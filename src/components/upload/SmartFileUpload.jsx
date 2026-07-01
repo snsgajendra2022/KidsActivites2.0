@@ -1,0 +1,189 @@
+import { useCallback, useEffect, useRef } from 'react';
+import {
+  UploadCloud, X, FileText, Eye, RefreshCw, WifiOff, AlertTriangle, CheckCircle2,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import Button from '../ui/Button.jsx';
+import { useNetworkStore } from '../../store/networkStore.js';
+import { useUploadStore } from '../../store/uploadStore.js';
+import { uploadFile } from '../../services/uploadService.js';
+import {
+  validateFile, formatFileSize, FILE_RULES, UPLOAD_STATUS, UPLOAD_STATUS_LABELS,
+} from '../../utils/uploadValidation.js';
+import { cn } from '../../lib/cn.js';
+
+const STATUS_ICON = {
+  [UPLOAD_STATUS.UPLOADED]: CheckCircle2,
+  [UPLOAD_STATUS.FAILED]: AlertTriangle,
+  [UPLOAD_STATUS.PAUSED]: WifiOff,
+  [UPLOAD_STATUS.WAITING_FOR_INTERNET]: WifiOff,
+  [UPLOAD_STATUS.UPLOADING]: UploadCloud,
+};
+
+export default function SmartFileUpload({
+  fieldKey,
+  label,
+  required = false,
+  category = 'document',
+  value,
+  onChange,
+  error: externalError,
+  rejectionReason,
+}) {
+  const inputRef = useRef(null);
+  const abortRef = useRef(null);
+  const isOnline = useNetworkStore((s) => s.isOnline);
+  const item = useUploadStore((s) => s.getByField(fieldKey));
+  const { addItem, updateItem, removeItem } = useUploadStore();
+
+  const rules = FILE_RULES[category];
+  const accept = rules.accept.join(',');
+
+  const startUpload = useCallback(async (uploadItem) => {
+    if (!uploadItem) return;
+
+    if (!isOnline) {
+      updateItem(uploadItem.id, { status: UPLOAD_STATUS.WAITING_FOR_INTERNET });
+      toast.warning('Upload paused due to internet issue.');
+      return;
+    }
+
+    abortRef.current = new AbortController();
+    updateItem(uploadItem.id, { status: UPLOAD_STATUS.UPLOADING, progress: 0, error: null });
+
+    const result = await uploadFile({
+      file: uploadItem.file,
+      fieldKey,
+      isOnline: () => useNetworkStore.getState().isOnline,
+      signal: abortRef.current.signal,
+      onProgress: (progress) => updateItem(uploadItem.id, { progress }),
+    });
+
+    if (result.success) {
+      updateItem(uploadItem.id, { status: UPLOAD_STATUS.UPLOADED, progress: 100 });
+      onChange?.(result.data);
+      toast.success('File uploaded successfully.');
+    } else {
+      updateItem(uploadItem.id, { status: result.status, error: result.error });
+      if (result.status === UPLOAD_STATUS.PAUSED) {
+        toast.warning('Upload paused due to network issue.');
+      } else {
+        toast.error('Upload failed. Please retry.');
+      }
+    }
+  }, [fieldKey, isOnline, onChange, updateItem]);
+
+  const handleFileSelect = (file) => {
+    if (!file) return;
+    const validation = validateFile(file, category);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+    const id = addItem(fieldKey, file);
+    const uploadItem = useUploadStore.getState().getByField(fieldKey);
+    startUpload(uploadItem);
+  };
+
+  const handleRetry = () => {
+    if (!item) return;
+    updateItem(item.id, { status: UPLOAD_STATUS.RETRYING, error: null });
+    toast.info('Retrying upload...');
+    startUpload({ ...item, status: UPLOAD_STATUS.RETRYING });
+  };
+
+  const handleRemove = () => {
+    if (item) removeItem(item.id);
+    onChange?.(null);
+  };
+
+  const handlePreview = () => {
+    if (item?.previewUrl) window.open(item.previewUrl, '_blank');
+    else if (value?.previewUrl) window.open(value.previewUrl, '_blank');
+  };
+
+  // Resume paused uploads when back online
+  useEffect(() => {
+    if (isOnline && item && [UPLOAD_STATUS.PAUSED, UPLOAD_STATUS.WAITING_FOR_INTERNET, UPLOAD_STATUS.RETRYING].includes(item.status)) {
+      startUpload(item);
+    }
+  }, [isOnline]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const displayValue = item || (value ? { file: { name: value.name, size: value.size }, status: UPLOAD_STATUS.UPLOADED, progress: 100 } : null);
+  const StatusIcon = displayValue ? STATUS_ICON[displayValue.status] || FileText : UploadCloud;
+
+  return (
+    <div className="form-field full">
+      {label && (
+        <label className="form-label">
+          {label}{required && <span className="required">*</span>}
+        </label>
+      )}
+
+      {!displayValue ? (
+        <div
+          className={cn('file-upload', !isOnline && 'opacity-75')}
+          onClick={() => isOnline && inputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+        >
+          <div className="file-upload-icon">
+            {!isOnline ? <WifiOff size={28} /> : <UploadCloud size={28} />}
+          </div>
+          <div className="file-upload-text">
+            {!isOnline ? 'Waiting for internet connection' : 'Drag and drop or browse file'}
+          </div>
+          <div className="file-upload-hint">{rules.label} up to {rules.maxSizeMB} MB</div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept={accept}
+            hidden
+            onChange={(e) => handleFileSelect(e.target.files?.[0])}
+          />
+        </div>
+      ) : (
+        <div className="upload-item-card">
+          <div className="upload-item-header">
+            <StatusIcon size={20} className={displayValue.status === UPLOAD_STATUS.UPLOADED ? 'text-green-600' : 'text-blue-600'} />
+            <div className="upload-item-info">
+              <span className="upload-item-name">{displayValue.file?.name || value?.name}</span>
+              <span className="upload-item-meta">
+                {formatFileSize(displayValue.file?.size || value?.size || 0)}
+                {' · '}
+                {UPLOAD_STATUS_LABELS[displayValue.status] || displayValue.status}
+              </span>
+            </div>
+            <div className="upload-item-actions">
+              {(displayValue.previewUrl || value?.previewUrl) && (
+                <Button variant="ghost" size="sm" onClick={handlePreview} aria-label="Preview"><Eye size={16} /></Button>
+              )}
+              {[UPLOAD_STATUS.FAILED, UPLOAD_STATUS.PAUSED, UPLOAD_STATUS.WAITING_FOR_INTERNET].includes(displayValue.status) && (
+                <Button variant="ghost" size="sm" onClick={handleRetry} aria-label="Retry"><RefreshCw size={16} /></Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={handleRemove} aria-label="Remove"><X size={16} /></Button>
+            </div>
+          </div>
+
+          {displayValue.status === UPLOAD_STATUS.UPLOADING && (
+            <div className="upload-progress-wrap">
+              <div className="upload-progress-bar" style={{ width: `${displayValue.progress || 0}%` }} />
+              <span className="upload-progress-text">{displayValue.progress || 0}%</span>
+            </div>
+          )}
+
+          {displayValue.error && <span className="form-error">{displayValue.error}</span>}
+          {rejectionReason && (
+            <div className="upload-rejection">
+              <AlertTriangle size={14} />
+              Document rejected: {rejectionReason}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(externalError) && <span className="form-error">{externalError}</span>}
+    </div>
+  );
+}
