@@ -1,8 +1,8 @@
 export const INITIAL_PHOTOS = [
   {
     id: 'photo-001',
-    teacherId: 'u-teacher',
-    teacherName: 'Anita Verma',
+    teacherId: 'usr-teacher',
+    teacherName: 'Meera Iyer',
     className: 'UKG-A',
     caption: 'Art class today! The children made beautiful paintings.',
     sentAt: '2026-06-20T10:00:00Z',
@@ -12,8 +12,8 @@ export const INITIAL_PHOTOS = [
   },
   {
     id: 'photo-002',
-    teacherId: 'u-teacher',
-    teacherName: 'Anita Verma',
+    teacherId: 'usr-teacher',
+    teacherName: 'Meera Iyer',
     className: 'UKG-A',
     caption: 'Sports day practice',
     sentAt: '2026-06-18T14:30:00Z',

@@ -1,5 +1,9 @@
 import usersData from '../data/users.json';
 import { delay } from './mockApi.js';
+import { api } from './api/client.js';
+import { isApiEnabled } from './api/config.js';
+import { isDemoEmail, isDemoMobile, markDemoSession } from './api/demoMode.js';
+import { clearTokens, setTokens } from './api/tokenStorage.js';
 
 const DEMO_OTP = '123456';
 const OTP_STORAGE_KEY = 'sb_login_otp';
@@ -56,6 +60,11 @@ function matchesIdentity(user, identity) {
   return matchesEmail(user, identity) || matchesMobile(user, identity);
 }
 
+function stripPassword(user) {
+  const { password: _pw, ...sessionUser } = user;
+  return sessionUser;
+}
+
 export function findUserByMobile(mobile) {
   return usersData.users.find((u) => matchesMobile(u, mobile)) || null;
 }
@@ -64,97 +73,95 @@ export function findUserByEmail(email) {
   return usersData.users.find((u) => matchesEmail(u, email)) || null;
 }
 
-/** Public demo accounts for login page (no passwords). */
 export function getDemoAccounts() {
   return usersData.users.map(({ password, ...account }) => account);
 }
 
-/** Authenticate by email + password only. */
 export function authenticateByEmail(email, password) {
   const trimmedEmail = normalizeIdentity(email);
-  if (!trimmedEmail) {
-    throw new Error('Please enter your email address.');
-  }
-  if (!trimmedEmail.includes('@')) {
-    throw new Error('Please enter a valid email address.');
-  }
-  if (!password) {
-    throw new Error('Please enter your password.');
-  }
+  if (!trimmedEmail) throw new Error('Please enter your email address.');
+  if (!trimmedEmail.includes('@')) throw new Error('Please enter a valid email address.');
+  if (!password) throw new Error('Please enter your password.');
 
   const user = usersData.users.find((u) => matchesEmail(u, trimmedEmail));
-  if (!user || user.password !== password) {
-    throw new Error('Invalid email or password.');
-  }
+  if (!user || user.password !== password) throw new Error('Invalid email or password.');
 
-  const { password: _pw, ...sessionUser } = user;
-  return { ...sessionUser, identity: trimmedEmail, loginMethod: 'email' };
+  return {
+    ...stripPassword(user),
+    identity: trimmedEmail,
+    loginMethod: 'email',
+    isDemoSession: true,
+  };
 }
 
-/** Authenticate by email or mobile + password (legacy). */
 export function authenticate(identity, password) {
   const trimmedIdentity = normalizeIdentity(identity);
-  if (!trimmedIdentity) {
-    throw new Error('Please enter email or mobile number.');
-  }
-  if (!password) {
-    throw new Error('Please enter your password.');
-  }
+  if (!trimmedIdentity) throw new Error('Please enter email or mobile number.');
+  if (!password) throw new Error('Please enter your password.');
 
   const user = usersData.users.find((u) => matchesIdentity(u, trimmedIdentity));
-  if (!user || user.password !== password) {
-    throw new Error('Invalid email/mobile or password.');
-  }
+  if (!user || user.password !== password) throw new Error('Invalid email/mobile or password.');
 
-  const { password: _pw, ...sessionUser } = user;
-  return { ...sessionUser, identity: trimmedIdentity, loginMethod: 'password' };
+  return {
+    ...stripPassword(user),
+    identity: trimmedIdentity,
+    loginMethod: 'password',
+    isDemoSession: true,
+  };
 }
 
-/** Mock: send OTP to registered mobile. Demo OTP is always 123456. */
+/** Unified email login — demo mock or live API. */
+export async function loginByEmail(email, password) {
+  if (isDemoEmail(email) || !isApiEnabled()) {
+    await delay(300);
+    return authenticateByEmail(email, password);
+  }
+
+  const data = await api.post('/auth/login', { email, password }, { auth: false });
+  setTokens(data.accessToken, data.refreshToken);
+  return markDemoSession(
+    { ...data.user, identity: email, loginMethod: 'email' },
+    false,
+  );
+}
+
 export async function sendLoginOtp(mobile) {
+  if (!isDemoMobile(mobile) && isApiEnabled()) {
+    const normalized = normalizeMobile(mobile);
+    const data = await api.post('/auth/login/otp/send', { channel: 'mobile', mobile: normalized }, { auth: false });
+    return { mobile: data.mobile || normalized, expiresIn: data.expiresIn || 300 };
+  }
+
   await delay(700);
   const normalized = normalizeMobile(mobile);
   if (!normalized || normalized.length !== 10) {
     throw new Error('Please enter a valid 10-digit mobile number.');
   }
-
   const user = findUserByMobile(normalized);
-  if (!user) {
-    throw new Error('No account found with this mobile number.');
-  }
+  if (!user) throw new Error('No account found with this mobile number.');
 
   saveOtpSession('mobile', normalized, DEMO_OTP);
-
-  return {
-    mobile: normalized,
-    expiresIn: OTP_TTL_MS / 1000,
-    demoOtp: DEMO_OTP,
-  };
+  return { mobile: normalized, expiresIn: OTP_TTL_MS / 1000, demoOtp: DEMO_OTP };
 }
 
-/** Mock: send OTP to registered email. Demo OTP is always 123456. */
 export async function sendEmailLoginOtp(email) {
+  if (!isDemoEmail(email) && isApiEnabled()) {
+    const trimmed = normalizeIdentity(email).toLowerCase();
+    const data = await api.post('/auth/login/otp/send', { channel: 'email', email: trimmed }, { auth: false });
+    return { email: data.email || trimmed, expiresIn: data.expiresIn || 300 };
+  }
+
   await delay(700);
   const trimmed = normalizeIdentity(email);
-  if (!trimmed || !trimmed.includes('@')) {
-    throw new Error('Please enter a valid email address.');
-  }
+  if (!trimmed || !trimmed.includes('@')) throw new Error('Please enter a valid email address.');
 
   const user = findUserByEmail(trimmed);
-  if (!user) {
-    throw new Error('No account found with this email address.');
-  }
+  if (!user) throw new Error('No account found with this email address.');
 
   const normalized = saveOtpSession('email', trimmed, DEMO_OTP);
-
-  return {
-    email: normalized,
-    expiresIn: OTP_TTL_MS / 1000,
-    demoOtp: DEMO_OTP,
-  };
+  return { email: normalized, expiresIn: OTP_TTL_MS / 1000, demoOtp: DEMO_OTP };
 }
 
-/** Verify OTP for mobile or email channel. */
 export function verifyLoginOtpByChannel(channel, target, otp) {
   const code = String(otp || '').trim();
   const normalizedTarget = channel === 'email'
@@ -167,9 +174,7 @@ export function verifyLoginOtpByChannel(channel, target, otp) {
   if (channel === 'email' && (!normalizedTarget || !normalizedTarget.includes('@'))) {
     throw new Error('Please enter a valid email address.');
   }
-  if (!code || code.length !== 6) {
-    throw new Error('Please enter the 6-digit OTP.');
-  }
+  if (!code || code.length !== 6) throw new Error('Please enter the 6-digit OTP.');
 
   const stored = readOtpSession();
   if (!stored || stored.channel !== channel || stored.target !== normalizedTarget) {
@@ -179,31 +184,57 @@ export function verifyLoginOtpByChannel(channel, target, otp) {
     sessionStorage.removeItem(OTP_STORAGE_KEY);
     throw new Error('OTP has expired. Please request a new one.');
   }
-  if (stored.otp !== code) {
-    throw new Error('Invalid OTP. Please try again.');
-  }
+  if (stored.otp !== code) throw new Error('Invalid OTP. Please try again.');
 
   const user = channel === 'email'
     ? findUserByEmail(normalizedTarget)
     : findUserByMobile(normalizedTarget);
-  if (!user) {
-    throw new Error('Account not found.');
-  }
+  if (!user) throw new Error('Account not found.');
 
   sessionStorage.removeItem(OTP_STORAGE_KEY);
-  const { password: _pw, ...sessionUser } = user;
   return {
-    ...sessionUser,
+    ...stripPassword(user),
     identity: normalizedTarget,
     loginMethod: channel === 'email' ? 'email_otp' : 'otp',
+    isDemoSession: true,
   };
 }
 
-/** Verify mobile OTP and return session user. */
+export async function verifyOtpByChannel(channel, target, otp) {
+  const isDemo = channel === 'email' ? isDemoEmail(target) : isDemoMobile(target);
+
+  if (!isDemo && isApiEnabled()) {
+    const body = channel === 'email'
+      ? { channel: 'email', email: normalizeIdentity(target).toLowerCase(), otp }
+      : { channel: 'mobile', mobile: normalizeMobile(target), otp };
+    const data = await api.post('/auth/login/otp/verify', body, { auth: false });
+    setTokens(data.accessToken, data.refreshToken);
+    return markDemoSession(
+      {
+        ...data.user,
+        identity: channel === 'email' ? body.email : body.mobile,
+        loginMethod: channel === 'email' ? 'email_otp' : 'otp',
+      },
+      false,
+    );
+  }
+
+  return verifyLoginOtpByChannel(channel, target, otp);
+}
+
 export function verifyLoginOtp(mobile, otp) {
   return verifyLoginOtpByChannel('mobile', mobile, otp);
 }
 
+export async function verifyOtp(mobile, otp) {
+  return verifyOtpByChannel('mobile', mobile, otp);
+}
+
 export function findUserById(userId) {
   return usersData.users.find((u) => u.id === userId) || null;
+}
+
+export function logoutSession() {
+  clearTokens();
+  sessionStorage.removeItem(OTP_STORAGE_KEY);
 }

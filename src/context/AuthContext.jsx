@@ -1,9 +1,22 @@
 import { createContext, useContext, useMemo, useState } from 'react';
-import { authenticateByEmail, sendLoginOtp, sendEmailLoginOtp, verifyLoginOtp, verifyLoginOtpByChannel } from '../services/authService.js';
+import {
+  loginByEmail,
+  sendLoginOtp,
+  sendEmailLoginOtp,
+  verifyOtp,
+  verifyOtpByChannel,
+  logoutSession,
+} from '../services/authService.js';
+import { isDemoUser } from '../services/api/demoMode.js';
 import { ROLE_DASHBOARD } from '../constants/roles.js';
+import { updateUserProfile, changeUserPassword } from '../services/userService.js';
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = 'schoolbridge_user';
+
+function persistUser(user) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -16,8 +29,8 @@ export function AuthProvider({ children }) {
   });
 
   const login = async ({ email, password }) => {
-    const nextUser = authenticateByEmail(email, password);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    const nextUser = await loginByEmail(email, password);
+    persistUser(nextUser);
     setUser(nextUser);
     return nextUser;
   };
@@ -27,30 +40,36 @@ export function AuthProvider({ children }) {
   const requestEmailOtp = async (email) => sendEmailLoginOtp(email);
 
   const loginWithOtp = async ({ mobile, otp }) => {
-    const nextUser = verifyLoginOtp(mobile, otp);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    const nextUser = await verifyOtp(mobile, otp);
+    persistUser(nextUser);
     setUser(nextUser);
     return nextUser;
   };
 
   const loginWithEmailOtp = async ({ email, otp }) => {
-    const nextUser = verifyLoginOtpByChannel('email', email, otp);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    const nextUser = await verifyOtpByChannel('email', email, otp);
+    persistUser(nextUser);
     setUser(nextUser);
     return nextUser;
   };
 
   const logout = () => {
+    logoutSession();
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
   };
 
-  const updateProfile = (updates) => {
+  const updateProfile = async (updates) => {
     if (!user) return null;
-    const nextUser = { ...user, ...updates };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    const nextUser = await updateUserProfile(user, updates);
+    persistUser(nextUser);
     setUser(nextUser);
     return nextUser;
+  };
+
+  const changePassword = async ({ currentPassword, newPassword }) => {
+    if (!user) throw new Error('Not authenticated');
+    return changeUserPassword(user, { currentPassword, newPassword });
   };
 
   const value = useMemo(
@@ -63,11 +82,13 @@ export function AuthProvider({ children }) {
       loginWithEmailOtp,
       logout,
       updateProfile,
+      changePassword,
       isAuthenticated: Boolean(user),
+      isDemoSession: isDemoUser(user),
       role: user?.role,
       dashboardPath: user ? ROLE_DASHBOARD[user.role] : '/login',
     }),
-    [user]
+    [user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,11 +1,9 @@
 import { delay } from './mockApi.js';
 import { UPLOAD_STATUS } from '../utils/uploadValidation.js';
+import { api } from './api/client.js';
+import { routeRequest } from './api/routeRequest.js';
 
-/**
- * Simulates file upload with progress. Pauses when isOnline is false.
- * Replace with real signed-URL upload when backend is ready.
- */
-export async function uploadFile({ file, fieldKey, onProgress, isOnline, signal }) {
+async function mockUploadFile({ file, fieldKey, onProgress, isOnline, signal }) {
   if (!isOnline) {
     return { success: false, status: UPLOAD_STATUS.WAITING_FOR_INTERNET, error: 'Waiting for internet connection.' };
   }
@@ -15,11 +13,9 @@ export async function uploadFile({ file, fieldKey, onProgress, isOnline, signal 
     if (signal?.aborted) {
       return { success: false, status: UPLOAD_STATUS.PAUSED, error: 'Upload cancelled.' };
     }
-
     if (!isOnline()) {
       return { success: false, status: UPLOAD_STATUS.PAUSED, error: 'Upload paused due to network issue.' };
     }
-
     await delay(150 + Math.random() * 100);
     onProgress?.(Math.round((i / totalSteps) * 100));
   }
@@ -33,8 +29,47 @@ export async function uploadFile({ file, fieldKey, onProgress, isOnline, signal 
       type: file.type,
       fieldKey,
       uploadedAt: new Date().toISOString(),
-      // In production: fileKey from S3
       fileKey: `mock/${fieldKey}/${Date.now()}-${file.name}`,
     },
   };
+}
+
+async function apiUploadFile({ file, fieldKey, onProgress, applicationId }) {
+  onProgress?.(5);
+  const signed = await api.post('/documents/upload', {
+    fileName: file.name,
+    mimeType: file.type,
+    sizeBytes: file.size,
+    category: fieldKey.includes('photo') ? 'photo' : 'document',
+    fieldKey,
+    applicationId,
+  });
+
+  onProgress?.(30);
+  await fetch(signed.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+
+  onProgress?.(80);
+  const confirmed = await api.post('/documents/confirm', {
+    fileKey: signed.fileKey,
+    fieldKey,
+    applicationId,
+  });
+
+  onProgress?.(100);
+  return {
+    success: true,
+    status: UPLOAD_STATUS.UPLOADED,
+    data: confirmed,
+  };
+}
+
+export async function uploadFile(options) {
+  return routeRequest({
+    mockFn: () => mockUploadFile(options),
+    apiFn: () => apiUploadFile(options),
+  });
 }

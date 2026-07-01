@@ -40,7 +40,7 @@ function PasswordField({ label, name, value, onChange, show, onToggle }) {
 }
 
 export default function Profile() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, changePassword, isDemoSession } = useAuth();
   const { school } = usePortalConfig();
   const { toast } = useToast();
   const [savingProfile, setSavingProfile] = useState(false);
@@ -75,13 +75,17 @@ export default function Profile() {
       return;
     }
     setSavingProfile(true);
-    await new Promise((r) => setTimeout(r, 400));
-    updateProfile({
-      name: profile.name.trim(),
-      mobile: profile.mobile.trim(),
-    });
-    toast('Profile updated successfully.', 'success');
-    setSavingProfile(false);
+    try {
+      await updateProfile({
+        name: profile.name.trim(),
+        mobile: profile.mobile.trim(),
+      });
+      toast('Profile updated successfully.', 'success');
+    } catch (err) {
+      toast(err.message || 'Unable to update profile.', 'error');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handlePasswordSave = async (e) => {
@@ -99,10 +103,18 @@ export default function Profile() {
       return;
     }
     setSavingPassword(true);
-    await new Promise((r) => setTimeout(r, 500));
-    toast('Password updated successfully.', 'success');
-    setPasswords({ current: '', next: '', confirm: '' });
-    setSavingPassword(false);
+    try {
+      await changePassword({
+        currentPassword: passwords.current,
+        newPassword: passwords.next,
+      });
+      toast('Password updated successfully.', 'success');
+      setPasswords({ current: '', next: '', confirm: '' });
+    } catch (err) {
+      toast(err.message || 'Unable to update password.', 'error');
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   return (
@@ -110,7 +122,16 @@ export default function Profile() {
       <PageTransition>
         <PageHeader
           title="Account Settings"
-          subtitle="Manage your profile, contact details, and account security."
+          subtitle={(
+            <>
+              Manage your profile, contact details, and account security.
+              {isDemoSession && (
+                <span className="ml-2 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                  Demo account
+                </span>
+              )}
+            </>
+          )}
           actions={(
             <Link to={dashboardPath} className="account-settings-back">
               <ArrowLeft size={16} />

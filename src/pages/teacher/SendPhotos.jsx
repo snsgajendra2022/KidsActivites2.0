@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Send } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -7,8 +7,9 @@ import Textarea from '../../components/ui/Textarea.jsx';
 import SmartFileUpload from '../../components/upload/SmartFileUpload.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { sendPhotos } from '../../services/mediaService.js';
-import { TEACHER_CLASSES, CLASS_STUDENTS } from '../../data/mockPhotos.js';
+import { getTeacherClasses, getTeacherStudents } from '../../services/teacherService.js';
 import '../../styles/send-photos.css';
 
 const SEND_TYPES = [
@@ -19,6 +20,9 @@ const SEND_TYPES = [
 
 export default function SendPhotos() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [classes, setClasses] = useState([]);
+  const [allStudents, setAllStudents] = useState([]);
   const [form, setForm] = useState({
     classId: '',
     recipients: 'class',
@@ -29,8 +33,14 @@ export default function SendPhotos() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const classOptions = TEACHER_CLASSES.map((c) => ({ value: c.id, label: c.name }));
-  const students = CLASS_STUDENTS.filter((s) => s.classId === form.classId);
+  useEffect(() => {
+    if (!user?.id) return;
+    getTeacherClasses(user.id).then(setClasses);
+    getTeacherStudents(user.id).then(setAllStudents);
+  }, [user?.id]);
+
+  const classOptions = classes.map((c) => ({ value: c.id, label: c.name }));
+  const students = allStudents.filter((s) => s.classId === form.classId);
 
   const toggleStudent = (id, checked) => {
     setForm((prev) => ({
@@ -60,8 +70,10 @@ export default function SendPhotos() {
   const handleSend = async () => {
     setLoading(true);
     try {
-      const cls = TEACHER_CLASSES.find((c) => c.id === form.classId);
+      const cls = classes.find((c) => c.id === form.classId);
       await sendPhotos({
+        teacherId: user?.id,
+        teacherName: user?.name,
         className: cls?.name || '',
         caption: form.caption,
         recipients: form.recipients,

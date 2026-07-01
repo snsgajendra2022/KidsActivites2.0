@@ -3,6 +3,9 @@ import { INITIAL_APPLICATIONS } from '../data/mockApplications.js';
 import { buildEmptyFormFromConfig } from '../utils/enrollmentFormUtils.js';
 import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js';
 import { delay, getStore, setStore, generateApplicationNo } from './mockApi.js';
+import { api } from './api/client.js';
+import { routeRequest } from './api/routeRequest.js';
+import { getStoredUser } from './api/demoMode.js';
 
 const KEY = 'sb_applications';
 
@@ -14,7 +17,7 @@ function saveAll(apps) {
   setStore(KEY, apps);
 }
 
-export async function getApplications(filters = {}) {
+async function mockGetApplications(filters = {}) {
   await delay();
   let apps = getAll();
   if (filters.status) apps = apps.filter((a) => a.status === filters.status);
@@ -22,68 +25,106 @@ export async function getApplications(filters = {}) {
   return apps;
 }
 
+export async function getApplications(filters = {}) {
+  return routeRequest({
+    mockFn: () => mockGetApplications(filters),
+    apiFn: () => api.get('/admin/applications', filters),
+  });
+}
+
 export async function getApplication(id) {
-  await delay();
-  return getAll().find((a) => a.id === id) || null;
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      return getAll().find((a) => a.id === id) || null;
+    },
+    apiFn: () => api.get(`/admin/applications/${id}`),
+  });
 }
 
 export async function getApplicationByParent(parentId) {
-  await delay();
-  const apps = getAll();
-  return (
-    apps.find((a) => a.parentId === parentId) ||
-    apps.find((a) => a.parentId === 'u-parent' && parentId === 'usr-parent') ||
-    null
-  );
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const apps = getAll();
+      return (
+        apps.find((a) => a.parentId === parentId) ||
+        apps.find((a) => a.parentId === 'u-parent' && parentId === 'usr-parent') ||
+        null
+      );
+    },
+    apiFn: () => api.get('/enrollment/my-application'),
+  });
 }
 
 export async function saveDraft(formData, existingId) {
-  await delay();
-  const apps = getAll();
-  if (existingId) {
-    const idx = apps.findIndex((a) => a.id === existingId);
-    if (idx >= 0) {
-      apps[idx] = { ...apps[idx], ...formData, status: ENROLLMENT_STATUSES.DRAFT, updatedAt: new Date().toISOString() };
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const apps = getAll();
+      if (existingId) {
+        const idx = apps.findIndex((a) => a.id === existingId);
+        if (idx >= 0) {
+          apps[idx] = {
+            ...apps[idx],
+            ...formData,
+            status: ENROLLMENT_STATUSES.DRAFT,
+            updatedAt: new Date().toISOString(),
+          };
+          saveAll(apps);
+          return apps[idx];
+        }
+      }
+      const draft = {
+        id: `app-draft-${Date.now()}`,
+        applicationNo: null,
+        status: ENROLLMENT_STATUSES.DRAFT,
+        ...formData,
+        createdAt: new Date().toISOString(),
+      };
+      apps.push(draft);
       saveAll(apps);
-      return apps[idx];
-    }
-  }
-  const draft = {
-    id: `app-draft-${Date.now()}`,
-    applicationNo: null,
-    status: ENROLLMENT_STATUSES.DRAFT,
-    ...formData,
-    createdAt: new Date().toISOString(),
-  };
-  apps.push(draft);
-  saveAll(apps);
-  return draft;
+      return draft;
+    },
+    apiFn: () => (existingId
+      ? api.put(`/enrollment/draft/${existingId}`, formData)
+      : api.post('/enrollment/draft', formData)),
+  });
 }
 
 export async function submitApplication(formData, existingId, parentId) {
-  await delay(600);
-  const apps = getAll();
-  const applicationNo = generateApplicationNo();
-  const entry = {
-    id: existingId || `app-${Date.now()}`,
-    applicationNo,
-    status: ENROLLMENT_STATUSES.SUBMITTED,
-    submittedAt: new Date().toISOString(),
-    parentId: parentId || null,
-    assignedReviewer: 'Priya Sharma',
-    statusHistory: [
-      { status: ENROLLMENT_STATUSES.SUBMITTED, date: new Date().toISOString(), note: 'Application submitted by parent' },
-    ],
-    ...formData,
-  };
-  const idx = apps.findIndex((a) => a.id === existingId);
-  if (idx >= 0) apps[idx] = entry;
-  else apps.push(entry);
-  saveAll(apps);
-  return entry;
+  return routeRequest({
+    mockFn: async () => {
+      await delay(600);
+      const apps = getAll();
+      const applicationNo = generateApplicationNo();
+      const entry = {
+        id: existingId || `app-${Date.now()}`,
+        applicationNo,
+        status: ENROLLMENT_STATUSES.SUBMITTED,
+        submittedAt: new Date().toISOString(),
+        parentId: parentId || null,
+        assignedReviewer: 'Priya Sharma',
+        statusHistory: [
+          {
+            status: ENROLLMENT_STATUSES.SUBMITTED,
+            date: new Date().toISOString(),
+            note: 'Application submitted by parent',
+          },
+        ],
+        ...formData,
+      };
+      const idx = apps.findIndex((a) => a.id === existingId);
+      if (idx >= 0) apps[idx] = entry;
+      else apps.push(entry);
+      saveAll(apps);
+      return entry;
+    },
+    apiFn: () => api.post('/enrollment/submit', { draftId: existingId, parentId, ...formData }),
+  });
 }
 
-export async function updateApplicationStatus(id, status, note) {
+async function mockUpdateStatus(id, status, note) {
   await delay();
   const apps = getAll();
   const idx = apps.findIndex((a) => a.id === id);
@@ -97,36 +138,60 @@ export async function updateApplicationStatus(id, status, note) {
   return apps[idx];
 }
 
+export async function updateApplicationStatus(id, status, note) {
+  return routeRequest({
+    mockFn: () => mockUpdateStatus(id, status, note),
+    apiFn: () => api.patch(`/admin/applications/${id}/status`, { status, note }),
+  });
+}
+
 export async function requestCorrection(id, reason) {
-  return updateApplicationStatus(id, ENROLLMENT_STATUSES.CORRECTION_REQUIRED, reason);
+  return routeRequest({
+    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.CORRECTION_REQUIRED, reason),
+    apiFn: () => api.post(`/admin/applications/${id}/request-correction`, { reason }),
+  });
 }
 
 export async function approveApplication(id) {
-  return updateApplicationStatus(id, ENROLLMENT_STATUSES.FEE_PENDING, 'Application approved. Fee assigned.');
+  return routeRequest({
+    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.FEE_PENDING, 'Application approved. Fee assigned.'),
+    apiFn: () => api.post(`/admin/applications/${id}/approve`),
+  });
 }
 
 export async function rejectApplication(id, reason) {
-  return updateApplicationStatus(id, ENROLLMENT_STATUSES.REJECTED, reason);
+  return routeRequest({
+    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.REJECTED, reason),
+    apiFn: () => api.post(`/admin/applications/${id}/reject`, { reason }),
+  });
 }
 
 export async function verifyDocuments(id) {
-  return updateApplicationStatus(id, ENROLLMENT_STATUSES.DOCUMENTS_VERIFIED, 'All documents verified');
+  return routeRequest({
+    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.DOCUMENTS_VERIFIED, 'All documents verified'),
+    apiFn: () => api.post(`/admin/applications/${id}/verify-documents`),
+  });
 }
 
 export async function confirmAdmission(id) {
-  return updateApplicationStatus(id, ENROLLMENT_STATUSES.ADMISSION_CONFIRMED, 'Admission confirmed');
+  return routeRequest({
+    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.ADMISSION_CONFIRMED, 'Admission confirmed'),
+    apiFn: () => api.post(`/admin/applications/${id}/confirm-admission`),
+  });
 }
 
 export async function createAccount(id) {
-  return updateApplicationStatus(id, ENROLLMENT_STATUSES.ACCOUNT_CREATED, 'Parent account created and invitation sent');
+  return routeRequest({
+    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.ACCOUNT_CREATED, 'Parent account created and invitation sent'),
+    apiFn: () => api.post(`/admin/applications/${id}/create-account`),
+  });
 }
 
 export function getEmptyForm(enrollmentForm) {
   return buildEmptyFormFromConfig(enrollmentForm || DEFAULT_ENROLLMENT_FORM);
 }
 
-export function getDashboardStats() {
-  const apps = getAll();
+function computeDashboardStats(apps) {
   return {
     total: apps.length,
     pendingReview: apps.filter((a) => [ENROLLMENT_STATUSES.SUBMITTED, ENROLLMENT_STATUSES.UNDER_REVIEW].includes(a.status)).length,
@@ -138,4 +203,54 @@ export function getDashboardStats() {
     rejected: apps.filter((a) => a.status === ENROLLMENT_STATUSES.REJECTED).length,
     accountsCreated: apps.filter((a) => a.status === ENROLLMENT_STATUSES.ACCOUNT_CREATED).length,
   };
+}
+
+export async function getDashboardStats() {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(100);
+      return computeDashboardStats(getAll());
+    },
+    apiFn: () => api.get('/admin/dashboard/stats'),
+  });
+}
+
+export async function getEnrolledStudents() {
+  return routeRequest({
+    mockFn: async () => {
+      const apps = await mockGetApplications();
+      return apps
+        .filter((a) => [
+          ENROLLMENT_STATUSES.ADMISSION_CONFIRMED,
+          ENROLLMENT_STATUSES.ACCOUNT_CREATED,
+        ].includes(a.status))
+        .map((a) => ({
+          id: a.id,
+          applicationNo: a.applicationNo,
+          name: a.student?.fullName,
+          classApplying: a.student?.classApplying,
+          parentName: a.parent?.fatherName || a.parent?.motherName,
+          status: a.status,
+          submittedAt: a.submittedAt,
+        }));
+    },
+    apiFn: () => api.get('/admin/students'),
+  });
+}
+
+export async function getDashboardChartData() {
+  const user = getStoredUser();
+  return routeRequest({
+    user,
+    mockFn: async () => {
+      const apps = getAll();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      return months.map((month, i) => ({
+        month,
+        applications: Math.max(1, apps.filter((_, idx) => idx % 6 === i).length * 3 + 8),
+        collected: (i + 1) * 180000 + apps.length * 12000,
+      }));
+    },
+    apiFn: () => api.get('/admin/dashboard/charts'),
+  });
 }

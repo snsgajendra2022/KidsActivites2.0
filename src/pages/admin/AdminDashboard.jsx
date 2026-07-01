@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  FileText, AlertCircle, FolderOpen, CreditCard, CheckCircle, XCircle, UserPlus, Clock, ArrowRight,
+  FileText, AlertCircle, FolderOpen, CreditCard, CheckCircle, UserPlus, Clock, ArrowRight,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
@@ -13,18 +13,9 @@ import {
   TableActionLink,
 } from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
-import { getApplications, getDashboardStats } from '../../services/enrollmentService.js';
+import { getApplications, getDashboardStats, getDashboardChartData } from '../../services/enrollmentService.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-
-const CHART_DATA = [
-  { month: 'Jan', applications: 12, collected: 420000 },
-  { month: 'Feb', applications: 18, collected: 580000 },
-  { month: 'Mar', applications: 24, collected: 720000 },
-  { month: 'Apr', applications: 31, collected: 890000 },
-  { month: 'May', applications: 28, collected: 950000 },
-  { month: 'Jun', applications: 35, collected: 1100000 },
-];
 
 const RECENT_COLUMNS = [
   { key: 'applicationNo', label: 'Application No.', primary: true },
@@ -44,14 +35,16 @@ const RECENT_COLUMNS = [
 ];
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, isDemoSession } = useAuth();
   const { school } = usePortalConfig();
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState([]);
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    setStats(getDashboardStats());
+    getDashboardStats().then(setStats);
     getApplications().then((apps) => setRecent(apps.slice(0, 5)));
+    getDashboardChartData().then(setChartData);
   }, []);
 
   return (
@@ -59,7 +52,14 @@ export default function AdminDashboard() {
       <PageTransition>
         <div className="premium-page-header">
           <h1 className="premium-page-title">Admin Dashboard</h1>
-          <p className="premium-page-subtitle">Welcome back, {user?.name}. Here&apos;s what&apos;s happening at {school?.name}.</p>
+          <p className="premium-page-subtitle">
+            Welcome back, {user?.name}. Here&apos;s what&apos;s happening at {school?.name}.
+            {isDemoSession && (
+              <span className="ml-2 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                Demo data
+              </span>
+            )}
+          </p>
         </div>
 
         <div className="bento-grid">
@@ -86,8 +86,8 @@ export default function AdminDashboard() {
           <div className="bento-span-3"><BentoStatCard icon={CheckCircle} value={stats?.confirmed ?? '—'} label="Admissions Confirmed" change="+8%" variant="emerald" /></div>
           <div className="bento-span-3"><BentoStatCard icon={UserPlus} value={stats?.accountsCreated ?? '—'} label="Accounts Created" variant="indigo" /></div>
 
-          <div className="bento-span-8"><ApplicationsChart data={CHART_DATA} /></div>
-          <div className="bento-span-4"><FeeChart data={CHART_DATA} /></div>
+          <div className="bento-span-8"><ApplicationsChart data={chartData} /></div>
+          <div className="bento-span-4"><FeeChart data={chartData} /></div>
 
           <div className="bento-span-12">
             <ResponsiveDataTablePanel

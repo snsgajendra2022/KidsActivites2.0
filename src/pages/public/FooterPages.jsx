@@ -1,8 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, AlertTriangle, Wrench } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { getSystemStatus } from '../../services/portalConfigService.js';
+import { submitSupportTicket } from '../../services/supportService.js';
+import { isApiEnabled } from '../../services/api/config.js';
 import '../../styles/legal-page.css';
 
 function StatusIcon({ status }) {
@@ -47,7 +51,22 @@ export function LegalDocumentPage({ title, subtitle, lastUpdated, sections }) {
   );
 }
 
-export function SystemStatusPage({ services }) {
+export function SystemStatusPage({ services: staticServices }) {
+  const [services, setServices] = useState(staticServices || []);
+  const [lastChecked, setLastChecked] = useState(null);
+
+  useEffect(() => {
+    getSystemStatus().then((data) => {
+      const list = data.services?.map((s) => ({
+        name: s.name,
+        status: s.status,
+        detail: s.detail || 'All systems running normally.',
+      })) || staticServices || [];
+      setServices(list);
+      setLastChecked(data.lastChecked);
+    });
+  }, [staticServices]);
+
   const operational = services.filter((s) => s.status === 'operational').length;
 
   return (
@@ -64,7 +83,8 @@ export function SystemStatusPage({ services }) {
               Live status of SchoolBridge platform services.
             </p>
             <p className="legal-page__updated">
-              {operational} of {services.length} services operational · Updated just now
+              {operational} of {services.length} services operational
+              {lastChecked ? ` · Updated ${new Date(lastChecked).toLocaleString()}` : ' · Updated just now'}
             </p>
           </header>
           <div className="legal-status-list">
@@ -93,10 +113,21 @@ export function DirectSupportPage({ faq }) {
   const { school, portalName } = usePortalConfig();
   const { toast } = useToast();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    toast('Support request received. The school team will contact you shortly.', 'success');
-    e.target.reset();
+    const form = e.target;
+    const payload = {
+      name: form.name.value.trim(),
+      contact: form.contact.value.trim(),
+      message: form.message.value.trim(),
+    };
+    try {
+      const result = await submitSupportTicket(payload);
+      toast(result.message || 'Support request received. The school team will contact you shortly.', 'success');
+      form.reset();
+    } catch (err) {
+      toast(err.message || 'Unable to submit support request.', 'error');
+    }
   };
 
   return (
@@ -168,7 +199,9 @@ export function DirectSupportPage({ faq }) {
                   Submit Request
                 </button>
                 <p className="legal-support-form-note">
-                  Demo: messages are not sent to a live backend. Use school contact details for urgent help.
+                  {isApiEnabled()
+                    ? 'Your message will be sent to the school support team.'
+                    : 'Demo mode: requests are saved locally. Use school contact details for urgent help.'}
                 </p>
               </form>
             </div>

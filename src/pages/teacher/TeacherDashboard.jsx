@@ -1,14 +1,23 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GraduationCap, Image, MessageCircle, Users, Send, ArrowRight } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
 import { WelcomeBanner } from '../../components/dashboard/ChartCards.jsx';
-import { TEACHER_CLASSES } from '../../data/mockPhotos.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { getTeacherClasses, getTeacherStats } from '../../services/teacherService.js';
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
+  const [classes, setClasses] = useState([]);
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    getTeacherClasses(user.id).then(setClasses);
+    getTeacherStats(user.id).then(setStats);
+  }, [user?.id]);
 
   return (
     <AppLayout>
@@ -30,15 +39,15 @@ export default function TeacherDashboard() {
             }
           />
 
-          <div className="bento-span-3"><BentoStatCard icon={GraduationCap} value={TEACHER_CLASSES.length} label="Assigned Classes" variant="indigo" /></div>
-          <div className="bento-span-3"><BentoStatCard icon={Users} value={54} label="Total Students" change="+3 new" variant="emerald" /></div>
-          <div className="bento-span-3"><BentoStatCard icon={Image} value={12} label="Photos Shared" variant="sky" /></div>
-          <div className="bento-span-3"><BentoStatCard icon={MessageCircle} value={3} label="Unread Messages" variant="amber" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={GraduationCap} value={stats?.classCount ?? classes.length} label="Assigned Classes" variant="indigo" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={Users} value={stats?.totalStudents ?? '—'} label="Total Students" variant="emerald" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={Image} value={stats?.photosShared ?? '—'} label="Photos Shared" variant="sky" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={MessageCircle} value={stats?.unreadMessages ?? '—'} label="Unread Messages" variant="amber" /></div>
 
           <div className="bento-span-12">
             <h3 className="card-title" style={{ marginBottom: 16 }}>My Classes</h3>
             <div className="bento-grid" style={{ gap: 16 }}>
-              {TEACHER_CLASSES.map((cls) => (
+              {classes.map((cls) => (
                 <div key={cls.id} className="bento-span-6">
                   <div className="premium-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

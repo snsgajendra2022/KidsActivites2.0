@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, LogOut, User, Settings } from 'lucide-react';
 import { ROLE_LABELS, ROLE_DASHBOARD } from '../../constants/roles.js';
+import { isDemoUser } from '../../services/api/demoMode.js';
 
 export default function UserMenu({ user, onLogout }) {
   const [open, setOpen] = useState(false);
@@ -63,6 +64,9 @@ export default function UserMenu({ user, onLogout }) {
             <span className="mt-2 inline-flex rounded-full bg-brand-muted px-2.5 py-0.5 text-[10px] font-semibold text-accent">
               {ROLE_LABELS[user?.role]}
             </span>
+            {isDemoUser(user) && (
+              <span className="user-menu-demo-badge mt-2">Demo account</span>
+            )}
           </div>
 
           <div className="p-1.5">

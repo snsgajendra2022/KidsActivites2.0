@@ -3,6 +3,8 @@ import { DEFAULT_ENROLLMENT_FORM, cloneEnrollmentFormConfig } from '../data/defa
 import { NAV_BY_ROLE } from '../constants/navigation.js';
 import { buildDefaultMenuVisibility } from '../data/defaultPortalConfig.js';
 import { delay, getStore, setStore } from './mockApi.js';
+import { api } from './api/client.js';
+import { routeRequest } from './api/routeRequest.js';
 
 const KEY = 'sb_portal_config';
 
@@ -19,9 +21,7 @@ function mergeConfig(stored) {
     menuVisibility: buildDefaultMenuVisibility(NAV_BY_ROLE),
   };
 
-  if (!stored) {
-    return defaults;
-  }
+  if (!stored) return defaults;
 
   const merged = {
     ...defaults,
@@ -58,17 +58,13 @@ function mergeConfig(stored) {
   return merged;
 }
 
-export async function getPortalConfig() {
-  await delay(120);
+function mockGetPortalConfig() {
   return mergeConfig(getStore(KEY, null));
 }
 
-export async function savePortalConfig(updates) {
-  await delay(300);
+function mockSavePortalConfig(updates) {
   const current = mergeConfig(getStore(KEY, null));
-  const theme = updates.theme
-    ? { ...current.theme, ...updates.theme }
-    : current.theme;
+  const theme = updates.theme ? { ...current.theme, ...updates.theme } : current.theme;
   const enrollmentTheme = updates.enrollmentTheme
     ? { ...current.enrollmentTheme, ...updates.enrollmentTheme }
     : current.enrollmentTheme;
@@ -93,16 +89,40 @@ export async function savePortalConfig(updates) {
   return next;
 }
 
-export async function setMenuVisibility(role, menuId, visible) {
-  const current = mergeConfig(getStore(KEY, null));
-  const menuVisibility = {
-    ...current.menuVisibility,
-    [role]: {
-      ...current.menuVisibility[role],
-      [menuId]: visible,
+export async function getPortalConfig() {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(120);
+      return mockGetPortalConfig();
     },
-  };
-  return savePortalConfig({ menuVisibility });
+    apiFn: () => api.get('/portal/config', undefined, { auth: false }),
+  });
+}
+
+export async function savePortalConfig(updates) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(300);
+      return mockSavePortalConfig(updates);
+    },
+    apiFn: () => api.put('/admin/portal-settings', updates),
+  });
+}
+
+export async function setMenuVisibility(role, menuId, visible) {
+  return routeRequest({
+    mockFn: async () => {
+      const current = mockGetPortalConfig();
+      const menuVisibility = {
+        ...current.menuVisibility,
+        [role]: { ...current.menuVisibility[role], [menuId]: visible },
+      };
+      return mockSavePortalConfig({ menuVisibility });
+    },
+    apiFn: () => api.patch('/admin/portal-settings/menus', {
+      updates: [{ role, menuId, visible }],
+    }),
+  });
 }
 
 export function readFileAsDataUrl(file) {
@@ -111,5 +131,21 @@ export function readFileAsDataUrl(file) {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+export async function getSystemStatus() {
+  return routeRequest({
+    mockFn: async () => ({
+      overall: 'operational',
+      lastChecked: new Date().toISOString(),
+      services: [
+        { name: 'Enrollment Portal', status: 'operational' },
+        { name: 'Parent Login', status: 'operational' },
+        { name: 'Fee Payments', status: 'operational' },
+        { name: 'Teacher Photos', status: 'operational' },
+      ],
+    }),
+    apiFn: () => api.get('/support/status', undefined, { auth: false }),
   });
 }
