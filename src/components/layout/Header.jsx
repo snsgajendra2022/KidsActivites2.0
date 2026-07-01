@@ -1,17 +1,17 @@
 import { Search, Menu, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { SCHOOL } from '../../data/mockSchool.js';
 import { ROLE_DASHBOARD } from '../../constants/roles.js';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import NotificationBell from '../notifications/NotificationBell.jsx';
 import UserMenu from './UserMenu.jsx';
 
 export default function Header({ user, onMenuClick, onLogout }) {
+  const { portalName, school } = usePortalConfig();
   const homePath = ROLE_DASHBOARD[user?.role] || '/';
 
   return (
     <header className="app-header shrink-0 border-b border-black/5 bg-white/95 backdrop-blur-xl">
       <div className="flex h-16 items-center gap-3 px-4 md:gap-4 md:px-6 lg:px-8">
-        {/* Mobile menu */}
         <button
           type="button"
           onClick={onMenuClick}
@@ -21,15 +21,13 @@ export default function Header({ user, onMenuClick, onLogout }) {
           <Menu size={20} />
         </button>
 
-        {/* Mobile brand */}
         <Link
           to={homePath}
           className="font-display shrink-0 text-lg font-bold tracking-tighter text-[#091426] lg:hidden"
         >
-          SchoolBridge
+          {portalName}
         </Link>
 
-        {/* Search */}
         <div className="relative hidden min-w-0 flex-1 md:block md:max-w-xl">
           <Search
             size={16}
@@ -43,11 +41,10 @@ export default function Header({ user, onMenuClick, onLogout }) {
           />
         </div>
 
-        {/* Right actions */}
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <div className="hidden items-center gap-1.5 rounded-full border border-black/5 bg-[#f8f9ff] px-3 py-1.5 text-xs font-semibold text-[#45474c] lg:flex">
             <Calendar size={14} className="text-[#6b7a8c]" />
-            {SCHOOL.academicYear}
+            {school?.academicYear}
           </div>
 
           <NotificationBell />

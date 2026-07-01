@@ -55,8 +55,8 @@ body {
 .hero-gradient {
   background: linear-gradient(
     135deg,
-    rgba(9, 20, 38, 0.92) 0%,
-    rgba(9, 20, 38, 0.45) 55%,
+    color-mix(in srgb, var(--sb-primary) 92%, transparent) 0%,
+    color-mix(in srgb, var(--sb-primary) 45%, transparent) 55%,
     transparent 100%
   );
 }
@@ -71,7 +71,7 @@ body {
 
 .input-premium:focus {
   border-color: var(--sb-secondary);
-  box-shadow: 0 0 0 4px rgba(0, 88, 190, 0.1);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
   outline: none;
 }
 
@@ -109,9 +109,9 @@ body {
 }
 
 .sb-btn-primary:hover:not(:disabled) {
-  background: #0d1f3d;
+  background: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px -4px rgba(9, 20, 38, 0.2);
+  box-shadow: 0 8px 16px -4px color-mix(in srgb, var(--sb-primary) 25%, transparent);
 }
 
 .sb-btn-secondary {
@@ -156,11 +156,11 @@ a.sb-link-btn--dark svg {
 a.sb-link-btn--light,
 a.sb-link-btn--light:hover,
 a.sb-link-btn--light:focus-visible {
-  color: #091426 !important;
+  color: var(--sb-primary) !important;
 }
 
 a.sb-link-btn--light svg {
-  color: #091426 !important;
+  color: var(--sb-primary) !important;
 }
 
 a.premium-btn-primary,
@@ -221,7 +221,7 @@ a.premium-btn-white:hover {
 }
 
 .premium-btn-primary:hover {
-  background: #0d1f3d !important;
+  background: var(--primary-dark) !important;
 }
 
 .premium-btn-secondary {
@@ -340,7 +340,7 @@ a.premium-btn-white:hover {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #0058be;
+  color: var(--sb-secondary);
   line-height: 1.35;
   word-break: break-word;
 }
@@ -383,7 +383,7 @@ a.premium-btn-white:hover {
   text-align: right;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #091426;
+  color: var(--sb-primary);
   word-break: break-word;
 }
 
@@ -437,6 +437,10 @@ a.premium-btn-white:hover {
   color: #ffffff !important;
 }
 
+.app-sidebar .sidebar-nav-link-active {
+  background: var(--sb-primary) !important;
+}
+
 .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) span {
   color: #45474c;
 }
@@ -446,11 +450,31 @@ a.premium-btn-white:hover {
 }
 
 .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover span {
-  color: #091426;
+  color: var(--sb-primary);
 }
 
 .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover svg {
-  color: #091426;
+  color: var(--sb-primary);
+}
+
+/* Theme-aware utilities */
+.text-brand { color: var(--sb-primary); }
+.text-accent { color: var(--sb-secondary); }
+.text-muted { color: var(--sb-on-surface-variant); }
+.bg-brand { background-color: var(--sb-primary); }
+.bg-accent { background-color: var(--sb-secondary); }
+.bg-brand-muted { background-color: var(--sb-surface-container-high); }
+.bg-brand-soft { background-color: color-mix(in srgb, var(--sb-primary) 8%, #fff); }
+.border-brand { border-color: var(--sb-primary); }
+.ring-accent { --tw-ring-color: color-mix(in srgb, var(--sb-secondary) 15%, transparent); }
+.hover-text-brand:hover { color: var(--sb-primary); }
+.hover-text-accent:hover { color: var(--sb-secondary); }
+.sb-tab-active {
+  background: var(--sb-primary);
+  color: #fff;
+}
+.sb-toggle-on {
+  background: var(--sb-secondary);
 }
 
 .app-header {

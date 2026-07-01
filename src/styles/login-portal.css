@@ -1,13 +1,10 @@
-/* SchoolBridge premium login portal — matches enrollment portal design */
+/* SchoolBridge premium login portal — inherits :root theme from themeUtils */
 
 .login-portal {
-  --sb-primary: #091426;
-  --sb-secondary: #0058be;
   --sb-surface: #f8f9ff;
   --sb-on-surface: #0b1c30;
   --sb-on-surface-variant: #45474c;
   --sb-outline-variant: #c5c6cd;
-  --sb-surface-container-high: #dce9ff;
   font-family: Inter, system-ui, sans-serif;
   height: 100dvh;
   max-height: 100dvh;
@@ -29,8 +26,8 @@
 .login-portal .hero-gradient {
   background: linear-gradient(
     135deg,
-    rgba(9, 20, 38, 0.95) 0%,
-    rgba(9, 20, 38, 0.4) 50%,
+    color-mix(in srgb, var(--sb-primary) 95%, transparent) 0%,
+    color-mix(in srgb, var(--sb-primary) 40%, transparent) 50%,
     transparent 100%
   );
 }
@@ -44,13 +41,13 @@
 }
 
 .login-portal .input-premium:focus {
-  border-color: #0058be;
-  box-shadow: 0 0 0 4px rgba(0, 88, 190, 0.1);
+  border-color: var(--sb-secondary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
   outline: none;
 }
 
 .login-portal .field-group:focus-within .field-label {
-  color: #0058be;
+  color: var(--sb-secondary);
 }
 
 .login-portal .btn-hover-lift {
@@ -74,4 +71,170 @@
 /* Prevent any nested scroll on the login shell */
 .login-portal > main {
   overscroll-behavior: none;
+}
+
+/* Login method switch — bottom of card, no tap flash */
+.login-method-footer {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.login-method-footer__or {
+  margin-bottom: 0.75rem;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9aa3b2;
+}
+
+.login-method-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sb-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  outline: none;
+  box-shadow: none;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.login-method-switch:hover {
+  color: var(--sb-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-method-switch:active,
+.login-method-switch:focus,
+.login-method-switch:focus-visible {
+  outline: none;
+  transform: none;
+  box-shadow: none;
+  opacity: 1;
+  background: transparent;
+}
+
+/* Mobile prefix field */
+.login-phone-wrap {
+  display: flex;
+  align-items: stretch;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.login-phone-wrap:focus-within {
+  border-color: var(--sb-secondary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
+}
+
+.login-phone-prefix {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sb-primary);
+  background: color-mix(in srgb, var(--sb-primary) 4%, transparent);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  white-space: nowrap;
+}
+
+.login-phone-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+}
+
+/* OTP boxes */
+.login-otp-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.login-otp-box {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 52px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--sb-primary);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.login-otp-box:focus {
+  border-color: var(--sb-secondary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
+  background: #fff;
+}
+
+.login-otp-demo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--sb-secondary) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--sb-secondary) 20%, transparent);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--sb-secondary);
+}
+
+.login-submit-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  background: var(--sb-primary);
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff !important;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.login-submit-btn:active:not(:disabled) {
+  transform: scale(0.99);
+  opacity: 0.88;
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

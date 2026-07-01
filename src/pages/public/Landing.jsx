@@ -1,21 +1,20 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, FileCheck, CreditCard, Users, ArrowRight, Sparkles, GraduationCap } from 'lucide-react';
-import { SCHOOL } from '../../data/mockSchool.js';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
-
-const HERO_IMAGE =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuA1Jp3AHHVfUbFSqzf3O-N5gFgr6s8ML-K8DwGD2GEXOTz15s-4fyzZM4Y1dwZ6vZaWqtLWEKGdZc1bwrXQMzn5bsiPQqN0FxnQdD3b2YNt-S05QXmCsAO0IBilprdNSAsdI39s5hIV7B5YPuyk0f-9esE0RwWHTQT0N5w6Qv9bcBb0Q1upVt_zm2uL6H9KaHy8QbCqOoaRNzNUIsoa0zzl2ZYB9sGHKd1fetYmj5dyKWuq4kD1hxjHmQ';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 
 const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 
 export default function Landing() {
+  const { portalName, school, branding } = usePortalConfig();
+  const heroImage = branding?.heroImageUrl;
+
   return (
     <PublicLayout hideFooter className="!bg-[#f8f9ff]">
-      {/* Hero */}
       <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden md:min-h-[calc(100vh-4.5rem)]">
         <div className="absolute inset-0 z-0">
-          <img alt="" className="h-full w-full object-cover" src={HERO_IMAGE} />
+          {heroImage && <img alt="" className="h-full w-full object-cover" src={heroImage} />}
           <div className="hero-gradient absolute inset-0" />
         </div>
 
@@ -23,7 +22,7 @@ export default function Landing() {
           <motion.div {...fadeUp} transition={{ duration: 0.5 }} className="max-w-2xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
               <Sparkles size={14} />
-              Admissions Open — {SCHOOL.academicYear}
+              Admissions Open — {school?.academicYear}
             </div>
             <h1 className="font-display mb-5 text-4xl font-extrabold leading-tight tracking-[-0.04em] text-white md:text-5xl">
               Modern School Enrollment,
@@ -52,12 +51,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features */}
       <section id="programs" className="px-4 py-16 md:px-10 md:py-20">
         <div className="mx-auto max-w-screen-2xl">
           <motion.div {...fadeUp} className="mb-12 text-center">
             <h2 className="font-display mb-3 text-3xl font-extrabold tracking-tight text-[#091426]">
-              Why Schools Choose SchoolBridge
+              Why Schools Choose {portalName}
             </h2>
             <p className="text-[#45474c]">
               A complete platform for admissions, fees, and parent communication.
@@ -90,12 +88,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* School CTA */}
       <section id="about" className="bg-[#091426] px-4 py-16 text-center text-white md:px-10 md:py-20">
         <div className="mx-auto max-w-screen-2xl">
           <GraduationCap size={40} className="mx-auto mb-4 opacity-80" />
-          <h2 className="font-display mb-3 text-3xl font-extrabold">{SCHOOL.name}</h2>
-          <p className="mb-8 text-white/70">{SCHOOL.address}</p>
+          <h2 className="font-display mb-3 text-3xl font-extrabold">{school?.name}</h2>
+          <p className="mb-8 text-white/70">{school?.address}</p>
           <Link
             to="/enroll"
             className="sb-link-btn sb-link-btn--light btn-hover-lift sb-btn-pill inline-flex items-center gap-2 bg-white text-sm font-semibold shadow-md"
@@ -105,17 +102,16 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Contact + footer */}
       <section id="contact" className="border-t border-black/5 bg-white px-4 py-10 md:px-10">
         <div className="mx-auto max-w-screen-2xl text-center text-sm text-[#45474c]">
-          {SCHOOL.phone} · {SCHOOL.email}
+          {school?.phone} · {school?.email}
         </div>
       </section>
 
       <footer className="border-t border-white/5 bg-[#091426] px-4 py-6 md:px-10">
         <div className="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-4 md:flex-row">
-          <span className="font-display text-lg font-semibold text-white">SchoolBridge</span>
-          <p className="text-xs text-white/40">© 2026 SchoolBridge · {SCHOOL.name}</p>
+          <span className="font-display text-lg font-semibold text-white">{portalName}</span>
+          <p className="text-xs text-white/40">© 2026 {portalName} · {school?.name}</p>
         </div>
       </footer>
     </PublicLayout>

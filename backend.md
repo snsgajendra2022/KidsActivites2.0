@@ -28,6 +28,7 @@
 ## Backend Must Handle
 
 - Authentication + RBAC permissions
+- **Portal branding & school configuration (Super Admin)**
 - Enrollment workflow + status history
 - Fee workflow + receipt generation
 - Document upload (signed URLs)
@@ -100,7 +101,7 @@ Every API must check:
 
 | Role | Scope |
 |------|-------|
-| **Super Admin** | Everything, all schools |
+| **Super Admin** | Everything, all schools, **portal branding & menu visibility** |
 | **School Admin** | Full school management |
 | **Admission Officer** | Review apps, verify docs, approve for fee — no payment verify unless granted |
 | **Accountant** | Fees, payments, receipts — no admission approval unless granted |
@@ -120,6 +121,94 @@ Frontend permission hiding is **not sufficient**. Backend guards are mandatory.
 
 ### School
 `schools`, `branches`, `academic_years`, `classes`, `sections`, `subjects`, `class_teachers`
+
+### Portal Branding & Navigation (Super Admin)
+`portal_settings`, `portal_branding_assets`, `school_branding`, `navigation_menu_items`, `role_menu_visibility`
+
+| Table | Purpose |
+|-------|---------|
+| `portal_settings` | Portal name, tagline, footer text, theme tokens per school |
+| `school_branding` | School name, address, phone, email, academic year |
+| `portal_branding_assets` | Logo, favicon, hero images (S3 keys + CDN URLs) |
+| `navigation_menu_items` | Menu id, label, route, icon, sort order, module |
+| `role_menu_visibility` | `role_id` + `menu_item_id` + `is_visible` |
+
+**Rules:**
+- Super Admin can configure branding for any school (multi-tenant) or globally
+- School Admin may have read-only access to branding; write access is Super Admin only
+- Menu visibility is enforced server-side when returning navigation config per user
+- Asset uploads use signed URLs (same as documents); store private, serve via signed CDN URL
+- Frontend reads config on app boot: `GET /portal/config` (public fields) + `GET /admin/portal-settings` (full, auth)
+
+---
+
+## Portal Branding API (Super Admin)
+
+Base: `/api/v1`
+
+### Public (no auth — landing, login, enroll)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/portal/config` | Portal name, tagline, school info, branding asset URLs, theme |
+
+Response shape (matches frontend `PortalConfig`):
+```json
+{
+  "portalName": "SchoolBridge",
+  "tagline": "School Enrollment Platform",
+  "footerText": "© 2026 SchoolBridge Systems.",
+  "school": {
+    "id": "school-1",
+    "name": "Green Valley International School",
+    "academicYear": "2026–2027",
+    "address": "123 Education Lane, New Delhi",
+    "phone": "+91 11 4567 8900",
+    "email": "admissions@school.edu.in"
+  },
+  "branding": {
+    "logoUrl": "https://cdn.../logo.png",
+    "logoIconUrl": "https://cdn.../icon.png",
+    "faviconUrl": "https://cdn.../favicon.ico",
+    "heroImageUrl": "https://cdn.../hero.jpg",
+    "loginHeroUrl": "https://cdn.../login-hero.jpg"
+  },
+  "theme": {
+    "brandColor": "#1B2E4B",
+    "accentColor": "#C81E1E"
+  }
+}
+```
+
+`theme.brandColor` and `theme.accentColor` drive CSS variables app-wide (login, dashboard, sidebar, enrollment form). Applied via `src/utils/themeUtils.js`.
+
+### Super Admin (auth + `manage_portal_settings` permission)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/admin/portal-settings` | Full portal config including menu visibility |
+| `PUT` | `/admin/portal-settings` | Update portal name, school details, footer text, **theme colors** |
+| `POST` | `/admin/portal-settings/assets` | Upload logo / favicon / hero (multipart or signed URL) |
+| `DELETE` | `/admin/portal-settings/assets/:type` | Remove branding asset (`logo`, `favicon`, `hero`, `login_hero`) |
+| `GET` | `/admin/portal-settings/menus` | All menu items with visibility per role |
+| `PATCH` | `/admin/portal-settings/menus` | Bulk update menu visibility |
+
+Menu visibility PATCH body:
+```json
+{
+  "updates": [
+    { "role": "parent", "menuId": "parent_photos", "visible": false },
+    { "role": "school_admin", "menuId": "admin_audit_logs", "visible": true }
+  ]
+}
+```
+
+### Authenticated navigation
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/navigation` | Returns visible menu items for current user role + school |
+
+Frontend mock: `src/services/portalConfigService.js` · `src/context/PortalConfigContext.jsx`
+
+---
 
 ### Enrollment
 `enrollment_applications`, `student_profiles`, `parent_profiles`, `guardian_profiles`, `student_addresses`, `previous_academic_details`, `enrollment_documents`, `enrollment_signatures`, `enrollment_status_history`, `enrollment_remarks`
@@ -143,7 +232,18 @@ Frontend permission hiding is **not sufficient**. Backend guards are mandatory.
 Base: `/api/v1`
 
 ### Auth
-`POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` · `POST /auth/forgot-password` · `POST /auth/activate`
+`POST /auth/login` · `POST /auth/login/otp/send` · `POST /auth/login/otp/verify` · `POST /auth/refresh` · `POST /auth/logout` · `POST /auth/forgot-password` · `POST /auth/activate`
+
+**Email login** — `POST /auth/login`
+```json
+{ "email": "parent@school.edu.in", "password": "..." }
+```
+
+**Mobile OTP** — two-step:
+1. `POST /auth/login/otp/send` → `{ "mobile": "9876543210" }` — sends 6-digit OTP via SMS
+2. `POST /auth/login/otp/verify` → `{ "mobile": "9876543210", "otp": "123456" }` — returns JWT + user
+
+Frontend mock: `src/services/authService.js` (`sendLoginOtp`, `verifyLoginOtp`) — demo OTP `123456`
 
 ### Enrollment
 `POST /enrollment/draft` · `PUT /enrollment/draft/:id` · `POST /enrollment/submit` · `GET /enrollment/my-application`
@@ -224,7 +324,7 @@ FROM_EMAIL=noreply@schoolbridge.app
 
 ## Development Phases
 
-1. **Foundation** — NestJS, DB, auth, roles, permissions, seeders
+1. **Foundation** — NestJS, DB, auth, roles, permissions, seeders, **portal branding module**
 2. **Enrollment** — CRUD, documents, signatures, status history
 3. **Fees** — Structure, assignment, payment, receipts
 4. **Accounts** — Parent invite, student profile, class assignment
@@ -255,6 +355,13 @@ export async function api(path, options = {}) {
 ```
 
 Replace `src/services/uploadService.js` mock upload with signed-URL flow when backend is ready.
+
+Replace `src/services/portalConfigService.js` with API calls:
+```javascript
+// GET /portal/config on app boot (PortalConfigProvider)
+// PUT /admin/portal-settings — Super Admin save
+// PATCH /admin/portal-settings/menus — menu visibility toggles
+```
 
 ---
 

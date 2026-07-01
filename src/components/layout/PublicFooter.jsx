@@ -1,13 +1,17 @@
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+
 export default function PublicFooter({ compact = false }) {
+  const { portalName, footerText } = usePortalConfig();
+
   return (
-    <footer className="relative z-10 shrink-0 border-t border-white/5 bg-[#091426] px-4 py-3 md:px-10 md:py-4">
+    <footer className="relative z-10 shrink-0 border-t border-white/5 bg-brand px-4 py-3 md:px-10 md:py-4">
       <div className="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-3 md:flex-row md:gap-4">
         <div className="flex flex-col items-center md:items-start">
           <span className="font-display text-base font-semibold tracking-tighter text-white md:text-lg">
-            SchoolBridge
+            {portalName}
           </span>
           <p className="text-center text-[11px] text-white/40 md:text-left">
-            © 2026 SchoolBridge Systems. All rights reserved.
+            {footerText}
             {!compact && ' Professional Grade Enrollment.'}
           </p>
         </div>

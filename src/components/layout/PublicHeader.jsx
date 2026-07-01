@@ -1,4 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import PortalLogo from '../brand/PortalLogo.jsx';
 
 const NAV_LINKS = [
   { to: '/enroll', label: 'Admissions' },
@@ -9,6 +11,7 @@ const NAV_LINKS = [
 
 export default function PublicHeader({ glass = false, compact = false }) {
   const location = useLocation();
+  const { portalName } = usePortalConfig();
 
   return (
     <header
@@ -24,11 +27,11 @@ export default function PublicHeader({ glass = false, compact = false }) {
         }`}
       >
         <div className="flex items-center gap-6 md:gap-8">
-          <Link
-            to="/"
-            className="font-display text-xl font-bold tracking-tighter text-[#091426] md:text-2xl"
-          >
-            SchoolBridge
+          <Link to="/" className="flex items-center gap-3">
+            <PortalLogo size="md" />
+            <span className="font-display text-xl font-bold tracking-tighter text-brand md:text-2xl">
+              {portalName}
+            </span>
           </Link>
           <div className="hidden items-center gap-6 md:flex">
             {NAV_LINKS.map(({ to, label, hash }) => (
@@ -37,8 +40,8 @@ export default function PublicHeader({ glass = false, compact = false }) {
                 to={to}
                 className={`text-sm font-semibold transition-premium ${
                   !hash && location.pathname === to
-                    ? 'text-[#091426]'
-                    : 'text-[#45474c] hover:text-[#091426]'
+                    ? 'text-brand'
+                    : 'text-muted hover:text-brand'
                 }`}
               >
                 {label}
@@ -52,15 +55,15 @@ export default function PublicHeader({ glass = false, compact = false }) {
             to="/login"
             className={`hidden text-sm font-semibold transition-premium md:block ${
               location.pathname === '/login'
-                ? 'text-[#091426]'
-                : 'text-[#091426]/60 hover:text-[#091426]'
+                ? 'text-brand'
+                : 'text-brand/60 hover:text-brand'
             } px-3 py-2`}
           >
             Staff Portal
           </Link>
           <Link
             to="/login"
-            className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill bg-[#091426] text-sm font-semibold transition-premium hover:bg-[#0d1f3d]"
+            className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill bg-brand text-sm font-semibold transition-premium hover:opacity-90"
           >
             Parent Login
           </Link>

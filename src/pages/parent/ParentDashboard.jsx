@@ -12,10 +12,11 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { getApplicationByParent } from '../../services/enrollmentService.js';
 import { getFeeByApplication } from '../../services/feeService.js';
 import { ENROLLMENT_STATUSES, STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
-import { SCHOOL } from '../../data/mockSchool.js';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 
 export default function ParentDashboard() {
   const { user } = useAuth();
+  const { school } = usePortalConfig();
   const [app, setApp] = useState(null);
   const [fee, setFee] = useState(null);
 
@@ -56,7 +57,7 @@ export default function ParentDashboard() {
         <div className="premium-page-header">
           <h1 className="premium-page-title">Parent Dashboard</h1>
           <p className="premium-page-subtitle">
-            Welcome back, {user?.name}. Track your child&apos;s admission journey at {SCHOOL.name}.
+            Welcome back, {user?.name}. Track your child&apos;s admission journey at {school?.name}.
           </p>
         </div>
 

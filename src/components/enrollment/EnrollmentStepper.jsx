@@ -19,15 +19,15 @@ export default function EnrollmentStepper({ currentStep }) {
   return (
     <div className="mb-10 md:mb-12">
       <div className="mb-4 flex items-center justify-between">
-        <span className="rounded-full bg-[#dce9ff] px-4 py-1 text-xs font-semibold text-[#0058be]">
+        <span className="rounded-full bg-brand-muted px-4 py-1 text-xs font-semibold text-accent">
           Step {currentStep} of {total}
         </span>
-        <span className="text-xs font-medium text-[#45474c]">{percent}% Complete</span>
+        <span className="text-xs font-medium text-muted">{percent}% Complete</span>
       </div>
 
-      <div className="relative mb-8 h-1.5 overflow-hidden rounded-full bg-[#e5eeff]">
+      <div className="relative mb-8 h-1.5 overflow-hidden rounded-full bg-brand-muted">
         <div
-          className="absolute left-0 top-0 h-full rounded-full bg-[#0058be] transition-all duration-500 ease-out"
+          className="absolute left-0 top-0 h-full rounded-full bg-accent transition-all duration-500 ease-out"
           style={{ width: progressWidth }}
         />
       </div>
@@ -49,8 +49,8 @@ export default function EnrollmentStepper({ currentStep }) {
               <div
                 className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
                   active || done
-                    ? 'bg-[#0058be] text-white shadow-md'
-                    : 'bg-[#e5eeff] text-[#45474c]'
+                    ? 'bg-accent text-white shadow-md'
+                    : 'bg-brand-muted text-muted'
                 }`}
               >
                 {done ? (
@@ -61,7 +61,7 @@ export default function EnrollmentStepper({ currentStep }) {
               </div>
               <span
                 className={`text-[11px] font-medium leading-tight ${
-                  active ? 'text-[#0058be]' : 'text-[#45474c]'
+                  active ? 'text-accent' : 'text-muted'
                 }`}
               >
                 {label}
@@ -71,8 +71,7 @@ export default function EnrollmentStepper({ currentStep }) {
         })}
       </div>
 
-      {/* Mobile: current step label */}
-      <p className="text-center text-sm font-semibold text-[#0058be] md:hidden">
+      <p className="text-center text-sm font-semibold text-accent md:hidden">
         {ENROLLMENT_STEPS[currentStep - 1]}
       </p>
     </div>

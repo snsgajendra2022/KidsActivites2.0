@@ -1,0 +1,448 @@
+import { useEffect, useState } from 'react';
+import { Image, Layout, Menu, Palette, Save, Upload } from 'lucide-react';
+import AppLayout from '../../components/layout/AppLayout.jsx';
+import PageTransition from '../../components/ui/PageTransition.jsx';
+import { PageHeader } from '../../components/ui/index.jsx';
+import Input from '../../components/ui/Input.jsx';
+import PortalLogo from '../../components/brand/PortalLogo.jsx';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { useToast } from '../../context/ToastContext.jsx';
+import { readFileAsDataUrl } from '../../services/portalConfigService.js';
+import { getAllMenuItemsGrouped } from '../../utils/navUtils.js';
+import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
+import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
+import { ROLE_LABELS } from '../../constants/roles.js';
+
+const TABS = [
+  { id: 'identity', label: 'Portal Identity', icon: Layout },
+  { id: 'theme', label: 'Theme Colors', icon: Palette },
+  { id: 'school', label: 'School Details', icon: Menu },
+  { id: 'images', label: 'Logo & Images', icon: Image },
+  { id: 'menus', label: 'Menu Visibility', icon: Menu },
+];
+
+function ImageUploadField({ label, hint, value, onChange }) {
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await readFileAsDataUrl(file);
+    onChange(dataUrl);
+  };
+
+  return (
+    <div className="rounded-xl border border-black/5 bg-[#f8f9ff] p-4">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-brand">{label}</p>
+          {hint && <p className="mt-1 text-xs text-[#45474c]">{hint}</p>}
+        </div>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-xs font-medium text-rose-600 hover:underline"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-black/5 bg-white">
+          {value ? (
+            <img src={value} alt={label} className="h-full w-full object-cover" />
+          ) : (
+            <Upload size={20} className="text-[#6b7a8c]" />
+          )}
+        </div>
+        <label className="premium-btn premium-btn-secondary premium-btn-sm inline-flex cursor-pointer">
+          <Upload size={14} />
+          Upload Image
+          <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+export default function PortalSettings() {
+  const { config, updateConfig, setMenuItemVisible } = usePortalConfig();
+  const { toast } = useToast();
+  const [tab, setTab] = useState('identity');
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(null);
+
+  useEffect(() => {
+    if (config) {
+      setForm({
+        portalName: config.portalName,
+        tagline: config.tagline,
+        footerText: config.footerText,
+        school: { ...config.school },
+        branding: { ...config.branding },
+        theme: { ...config.theme },
+        enrollmentTheme: { ...config.enrollmentTheme },
+      });
+    }
+  }, [config]);
+
+  useEffect(() => {
+    if (tab === 'theme' && form?.theme) {
+      applyPortalTheme(form.theme);
+    } else if (config?.theme) {
+      applyPortalTheme(config.theme);
+    }
+  }, [tab, form?.theme, config?.theme]);
+
+  const setBrandColor = (color) => {
+    setForm((f) => ({
+      ...f,
+      theme: { brandColor: color, accentColor: color },
+    }));
+  };
+
+  const setEnrollmentColor = (key, value) => {
+    setForm((f) => ({
+      ...f,
+      enrollmentTheme: { ...f.enrollmentTheme, [key]: value },
+    }));
+  };
+
+  if (!form) {
+    return (
+      <AppLayout>
+        <div className="p-8 text-sm text-[#45474c]">Loading portal settings…</div>
+      </AppLayout>
+    );
+  }
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateConfig(form);
+      toast('Portal settings saved. Changes are live across the app.', 'success');
+    } catch {
+      toast('Failed to save portal settings.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const menuGroups = getAllMenuItemsGrouped();
+
+  return (
+    <AppLayout>
+      <PageTransition>
+        <PageHeader
+          title="Portal Branding & Configuration"
+          subtitle="Manage portal name, school branding, images, and side menu visibility for all roles."
+          actions={(
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="premium-btn premium-btn-primary premium-btn-sm"
+            >
+              <Save size={16} />
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          )}
+        />
+
+        <div className="mb-6 flex flex-wrap gap-2">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                tab === id
+                  ? 'sb-tab-active'
+                  : 'border border-black/5 bg-white text-muted hover:bg-[#f8f9ff]'
+              }`}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'identity' && (
+          <div className="sb-card grid max-w-3xl gap-4 p-6">
+            <div className="mb-2 flex items-center gap-3">
+              <PortalLogo size="lg" />
+              <div>
+                <p className="text-sm font-semibold text-brand">Live preview</p>
+                <p className="text-xs text-[#45474c]">Sidebar & header branding</p>
+              </div>
+            </div>
+            <Input
+              label="Portal Name"
+              value={form.portalName}
+              onChange={(e) => setForm((f) => ({ ...f, portalName: e.target.value }))}
+              variant="enrollment"
+              helper="Shown in header, sidebar, login, and browser title."
+            />
+            <Input
+              label="Portal Tagline"
+              value={form.tagline}
+              onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+              variant="enrollment"
+            />
+            <Input
+              label="Footer Text"
+              value={form.footerText}
+              onChange={(e) => setForm((f) => ({ ...f, footerText: e.target.value }))}
+              variant="enrollment"
+            />
+          </div>
+        )}
+
+        {tab === 'theme' && (
+          <div className="space-y-6 max-w-3xl">
+            <div className="sb-card p-6">
+              <p className="mb-5 text-sm text-muted">
+                App brand color for login, dashboard, sidebar, and admin pages.
+              </p>
+
+              <div className="mb-6">
+                <label className="mb-2 block text-sm font-semibold text-brand">App Brand Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.theme.brandColor}
+                    onChange={(e) => setBrandColor(e.target.value)}
+                    className="h-11 w-14 cursor-pointer rounded-lg border border-black/10"
+                  />
+                  <input
+                    type="text"
+                    value={form.theme.brandColor}
+                    onChange={(e) => setBrandColor(e.target.value)}
+                    className="input-premium h-11 flex-1 rounded-lg border border-[#c5c6cd] px-3 text-sm uppercase"
+                  />
+                </div>
+              </div>
+
+              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#6b7a8c]">App Presets</p>
+              <div className="flex flex-wrap gap-2">
+                {THEME_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => setBrandColor(preset.brandColor)}
+                    className="inline-flex items-center gap-2 rounded-full border border-black/5 px-3 py-1.5 text-xs font-semibold text-muted hover:bg-[#f8f9ff]"
+                  >
+                    <span className="h-4 w-4 rounded-full border border-black/10" style={{ background: preset.brandColor }} />
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="sb-card p-6">
+              <p className="mb-1 text-sm font-semibold text-brand">Enrollment Form Colors</p>
+              <p className="mb-5 text-sm text-muted">
+                Applies only to the public enrollment page (<code className="text-xs">/enroll</code>). Does not change dashboard or login.
+              </p>
+
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {[
+                  { key: 'brandNavy', label: 'Brand Navy', hint: 'Headers, labels, primary buttons' },
+                  { key: 'brandRed', label: 'Brand Red', hint: 'Title accent, section stripe, badges' },
+                  { key: 'brandGrayLight', label: 'Gray Light', hint: 'Borders, dividers, progress track' },
+                  { key: 'formBg', label: 'Form Background', hint: 'Input fields & notes panel' },
+                ].map(({ key, label, hint }) => (
+                  <div key={key}>
+                    <label className="mb-1.5 block text-xs font-semibold text-brand">{label}</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={form.enrollmentTheme[key]}
+                        onChange={(e) => setEnrollmentColor(key, e.target.value)}
+                        className="h-10 w-12 cursor-pointer rounded-lg border border-black/10"
+                      />
+                      <input
+                        type="text"
+                        value={form.enrollmentTheme[key]}
+                        onChange={(e) => setEnrollmentColor(key, e.target.value)}
+                        className="input-premium h-10 flex-1 rounded-lg border border-[#c5c6cd] px-2 text-xs uppercase"
+                      />
+                    </div>
+                    <p className="mt-1 text-[11px] text-[#6b7a8c]">{hint}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                className="overflow-hidden rounded-xl border"
+                style={{ borderColor: form.enrollmentTheme.brandGrayLight }}
+              >
+                <div
+                  className="flex items-center px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white"
+                  style={{
+                    background: `linear-gradient(to right, ${form.enrollmentTheme.brandRed} 0%, ${form.enrollmentTheme.brandRed} 44px, ${form.enrollmentTheme.brandNavy} 44px)`,
+                  }}
+                >
+                  <span className="mr-3 w-6 text-center">A</span>
+                  Enrollment Preview
+                </div>
+                <div className="flex flex-wrap items-center gap-3 p-4" style={{ background: '#fff' }}>
+                  <span
+                    className="rounded px-3 py-1.5 text-xs font-semibold text-white"
+                    style={{ background: form.enrollmentTheme.brandNavy }}
+                  >
+                    Continue
+                  </span>
+                  <input
+                    readOnly
+                    className="rounded border px-2 py-1.5 text-xs"
+                    style={{
+                      background: form.enrollmentTheme.formBg,
+                      borderColor: form.enrollmentTheme.brandGrayLight,
+                      color: form.enrollmentTheme.brandNavy,
+                    }}
+                    value="Sample input"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, enrollmentTheme: { ...DEFAULT_ENROLLMENT_THEME } }))}
+                className="mt-4 text-xs font-semibold text-accent hover:underline"
+              >
+                Reset enrollment colors to default
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === 'school' && (
+          <div className="sb-card grid max-w-3xl gap-4 p-6">
+            <Input
+              label="School Name"
+              value={form.school.name}
+              onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, name: e.target.value } }))}
+              variant="enrollment"
+            />
+            <Input
+              label="Academic Year"
+              value={form.school.academicYear}
+              onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, academicYear: e.target.value } }))}
+              variant="enrollment"
+            />
+            <Input
+              label="Address"
+              value={form.school.address}
+              onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, address: e.target.value } }))}
+              variant="enrollment"
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="Phone"
+                value={form.school.phone}
+                onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, phone: e.target.value } }))}
+                variant="enrollment"
+              />
+              <Input
+                label="Email"
+                type="email"
+                value={form.school.email}
+                onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, email: e.target.value } }))}
+                variant="enrollment"
+              />
+            </div>
+          </div>
+        )}
+
+        {tab === 'images' && (
+          <div className="grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
+            <ImageUploadField
+              label="Sidebar / Header Logo"
+              hint="Square image recommended. Used in sidebar and public header."
+              value={form.branding.logoIconUrl || form.branding.logoUrl}
+              onChange={(url) => setForm((f) => ({
+                ...f,
+                branding: { ...f.branding, logoIconUrl: url, logoUrl: url },
+              }))}
+            />
+            <ImageUploadField
+              label="Favicon"
+              hint="Browser tab icon (.png or .svg)."
+              value={form.branding.faviconUrl}
+              onChange={(url) => setForm((f) => ({
+                ...f,
+                branding: { ...f.branding, faviconUrl: url },
+              }))}
+            />
+            <ImageUploadField
+              label="Landing Hero Image"
+              hint="Full-width background on home page."
+              value={form.branding.heroImageUrl}
+              onChange={(url) => setForm((f) => ({
+                ...f,
+                branding: { ...f.branding, heroImageUrl: url },
+              }))}
+            />
+            <ImageUploadField
+              label="Login Page Hero"
+              hint="Background image on login page."
+              value={form.branding.loginHeroUrl}
+              onChange={(url) => setForm((f) => ({
+                ...f,
+                branding: { ...f.branding, loginHeroUrl: url },
+              }))}
+            />
+          </div>
+        )}
+
+        {tab === 'menus' && (
+          <div className="space-y-4">
+            <p className="text-sm text-[#45474c]">
+              Toggle which side menu items each role can see. Hidden items are removed from the sidebar only — routes remain protected by permissions.
+            </p>
+            {Object.entries(menuGroups).map(([role, items]) => (
+              <div key={role} className="sb-card overflow-hidden">
+                <div className="border-b border-black/5 bg-[#f8f9ff] px-5 py-3">
+                  <h3 className="font-display text-sm font-bold text-brand">
+                    {ROLE_LABELS[role] || role}
+                  </h3>
+                </div>
+                <div className="divide-y divide-black/5">
+                  {items.map((item) => {
+                    const visible = config.menuVisibility?.[role]?.[item.id] !== false;
+                    return (
+                      <label
+                        key={`${role}-${item.id}`}
+                        className="flex cursor-pointer items-center justify-between gap-4 px-5 py-3 hover:bg-[#fafbfe]"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-brand">{item.label}</p>
+                          <p className="text-xs text-[#6b7a8c]">{item.to}</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={visible}
+                          onClick={() => setMenuItemVisible(role, item.id, !visible)}
+                          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                            visible ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                              visible ? 'left-[22px]' : 'left-0.5'
+                            }`}
+                          />
+                        </button>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </PageTransition>
+    </AppLayout>
+  );
+}

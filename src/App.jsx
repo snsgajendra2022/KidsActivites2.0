@@ -12,6 +12,7 @@ import ApplicationReview from './pages/admin/ApplicationReview.jsx';
 import AdminFees from './pages/admin/AdminFees.jsx';
 import AdminStudents from './pages/admin/AdminStudents.jsx';
 import AdminPlaceholder from './pages/admin/AdminPlaceholder.jsx';
+import PortalSettings from './pages/admin/PortalSettings.jsx';
 
 import ParentDashboard from './pages/parent/ParentDashboard.jsx';
 import ParentEnrollmentStatus from './pages/parent/ParentEnrollmentStatus.jsx';
@@ -27,6 +28,7 @@ import ChatPage from './pages/shared/ChatPage.jsx';
 import Profile from './pages/shared/Profile.jsx';
 
 const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
+const SUPER_ADMIN_ONLY = [ROLES.SUPER_ADMIN];
 const FEES_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
 const REPORTS_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
 const CHAT_ADMIN_ROLES = [...CORE_ADMIN, ROLES.SUPPORT_STAFF];
@@ -54,6 +56,7 @@ export default function App() {
       <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminPlaceholder title="Reports" subtitle="Application, fee, and communication reports." /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPlaceholder title="Settings" subtitle="School configuration and fee structures." /></ProtectedRoute>} />
       <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPlaceholder title="Audit Logs" subtitle="Track all system actions and changes." /></ProtectedRoute>} />
+      <Route path="/admin/portal-settings" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><PortalSettings /></ProtectedRoute>} />
 
       {/* Parent routes */}
       <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDashboard /></ProtectedRoute>} />

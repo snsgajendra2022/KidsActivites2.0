@@ -1,12 +1,7 @@
-export const SCHOOL = {
-  id: 'school-1',
-  name: 'Green Valley International School',
-  logo: null,
-  academicYear: '2026–2027',
-  address: '123 Education Lane, New Delhi, 110001',
-  phone: '+91 11 4567 8900',
-  email: 'admissions@greenvalley.edu.in',
-};
+import { DEFAULT_PORTAL_CONFIG } from './defaultPortalConfig.js';
+
+/** @deprecated Use usePortalConfig() in React components */
+export const SCHOOL = { ...DEFAULT_PORTAL_CONFIG.school };
 
 export const CLASSES = [
   { value: 'nursery', label: 'Nursery' },

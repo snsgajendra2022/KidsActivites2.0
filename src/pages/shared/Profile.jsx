@@ -7,11 +7,12 @@ import { PageHeader } from '../../components/ui/index.jsx';
 import Input from '../../components/ui/Input.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { ROLE_LABELS, ROLE_DASHBOARD } from '../../constants/roles.js';
-import { SCHOOL } from '../../data/mockSchool.js';
 
 export default function Profile() {
   const { user, updateProfile } = useAuth();
+  const { school } = usePortalConfig();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({
@@ -113,7 +114,7 @@ export default function Profile() {
               </div>
               <div className="flex items-center gap-3 text-sm text-[#45474c]">
                 <Building2 size={16} className="shrink-0 text-[#6b7a8c]" />
-                <span className="truncate">{SCHOOL.name}</span>
+                <span className="truncate">{school?.name}</span>
               </div>
             </div>
           </div>

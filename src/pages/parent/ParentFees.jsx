@@ -7,6 +7,7 @@ import Input from '../../components/ui/Input.jsx';
 import Select from '../../components/ui/Select.jsx';
 import SmartFileUpload from '../../components/upload/SmartFileUpload.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { getApplicationByParent } from '../../services/enrollmentService.js';
 import { getFeeByApplication, submitPayment } from '../../services/feeService.js';
@@ -20,6 +21,7 @@ const PAYMENT_METHODS = [
 
 export default function ParentFees() {
   const { user } = useAuth();
+  const { school } = usePortalConfig();
   const { toast } = useToast();
   const [app, setApp] = useState(null);
   const [fee, setFee] = useState(null);
@@ -88,7 +90,7 @@ export default function ParentFees() {
               <div style={{ marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>
                 <strong>Payment Instructions:</strong><br />
                 Bank: State Bank of India<br />
-                Account: Green Valley International School<br />
+                Account: {school?.name}<br />
                 IFSC: SBIN0001234
               </div>
               <Button variant="primary" loading={loading} onClick={handleSubmit} style={{ marginTop: 16, width: '100%' }}>Submit Payment Proof</Button>

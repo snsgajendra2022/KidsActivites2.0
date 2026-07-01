@@ -14,7 +14,7 @@ import {
 } from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { getApplications, getDashboardStats } from '../../services/enrollmentService.js';
-import { SCHOOL } from '../../data/mockSchool.js';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 const CHART_DATA = [
@@ -45,6 +45,7 @@ const RECENT_COLUMNS = [
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { school } = usePortalConfig();
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState([]);
 
@@ -58,14 +59,14 @@ export default function AdminDashboard() {
       <PageTransition>
         <div className="premium-page-header">
           <h1 className="premium-page-title">Admin Dashboard</h1>
-          <p className="premium-page-subtitle">Welcome back, {user?.name}. Here&apos;s what&apos;s happening at {SCHOOL.name}.</p>
+          <p className="premium-page-subtitle">Welcome back, {user?.name}. Here&apos;s what&apos;s happening at {school?.name}.</p>
         </div>
 
         <div className="bento-grid">
           <WelcomeBanner
             title="Admissions Overview"
-            subtitle={`Manage enrollment applications, fee verification, and admissions for ${SCHOOL.academicYear}.`}
-            badge={`${SCHOOL.academicYear} · Admissions Open`}
+            subtitle={`Manage enrollment applications, fee verification, and admissions for ${school?.academicYear}.`}
+            badge={`${school?.academicYear} · Admissions Open`}
             actions={
               <>
                 <Link to="/admin/applications" className="premium-btn premium-btn-white premium-btn-sm">

@@ -1,15 +1,15 @@
 import { Link, NavLink } from 'react-router-dom';
 import { ChevronLeft, X } from 'lucide-react';
-import { NAV_BY_ROLE } from '../../constants/navigation.js';
 import { ROLE_LABELS, ROLE_DASHBOARD } from '../../constants/roles.js';
-import { SCHOOL } from '../../data/mockSchool.js';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import PortalLogo from '../brand/PortalLogo.jsx';
 
 function sidebarLinkClass({ isActive }) {
   if (isActive) {
     return [
       'sidebar-nav-link sidebar-nav-link-active',
       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
-      'bg-[#091426] text-white shadow-sm',
+      'bg-[var(--sb-primary)] text-white shadow-sm',
       '[&_span]:text-white [&_svg]:text-white',
     ].join(' ');
   }
@@ -23,7 +23,8 @@ function sidebarLinkClass({ isActive }) {
 }
 
 export default function Sidebar({ user, open, onClose, collapsed, onToggleCollapse }) {
-  const navItems = NAV_BY_ROLE[user?.role] || [];
+  const { portalName, school, getNavItems } = usePortalConfig();
+  const navItems = getNavItems(user?.role);
   const homePath = ROLE_DASHBOARD[user?.role] || '/';
 
   return (
@@ -41,16 +42,13 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           open ? 'translate-x-0 shadow-xl shadow-[#091426]/10' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
         } ${collapsed ? 'w-[4.5rem]' : 'w-72'}`}
       >
-        {/* Brand */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-black/5 px-4">
           <Link to={homePath} onClick={onClose} className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#091426] text-[11px] font-bold text-white">
-              SB
-            </div>
+            <PortalLogo size="md" />
             {!collapsed && (
               <div className="min-w-0">
-                <div className="font-display truncate text-sm font-bold text-[#091426]">SchoolBridge</div>
-                <div className="truncate text-[11px] text-[#6b7a8c]">{SCHOOL.name}</div>
+                <div className="font-display truncate text-sm font-bold text-[#091426]">{portalName}</div>
+                <div className="truncate text-[11px] text-[#6b7a8c]">{school?.name}</div>
               </div>
             )}
           </Link>
@@ -70,7 +68,6 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           </p>
         )}
 
-        {/* Navigation */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -88,18 +85,16 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           ))}
         </nav>
 
-        {/* User card */}
         {!collapsed && user && (
           <div className="shrink-0 border-t border-black/5 p-4">
             <div className="rounded-xl bg-gradient-to-br from-[#f8f9ff] to-[#eff4ff] p-3 ring-1 ring-black/5">
               <div className="truncate text-sm font-semibold text-[#091426]">{user.name}</div>
               <div className="mt-0.5 text-xs text-[#6b7a8c]">{ROLE_LABELS[user.role]}</div>
-              <div className="mt-2 text-[10px] font-medium text-[#6b7a8c]/80">{SCHOOL.academicYear}</div>
+              <div className="mt-2 text-[10px] font-medium text-[#6b7a8c]/80">{school?.academicYear}</div>
             </div>
           </div>
         )}
 
-        {/* Collapse */}
         <button
           type="button"
           onClick={onToggleCollapse}
