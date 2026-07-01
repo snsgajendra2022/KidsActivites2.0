@@ -1,10 +1,11 @@
+import { Link } from 'react-router-dom';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 
-const FOOTER_LINKS = [
-  { label: 'Security Policy', href: '#' },
-  { label: 'Terms of Use', href: '#' },
-  { label: 'System Status', href: '#' },
-  { label: 'Direct Support', href: '#' },
+export const FOOTER_LINKS = [
+  { label: 'Security Policy', to: '/security-policy' },
+  { label: 'Terms of Use', to: '/terms-of-use' },
+  { label: 'System Status', to: '/system-status' },
+  { label: 'Direct Support', to: '/support' },
 ];
 
 export default function PublicFooter({ compact = false, minimal = false }) {
@@ -16,6 +17,13 @@ export default function PublicFooter({ compact = false, minimal = false }) {
         <p className="mx-auto max-w-screen-2xl truncate text-center text-[10px] text-on-primary-faint">
           {footerText}
         </p>
+        <nav className="public-footer-links mt-1.5 md:mt-2" aria-label="Footer">
+          {FOOTER_LINKS.map(({ label, to }) => (
+            <Link key={to} to={to} className="public-footer-link text-on-primary-faint hover:text-on-primary-muted">
+              {label}
+            </Link>
+          ))}
+        </nav>
       </footer>
     );
   }
@@ -32,13 +40,13 @@ export default function PublicFooter({ compact = false, minimal = false }) {
             {!compact && ' Professional Grade Enrollment.'}
           </p>
         </div>
-        <div className="hidden flex-wrap justify-center gap-5 md:flex md:gap-8">
-          {FOOTER_LINKS.map(({ label, href }) => (
-            <a key={label} className="public-footer-link" href={href}>
+        <nav className="public-footer-links" aria-label="Footer">
+          {FOOTER_LINKS.map(({ label, to }) => (
+            <Link key={to} to={to} className="public-footer-link">
               {label}
-            </a>
+            </Link>
           ))}
-        </div>
+        </nav>
       </div>
     </footer>
   );

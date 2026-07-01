@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, FileCheck, CreditCard, Users, ArrowRight, Sparkles, GraduationCap } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
+import PublicFooter from '../../components/layout/PublicFooter.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 
 const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
@@ -108,12 +109,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="public-footer border-t px-4 py-6 md:px-10">
-        <div className="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-4 md:flex-row">
-          <span className="font-display text-lg font-semibold text-on-primary">{portalName}</span>
-          <p className="text-xs text-on-primary-faint">© 2026 {portalName} · {school?.name}</p>
-        </div>
-      </footer>
+      <PublicFooter compact />
     </PublicLayout>
   );
 }

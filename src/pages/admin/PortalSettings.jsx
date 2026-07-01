@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield, FileText } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
@@ -14,6 +15,7 @@ import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import EnrollmentFormBuilder from './EnrollmentFormBuilder.jsx';
 import { cloneEnrollmentFormConfig } from '../../data/defaultEnrollmentFormConfig.js';
+import { FOOTER_LINKS } from '../../components/layout/PublicFooter.jsx';
 
 const TABS = [
   { id: 'identity', label: 'Portal Identity', icon: Layout },
@@ -428,8 +430,8 @@ export default function PortalSettings() {
                 <p className="text-sm font-semibold text-on-primary">{form.portalName}</p>
                 <p className="mt-1 text-xs text-on-primary-subtle">{form.footerText}</p>
                 <div className="mt-3 flex flex-wrap gap-4">
-                  {['Security Policy', 'Terms of Use'].map((label) => (
-                    <span key={label} className="public-footer-link">{label}</span>
+                  {FOOTER_LINKS.map(({ label, to }) => (
+                    <Link key={to} to={to} className="public-footer-link">{label}</Link>
                   ))}
                 </div>
               </div>

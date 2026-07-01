@@ -5,6 +5,12 @@ import { ROLES } from './constants/roles.js';
 import Landing from './pages/public/Landing.jsx';
 import Enrollment from './pages/public/Enrollment.jsx';
 import Login from './pages/auth/Login.jsx';
+import {
+  SecurityPolicy,
+  TermsOfUse,
+  SystemStatus,
+  DirectSupport,
+} from './pages/public/FooterPageRoutes.jsx';
 
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import ApplicationsList from './pages/admin/ApplicationsList.jsx';
@@ -43,6 +49,10 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/enroll" element={<Enrollment />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/security-policy" element={<SecurityPolicy />} />
+      <Route path="/terms-of-use" element={<TermsOfUse />} />
+      <Route path="/system-status" element={<SystemStatus />} />
+      <Route path="/support" element={<DirectSupport />} />
 
       {/* Admin routes */}
       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminDashboard /></ProtectedRoute>} />

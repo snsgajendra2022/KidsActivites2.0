@@ -203,6 +203,22 @@ export default function Login() {
     return () => clearInterval(timer);
   }, [resendIn]);
 
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlHeight = html.style.height;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    html.style.height = '100%';
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      html.style.height = prevHtmlHeight;
+    };
+  }, []);
+
   const switchMethod = (next) => {
     setMethod(next);
     setError('');
@@ -371,7 +387,7 @@ export default function Login() {
   );
 
   return (
-    <div className="login-portal flex min-h-dvh flex-col sb-surface text-[var(--sb-on-surface,#0b1c30)]">
+    <div className="login-portal flex h-dvh max-h-dvh flex-col overflow-hidden sb-surface text-[var(--sb-on-surface,#0b1c30)]">
       <PublicHeader glass loginMobile />
 
       <main className="login-portal-main relative min-h-0 flex-1">
@@ -380,7 +396,7 @@ export default function Login() {
           <div className="hero-gradient absolute inset-0" />
         </div>
 
-        <div className="login-portal-body relative z-10 mx-auto flex w-full max-w-screen-2xl flex-col items-center px-3 sm:px-4 md:px-10 xl:flex-row xl:items-center">
+        <div className="login-portal-body relative z-10 mx-auto flex w-full max-w-screen-2xl flex-col items-stretch px-0 xl:flex-row xl:items-center xl:px-10">
           <div className="hidden h-full w-[42%] items-center pr-10 xl:flex">
             <div className="max-w-lg">
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
@@ -586,10 +602,10 @@ export default function Login() {
         </div>
       </main>
 
-      <div className="md:hidden">
+      <div className="login-portal-footer-slot login-portal-footer-slot--minimal xl:hidden">
         <PublicFooter compact minimal />
       </div>
-      <div className="hidden md:block">
+      <div className="login-portal-footer-slot hidden shrink-0 xl:block">
         <PublicFooter compact />
       </div>
 

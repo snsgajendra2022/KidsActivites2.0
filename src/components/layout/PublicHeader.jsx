@@ -65,7 +65,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
 
           {loginMobile && loginScrollLines?.length > 0 && (
             <div className="login-header-marquee-inner login-header-marquee-inner--desktop hidden min-w-0 flex-1 md:flex">
-              <LoginHeaderScrollText lines={loginScrollLines} />
+              <LoginHeaderScrollText lines={loginScrollLines} variant="horizontal" />
             </div>
           )}
 
@@ -93,7 +93,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
 
         {loginMobile && loginScrollLines?.length > 0 && (
           <div className="login-header-marquee-row md:hidden">
-            <LoginHeaderScrollText lines={loginScrollLines} />
+            <LoginHeaderScrollText lines={loginScrollLines} variant="vertical" />
           </div>
         )}
       </div>
