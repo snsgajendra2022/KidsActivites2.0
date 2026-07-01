@@ -457,6 +457,39 @@ a.premium-btn-white:hover {
   color: var(--sb-primary);
 }
 
+.app-sidebar .sidebar-top {
+  min-height: 4rem;
+}
+
+.app-sidebar .sidebar-collapse-btn {
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
+  color: #6b7a8c;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.app-sidebar .sidebar-collapse-btn:hover {
+  background: color-mix(in srgb, var(--sb-primary) 6%, white);
+  border-color: color-mix(in srgb, var(--sb-primary) 12%, transparent);
+  color: var(--sb-primary);
+}
+
+.app-sidebar.w-\[4\.5rem\] .sidebar-top .sidebar-collapse-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.app-sidebar.w-\[4\.5rem\] .sidebar-top {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
 /* Theme-aware utilities */
 .text-brand { color: var(--sb-primary); }
 .text-accent { color: var(--sb-secondary); }

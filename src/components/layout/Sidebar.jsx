@@ -43,8 +43,12 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           open ? 'translate-x-0 shadow-xl shadow-[#091426]/10' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
         } ${collapsed ? 'w-[4.5rem]' : 'w-72'}`}
       >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-black/5 px-4">
-          <Link to={homePath} onClick={onClose} className="flex min-w-0 items-center gap-3">
+        <div className="sidebar-top relative flex h-16 shrink-0 items-center border-b border-black/5 px-3">
+          <Link
+            to={homePath}
+            onClick={onClose}
+            className={`flex min-w-0 items-center gap-3 ${collapsed ? 'w-full justify-center pr-7' : 'min-w-0 flex-1 pr-10'}`}
+          >
             <PortalLogo size="md" />
             {!collapsed && (
               <div className="min-w-0">
@@ -53,14 +57,26 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
               </div>
             )}
           </Link>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-[#6b7a8c] hover:bg-brand-muted hover:text-brand lg:hidden"
-            aria-label="Close menu"
-          >
-            <X size={18} />
-          </button>
+
+          <div className="absolute right-[2px] top-1/2 flex -translate-y-1/2 items-center gap-1">
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="sidebar-collapse-btn hidden lg:inline-flex"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <ChevronLeft size={18} className={`transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-[#6b7a8c] hover:bg-brand-muted hover:text-brand lg:hidden"
+              aria-label="Close menu"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {!collapsed && (
@@ -95,16 +111,6 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             </div>
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="mx-3 mb-4 hidden h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-black/5 text-xs font-medium text-[#6b7a8c] transition-all hover:bg-brand-muted hover:text-brand lg:flex"
-          aria-label="Collapse sidebar"
-        >
-          <ChevronLeft size={16} className={`transition-transform ${collapsed ? 'rotate-180' : ''}`} />
-          {!collapsed && 'Collapse'}
-        </button>
       </aside>
     </>
   );
