@@ -27,11 +27,20 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateProfile = (updates) => {
+    if (!user) return null;
+    const nextUser = { ...user, ...updates };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    setUser(nextUser);
+    return nextUser;
+  };
+
   const value = useMemo(
     () => ({
       user,
       login,
       logout,
+      updateProfile,
       isAuthenticated: Boolean(user),
       role: user?.role,
       dashboardPath: user ? ROLE_DASHBOARD[user.role] : '/login',

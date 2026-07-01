@@ -60,7 +60,7 @@ export default function PublicHeader({ glass = false, compact = false }) {
           </Link>
           <Link
             to="/login"
-            className="btn-hover-lift rounded-full bg-[#091426] px-5 py-2.5 text-sm font-semibold text-white transition-premium hover:text-white md:px-8 md:py-3"
+            className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill bg-[#091426] text-sm font-semibold transition-premium hover:bg-[#0d1f3d]"
           >
             Parent Login
           </Link>

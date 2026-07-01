@@ -55,7 +55,7 @@ export const INITIAL_APPLICATIONS = [
       { status: ENROLLMENT_STATUSES.SUBMITTED, date: '2026-06-15T10:30:00Z', note: 'Application submitted' },
       { status: ENROLLMENT_STATUSES.UNDER_REVIEW, date: '2026-06-16T09:00:00Z', note: 'Assigned to admission officer' },
     ],
-    parentId: 'u-parent',
+    parentId: 'usr-parent',
     assignedReviewer: 'Priya Sharma',
   },
   {

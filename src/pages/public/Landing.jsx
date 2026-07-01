@@ -37,13 +37,13 @@ export default function Landing() {
             <div className="flex flex-wrap gap-4">
               <Link
                 to="/enroll"
-                className="btn-hover-lift inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-[#091426]"
+                className="sb-link-btn sb-link-btn--light btn-hover-lift sb-btn-pill inline-flex items-center gap-2 bg-white text-sm font-semibold shadow-sm"
               >
                 Start Enrollment <ArrowRight size={18} />
               </Link>
               <Link
                 to="/login"
-                className="btn-hover-lift inline-flex items-center gap-2 rounded-full border border-white/20 bg-[#091426] px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition-premium hover:bg-[#1e293b] hover:text-white"
+                className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill inline-flex items-center gap-2 border border-white/20 bg-[#091426] text-sm font-semibold shadow-sm transition-premium hover:bg-[#1e293b]"
               >
                 Parent Login
               </Link>
@@ -98,7 +98,7 @@ export default function Landing() {
           <p className="mb-8 text-white/70">{SCHOOL.address}</p>
           <Link
             to="/enroll"
-            className="btn-hover-lift inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black"
+            className="sb-link-btn sb-link-btn--light btn-hover-lift sb-btn-pill inline-flex items-center gap-2 bg-white text-sm font-semibold shadow-md"
           >
             Begin Enrollment Application <ArrowRight size={18} />
           </Link>

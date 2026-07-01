@@ -74,15 +74,15 @@ export default function UserMenu({ user, onLogout }) {
               <User size={16} className="text-[#6b7a8c]" />
               My Dashboard
             </Link>
-            <button
-              type="button"
+            <Link
+              to="/profile"
               onClick={() => setOpen(false)}
               className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-[#45474c] transition-colors hover:bg-[#f8f9ff] hover:text-[#091426]"
               role="menuitem"
             >
               <Settings size={16} className="text-[#6b7a8c]" />
               Account Settings
-            </button>
+            </Link>
           </div>
 
           <div className="border-t border-black/5 p-1.5">

@@ -27,7 +27,12 @@ export async function getApplication(id) {
 
 export async function getApplicationByParent(parentId) {
   await delay();
-  return getAll().find((a) => a.parentId === parentId) || null;
+  const apps = getAll();
+  return (
+    apps.find((a) => a.parentId === parentId) ||
+    apps.find((a) => a.parentId === 'u-parent' && parentId === 'usr-parent') ||
+    null
+  );
 }
 
 export async function saveDraft(formData, existingId) {

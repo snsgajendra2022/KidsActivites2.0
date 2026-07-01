@@ -24,6 +24,7 @@ import TeacherStudents from './pages/teacher/TeacherStudents.jsx';
 import SendPhotos from './pages/teacher/SendPhotos.jsx';
 
 import ChatPage from './pages/shared/ChatPage.jsx';
+import Profile from './pages/shared/Profile.jsx';
 
 const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
 const FEES_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
@@ -69,6 +70,9 @@ export default function App() {
       <Route path="/teacher/students" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherStudents /></ProtectedRoute>} />
       <Route path="/teacher/photos" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><SendPhotos /></ProtectedRoute>} />
       <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ChatPage /></ProtectedRoute>} />
+
+      {/* Shared authenticated routes */}
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

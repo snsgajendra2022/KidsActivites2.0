@@ -138,6 +138,41 @@ body {
   padding: 0.625rem 1.75rem;
 }
 
+/* Link buttons — prevent color:inherit from hiding text on colored backgrounds */
+a.sb-link-btn {
+  text-decoration: none;
+}
+
+a.sb-link-btn--dark,
+a.sb-link-btn--dark:hover,
+a.sb-link-btn--dark:focus-visible {
+  color: #ffffff !important;
+}
+
+a.sb-link-btn--dark svg {
+  color: #ffffff !important;
+}
+
+a.sb-link-btn--light,
+a.sb-link-btn--light:hover,
+a.sb-link-btn--light:focus-visible {
+  color: #091426 !important;
+}
+
+a.sb-link-btn--light svg {
+  color: #091426 !important;
+}
+
+a.premium-btn-primary,
+a.premium-btn-primary:hover {
+  color: #ffffff !important;
+}
+
+a.premium-btn-white,
+a.premium-btn-white:hover {
+  color: #ffffff !important;
+}
+
 /* ─── Page headers ─── */
 .sb-page-header {
   margin-bottom: 1.5rem;
