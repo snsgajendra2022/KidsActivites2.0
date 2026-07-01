@@ -18,16 +18,63 @@ export function getUniqueBuiltinMenuItems() {
   return Array.from(map.values());
 }
 
+export function getDefaultMenuIdsForRole(role, customMenuItems = []) {
+  const baseIds = (NAV_BY_ROLE[role] || []).map((item) => item.id);
+  const customIds = customMenuItems
+    .filter((item) => item.roles?.includes(role))
+    .map((item) => item.id);
+  return [...baseIds, ...customIds];
+}
+
+/** Merge saved order with defaults; append any new menu ids at the end. */
+export function resolveMenuOrderForRole(role, menuOrder = {}, customMenuItems = []) {
+  const allIds = getDefaultMenuIdsForRole(role, customMenuItems);
+  const saved = menuOrder[role];
+  if (!saved?.length) return allIds;
+  const ordered = saved.filter((id) => allIds.includes(id));
+  const tail = allIds.filter((id) => !ordered.includes(id));
+  return [...ordered, ...tail];
+}
+
+export function sortNavItemsByOrder(items, orderIds = []) {
+  if (!orderIds.length) return items;
+  const rank = new Map(orderIds.map((id, index) => [id, index]));
+  return [...items].sort((a, b) => {
+    const ai = rank.has(a.id) ? rank.get(a.id) : 9999;
+    const bi = rank.has(b.id) ? rank.get(b.id) : 9999;
+    return ai - bi;
+  });
+}
+
+/**
+ * Ordered editor rows for a role (built-in + custom).
+ * @returns {{ id: string, kind: 'builtin' | 'custom', item: object }[]}
+ */
+export function buildRoleMenuEntries(role, customMenuItems = [], menuOrder = {}) {
+  const baseItems = NAV_BY_ROLE[role] || [];
+  const customForRole = customMenuItems.filter((item) => item.roles?.includes(role));
+  const orderIds = resolveMenuOrderForRole(role, menuOrder, customMenuItems);
+  const entryMap = new Map();
+
+  baseItems.forEach((item) => entryMap.set(item.id, { kind: 'builtin', item }));
+  customForRole.forEach((item) => entryMap.set(item.id, { kind: 'custom', item }));
+
+  return orderIds
+    .filter((id) => entryMap.has(id))
+    .map((id) => ({ id, ...entryMap.get(id) }));
+}
+
 /**
  * Resolve sidebar nav for a role with portal menu overrides.
  * @param {string} role
- * @param {{ menuVisibility?: object, menuCustomization?: object, customMenuItems?: object[] }} config
+ * @param {{ menuVisibility?: object, menuCustomization?: object, customMenuItems?: object[], menuOrder?: object }} config
  */
 export function resolveNavItemsForRole(role, config = {}) {
   const {
     menuVisibility = {},
     menuCustomization = {},
     customMenuItems = [],
+    menuOrder = {},
   } = config;
 
   const baseItems = NAV_BY_ROLE[role] || [];
@@ -54,7 +101,8 @@ export function resolveNavItemsForRole(role, config = {}) {
       custom: true,
     }));
 
-  return [...resolvedBase, ...resolvedCustom];
+  const orderIds = resolveMenuOrderForRole(role, menuOrder, customMenuItems);
+  return sortNavItemsByOrder([...resolvedBase, ...resolvedCustom], orderIds);
 }
 
 /** @deprecated use resolveNavItemsForRole */

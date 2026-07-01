@@ -47,6 +47,8 @@ export const DEFAULT_PORTAL_CONFIG = {
   menuCustomization: {},
   /** Custom sidebar links added by super admin */
   customMenuItems: [],
+  /** role → ordered menuId[] — sidebar display order per role */
+  menuOrder: {},
 };
 
 export function buildDefaultMenuVisibility(navByRole) {

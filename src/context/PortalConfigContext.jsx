@@ -61,6 +61,7 @@ export function PortalConfigProvider({ children }) {
       menuVisibility: config?.menuVisibility,
       menuCustomization: config?.menuCustomization,
       customMenuItems: config?.customMenuItems,
+      menuOrder: config?.menuOrder,
     }),
     [config],
   );

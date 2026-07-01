@@ -348,6 +348,8 @@ interface PortalConfig {
   menuCustomization: Record<string, MenuItemCustomization>;
   /** Super-admin-defined extra sidebar links */
   customMenuItems: CustomMenuItem[];
+  /** Per-role sidebar order — array of menuIds top to bottom */
+  menuOrder: Record<Role, string[]>;
 }
 
 interface MenuItemCustomization {
@@ -892,6 +894,38 @@ Remove a custom menu item and clear its visibility entries.
 **Response `200`:** Updated `customMenuItems` array
 
 **Mock function:** `removeCustomMenuItem(menuId)`
+
+---
+
+### `PATCH /admin/portal-settings/menus/order`
+
+Reorder sidebar menu items for a role (top → bottom).
+
+**Auth:** Super Admin
+
+**Request body:**
+```json
+{
+  "role": "school_admin",
+  "order": [
+    "admin_dashboard",
+    "admin_applications",
+    "admin_students",
+    "admin_fees",
+    "admin_reports",
+    "admin_settings"
+  ]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `role` | Role key, e.g. `parent`, `school_admin` |
+| `order` | Full ordered list of `menuId` values for that role (built-in + custom) |
+
+**Response `200`:** Updated `menuOrder` map
+
+**Mock function:** `reorderMenuItems(role, order)` · also saved via `PUT /admin/portal-settings` with `menuOrder` in body
 
 ---
 
@@ -1842,7 +1876,7 @@ Returns visible sidebar menu for current user's role.
 
 Filtered server-side using `menuVisibility` from portal config + role permissions.
 
-**Source:** `src/constants/navigation.js` + `portalConfig.menuVisibility` + `menuCustomization` + `customMenuItems`
+**Source:** `src/constants/navigation.js` + `portalConfig.menuVisibility` + `menuCustomization` + `customMenuItems` + `menuOrder`
 
 ---
 
@@ -1862,6 +1896,7 @@ Filtered server-side using `menuVisibility` from portal config + role permission
 | `addCustomMenuItem` | POST | `/admin/portal-settings/menus/custom` |
 | `saveCustomMenuItems` | PUT | `/admin/portal-settings/menus/custom` |
 | `removeCustomMenuItem` | DELETE | `/admin/portal-settings/menus/custom/:menuId` |
+| `reorderMenuItems` | PATCH | `/admin/portal-settings/menus/order` |
 | `getApplications` | GET | `/admin/applications` |
 | `getApplication` | GET | `/admin/applications/:id` |
 | `getApplicationByParent` | GET | `/enrollment/my-application` |

@@ -21,6 +21,7 @@ function mergeConfig(stored) {
     menuVisibility: buildDefaultMenuVisibility(NAV_BY_ROLE),
     menuCustomization: {},
     customMenuItems: [],
+    menuOrder: {},
   };
 
   if (!stored) return defaults;
@@ -50,6 +51,10 @@ function mergeConfig(stored) {
     customMenuItems: stored.customMenuItems?.length
       ? [...stored.customMenuItems]
       : [...defaults.customMenuItems],
+    menuOrder: {
+      ...defaults.menuOrder,
+      ...(stored.menuOrder || {}),
+    },
   };
 
   Object.keys(NAV_BY_ROLE).forEach((role) => {
@@ -99,6 +104,9 @@ function mockSavePortalConfig(updates) {
     customMenuItems: updates.customMenuItems
       ? [...updates.customMenuItems]
       : current.customMenuItems,
+    menuOrder: updates.menuOrder
+      ? { ...current.menuOrder, ...updates.menuOrder }
+      : current.menuOrder,
   };
   setStore(KEY, next);
   return next;
@@ -187,6 +195,18 @@ export async function removeCustomMenuItem(menuId) {
       return mockSavePortalConfig({ customMenuItems, menuVisibility });
     },
     apiFn: () => api.delete(`/admin/portal-settings/menus/custom/${menuId}`),
+  });
+}
+
+export async function reorderMenuItems(role, order) {
+  return routeRequest({
+    mockFn: async () => {
+      const current = mockGetPortalConfig();
+      return mockSavePortalConfig({
+        menuOrder: { ...current.menuOrder, [role]: order },
+      });
+    },
+    apiFn: () => api.patch('/admin/portal-settings/menus/order', { role, order }),
   });
 }
 

@@ -9,7 +9,7 @@ import PortalLogo from '../../components/brand/PortalLogo.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { readFileAsDataUrl } from '../../services/portalConfigService.js';
-import { getAllMenuItemsGrouped } from '../../utils/navUtils.js';
+import { getAllMenuItemsGrouped, buildRoleMenuEntries, resolveMenuOrderForRole } from '../../utils/navUtils.js';
 import { MenuItemRow, AddMenuButton } from '../../components/admin/PortalMenuEditor.jsx';
 import '../../styles/portal-menu-editor.css';
 import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
@@ -95,6 +95,7 @@ export default function PortalSettings() {
         menuVisibility: JSON.parse(JSON.stringify(config.menuVisibility || {})),
         menuCustomization: { ...(config.menuCustomization || {}) },
         customMenuItems: [...(config.customMenuItems || [])],
+        menuOrder: JSON.parse(JSON.stringify(config.menuOrder || {})),
       });
     }
   }, [config]);
@@ -182,6 +183,7 @@ export default function PortalSettings() {
         ...form,
         menuCustomization,
         customMenuItems: (form.customMenuItems || []).filter((i) => i.label?.trim() && i.to?.trim()),
+        menuOrder: form.menuOrder || {},
       });
       toast('Portal settings saved. Changes are live across the app.', 'success');
     } catch {
@@ -224,14 +226,22 @@ export default function PortalSettings() {
       to: '/support',
       roles: [role],
     };
-    setForm((f) => ({
-      ...f,
-      customMenuItems: [...(f.customMenuItems || []), item],
-      menuVisibility: {
-        ...f.menuVisibility,
-        [role]: { ...(f.menuVisibility[role] || {}), [item.id]: true },
-      },
-    }));
+    setForm((f) => {
+      const customMenuItems = [...(f.customMenuItems || []), item];
+      const currentOrder = resolveMenuOrderForRole(role, f.menuOrder, customMenuItems);
+      return {
+        ...f,
+        customMenuItems,
+        menuVisibility: {
+          ...f.menuVisibility,
+          [role]: { ...(f.menuVisibility[role] || {}), [item.id]: true },
+        },
+        menuOrder: {
+          ...f.menuOrder,
+          [role]: [...currentOrder, item.id],
+        },
+      };
+    });
   };
 
   const updateCustomMenuItem = (id, patch) => {
@@ -244,10 +254,30 @@ export default function PortalSettings() {
   };
 
   const removeCustomMenuItem = (id) => {
-    setForm((f) => ({
-      ...f,
-      customMenuItems: f.customMenuItems.filter((item) => item.id !== id),
-    }));
+    setForm((f) => {
+      const customMenuItems = f.customMenuItems.filter((item) => item.id !== id);
+      const menuOrder = { ...f.menuOrder };
+      Object.keys(menuOrder).forEach((role) => {
+        menuOrder[role] = (menuOrder[role] || []).filter((menuId) => menuId !== id);
+      });
+      return { ...f, customMenuItems, menuOrder };
+    });
+  };
+
+  const moveMenuItem = (role, menuId, direction) => {
+    setForm((f) => {
+      const order = resolveMenuOrderForRole(role, f.menuOrder, f.customMenuItems);
+      const index = order.indexOf(menuId);
+      if (index < 0) return f;
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      if (swapIndex < 0 || swapIndex >= order.length) return f;
+      const nextOrder = [...order];
+      [nextOrder[index], nextOrder[swapIndex]] = [nextOrder[swapIndex], nextOrder[index]];
+      return {
+        ...f,
+        menuOrder: { ...f.menuOrder, [role]: nextOrder },
+      };
+    });
   };
 
   return (
@@ -682,11 +712,11 @@ export default function PortalSettings() {
         {tab === 'menus' && (
           <div className="space-y-4">
             <p className="portal-menu-hint">
-              Customize sidebar menu labels, icons, and visibility per role. Add new menu links for internal routes.
-              Click <strong>Save Changes</strong> to apply. Hidden items are removed from the sidebar only — routes stay protected by permissions.
+              Customize sidebar labels, icons, order, and visibility per role. Use the arrows to move items up or down.
+              Add new menu links for internal routes. Click <strong>Save Changes</strong> to apply.
             </p>
-            {Object.entries(menuGroups).map(([role, items]) => {
-              const customForRole = (form.customMenuItems || []).filter((c) => c.roles?.includes(role));
+            {Object.entries(menuGroups).map(([role]) => {
+              const entries = buildRoleMenuEntries(role, form.customMenuItems || [], form.menuOrder || {});
               return (
                 <div key={role} className="sb-card overflow-hidden">
                   <div className="border-b border-black/5 bg-[#f8f9ff] px-5 py-3">
@@ -695,35 +725,44 @@ export default function PortalSettings() {
                     </h3>
                   </div>
                   <div className="portal-menu-col-headers">
+                    <span>Order</span>
                     <span>Icon</span>
                     <span>Label &amp; Path</span>
                     <span>Visible</span>
                   </div>
                   <div>
-                    {items.map((item) => {
-                      const custom = form.menuCustomization[item.id] || {};
-                      const label = custom.label ?? item.label;
-                      const icon = custom.icon ?? item.iconName ?? 'Circle';
+                    {entries.map((entry, index) => {
+                      const { item, kind } = entry;
                       const visible = form.menuVisibility?.[role]?.[item.id] !== false;
-                      return (
-                        <MenuItemRow
-                          key={`${role}-${item.id}`}
-                          item={item}
-                          label={label}
-                          icon={icon}
-                          path={item.to}
-                          visible={visible}
-                          builtin
-                          onLabelChange={(value) => patchMenuCustomization(item.id, {
-                            label: value === item.label ? undefined : value,
-                          })}
-                          onIconChange={(value) => patchMenuCustomization(item.id, { icon: value })}
-                          onVisibleChange={(v) => setMenuVisible(role, item.id, v)}
-                        />
-                      );
-                    })}
-                    {customForRole.map((item) => {
-                      const visible = form.menuVisibility?.[role]?.[item.id] !== false;
+                      const canMoveUp = index > 0;
+                      const canMoveDown = index < entries.length - 1;
+
+                      if (kind === 'builtin') {
+                        const custom = form.menuCustomization[item.id] || {};
+                        const label = custom.label ?? item.label;
+                        const icon = custom.icon ?? item.iconName ?? 'Circle';
+                        return (
+                          <MenuItemRow
+                            key={`${role}-${item.id}`}
+                            item={item}
+                            label={label}
+                            icon={icon}
+                            path={item.to}
+                            visible={visible}
+                            builtin
+                            canMoveUp={canMoveUp}
+                            canMoveDown={canMoveDown}
+                            onMoveUp={() => moveMenuItem(role, item.id, 'up')}
+                            onMoveDown={() => moveMenuItem(role, item.id, 'down')}
+                            onLabelChange={(value) => patchMenuCustomization(item.id, {
+                              label: value === item.label ? undefined : value,
+                            })}
+                            onIconChange={(value) => patchMenuCustomization(item.id, { icon: value })}
+                            onVisibleChange={(v) => setMenuVisible(role, item.id, v)}
+                          />
+                        );
+                      }
+
                       return (
                         <MenuItemRow
                           key={`${role}-custom-${item.id}`}
@@ -733,6 +772,10 @@ export default function PortalSettings() {
                           path={item.to}
                           visible={visible}
                           builtin={false}
+                          canMoveUp={canMoveUp}
+                          canMoveDown={canMoveDown}
+                          onMoveUp={() => moveMenuItem(role, item.id, 'up')}
+                          onMoveDown={() => moveMenuItem(role, item.id, 'down')}
                           onLabelChange={(value) => updateCustomMenuItem(item.id, { label: value })}
                           onIconChange={(value) => updateCustomMenuItem(item.id, { icon: value })}
                           onPathChange={(value) => updateCustomMenuItem(item.id, { to: value })}

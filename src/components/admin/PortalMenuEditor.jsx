@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { MENU_ICON_MAP, MENU_ICON_OPTIONS } from '../../constants/menuIcons.js';
 
 function IconPreview({ name, size = 18 }) {
@@ -34,6 +34,10 @@ export function MenuItemRow({
   path,
   visible,
   builtin = true,
+  canMoveUp = false,
+  canMoveDown = false,
+  onMoveUp,
+  onMoveDown,
   onLabelChange,
   onIconChange,
   onPathChange,
@@ -42,6 +46,29 @@ export function MenuItemRow({
 }) {
   return (
     <div className="portal-menu-row">
+      <div className="portal-menu-row__reorder">
+        <button
+          type="button"
+          className="portal-menu-row__move"
+          onClick={onMoveUp}
+          disabled={!canMoveUp}
+          aria-label={`Move ${label} up`}
+          title="Move up"
+        >
+          <ChevronUp size={16} />
+        </button>
+        <button
+          type="button"
+          className="portal-menu-row__move"
+          onClick={onMoveDown}
+          disabled={!canMoveDown}
+          aria-label={`Move ${label} down`}
+          title="Move down"
+        >
+          <ChevronDown size={16} />
+        </button>
+      </div>
+
       <div className="portal-menu-row__icon-picker">
         <span className="portal-menu-row__icon-preview" aria-hidden>
           <IconPreview name={icon} />
