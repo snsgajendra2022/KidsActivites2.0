@@ -16,9 +16,9 @@ function sidebarLinkClass({ isActive }) {
   return [
     'sidebar-nav-link',
     'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
-    'text-[#45474c] hover:bg-[#eff4ff] hover:text-[#091426]',
-    '[&_svg]:text-[#6b7a8c] hover:[&_svg]:text-[#091426]',
-    '[&_span]:text-[#45474c] hover:[&_span]:text-[#091426]',
+    'text-muted hover:bg-brand-muted hover:text-brand',
+    '[&_svg]:text-[#6b7a8c] hover:[&_svg]:text-[var(--sb-primary)]',
+    '[&_span]:text-muted hover:[&_span]:text-brand',
   ].join(' ');
 }
 
@@ -30,9 +30,10 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 bg-[#091426]/30 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
+        className={`fixed inset-0 z-40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
+        style={{ background: 'color-mix(in srgb, var(--sb-primary) 30%, transparent)' }}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -47,7 +48,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             <PortalLogo size="md" />
             {!collapsed && (
               <div className="min-w-0">
-                <div className="font-display truncate text-sm font-bold text-[#091426]">{portalName}</div>
+                <div className="font-display truncate text-sm font-bold text-brand">{portalName}</div>
                 <div className="truncate text-[11px] text-[#6b7a8c]">{school?.name}</div>
               </div>
             )}
@@ -55,7 +56,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-[#6b7a8c] hover:bg-[#f8f9ff] hover:text-[#091426] lg:hidden"
+            className="rounded-lg p-1.5 text-[#6b7a8c] hover:bg-brand-muted hover:text-brand lg:hidden"
             aria-label="Close menu"
           >
             <X size={18} />
@@ -87,8 +88,8 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
 
         {!collapsed && user && (
           <div className="shrink-0 border-t border-black/5 p-4">
-            <div className="rounded-xl bg-gradient-to-br from-[#f8f9ff] to-[#eff4ff] p-3 ring-1 ring-black/5">
-              <div className="truncate text-sm font-semibold text-[#091426]">{user.name}</div>
+            <div className="rounded-xl bg-brand-muted p-3 ring-1 ring-black/5">
+              <div className="truncate text-sm font-semibold text-brand">{user.name}</div>
               <div className="mt-0.5 text-xs text-[#6b7a8c]">{ROLE_LABELS[user.role]}</div>
               <div className="mt-2 text-[10px] font-medium text-[#6b7a8c]/80">{school?.academicYear}</div>
             </div>
@@ -98,7 +99,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="mx-3 mb-4 hidden h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-black/5 text-xs font-medium text-[#6b7a8c] transition-all hover:bg-[#f8f9ff] hover:text-[#091426] lg:flex"
+          className="mx-3 mb-4 hidden h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-black/5 text-xs font-medium text-[#6b7a8c] transition-all hover:bg-brand-muted hover:text-brand lg:flex"
           aria-label="Collapse sidebar"
         >
           <ChevronLeft size={16} className={`transition-transform ${collapsed ? 'rotate-180' : ''}`} />

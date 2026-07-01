@@ -19,7 +19,7 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f8f9ff] text-[#0b1c30]">
+    <div className="flex h-screen overflow-hidden sb-surface text-[var(--sb-on-surface,#0b1c30)]">
       <Sidebar
         user={user}
         open={sidebarOpen}

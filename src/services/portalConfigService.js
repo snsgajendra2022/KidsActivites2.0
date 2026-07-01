@@ -12,6 +12,7 @@ function mergeConfig(stored) {
     branding: { ...DEFAULT_PORTAL_CONFIG.branding },
     theme: { ...DEFAULT_PORTAL_CONFIG.theme },
     enrollmentTheme: { ...DEFAULT_PORTAL_CONFIG.enrollmentTheme },
+    loginMethods: { ...DEFAULT_PORTAL_CONFIG.loginMethods },
     menuVisibility: buildDefaultMenuVisibility(NAV_BY_ROLE),
   };
 
@@ -32,6 +33,7 @@ function mergeConfig(stored) {
     branding: { ...defaults.branding, ...stored.branding },
     theme: { ...defaults.theme, ...(stored.theme || {}) },
     enrollmentTheme: { ...defaults.enrollmentTheme, ...(stored.enrollmentTheme || {}) },
+    loginMethods: { ...defaults.loginMethods, ...(stored.loginMethods || {}) },
     menuVisibility: {
       ...defaults.menuVisibility,
       ...(stored.menuVisibility || {}),
@@ -70,15 +72,25 @@ export async function savePortalConfig(updates) {
   const theme = updates.theme
     ? { brandColor: brand, accentColor: brand }
     : current.theme;
+  const enrollmentTheme = updates.enrollmentTheme
+    ? { ...current.enrollmentTheme, ...updates.enrollmentTheme }
+    : updates.theme
+      ? {
+        ...current.enrollmentTheme,
+        brandNavy: brand,
+        brandRed: brand,
+      }
+      : current.enrollmentTheme;
   const next = {
     ...current,
     ...updates,
     school: { ...current.school, ...(updates.school || {}) },
     branding: { ...current.branding, ...(updates.branding || {}) },
     theme,
-    enrollmentTheme: updates.enrollmentTheme
-      ? { ...current.enrollmentTheme, ...updates.enrollmentTheme }
-      : current.enrollmentTheme,
+    enrollmentTheme,
+    loginMethods: updates.loginMethods
+      ? { ...current.loginMethods, ...updates.loginMethods }
+      : current.loginMethods,
     menuVisibility: updates.menuVisibility
       ? { ...current.menuVisibility, ...updates.menuVisibility }
       : current.menuVisibility,

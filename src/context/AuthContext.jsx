@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react';
-import { authenticateByEmail, sendLoginOtp, verifyLoginOtp } from '../services/authService.js';
+import { authenticateByEmail, sendLoginOtp, sendEmailLoginOtp, verifyLoginOtp, verifyLoginOtpByChannel } from '../services/authService.js';
 import { ROLE_DASHBOARD } from '../constants/roles.js';
 
 const AuthContext = createContext(null);
@@ -24,8 +24,17 @@ export function AuthProvider({ children }) {
 
   const requestOtp = async (mobile) => sendLoginOtp(mobile);
 
+  const requestEmailOtp = async (email) => sendEmailLoginOtp(email);
+
   const loginWithOtp = async ({ mobile, otp }) => {
     const nextUser = verifyLoginOtp(mobile, otp);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    setUser(nextUser);
+    return nextUser;
+  };
+
+  const loginWithEmailOtp = async ({ email, otp }) => {
+    const nextUser = verifyLoginOtpByChannel('email', email, otp);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
     setUser(nextUser);
     return nextUser;
@@ -49,7 +58,9 @@ export function AuthProvider({ children }) {
       user,
       login,
       requestOtp,
+      requestEmailOtp,
       loginWithOtp,
+      loginWithEmailOtp,
       logout,
       updateProfile,
       isAuthenticated: Boolean(user),

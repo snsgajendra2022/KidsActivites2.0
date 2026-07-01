@@ -5,6 +5,30 @@ const DEMO_OTP = '123456';
 const OTP_STORAGE_KEY = 'sb_login_otp';
 const OTP_TTL_MS = 5 * 60 * 1000;
 
+function saveOtpSession(channel, target, otp) {
+  const normalizedTarget = channel === 'email'
+    ? normalizeIdentity(target).toLowerCase()
+    : normalizeMobile(target);
+  sessionStorage.setItem(
+    OTP_STORAGE_KEY,
+    JSON.stringify({
+      channel,
+      target: normalizedTarget,
+      otp,
+      expires: Date.now() + OTP_TTL_MS,
+    }),
+  );
+  return normalizedTarget;
+}
+
+function readOtpSession() {
+  try {
+    return JSON.parse(sessionStorage.getItem(OTP_STORAGE_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
 function normalizeIdentity(value) {
   return String(value || '').trim();
 }
@@ -99,14 +123,7 @@ export async function sendLoginOtp(mobile) {
     throw new Error('No account found with this mobile number.');
   }
 
-  sessionStorage.setItem(
-    OTP_STORAGE_KEY,
-    JSON.stringify({
-      mobile: normalized,
-      otp: DEMO_OTP,
-      expires: Date.now() + OTP_TTL_MS,
-    }),
-  );
+  saveOtpSession('mobile', normalized, DEMO_OTP);
 
   return {
     mobile: normalized,
@@ -115,27 +132,47 @@ export async function sendLoginOtp(mobile) {
   };
 }
 
-/** Verify OTP and return session user. */
-export function verifyLoginOtp(mobile, otp) {
-  const normalized = normalizeMobile(mobile);
-  const code = String(otp || '').trim();
+/** Mock: send OTP to registered email. Demo OTP is always 123456. */
+export async function sendEmailLoginOtp(email) {
+  await delay(700);
+  const trimmed = normalizeIdentity(email);
+  if (!trimmed || !trimmed.includes('@')) {
+    throw new Error('Please enter a valid email address.');
+  }
 
-  if (!normalized || normalized.length !== 10) {
+  const user = findUserByEmail(trimmed);
+  if (!user) {
+    throw new Error('No account found with this email address.');
+  }
+
+  const normalized = saveOtpSession('email', trimmed, DEMO_OTP);
+
+  return {
+    email: normalized,
+    expiresIn: OTP_TTL_MS / 1000,
+    demoOtp: DEMO_OTP,
+  };
+}
+
+/** Verify OTP for mobile or email channel. */
+export function verifyLoginOtpByChannel(channel, target, otp) {
+  const code = String(otp || '').trim();
+  const normalizedTarget = channel === 'email'
+    ? normalizeIdentity(target).toLowerCase()
+    : normalizeMobile(target);
+
+  if (channel === 'mobile' && (!normalizedTarget || normalizedTarget.length !== 10)) {
     throw new Error('Please enter a valid mobile number.');
+  }
+  if (channel === 'email' && (!normalizedTarget || !normalizedTarget.includes('@'))) {
+    throw new Error('Please enter a valid email address.');
   }
   if (!code || code.length !== 6) {
     throw new Error('Please enter the 6-digit OTP.');
   }
 
-  const stored = (() => {
-    try {
-      return JSON.parse(sessionStorage.getItem(OTP_STORAGE_KEY) || 'null');
-    } catch {
-      return null;
-    }
-  })();
-
-  if (!stored || stored.mobile !== normalized) {
+  const stored = readOtpSession();
+  if (!stored || stored.channel !== channel || stored.target !== normalizedTarget) {
     throw new Error('Please request an OTP first.');
   }
   if (Date.now() > stored.expires) {
@@ -146,14 +183,25 @@ export function verifyLoginOtp(mobile, otp) {
     throw new Error('Invalid OTP. Please try again.');
   }
 
-  const user = findUserByMobile(normalized);
+  const user = channel === 'email'
+    ? findUserByEmail(normalizedTarget)
+    : findUserByMobile(normalizedTarget);
   if (!user) {
     throw new Error('Account not found.');
   }
 
   sessionStorage.removeItem(OTP_STORAGE_KEY);
   const { password: _pw, ...sessionUser } = user;
-  return { ...sessionUser, identity: normalized, loginMethod: 'otp' };
+  return {
+    ...sessionUser,
+    identity: normalizedTarget,
+    loginMethod: channel === 'email' ? 'email_otp' : 'otp',
+  };
+}
+
+/** Verify mobile OTP and return session user. */
+export function verifyLoginOtp(mobile, otp) {
+  return verifyLoginOtpByChannel('mobile', mobile, otp);
 }
 
 export function findUserById(userId) {

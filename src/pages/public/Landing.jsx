@@ -11,7 +11,7 @@ export default function Landing() {
   const heroImage = branding?.heroImageUrl;
 
   return (
-    <PublicLayout hideFooter className="!bg-[#f8f9ff]">
+    <PublicLayout hideFooter className="!sb-surface">
       <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden md:min-h-[calc(100vh-4.5rem)]">
         <div className="absolute inset-0 z-0">
           {heroImage && <img alt="" className="h-full w-full object-cover" src={heroImage} />}
@@ -42,7 +42,7 @@ export default function Landing() {
               </Link>
               <Link
                 to="/login"
-                className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill inline-flex items-center gap-2 border border-white/20 bg-[#091426] text-sm font-semibold shadow-sm transition-premium hover:bg-[#1e293b]"
+                className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill inline-flex items-center gap-2 border border-white/20 bg-brand text-sm font-semibold shadow-sm transition-premium hover:opacity-90"
               >
                 Parent Login
               </Link>
@@ -54,10 +54,10 @@ export default function Landing() {
       <section id="programs" className="px-4 py-16 md:px-10 md:py-20">
         <div className="mx-auto max-w-screen-2xl">
           <motion.div {...fadeUp} className="mb-12 text-center">
-            <h2 className="font-display mb-3 text-3xl font-extrabold tracking-tight text-[#091426]">
+            <h2 className="font-display mb-3 text-3xl font-extrabold tracking-tight text-brand">
               Why Schools Choose {portalName}
             </h2>
-            <p className="text-[#45474c]">
+            <p className="text-muted">
               A complete platform for admissions, fees, and parent communication.
             </p>
           </motion.div>
@@ -77,18 +77,18 @@ export default function Landing() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
               >
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#dce9ff] text-[#0058be]">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-muted text-accent">
                   <Icon size={22} />
                 </div>
-                <h3 className="mb-2 text-base font-bold text-[#091426]">{title}</h3>
-                <p className="text-sm leading-relaxed text-[#45474c]">{desc}</p>
+                <h3 className="mb-2 text-base font-bold text-brand">{title}</h3>
+                <p className="text-sm leading-relaxed text-muted">{desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="about" className="bg-[#091426] px-4 py-16 text-center text-white md:px-10 md:py-20">
+      <section id="about" className="bg-brand px-4 py-16 text-center text-white md:px-10 md:py-20">
         <div className="mx-auto max-w-screen-2xl">
           <GraduationCap size={40} className="mx-auto mb-4 opacity-80" />
           <h2 className="font-display mb-3 text-3xl font-extrabold">{school?.name}</h2>
@@ -103,12 +103,12 @@ export default function Landing() {
       </section>
 
       <section id="contact" className="border-t border-black/5 bg-white px-4 py-10 md:px-10">
-        <div className="mx-auto max-w-screen-2xl text-center text-sm text-[#45474c]">
+        <div className="mx-auto max-w-screen-2xl text-center text-sm text-muted">
           {school?.phone} · {school?.email}
         </div>
       </section>
 
-      <footer className="border-t border-white/5 bg-[#091426] px-4 py-6 md:px-10">
+      <footer className="border-t border-white/5 bg-brand px-4 py-6 md:px-10">
         <div className="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-4 md:flex-row">
           <span className="font-display text-lg font-semibold text-white">{portalName}</span>
           <p className="text-xs text-white/40">© 2026 {portalName} · {school?.name}</p>

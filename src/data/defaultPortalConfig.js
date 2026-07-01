@@ -30,6 +30,11 @@ export const DEFAULT_PORTAL_CONFIG = {
     brandGrayLight: '#E5E7EB',
     formBg: '#F3F4F6',
   },
+  loginMethods: {
+    emailLogin: true,
+    mobileOtp: true,
+    emailOtp: true,
+  },
   /** role → menuId → visible (false = hidden) */
   menuVisibility: {},
 };

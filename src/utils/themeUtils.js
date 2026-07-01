@@ -22,21 +22,27 @@ function mixHex(hex, target, amount) {
 }
 
 /** Apply single brand color across the entire app via CSS variables */
-export function applyPortalTheme(theme = {}) {
+export function applyPortalTheme(theme = {}, enrollmentTheme = {}) {
   const brand = theme.brandColor || DEFAULT_BRAND;
   const accent = theme.accentColor || brand;
   const root = document.documentElement;
 
+  const enrollNavy = enrollmentTheme.brandNavy || brand;
+  const enrollRed = enrollmentTheme.brandRed || brand;
+
   root.style.setProperty('--sb-primary', brand);
   root.style.setProperty('--sb-secondary', accent);
-  root.style.setProperty('--enroll-navy', brand);
-  root.style.setProperty('--enroll-red', accent);
+  root.style.setProperty('--enroll-navy', enrollNavy);
+  root.style.setProperty('--enroll-red', enrollRed);
+  root.style.setProperty('--enroll-gray-light', enrollmentTheme.brandGrayLight || '#E5E7EB');
+  root.style.setProperty('--enroll-form-bg', enrollmentTheme.formBg || '#F3F4F6');
   root.style.setProperty('--primary', brand);
   root.style.setProperty('--navy', brand);
   root.style.setProperty('--primary-dark', mixHex(brand, '#000000', 0.25));
   root.style.setProperty('--primary-light', mixHex(brand, '#ffffff', 0.88));
   root.style.setProperty('--sb-surface-container-high', mixHex(brand, '#ffffff', 0.9));
   root.style.setProperty('--sb-surface-container', mixHex(brand, '#ffffff', 0.93));
+  root.style.setProperty('--sb-on-primary', '#ffffff');
 }
 
 export const THEME_PRESETS = [

@@ -12,7 +12,7 @@ import './styles/login-portal.css';
 import { applyPortalTheme } from './utils/themeUtils.js';
 import { DEFAULT_PORTAL_CONFIG } from './data/defaultPortalConfig.js';
 
-applyPortalTheme(DEFAULT_PORTAL_CONFIG.theme);
+applyPortalTheme(DEFAULT_PORTAL_CONFIG.theme, DEFAULT_PORTAL_CONFIG.enrollmentTheme);
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>

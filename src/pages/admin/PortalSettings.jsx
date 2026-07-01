@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Layout, Menu, Palette, Save, Upload } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -15,6 +15,7 @@ import { ROLE_LABELS } from '../../constants/roles.js';
 
 const TABS = [
   { id: 'identity', label: 'Portal Identity', icon: Layout },
+  { id: 'login', label: 'Login Access', icon: KeyRound },
   { id: 'theme', label: 'Theme Colors', icon: Palette },
   { id: 'school', label: 'School Details', icon: Menu },
   { id: 'images', label: 'Logo & Images', icon: Image },
@@ -81,22 +82,28 @@ export default function PortalSettings() {
         branding: { ...config.branding },
         theme: { ...config.theme },
         enrollmentTheme: { ...config.enrollmentTheme },
+        loginMethods: { ...config.loginMethods },
       });
     }
   }, [config]);
 
   useEffect(() => {
     if (tab === 'theme' && form?.theme) {
-      applyPortalTheme(form.theme);
+      applyPortalTheme(form.theme, form.enrollmentTheme);
     } else if (config?.theme) {
-      applyPortalTheme(config.theme);
+      applyPortalTheme(config.theme, config.enrollmentTheme);
     }
-  }, [tab, form?.theme, config?.theme]);
+  }, [tab, form?.theme, form?.enrollmentTheme, config?.theme, config?.enrollmentTheme]);
 
   const setBrandColor = (color) => {
     setForm((f) => ({
       ...f,
       theme: { brandColor: color, accentColor: color },
+      enrollmentTheme: {
+        ...f.enrollmentTheme,
+        brandNavy: color,
+        brandRed: color,
+      },
     }));
   };
 
@@ -115,7 +122,23 @@ export default function PortalSettings() {
     );
   }
 
+  const setLoginMethod = (key, enabled) => {
+    setForm((f) => {
+      const next = { ...f.loginMethods, [key]: enabled };
+      const count = (next.emailLogin ? 1 : 0) + (next.mobileOtp ? 1 : 0) + (next.emailOtp ? 1 : 0);
+      if (count === 0) {
+        toast('At least one login method must remain enabled.', 'warning');
+        return f;
+      }
+      return { ...f, loginMethods: next };
+    });
+  };
+
   const handleSave = async () => {
+    if (!form.loginMethods?.emailLogin && !form.loginMethods?.mobileOtp && !form.loginMethods?.emailOtp) {
+      toast('Enable at least one login method.', 'error');
+      return;
+    }
     setSaving(true);
     try {
       await updateConfig(form);
@@ -197,11 +220,114 @@ export default function PortalSettings() {
           </div>
         )}
 
+        {tab === 'login' && (
+          <div className="sb-card max-w-3xl p-6">
+            <p className="mb-5 text-sm text-muted">
+              Control which sign-in options parents and staff see on the login page. At least one method must stay enabled.
+            </p>
+
+            <div className="divide-y divide-black/5 rounded-xl border border-black/5">
+              <div className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-[#fafbfe]">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-muted text-accent">
+                    <Mail size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-brand">Email Login</p>
+                    <p className="text-xs text-muted">School-registered email + password</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.loginMethods.emailLogin !== false}
+                  onClick={() => setLoginMethod('emailLogin', form.loginMethods.emailLogin === false)}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    form.loginMethods.emailLogin !== false ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      form.loginMethods.emailLogin !== false ? 'left-[22px]' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="px-5 py-4">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-muted text-accent">
+                    <Shield size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-brand">OTP Login</p>
+                    <p className="text-xs text-muted">Single OTP sign-in — users choose mobile or email on the login page</p>
+                  </div>
+                </div>
+
+                <div className="ml-2 space-y-3 border-l-2 border-black/5 pl-5">
+                  {[
+                    {
+                      key: 'mobileOtp',
+                      icon: Smartphone,
+                      title: 'Mobile OTP',
+                      desc: 'Allow OTP via registered mobile number',
+                    },
+                    {
+                      key: 'emailOtp',
+                      icon: Mail,
+                      title: 'Email OTP',
+                      desc: 'Allow OTP via registered email address',
+                    },
+                  ].map(({ key, icon: Icon, title, desc }) => {
+                    const enabled = form.loginMethods[key] !== false;
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#fafbfe] px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-accent">
+                            <Icon size={16} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-brand">{title}</p>
+                            <p className="text-xs text-muted">{desc}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={enabled}
+                          onClick={() => setLoginMethod(key, !enabled)}
+                          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                            enabled ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                              enabled ? 'left-[22px]' : 'left-0.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs text-muted">
+              OTP login appears as one option on the login page. Enable mobile, email, or both channels inside OTP login.
+            </p>
+          </div>
+        )}
+
         {tab === 'theme' && (
           <div className="space-y-6 max-w-3xl">
             <div className="sb-card p-6">
               <p className="mb-5 text-sm text-muted">
-                App brand color for login, dashboard, sidebar, and admin pages.
+                One brand color for login, dashboard, sidebar, landing page, and enrollment form headers.
               </p>
 
               <div className="mb-6">
@@ -241,13 +367,11 @@ export default function PortalSettings() {
             <div className="sb-card p-6">
               <p className="mb-1 text-sm font-semibold text-brand">Enrollment Form Colors</p>
               <p className="mb-5 text-sm text-muted">
-                Applies only to the public enrollment page (<code className="text-xs">/enroll</code>). Does not change dashboard or login.
+                Navy &amp; red sync with app brand color. Adjust form background and borders below.
               </p>
 
               <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {[
-                  { key: 'brandNavy', label: 'Brand Navy', hint: 'Headers, labels, primary buttons' },
-                  { key: 'brandRed', label: 'Brand Red', hint: 'Title accent, section stripe, badges' },
                   { key: 'brandGrayLight', label: 'Gray Light', hint: 'Borders, dividers, progress track' },
                   { key: 'formBg', label: 'Form Background', hint: 'Input fields & notes panel' },
                 ].map(({ key, label, hint }) => (
@@ -279,7 +403,7 @@ export default function PortalSettings() {
                 <div
                   className="flex items-center px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white"
                   style={{
-                    background: `linear-gradient(to right, ${form.enrollmentTheme.brandRed} 0%, ${form.enrollmentTheme.brandRed} 44px, ${form.enrollmentTheme.brandNavy} 44px)`,
+                    background: `linear-gradient(to right, ${form.theme.brandColor} 0%, ${form.theme.brandColor} 44px, ${form.theme.brandColor} 44px)`,
                   }}
                 >
                   <span className="mr-3 w-6 text-center">A</span>
@@ -288,7 +412,7 @@ export default function PortalSettings() {
                 <div className="flex flex-wrap items-center gap-3 p-4" style={{ background: '#fff' }}>
                   <span
                     className="rounded px-3 py-1.5 text-xs font-semibold text-white"
-                    style={{ background: form.enrollmentTheme.brandNavy }}
+                    style={{ background: form.theme.brandColor }}
                   >
                     Continue
                   </span>
@@ -298,7 +422,7 @@ export default function PortalSettings() {
                     style={{
                       background: form.enrollmentTheme.formBg,
                       borderColor: form.enrollmentTheme.brandGrayLight,
-                      color: form.enrollmentTheme.brandNavy,
+                      color: form.theme.brandColor,
                     }}
                     value="Sample input"
                   />

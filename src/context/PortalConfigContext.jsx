@@ -8,7 +8,7 @@ const PortalConfigContext = createContext(null);
 function applyDocumentBranding(config) {
   if (!config) return;
   document.title = `${config.portalName} — ${config.tagline || config.school?.name || 'School Portal'}`;
-  applyPortalTheme(config.theme);
+  applyPortalTheme(config.theme, config.enrollmentTheme);
 
   const favicon = config.branding?.faviconUrl;
   if (favicon) {
@@ -68,6 +68,7 @@ export function PortalConfigProvider({ children }) {
       branding: config?.branding,
       theme: config?.theme,
       enrollmentTheme: config?.enrollmentTheme,
+      loginMethods: config?.loginMethods,
       portalName: config?.portalName || 'SchoolBridge',
       loading,
       reload: load,

@@ -175,9 +175,20 @@ Response shape (matches frontend `PortalConfig`):
   "theme": {
     "brandColor": "#1B2E4B",
     "accentColor": "#C81E1E"
+  },
+  "loginMethods": {
+    "emailLogin": true,
+    "mobileOtp": true,
+    "emailOtp": true
   }
 }
 ```
+
+`loginMethods` controls which sign-in options appear on `/login`:
+- `emailLogin` — email + password
+- `mobileOtp` / `emailOtp` — channels inside the unified **OTP Login** flow (one button on the login page; user picks mobile or email when both are enabled)
+
+At least one of `emailLogin`, `mobileOtp`, or `emailOtp` must be `true`.
 
 `theme.brandColor` and `theme.accentColor` drive CSS variables app-wide (login, dashboard, sidebar, enrollment form). Applied via `src/utils/themeUtils.js`.
 
@@ -185,7 +196,7 @@ Response shape (matches frontend `PortalConfig`):
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/admin/portal-settings` | Full portal config including menu visibility |
-| `PUT` | `/admin/portal-settings` | Update portal name, school details, footer text, **theme colors** |
+| `PUT` | `/admin/portal-settings` | Update portal name, school details, footer text, **theme colors**, **login methods** |
 | `POST` | `/admin/portal-settings/assets` | Upload logo / favicon / hero (multipart or signed URL) |
 | `DELETE` | `/admin/portal-settings/assets/:type` | Remove branding asset (`logo`, `favicon`, `hero`, `login_hero`) |
 | `GET` | `/admin/portal-settings/menus` | All menu items with visibility per role |

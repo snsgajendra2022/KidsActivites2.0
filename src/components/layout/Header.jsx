@@ -15,7 +15,7 @@ export default function Header({ user, onMenuClick, onLogout }) {
         <button
           type="button"
           onClick={onMenuClick}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/5 bg-white text-[#45474c] transition-all duration-200 hover:border-black/10 hover:bg-[#f8f9ff] hover:text-[#091426] lg:hidden"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/5 bg-white text-muted transition-all duration-200 hover:border-black/10 hover:bg-brand-muted hover:text-brand lg:hidden"
           aria-label="Open menu"
         >
           <Menu size={20} />
@@ -23,7 +23,7 @@ export default function Header({ user, onMenuClick, onLogout }) {
 
         <Link
           to={homePath}
-          className="font-display shrink-0 text-lg font-bold tracking-tighter text-[#091426] lg:hidden"
+          className="font-display shrink-0 text-lg font-bold tracking-tighter text-brand lg:hidden"
         >
           {portalName}
         </Link>
@@ -37,12 +37,12 @@ export default function Header({ user, onMenuClick, onLogout }) {
             type="search"
             placeholder="Search applications, students, fees…"
             aria-label="Search"
-            className="h-10 w-full rounded-xl border border-black/5 bg-[#f8f9ff] pl-11 pr-4 text-sm text-[#0b1c30] outline-none transition-all placeholder:text-[#9aa3b2] focus:border-[#0058be]/40 focus:bg-white focus:ring-2 focus:ring-[#0058be]/10"
+            className="h-10 w-full rounded-xl border border-black/5 sb-surface pl-11 pr-4 text-sm outline-none transition-all placeholder:text-[#9aa3b2] focus:border-[color-mix(in_srgb,var(--sb-secondary)_40%,transparent)] focus:bg-white focus:ring-2 focus:ring-[color-mix(in_srgb,var(--sb-secondary)_10%,transparent)]"
           />
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <div className="hidden items-center gap-1.5 rounded-full border border-black/5 bg-[#f8f9ff] px-3 py-1.5 text-xs font-semibold text-[#45474c] lg:flex">
+          <div className="hidden items-center gap-1.5 rounded-full border border-black/5 sb-surface px-3 py-1.5 text-xs font-semibold text-muted lg:flex">
             <Calendar size={14} className="text-[#6b7a8c]" />
             {school?.academicYear}
           </div>
