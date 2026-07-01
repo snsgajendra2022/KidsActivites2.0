@@ -17,13 +17,7 @@ function mergeConfig(stored) {
   };
 
   if (!stored) {
-    return {
-      ...defaults,
-      theme: {
-        brandColor: defaults.theme.brandColor,
-        accentColor: defaults.theme.brandColor,
-      },
-    };
+    return defaults;
   }
 
   const merged = {
@@ -38,11 +32,6 @@ function mergeConfig(stored) {
       ...defaults.menuVisibility,
       ...(stored.menuVisibility || {}),
     },
-  };
-
-  merged.theme = {
-    brandColor: merged.theme.brandColor,
-    accentColor: merged.theme.brandColor,
   };
 
   Object.keys(NAV_BY_ROLE).forEach((role) => {
@@ -68,19 +57,12 @@ export async function getPortalConfig() {
 export async function savePortalConfig(updates) {
   await delay(300);
   const current = mergeConfig(getStore(KEY, null));
-  const brand = updates.theme?.brandColor ?? current.theme.brandColor;
   const theme = updates.theme
-    ? { brandColor: brand, accentColor: brand }
+    ? { ...current.theme, ...updates.theme }
     : current.theme;
   const enrollmentTheme = updates.enrollmentTheme
     ? { ...current.enrollmentTheme, ...updates.enrollmentTheme }
-    : updates.theme
-      ? {
-        ...current.enrollmentTheme,
-        brandNavy: brand,
-        brandRed: brand,
-      }
-      : current.enrollmentTheme;
+    : current.enrollmentTheme;
   const next = {
     ...current,
     ...updates,

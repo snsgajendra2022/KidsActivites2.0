@@ -6,9 +6,95 @@
   --sb-on-surface-variant: #45474c;
   --sb-outline-variant: #c5c6cd;
   font-family: Inter, system-ui, sans-serif;
-  height: 100dvh;
-  max-height: 100dvh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  min-height: 100dvh;
+  min-height: 100svh;
+}
+
+/* Desktop: lock viewport height, no page scroll */
+@media (min-width: 1024px) {
+  .login-portal {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+.login-portal-main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+@media (min-width: 1024px) {
+  .login-portal-main {
+    overflow: hidden;
+  }
+}
+
+.login-portal-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.login-portal-body {
+  display: flex;
+  width: 100%;
+  min-height: min(100%, 100%);
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .login-portal-body {
+    height: 100%;
+    min-height: 100%;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+.login-portal-card-wrap {
+  width: 100%;
+  max-width: min(28rem, 100%);
+  box-sizing: border-box;
+}
+
+.login-portal-card {
+  max-width: 100%;
+  box-sizing: border-box;
   overflow: hidden;
+}
+
+.login-portal-card .input-premium,
+.login-portal-card .login-password-wrap,
+.login-portal-card .login-identity-wrap {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Login page header — compact on narrow screens */
+.login-public-header .login-header-brand-text {
+  display: inline;
+}
+
+@media (max-width: 399px) {
+  .login-public-header .login-header-brand-text {
+    display: none;
+  }
+}
+
+.login-public-header .sb-btn-pill {
+  padding: 0.4375rem 0.875rem;
+  white-space: nowrap;
 }
 
 .login-portal .font-display {
@@ -68,9 +154,11 @@
   display: none;
 }
 
-/* Prevent any nested scroll on the login shell */
-.login-portal > main {
-  overscroll-behavior: none;
+/* Prevent bounce on desktop locked layout */
+@media (min-width: 1024px) {
+  .login-portal > main {
+    overscroll-behavior: none;
+  }
 }
 
 /* Login method switch — bottom of card */
@@ -425,4 +513,90 @@
 
 .login-modal-overlay {
   background: color-mix(in srgb, var(--sb-primary) 50%, transparent);
+}
+
+/* Narrow mobile: 320px – 380px */
+@media (max-width: 380px) {
+  .login-portal-body {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .login-portal-card {
+    padding: 0.875rem !important;
+    border-radius: 1.25rem;
+  }
+
+  .login-card-title {
+    font-size: 1.125rem;
+  }
+
+  .login-card-subtitle {
+    font-size: 11px;
+  }
+
+  .login-field-label {
+    font-size: 13px;
+  }
+
+  .login-otp-grid {
+    gap: 4px;
+  }
+
+  .login-otp-box {
+    font-size: 15px;
+    max-height: 42px;
+    border-radius: 8px;
+  }
+
+  .login-otp-demo {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .login-submit-btn {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  .login-enroll-btn {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .login-method-switch {
+    font-size: 12px;
+    padding: 8px 2px;
+  }
+
+  .login-demo-link {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    white-space: normal;
+  }
+
+  .login-identity-icon,
+  .login-password-toggle {
+    width: 40px;
+  }
+
+  .login-identity-input,
+  .login-password-input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .login-portal .input-premium {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
+/* 331px and similar small phones */
+@media (max-width: 360px) {
+  .login-enroll-btn span,
+  .login-enroll-btn {
+    gap: 6px;
+  }
 }

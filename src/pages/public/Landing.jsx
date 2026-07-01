@@ -88,11 +88,11 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="about" className="bg-brand px-4 py-16 text-center text-white md:px-10 md:py-20">
+      <section id="about" className="bg-brand px-4 py-16 text-center text-on-primary md:px-10 md:py-20">
         <div className="mx-auto max-w-screen-2xl">
           <GraduationCap size={40} className="mx-auto mb-4 opacity-80" />
           <h2 className="font-display mb-3 text-3xl font-extrabold">{school?.name}</h2>
-          <p className="mb-8 text-white/70">{school?.address}</p>
+          <p className="mb-8 text-on-primary-muted">{school?.address}</p>
           <Link
             to="/enroll"
             className="sb-link-btn sb-link-btn--light btn-hover-lift sb-btn-pill inline-flex items-center gap-2 bg-white text-sm font-semibold shadow-md"
@@ -108,10 +108,10 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-white/5 bg-brand px-4 py-6 md:px-10">
+      <footer className="public-footer border-t px-4 py-6 md:px-10">
         <div className="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-4 md:flex-row">
-          <span className="font-display text-lg font-semibold text-white">{portalName}</span>
-          <p className="text-xs text-white/40">© 2026 {portalName} · {school?.name}</p>
+          <span className="font-display text-lg font-semibold text-on-primary">{portalName}</span>
+          <p className="text-xs text-on-primary-faint">© 2026 {portalName} · {school?.name}</p>
         </div>
       </footer>
     </PublicLayout>

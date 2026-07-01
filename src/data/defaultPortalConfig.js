@@ -22,7 +22,7 @@ export const DEFAULT_PORTAL_CONFIG = {
   },
   theme: {
     brandColor: '#1B2E4B',
-    accentColor: '#1B2E4B',
+    accentColor: '#0058BE',
   },
   enrollmentTheme: {
     brandNavy: '#1B2E4B',

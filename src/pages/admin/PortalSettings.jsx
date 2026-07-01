@@ -98,11 +98,33 @@ export default function PortalSettings() {
   const setBrandColor = (color) => {
     setForm((f) => ({
       ...f,
-      theme: { brandColor: color, accentColor: color },
+      theme: { ...f.theme, brandColor: color },
       enrollmentTheme: {
         ...f.enrollmentTheme,
         brandNavy: color,
+      },
+    }));
+  };
+
+  const setAccentColor = (color) => {
+    setForm((f) => ({
+      ...f,
+      theme: { ...f.theme, accentColor: color },
+      enrollmentTheme: {
+        ...f.enrollmentTheme,
         brandRed: color,
+      },
+    }));
+  };
+
+  const applyPreset = (preset) => {
+    setForm((f) => ({
+      ...f,
+      theme: { brandColor: preset.brandColor, accentColor: preset.accentColor },
+      enrollmentTheme: {
+        ...f.enrollmentTheme,
+        brandNavy: preset.brandColor,
+        brandRed: preset.accentColor,
       },
     }));
   };
@@ -327,37 +349,72 @@ export default function PortalSettings() {
           <div className="space-y-6 max-w-3xl">
             <div className="sb-card p-6">
               <p className="mb-5 text-sm text-muted">
-                One brand color for login, dashboard, sidebar, landing page, and enrollment form headers.
+                Brand and accent colors apply across login, dashboard, footer, links, notifications, and enrollment headers.
               </p>
 
-              <div className="mb-6">
-                <label className="mb-2 block text-sm font-semibold text-brand">App Brand Color</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={form.theme.brandColor}
-                    onChange={(e) => setBrandColor(e.target.value)}
-                    className="h-11 w-14 cursor-pointer rounded-lg border border-black/10"
-                  />
-                  <input
-                    type="text"
-                    value={form.theme.brandColor}
-                    onChange={(e) => setBrandColor(e.target.value)}
-                    className="input-premium h-11 flex-1 rounded-lg border border-[#c5c6cd] px-3 text-sm uppercase"
-                  />
+              <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-brand">Brand Color</label>
+                  <p className="mb-2 text-xs text-muted">Footer, sidebar, primary buttons, headers</p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={form.theme.brandColor}
+                      onChange={(e) => setBrandColor(e.target.value)}
+                      className="h-11 w-14 cursor-pointer rounded-lg border border-black/10"
+                    />
+                    <input
+                      type="text"
+                      value={form.theme.brandColor}
+                      onChange={(e) => setBrandColor(e.target.value)}
+                      className="input-premium h-11 flex-1 rounded-lg border border-[#c5c6cd] px-3 text-sm uppercase"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-brand">Accent Color</label>
+                  <p className="mb-2 text-xs text-muted">Links, badges, toggles, notification alerts</p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={form.theme.accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      className="h-11 w-14 cursor-pointer rounded-lg border border-black/10"
+                    />
+                    <input
+                      type="text"
+                      value={form.theme.accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      className="input-premium h-11 flex-1 rounded-lg border border-[#c5c6cd] px-3 text-sm uppercase"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#6b7a8c]">App Presets</p>
+              <div className="mb-6 rounded-xl border border-black/5 p-4" style={{ background: form.theme.brandColor }}>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-on-primary-muted">Footer preview</p>
+                <p className="text-sm font-semibold text-on-primary">{form.portalName}</p>
+                <p className="mt-1 text-xs text-on-primary-subtle">{form.footerText}</p>
+                <div className="mt-3 flex flex-wrap gap-4">
+                  {['Security Policy', 'Terms of Use'].map((label) => (
+                    <span key={label} className="public-footer-link">{label}</span>
+                  ))}
+                </div>
+              </div>
+
+              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">Color Presets</p>
               <div className="flex flex-wrap gap-2">
                 {THEME_PRESETS.map((preset) => (
                   <button
                     key={preset.name}
                     type="button"
-                    onClick={() => setBrandColor(preset.brandColor)}
-                    className="inline-flex items-center gap-2 rounded-full border border-black/5 px-3 py-1.5 text-xs font-semibold text-muted hover:bg-[#f8f9ff]"
+                    onClick={() => applyPreset(preset)}
+                    className="inline-flex items-center gap-2 rounded-full border border-black/5 px-3 py-1.5 text-xs font-semibold text-muted hover:bg-brand-muted"
                   >
-                    <span className="h-4 w-4 rounded-full border border-black/10" style={{ background: preset.brandColor }} />
+                    <span className="flex h-4 overflow-hidden rounded-full border border-black/10">
+                      <span className="h-4 w-4" style={{ background: preset.brandColor }} />
+                      <span className="h-4 w-4" style={{ background: preset.accentColor }} />
+                    </span>
                     {preset.name}
                   </button>
                 ))}

@@ -190,7 +190,7 @@ Response shape (matches frontend `PortalConfig`):
 
 At least one of `emailLogin`, `mobileOtp`, or `emailOtp` must be `true`.
 
-`theme.brandColor` and `theme.accentColor` drive CSS variables app-wide (login, dashboard, sidebar, enrollment form). Applied via `src/utils/themeUtils.js`.
+`theme.brandColor` drives primary surfaces (footer, sidebar, login buttons). `theme.accentColor` drives links, badges, toggles, and notification alerts. Footer link/text colors on brand backgrounds use derived `--sb-on-primary-*` tokens. Applied via `src/utils/themeUtils.js`.
 
 ### Super Admin (auth + `manage_portal_settings` permission)
 | Method | Endpoint | Description |

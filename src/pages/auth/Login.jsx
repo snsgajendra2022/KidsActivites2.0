@@ -198,19 +198,6 @@ export default function Login() {
   })();
 
   useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtml = html.style.overflow;
-    const prevBody = body.style.overflow;
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    return () => {
-      html.style.overflow = prevHtml;
-      body.style.overflow = prevBody;
-    };
-  }, []);
-
-  useEffect(() => {
     if (resendIn <= 0) return undefined;
     const timer = setInterval(() => setResendIn((s) => s - 1), 1000);
     return () => clearInterval(timer);
@@ -350,7 +337,7 @@ export default function Login() {
         <label className="login-field-label block text-sm font-semibold">Enter 6-digit OTP</label>
         <OtpInput value={otp} onChange={setOtp} disabled={loading} />
       </div>
-      <div className="flex items-center justify-between text-xs">
+      <div className="login-otp-actions flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
         {resendIn > 0 ? (
           <span className="login-muted-text text-xs">Resend OTP in {resendIn}s</span>
         ) : (
@@ -384,16 +371,16 @@ export default function Login() {
   );
 
   return (
-    <div className="login-portal flex h-dvh max-h-dvh flex-col overflow-hidden sb-surface text-[var(--sb-on-surface,#0b1c30)]">
-      <PublicHeader glass />
+    <div className="login-portal flex min-h-dvh flex-col sb-surface text-[var(--sb-on-surface,#0b1c30)]">
+      <PublicHeader glass loginMobile />
 
-      <main className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="absolute inset-0 z-0">
+      <main className="login-portal-main relative min-h-0 flex-1">
+        <div className="login-portal-bg absolute inset-0 z-0">
           {heroImage && <img alt="" className="h-full w-full object-cover" src={heroImage} />}
           <div className="hero-gradient absolute inset-0" />
         </div>
 
-        <div className="relative z-10 mx-auto flex h-full w-full max-w-screen-2xl items-center px-4 md:px-10">
+        <div className="login-portal-body relative z-10 mx-auto flex w-full max-w-screen-2xl flex-col items-center px-3 sm:px-4 md:px-10 xl:flex-row xl:items-center">
           <div className="hidden h-full w-[42%] items-center pr-10 xl:flex">
             <div className="max-w-lg">
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
@@ -443,13 +430,13 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex w-full justify-center lg:ml-auto lg:w-[24rem] xl:w-[28rem]">
-            <div className="glass-card w-full rounded-3xl p-5 shadow-2xl md:p-7" style={{ boxShadow: '0 8px 32px color-mix(in srgb, var(--sb-primary) 12%, transparent)' }}>
-              <div className="mb-5 flex items-center gap-3">
+          <div className="login-portal-card-wrap flex w-full justify-center lg:ml-auto lg:w-[24rem] xl:w-[28rem]">
+            <div className="login-portal-card glass-card w-full max-w-full rounded-3xl p-4 shadow-2xl sm:p-5 md:p-7" style={{ boxShadow: '0 8px 32px color-mix(in srgb, var(--sb-primary) 12%, transparent)' }}>
+              <div className="mb-4 flex items-center gap-3 sm:mb-5">
                 <PortalLogo size="lg" />
-                <div>
+                <div className="min-w-0">
                   <h2 className="login-card-title">Sign In</h2>
-                  <p className="login-card-subtitle">{school?.name}</p>
+                  <p className="login-card-subtitle truncate">{school?.name}</p>
                 </div>
               </div>
 
@@ -483,7 +470,7 @@ export default function Login() {
                   </div>
 
                   <div className="field-group space-y-1.5">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                       <label className="field-label login-field-label block" htmlFor="password">
                         Password
                       </label>
@@ -599,7 +586,12 @@ export default function Login() {
         </div>
       </main>
 
-      <PublicFooter compact />
+      <div className="md:hidden">
+        <PublicFooter compact minimal />
+      </div>
+      <div className="hidden md:block">
+        <PublicFooter compact />
+      </div>
 
       {demoOpen && (
         <div

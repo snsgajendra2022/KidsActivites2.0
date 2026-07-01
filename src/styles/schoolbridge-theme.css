@@ -516,13 +516,170 @@ a.premium-btn-white:hover {
   z-index: 30;
 }
 
-/* Login page lock */
-.login-portal {
-  height: 100dvh;
-  max-height: 100dvh;
-  overflow: hidden;
+/* On-brand surfaces (footer, hero CTAs on primary bg) */
+.text-on-primary { color: var(--sb-on-primary); }
+.text-on-primary-muted { color: var(--sb-on-primary-muted); }
+.text-on-primary-subtle { color: var(--sb-on-primary-subtle); }
+.text-on-primary-faint { color: var(--sb-on-primary-faint); }
+.hover-text-on-primary:hover { color: var(--sb-on-primary); }
+
+.public-footer {
+  background-color: var(--sb-primary);
+  border-top-color: color-mix(in srgb, var(--sb-on-primary) 8%, transparent);
 }
 
-.login-portal > main {
-  overscroll-behavior: none;
+.public-footer-link {
+  font-size: 0.75rem;
+  color: var(--sb-on-primary-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.public-footer-link:hover {
+  color: var(--sb-on-primary);
+}
+
+/* Notification dropdown — mobile sheet, desktop popover */
+.notif-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--sb-primary) 35%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.notif-dropdown-panel {
+  position: fixed;
+  z-index: 70;
+  left: 0.75rem;
+  right: 0.75rem;
+  top: calc(3.75rem + env(safe-area-inset-top, 0px));
+  display: flex;
+  max-height: min(70dvh, 22rem);
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  border: 1px solid color-mix(in srgb, var(--sb-primary) 8%, transparent);
+  background: #fff;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--sb-primary) 18%, transparent);
+}
+
+.notif-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--sb-primary) 8%, transparent);
+  padding: 0.75rem 1rem;
+}
+
+.notif-dropdown-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sb-primary);
+}
+
+.notif-dropdown-mark-all {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sb-secondary);
+}
+
+.notif-dropdown-mark-all:hover {
+  text-decoration: underline;
+}
+
+.notif-dropdown-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--sb-on-surface-variant);
+}
+
+.notif-dropdown-list {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.notif-dropdown-item {
+  display: block;
+  width: 100%;
+  border-bottom: 1px solid color-mix(in srgb, var(--sb-primary) 6%, transparent);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.notif-dropdown-item:hover {
+  background: var(--sb-surface-container-high);
+}
+
+.notif-dropdown-item--unread {
+  background: var(--sb-notification-unread, var(--sb-surface-container-high));
+}
+
+.notif-dropdown-item-title {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sb-primary);
+}
+
+.notif-dropdown-item-message {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--sb-on-surface-variant);
+}
+
+.notif-bell-btn {
+  position: relative;
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--sb-primary) 8%, transparent);
+  background: #fff;
+  color: var(--sb-on-surface-variant);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.notif-bell-btn:hover {
+  background: var(--sb-surface-container-high);
+  color: var(--sb-primary);
+}
+
+.notif-bell-badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  display: flex;
+  min-width: 1rem;
+  height: 1rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--sb-secondary);
+  padding: 0 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--sb-on-primary);
+}
+
+@media (min-width: 768px) {
+  .notif-backdrop {
+    display: none;
+  }
+
+  .notif-dropdown-panel {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: auto;
+    margin-top: 0.5rem;
+    width: 20rem;
+    max-height: 18rem;
+  }
 }

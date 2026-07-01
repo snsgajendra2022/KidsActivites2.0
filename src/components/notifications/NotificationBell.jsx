@@ -14,12 +14,26 @@ export default function NotificationBell() {
   }, [user]);
 
   useEffect(() => {
+    if (!open) return undefined;
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   const unread = notifications.filter((n) => !n.read).length;
 
@@ -37,52 +51,57 @@ export default function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/5 bg-white text-[#45474c] transition-premium hover:bg-[#f8f9ff] hover:text-[#091426]"
+        onClick={() => setOpen((v) => !v)}
+        className="notif-bell-btn"
         aria-label="Notifications"
+        aria-expanded={open}
       >
         <Bell size={18} />
         {unread > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0058be] px-1 text-[10px] font-bold text-white">
-            {unread}
-          </span>
+          <span className="notif-bell-badge">{unread}</span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-black/5 bg-white shadow-xl shadow-[#091426]/10">
-          <div className="flex items-center justify-between border-b border-black/5 px-4 py-3">
-            <strong className="text-sm font-semibold text-[#091426]">Notifications</strong>
-            {unread > 0 && (
-              <button
-                type="button"
-                onClick={handleReadAll}
-                className="text-xs font-semibold text-[#0058be] hover:underline"
-              >
-                Mark all read
-              </button>
+        <>
+          <button
+            type="button"
+            className="notif-backdrop md:hidden"
+            aria-label="Close notifications"
+            onClick={() => setOpen(false)}
+          />
+          <div className="notif-dropdown-panel" role="dialog" aria-label="Notifications">
+            <div className="notif-dropdown-header">
+              <strong className="notif-dropdown-title">Notifications</strong>
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={handleReadAll}
+                  className="notif-dropdown-mark-all"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+            {notifications.length === 0 ? (
+              <div className="notif-dropdown-empty">No notifications yet.</div>
+            ) : (
+              <div className="notif-dropdown-list">
+                {notifications.slice(0, 8).map((n) => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => handleRead(n.id)}
+                    className={`notif-dropdown-item${!n.read ? ' notif-dropdown-item--unread' : ''}`}
+                  >
+                    <strong className="notif-dropdown-item-title">{n.title}</strong>
+                    <span className="notif-dropdown-item-message">{n.message}</span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-          {notifications.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-[#45474c]">No notifications yet.</div>
-          ) : (
-            <div className="max-h-72 overflow-y-auto">
-              {notifications.slice(0, 8).map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => handleRead(n.id)}
-                  className={`block w-full border-b border-black/5 px-4 py-3 text-left transition-premium hover:bg-[#f8f9ff] ${
-                    !n.read ? 'bg-[#dce9ff]/40' : ''
-                  }`}
-                >
-                  <strong className="block text-sm text-[#091426]">{n.title}</strong>
-                  <span className="mt-0.5 block text-xs text-[#45474c]">{n.message}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        </>
       )}
     </div>
   );

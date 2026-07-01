@@ -43,6 +43,10 @@ export function applyPortalTheme(theme = {}, enrollmentTheme = {}) {
   root.style.setProperty('--sb-surface-container-high', mixHex(brand, '#ffffff', 0.9));
   root.style.setProperty('--sb-surface-container', mixHex(brand, '#ffffff', 0.93));
   root.style.setProperty('--sb-on-primary', '#ffffff');
+  root.style.setProperty('--sb-on-primary-muted', 'rgba(255, 255, 255, 0.6)');
+  root.style.setProperty('--sb-on-primary-subtle', 'rgba(255, 255, 255, 0.45)');
+  root.style.setProperty('--sb-on-primary-faint', 'rgba(255, 255, 255, 0.4)');
+  root.style.setProperty('--sb-notification-unread', mixHex(accent, '#ffffff', 0.88));
 }
 
 export const THEME_PRESETS = [
