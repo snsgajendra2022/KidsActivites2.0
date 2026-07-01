@@ -5,15 +5,46 @@ import { PageHeader } from '../../components/ui/index.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import Select from '../../components/ui/Select.jsx';
 import {
-  DataTable,
+  ResponsiveDataTable,
   TableActionLink,
-  TableActionCell,
-  TableEmptyRow,
-  TableMutedCell,
-  TablePrimaryCell,
 } from '../../components/ui/DataTable.jsx';
 import { getApplications } from '../../services/enrollmentService.js';
 import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
+
+const APP_COLUMNS = [
+  { key: 'applicationNo', label: 'Application No.', primary: true },
+  {
+    label: 'Student Name',
+    render: (app) => app.student?.fullName,
+  },
+  {
+    label: 'Class',
+    render: (app) => app.student?.classApplying?.toUpperCase(),
+  },
+  {
+    label: 'Parent Name',
+    render: (app) => app.parent?.fatherName,
+  },
+  {
+    label: 'Mobile',
+    render: (app) => app.parent?.fatherMobile,
+  },
+  {
+    label: 'Status',
+    badge: true,
+    render: (app) => <StatusBadge status={app.status} />,
+  },
+  {
+    label: 'Submitted Date',
+    muted: true,
+    render: (app) => (app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : '—'),
+  },
+  {
+    label: 'Reviewer',
+    muted: true,
+    render: (app) => app.assignedReviewer || '—',
+  },
+];
 
 export default function ApplicationsList() {
   const [apps, setApps] = useState([]);
@@ -54,44 +85,15 @@ export default function ApplicationsList() {
         />
       </div>
 
-      <DataTable minWidth={1000}>
-        <thead>
-          <tr>
-            <th>Application No.</th>
-            <th>Student Name</th>
-            <th>Class</th>
-            <th>Parent Name</th>
-            <th>Mobile</th>
-            <th>Status</th>
-            <th>Submitted Date</th>
-            <th>Reviewer</th>
-            <th className="!text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.length === 0 ? (
-            <TableEmptyRow colSpan={9} message="No enrollment applications found." />
-          ) : (
-            filtered.map((app) => (
-              <tr key={app.id}>
-                <TablePrimaryCell>{app.applicationNo}</TablePrimaryCell>
-                <td>{app.student?.fullName}</td>
-                <td>{app.student?.classApplying?.toUpperCase()}</td>
-                <td>{app.parent?.fatherName}</td>
-                <td>{app.parent?.fatherMobile}</td>
-                <td><StatusBadge status={app.status} /></td>
-                <TableMutedCell>
-                  {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : '—'}
-                </TableMutedCell>
-                <TableMutedCell>{app.assignedReviewer || '—'}</TableMutedCell>
-                <TableActionCell showDash={false}>
-                  <TableActionLink to={`/admin/applications/${app.id}`}>View Application</TableActionLink>
-                </TableActionCell>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </DataTable>
+      <ResponsiveDataTable
+        columns={APP_COLUMNS}
+        data={filtered}
+        minWidth={1000}
+        emptyMessage="No enrollment applications found."
+        renderActions={(app) => (
+          <TableActionLink to={`/admin/applications/${app.id}`}>View Application</TableActionLink>
+        )}
+      />
     </DashboardLayout>
   );
 }

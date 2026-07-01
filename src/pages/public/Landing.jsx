@@ -98,7 +98,7 @@ export default function Landing() {
           <p className="mb-8 text-white/70">{SCHOOL.address}</p>
           <Link
             to="/enroll"
-            className="btn-hover-lift inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-[#091426]"
+            className="btn-hover-lift inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black"
           >
             Begin Enrollment Application <ArrowRight size={18} />
           </Link>

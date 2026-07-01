@@ -272,6 +272,108 @@ body {
   gap: 8px;
 }
 
+/* ─── Mobile table cards ─── */
+.table-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.table-mobile-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+.table-mobile-card {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(9, 20, 38, 0.04);
+}
+
+.table-mobile-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.table-mobile-card-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0058be;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.table-mobile-card-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #6b7a8c;
+}
+
+.table-mobile-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.table-mobile-field {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.table-mobile-field dt {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7a8c;
+  max-width: 42%;
+}
+
+.table-mobile-field dd {
+  margin: 0;
+  text-align: right;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #091426;
+  word-break: break-word;
+}
+
+.table-mobile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.table-mobile-actions .table-action-btn {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .table-mobile-list,
+  .table-mobile-empty {
+    display: none !important;
+  }
+}
+
 .enrollment-shell {
   background: var(--sb-surface) !important;
   min-height: 100vh;
@@ -287,6 +389,39 @@ body {
   background: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(12px);
   border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ─── App shell: sidebar + header ─── */
+.app-sidebar .sidebar-nav-link {
+  text-decoration: none;
+}
+
+.app-sidebar .sidebar-nav-link-active,
+.app-sidebar .sidebar-nav-link-active span,
+.app-sidebar .sidebar-nav-link-active svg {
+  color: #ffffff !important;
+}
+
+.app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) span {
+  color: #45474c;
+}
+
+.app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) svg {
+  color: #6b7a8c;
+}
+
+.app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover span {
+  color: #091426;
+}
+
+.app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover svg {
+  color: #091426;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
 /* Login page lock */

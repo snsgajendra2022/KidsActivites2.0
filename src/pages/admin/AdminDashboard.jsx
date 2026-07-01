@@ -8,12 +8,9 @@ import PageTransition from '../../components/ui/PageTransition.jsx';
 import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
 import { ApplicationsChart, FeeChart, WelcomeBanner } from '../../components/dashboard/ChartCards.jsx';
 import {
-  DataTablePanel,
+  ResponsiveDataTablePanel,
   DataTableToolbar,
   TableActionLink,
-  TableActionCell,
-  TableMutedCell,
-  TablePrimaryCell,
 } from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { getApplications, getDashboardStats } from '../../services/enrollmentService.js';
@@ -27,6 +24,23 @@ const CHART_DATA = [
   { month: 'Apr', applications: 31, collected: 890000 },
   { month: 'May', applications: 28, collected: 950000 },
   { month: 'Jun', applications: 35, collected: 1100000 },
+];
+
+const RECENT_COLUMNS = [
+  { key: 'applicationNo', label: 'Application No.', primary: true },
+  { label: 'Student Name', render: (app) => app.student?.fullName },
+  { label: 'Class', render: (app) => app.student?.classApplying?.toUpperCase() },
+  { label: 'Parent', render: (app) => app.parent?.fatherName },
+  {
+    label: 'Status',
+    badge: true,
+    render: (app) => <StatusBadge status={app.status} />,
+  },
+  {
+    label: 'Submitted',
+    muted: true,
+    render: (app) => (app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : '—'),
+  },
 ];
 
 export default function AdminDashboard() {
@@ -75,8 +89,10 @@ export default function AdminDashboard() {
           <div className="bento-span-4"><FeeChart data={CHART_DATA} /></div>
 
           <div className="bento-span-12">
-            <DataTablePanel
+            <ResponsiveDataTablePanel
               minWidth={900}
+              columns={RECENT_COLUMNS}
+              data={recent}
               toolbar={(
                 <DataTableToolbar
                   title="Recent Applications"
@@ -88,36 +104,10 @@ export default function AdminDashboard() {
                   )}
                 />
               )}
-            >
-              <thead>
-                <tr>
-                  <th>Application No.</th>
-                  <th>Student Name</th>
-                  <th>Class</th>
-                  <th>Parent</th>
-                  <th>Status</th>
-                  <th>Submitted</th>
-                  <th className="!text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((app) => (
-                  <tr key={app.id}>
-                    <TablePrimaryCell>{app.applicationNo}</TablePrimaryCell>
-                    <td>{app.student?.fullName}</td>
-                    <td>{app.student?.classApplying?.toUpperCase()}</td>
-                    <td>{app.parent?.fatherName}</td>
-                    <td><StatusBadge status={app.status} /></td>
-                    <TableMutedCell>
-                      {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : '—'}
-                    </TableMutedCell>
-                    <TableActionCell showDash={false}>
-                      <TableActionLink to={`/admin/applications/${app.id}`}>Review</TableActionLink>
-                    </TableActionCell>
-                  </tr>
-                ))}
-              </tbody>
-            </DataTablePanel>
+              renderActions={(app) => (
+                <TableActionLink to={`/admin/applications/${app.id}`}>Review</TableActionLink>
+              )}
+            />
           </div>
         </div>
       </PageTransition>

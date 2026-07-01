@@ -19,7 +19,7 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9ff] text-[#0b1c30]">
+    <div className="flex h-screen overflow-hidden bg-[#f8f9ff] text-[#0b1c30]">
       <Sidebar
         user={user}
         open={sidebarOpen}
@@ -27,7 +27,8 @@ export default function AppLayout({ children }) {
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed((c) => !c)}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <NetworkBanner />
         <Header user={user} onMenuClick={() => setSidebarOpen(true)} onLogout={onLogout} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>

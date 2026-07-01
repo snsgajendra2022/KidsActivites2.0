@@ -3,9 +3,8 @@ import { useParams } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import {
-  DataTable,
+  ResponsiveDataTable,
   TableActionButton,
-  TableActionCell,
 } from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -54,6 +53,32 @@ export default function ApplicationReview() {
 
   if (!app) return <DashboardLayout><div className="page-content">Loading...</div></DashboardLayout>;
 
+  const documentRows = Object.entries(app.documents || {}).map(([key, doc]) => ({ key, doc }));
+
+  const DOC_COLUMNS = [
+    {
+      label: 'Document',
+      primary: true,
+      render: (row) => <span className="capitalize">{row.key.replace(/([A-Z])/g, ' $1')}</span>,
+    },
+    {
+      label: 'File',
+      render: (row) => row.doc?.name || '—',
+    },
+    {
+      label: 'Status',
+      badge: true,
+      render: (row) => (
+        <StatusBadge
+          status={row.doc?.status === 'verified' ? 'documents_verified' : 'documents_pending'}
+          variant={row.doc?.status === 'verified' ? 'success' : 'warning'}
+        >
+          {row.doc?.status || 'pending'}
+        </StatusBadge>
+      ),
+    },
+  ];
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -77,35 +102,16 @@ export default function ApplicationReview() {
 
           <div className="card" style={{ marginBottom: 16 }}>
             <h3 className="card-title">Documents</h3>
-            <DataTable nested minWidth={600}>
-              <thead>
-                <tr>
-                  <th>Document</th>
-                  <th>File</th>
-                  <th>Status</th>
-                  <th className="!text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(app.documents || {}).map(([key, doc]) => (
-                  <tr key={key}>
-                    <td className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</td>
-                    <td>{doc?.name || '—'}</td>
-                    <td>
-                      <StatusBadge
-                        status={doc?.status === 'verified' ? 'documents_verified' : 'documents_pending'}
-                        variant={doc?.status === 'verified' ? 'success' : 'warning'}
-                      >
-                        {doc?.status || 'pending'}
-                      </StatusBadge>
-                    </td>
-                    <TableActionCell showDash={false}>
-                      <TableActionButton variant="outline">Preview</TableActionButton>
-                    </TableActionCell>
-                  </tr>
-                ))}
-              </tbody>
-            </DataTable>
+            <ResponsiveDataTable
+              nested
+              columns={DOC_COLUMNS}
+              data={documentRows}
+              keyExtractor={(row) => row.key}
+              minWidth={600}
+              renderActions={() => (
+                <TableActionButton variant="outline">Preview</TableActionButton>
+              )}
+            />
           </div>
 
           <div className="card">
