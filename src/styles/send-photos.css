@@ -1,11 +1,70 @@
-/* Send Photos — teacher photo sharing form */
+/* Send Photos — modern split composer */
 
 .send-photos-page {
-  max-width: 42rem;
+  width: 100%;
+  max-width: 56rem;
+  margin: 0 auto;
+  padding-bottom: 1.5rem;
 }
 
+.send-photos-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .send-photos-layout {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+}
+
+/* ─── Page intro (minimal) ─── */
+.send-photos-intro {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 0.125rem 0.25rem;
+}
+
+.send-photos-intro__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.875rem;
+  background: linear-gradient(135deg, var(--sb-primary), color-mix(in srgb, var(--sb-primary) 70%, var(--sb-secondary)));
+  color: #fff;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--sb-primary) 20%, transparent);
+}
+
+.send-photos-intro__text h1 {
+  margin: 0 0 0.2rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--sb-primary);
+}
+
+.send-photos-intro__text p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--sb-on-surface-variant);
+  line-height: 1.45;
+}
+
+/* ─── Cards ─── */
 .send-photos-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 1.125rem;
   padding: 1.25rem;
+  box-shadow: 0 2px 12px rgba(9, 20, 38, 0.04);
 }
 
 @media (min-width: 640px) {
@@ -14,178 +73,286 @@
   }
 }
 
-.send-photos-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.send-photos-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.send-photos-field__label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--sb-primary);
-}
-
-.send-photos-field__label .required {
-  color: #c81e1e;
-  margin-left: 2px;
-}
-
-.send-photos-type-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
-}
-
-@media (min-width: 480px) {
-  .send-photos-type-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.send-photos-type-btn {
-  min-height: 2.75rem;
-  padding: 0.625rem 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #fff;
-  font-size: 0.8125rem;
-  font-weight: 600;
+.send-photos-card__label {
+  display: block;
+  margin: 0 0 0.875rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   color: var(--sb-on-surface-variant);
+}
+
+/* ─── Class chips ─── */
+.send-photos-classes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.625rem;
+}
+
+.send-photos-class-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 4.5rem;
+  padding: 0.75rem 0.5rem;
+  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.875rem;
+  background: var(--sb-surface, #f8fafc);
+  cursor: pointer;
+  transition: all 0.15s ease;
   text-align: center;
-  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
-.send-photos-type-btn:hover {
+.send-photos-class-chip:hover {
   border-color: color-mix(in srgb, var(--sb-secondary) 35%, transparent);
-  background: var(--sb-surface);
+  background: #fff;
 }
 
-.send-photos-type-btn.is-active {
+.send-photos-class-chip.is-selected {
   border-color: var(--sb-secondary);
-  background: color-mix(in srgb, var(--sb-secondary) 10%, white);
-  color: var(--sb-primary);
+  background: color-mix(in srgb, var(--sb-secondary) 8%, white);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
 }
 
-.send-photos-students {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 12rem;
-  overflow-y: auto;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: var(--sb-surface);
+.send-photos-class-chip__name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--sb-primary);
 }
 
-.send-photos-student-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.625rem;
-  padding: 0.5rem 0.625rem;
-  border-radius: 0.5rem;
-  font-size: 0.8125rem;
-  color: var(--sb-on-surface);
-  cursor: pointer;
-}
-
-.send-photos-student-row:hover {
-  background: #fff;
-}
-
-.send-photos-student-row input {
-  margin-top: 0.125rem;
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-  accent-color: var(--sb-secondary);
-}
-
-.send-photos-student-row span {
-  line-height: 1.4;
-}
-
-.send-photos-student-row small {
-  display: block;
+.send-photos-class-chip__meta {
   font-size: 0.6875rem;
   color: var(--sb-on-surface-variant);
-  margin-top: 0.125rem;
+}
+
+.send-photos-classes-empty {
+  margin: 0;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--sb-on-surface-variant);
+  background: var(--sb-surface);
+  border-radius: 0.75rem;
+}
+
+/* ─── Recipient pills ─── */
+.send-photos-recipients {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.send-photos-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.send-photos-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sb-on-surface-variant);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.send-photos-pill:hover {
+  border-color: color-mix(in srgb, var(--sb-secondary) 40%, transparent);
+  color: var(--sb-primary);
+}
+
+.send-photos-pill.is-active {
+  border-color: var(--sb-secondary);
+  background: var(--sb-primary);
+  color: #fff;
+}
+
+.send-photos-pill svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+/* ─── Student grid ─── */
+.send-photos-student-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.375rem;
+  max-height: 10rem;
+  overflow-y: auto;
+}
+
+.send-photos-student-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  background: var(--sb-surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.send-photos-student-chip:hover {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.send-photos-student-chip.is-selected {
+  background: color-mix(in srgb, var(--sb-secondary) 8%, white);
+  border-color: color-mix(in srgb, var(--sb-secondary) 30%, transparent);
+}
+
+.send-photos-student-chip input {
+  accent-color: var(--sb-secondary);
+  width: 1rem;
+  height: 1rem;
+}
+
+.send-photos-student-chip__text strong {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sb-primary);
+}
+
+.send-photos-student-chip__text span {
+  font-size: 0.6875rem;
+  color: var(--sb-on-surface-variant);
+}
+
+/* ─── Upload panel ─── */
+.send-photos-upload-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
 }
 
 .send-photos-form .form-field {
   margin: 0;
-}
-
-.send-photos-form .form-field.full {
   width: 100%;
 }
 
 .send-photos-form .form-label {
+  display: block;
+  margin-bottom: 0.5rem;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--sb-primary);
 }
 
-.send-photos-form .form-select,
-.send-photos-form .form-textarea {
-  width: 100%;
-  font-size: 0.875rem;
-  border-color: rgba(0, 0, 0, 0.1);
-  border-radius: 0.75rem;
-  background: #fff;
-}
-
-.send-photos-form .form-select {
-  min-height: 2.75rem;
-}
-
-.send-photos-form .form-textarea {
-  min-height: 5.5rem;
-  padding: 0.75rem 0.875rem;
-  resize: vertical;
+.send-photos-form .form-label .required {
+  color: #c81e1e;
 }
 
 .send-photos-form .file-upload {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 0.75rem;
-  border: 1.5px dashed rgba(0, 0, 0, 0.12);
-  background: var(--sb-surface);
-  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 11rem;
+  padding: 2rem 1.5rem;
+  border: 2px dashed color-mix(in srgb, var(--sb-secondary) 25%, transparent);
+  border-radius: 1rem;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 0%, color-mix(in srgb, var(--sb-secondary) 6%, transparent), transparent 65%),
+    var(--sb-surface, #f8fafc);
   text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
 }
 
 .send-photos-form .file-upload:hover {
   border-color: var(--sb-secondary);
-  background: color-mix(in srgb, var(--sb-secondary) 6%, white);
+  background: color-mix(in srgb, var(--sb-secondary) 4%, white);
+  transform: translateY(-1px);
+}
+
+.send-photos-form .file-upload-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 0.75rem;
+  border-radius: 1rem;
+  background: #fff;
+  color: var(--sb-secondary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .send-photos-form .file-upload-text {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--sb-primary);
 }
 
 .send-photos-form .file-upload-hint {
+  margin-top: 0.35rem;
   font-size: 0.75rem;
+  color: var(--sb-on-surface-variant);
+}
+
+.send-photos-form .form-textarea {
+  width: 100%;
+  min-height: 5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.875rem;
+  font-size: 0.875rem;
+  resize: vertical;
+  background: #fff;
+}
+
+.send-photos-form .form-textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--sb-secondary) 50%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-secondary) 10%, transparent);
 }
 
 .send-photos-form .upload-item-card {
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.send-photos-actions {
+/* ─── Send bar ─── */
+.send-photos-footer {
+  grid-column: 1 / -1;
   display: flex;
-  justify-content: flex-end;
-  padding-top: 0.25rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--sb-primary), color-mix(in srgb, var(--sb-primary) 82%, var(--sb-secondary)));
+  color: #fff;
+}
+
+.send-photos-footer__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+.send-photos-footer__hint strong {
+  font-weight: 700;
 }
 
 .send-photos-submit {
@@ -193,20 +360,23 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  width: 100%;
   min-height: 2.75rem;
-  padding: 0 1.25rem;
+  padding: 0 1.5rem;
   border: none;
   border-radius: 0.75rem;
-  background: var(--sb-primary);
-  color: #fff;
+  background: #fff;
+  color: var(--sb-primary);
   font-size: 0.875rem;
-  font-weight: 600;
-  transition: opacity 0.15s;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
 }
 
 .send-photos-submit:hover:not(:disabled) {
-  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 
 .send-photos-submit:disabled {
@@ -214,9 +384,14 @@
   cursor: not-allowed;
 }
 
-@media (min-width: 480px) {
+@media (max-width: 599px) {
+  .send-photos-footer {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
   .send-photos-submit {
-    width: auto;
-    min-width: 10rem;
+    width: 100%;
   }
 }

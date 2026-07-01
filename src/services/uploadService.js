@@ -2,6 +2,7 @@ import { delay } from './mockApi.js';
 import { UPLOAD_STATUS } from '../utils/uploadValidation.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
+import { buildDocumentPreviewFields, saveDocumentPreview } from '../utils/documentPreview.js';
 
 async function mockUploadFile({ file, fieldKey, onProgress, isOnline, signal }) {
   if (!isOnline) {
@@ -20,6 +21,13 @@ async function mockUploadFile({ file, fieldKey, onProgress, isOnline, signal }) 
     onProgress?.(Math.round((i / totalSteps) * 100));
   }
 
+  const previewFields = await buildDocumentPreviewFields(file);
+  const fileKey = `mock/${fieldKey}/${Date.now()}-${file.name}`;
+
+  if (previewFields.previewUrl) {
+    saveDocumentPreview(fileKey, previewFields.previewUrl);
+  }
+
   return {
     success: true,
     status: UPLOAD_STATUS.UPLOADED,
@@ -29,7 +37,9 @@ async function mockUploadFile({ file, fieldKey, onProgress, isOnline, signal }) 
       type: file.type,
       fieldKey,
       uploadedAt: new Date().toISOString(),
-      fileKey: `mock/${fieldKey}/${Date.now()}-${file.name}`,
+      fileKey,
+      status: 'uploaded',
+      ...previewFields,
     },
   };
 }

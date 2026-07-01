@@ -19,7 +19,9 @@ import {
 } from '../../services/enrollmentService.js';
 import { assignFee, verifyPayment, getFeeByApplication } from '../../services/feeService.js';
 import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
+import DocumentPreviewModal from '../../components/documents/DocumentPreviewModal.jsx';
 import '../../styles/application-review.css';
+import '../../styles/document-preview.css';
 
 const SECTION_TITLES = {
   student: 'Student Details',
@@ -77,6 +79,7 @@ export default function ApplicationReview() {
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(null);
   const [reason, setReason] = useState('');
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   const load = async () => {
     const data = await getApplication(id);
@@ -229,8 +232,13 @@ export default function ApplicationReview() {
                     data={documentRows}
                     keyExtractor={(row) => row.key}
                     minWidth={520}
-                    renderActions={() => (
-                      <TableActionButton variant="outline">Preview</TableActionButton>
+                    renderActions={(row) => (
+                      <TableActionButton
+                        variant="outline"
+                        onClick={() => setPreviewDoc({ key: row.key, doc: row.doc })}
+                      >
+                        Preview
+                      </TableActionButton>
                     )}
                   />
                 </section>
@@ -273,6 +281,13 @@ export default function ApplicationReview() {
         <ConfirmModal open={modal === 'assignFee'} onClose={() => setModal(null)} onConfirm={() => act(() => assignFee(app.id, app.applicationNo, app.student.fullName, app.student.classApplying, { admissionFee: 15000, registrationFee: 5000, tuitionFee: 42000, transportFee: 10000, activityFee: 3000, discount: 0 }), 'Fee assigned successfully.')} title="Assign Fee?" message="Default fee structure will be assigned for this class." confirmText="Assign Fee" loading={loading} />
 
         <ConfirmModal open={modal === 'verifyPayment'} onClose={() => setModal(null)} onConfirm={() => act(() => verifyPayment(fee.id, 'Priya Sharma'), 'Fee payment verified successfully.')} title="Verify Fee Payment?" message="This will mark the fee as received and allow the admission process to continue." confirmText="Verify Payment" confirmVariant="success" loading={loading} />
+
+        <DocumentPreviewModal
+          open={Boolean(previewDoc)}
+          onClose={() => setPreviewDoc(null)}
+          docKey={previewDoc?.key}
+          doc={previewDoc?.doc}
+        />
       </PageTransition>
     </DashboardLayout>
   );

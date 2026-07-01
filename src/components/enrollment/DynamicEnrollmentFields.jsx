@@ -190,27 +190,41 @@ export function DynamicFormStepFields({ step, form, errors, update }) {
 
 export function DynamicDocumentStepFields({ step, form, errors, updateDoc }) {
   return (
-    <>
-      {(step.fields || []).map((field) => (
-        <div key={field.id} className="enrollment-doc-row">
-          <EnrollmentFormRow
-            label={field.label}
-            wide={field.wideLabel}
-            required={field.required}
-            error={errors[`documents.${field.key}`]}
-          >
-            <FileUpload
-              fieldKey={field.key}
-              label=""
-              category={field.fileCategory || 'document'}
-              required={field.required}
-              value={form.documents?.[field.key]}
-              onChange={(data) => updateDoc(field.key, data)}
-            />
-          </EnrollmentFormRow>
-        </div>
-      ))}
-    </>
+    <div className="enrollment-documents">
+      {(step.fields || []).map((field) => {
+        const errorKey = `documents.${field.key}`;
+        return (
+          <div key={field.id} className="enrollment-doc-upload">
+            <div className="enrollment-doc-upload__head">
+              <label className="enrollment-doc-upload__label" htmlFor={`upload-${field.key}`}>
+                {field.label}
+                {field.required && (
+                  <span className="enrollment-required" aria-hidden="true">*</span>
+                )}
+              </label>
+              {field.required ? (
+                <span className="enrollment-doc-upload__badge enrollment-doc-upload__badge--required">Required</span>
+              ) : (
+                <span className="enrollment-doc-upload__badge">Optional</span>
+              )}
+            </div>
+            <div className="enrollment-doc-upload__drop" id={`upload-${field.key}`}>
+              <FileUpload
+                fieldKey={field.key}
+                label=""
+                category={field.fileCategory || 'document'}
+                required={field.required}
+                value={form.documents?.[field.key]}
+                onChange={(data) => updateDoc(field.key, data)}
+              />
+            </div>
+            {errors[errorKey] && (
+              <p className="enrollment-doc-upload__error" role="alert">{errors[errorKey]}</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

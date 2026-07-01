@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Send } from 'lucide-react';
+import { Camera, Send, Users, User, GraduationCap } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
-import { PageHeader } from '../../components/ui/index.jsx';
-import Select from '../../components/ui/Select.jsx';
-import Textarea from '../../components/ui/Textarea.jsx';
 import SmartFileUpload from '../../components/upload/SmartFileUpload.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -13,9 +10,9 @@ import { getTeacherClasses, getTeacherStudents } from '../../services/teacherSer
 import '../../styles/send-photos.css';
 
 const SEND_TYPES = [
-  { value: 'class', label: 'Entire Class' },
-  { value: 'selected', label: 'Selected Students' },
-  { value: 'individual', label: 'Individual Parent' },
+  { value: 'class', label: 'Entire Class', icon: GraduationCap },
+  { value: 'selected', label: 'Selected', icon: Users },
+  { value: 'individual', label: 'Individual', icon: User },
 ];
 
 export default function SendPhotos() {
@@ -39,21 +36,21 @@ export default function SendPhotos() {
     getTeacherStudents(user.id).then(setAllStudents);
   }, [user?.id]);
 
-  const classOptions = classes.map((c) => ({ value: c.id, label: c.name }));
   const students = allStudents.filter((s) => s.classId === form.classId);
+  const selectedClass = classes.find((c) => c.id === form.classId);
 
-  const toggleStudent = (id, checked) => {
+  const toggleStudent = (id) => {
     setForm((prev) => ({
       ...prev,
-      studentIds: checked
-        ? [...prev.studentIds, id]
-        : prev.studentIds.filter((sid) => sid !== id),
+      studentIds: prev.studentIds.includes(id)
+        ? prev.studentIds.filter((sid) => sid !== id)
+        : [...prev.studentIds, id],
     }));
   };
 
   const handlePreview = () => {
     if (!form.classId) {
-      toast('Please select at least one class.', 'warning');
+      toast('Please select a class.', 'warning');
       return;
     }
     if (form.recipients !== 'class' && form.studentIds.length === 0) {
@@ -70,11 +67,10 @@ export default function SendPhotos() {
   const handleSend = async () => {
     setLoading(true);
     try {
-      const cls = classes.find((c) => c.id === form.classId);
       await sendPhotos({
         teacherId: user?.id,
         teacherName: user?.name,
-        className: cls?.name || '',
+        className: selectedClass?.name || '',
         caption: form.caption,
         recipients: form.recipients,
         studentIds: form.studentIds,
@@ -93,72 +89,96 @@ export default function SendPhotos() {
     ? 'the entire class'
     : `${form.studentIds.length} selected parent(s)`;
 
+  const footerHint = selectedClass
+    ? `${selectedClass.name} · ${form.recipients === 'class' ? 'All parents' : `${form.studentIds.length} selected`}`
+    : 'Select a class to continue';
+
   return (
     <DashboardLayout>
       <div className="send-photos-page">
-        <PageHeader
-          title="Send Photos"
-          subtitle="Share classroom photos with class groups or individual parents."
-        />
+        <div className="send-photos-layout">
+          <header className="send-photos-intro">
+            <div className="send-photos-intro__icon" aria-hidden>
+              <Camera size={22} />
+            </div>
+            <div className="send-photos-intro__text">
+              <h1>Send Photos</h1>
+              <p>Share classroom moments with parents — pick a class, choose recipients, and upload.</p>
+            </div>
+          </header>
 
-        <div className="send-photos-card sb-card">
-          <div className="send-photos-form">
-            <Select
-              label="Select Class"
-              required
-              options={classOptions}
-              placeholder="Choose class"
-              value={form.classId}
-              onChange={(e) => setForm({
-                ...form,
-                classId: e.target.value,
-                studentIds: [],
-              })}
-            />
+          <div className="send-photos-card">
+            <span className="send-photos-card__label">Class &amp; recipients</span>
 
-            <div className="send-photos-field">
-              <span className="send-photos-field__label">Send Type</span>
-              <div className="send-photos-type-grid" role="group" aria-label="Send type">
-                {SEND_TYPES.map(({ value, label }) => (
+            {classes.length === 0 ? (
+              <p className="send-photos-classes-empty">No classes assigned yet.</p>
+            ) : (
+              <div className="send-photos-classes">
+                {classes.map((cls) => (
                   <button
-                    key={value}
+                    key={cls.id}
                     type="button"
-                    className={`send-photos-type-btn ${form.recipients === value ? 'is-active' : ''}`}
-                    onClick={() => setForm({ ...form, recipients: value, studentIds: [] })}
+                    className={`send-photos-class-chip ${form.classId === cls.id ? 'is-selected' : ''}`}
+                    onClick={() => setForm({
+                      ...form,
+                      classId: cls.id,
+                      studentIds: [],
+                    })}
                   >
-                    {label}
+                    <span className="send-photos-class-chip__name">{cls.name}</span>
+                    <span className="send-photos-class-chip__meta">{cls.studentCount} students</span>
                   </button>
                 ))}
               </div>
-            </div>
+            )}
 
-            {form.recipients !== 'class' && form.classId && (
-              <div className="send-photos-field">
-                <span className="send-photos-field__label">
-                  Select Students
-                  <span className="required">*</span>
-                </span>
-                <div className="send-photos-students">
-                  {students.length === 0 ? (
-                    <p className="text-sm text-muted px-1">No students in this class.</p>
-                  ) : (
-                    students.map((s) => (
-                      <label key={s.id} className="send-photos-student-row">
-                        <input
-                          type="checkbox"
-                          checked={form.studentIds.includes(s.id)}
-                          onChange={(e) => toggleStudent(s.id, e.target.checked)}
-                        />
-                        <span>
-                          {s.name}
-                          <small>Parent: {s.parentName}</small>
-                        </span>
-                      </label>
-                    ))
-                  )}
+            {form.classId && (
+              <div className="send-photos-recipients">
+                <span className="send-photos-card__label" style={{ marginBottom: 0 }}>Send to</span>
+                <div className="send-photos-pills" role="group" aria-label="Recipient type">
+                  {SEND_TYPES.map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`send-photos-pill ${form.recipients === value ? 'is-active' : ''}`}
+                      onClick={() => setForm({ ...form, recipients: value, studentIds: [] })}
+                    >
+                      <Icon size={15} />
+                      {label}
+                    </button>
+                  ))}
                 </div>
+
+                {form.recipients !== 'class' && (
+                  <div className="send-photos-student-grid">
+                    {students.length === 0 ? (
+                      <p className="send-photos-classes-empty">No students in this class.</p>
+                    ) : (
+                      students.map((s) => (
+                        <label
+                          key={s.id}
+                          className={`send-photos-student-chip ${form.studentIds.includes(s.id) ? 'is-selected' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={form.studentIds.includes(s.id)}
+                            onChange={() => toggleStudent(s.id)}
+                          />
+                          <div className="send-photos-student-chip__text">
+                            <strong>{s.name}</strong>
+                            <span>{s.parentName}</span>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             )}
+          </div>
+
+          <div className="send-photos-card send-photos-upload-card send-photos-form">
+            <span className="send-photos-card__label">Photo &amp; caption</span>
 
             <SmartFileUpload
               fieldKey="teacherPhotos"
@@ -169,25 +189,33 @@ export default function SendPhotos() {
               onChange={(data) => setForm({ ...form, photos: data })}
             />
 
-            <Textarea
-              label="Caption"
-              value={form.caption}
-              onChange={(e) => setForm({ ...form, caption: e.target.value })}
-              placeholder="Add a caption for the photos"
-            />
-
-            <div className="send-photos-actions">
-              <button
-                type="button"
-                className="send-photos-submit"
-                onClick={handlePreview}
-                disabled={loading}
-              >
-                <Send size={16} />
-                Preview &amp; Send
-              </button>
+            <div className="form-field full">
+              <label className="form-label" htmlFor="photo-caption">Caption</label>
+              <textarea
+                id="photo-caption"
+                className="form-textarea"
+                value={form.caption}
+                onChange={(e) => setForm({ ...form, caption: e.target.value })}
+                placeholder="What happened in class today?"
+                rows={3}
+              />
             </div>
           </div>
+
+          <footer className="send-photos-footer">
+            <p className="send-photos-footer__hint">
+              Ready to share? <strong>{footerHint}</strong>
+            </p>
+            <button
+              type="button"
+              className="send-photos-submit"
+              onClick={handlePreview}
+              disabled={loading || !form.classId}
+            >
+              <Send size={17} />
+              Preview &amp; Send
+            </button>
+          </footer>
         </div>
       </div>
 
@@ -195,8 +223,8 @@ export default function SendPhotos() {
         open={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleSend}
-        title="Send Photos?"
-        message={`Photos will be sent to ${recipientSummary}.`}
+        title="Send photos?"
+        message={`Photos will be delivered to ${recipientSummary}${selectedClass ? ` in ${selectedClass.name}` : ''}.`}
         confirmText="Send Photos"
         loading={loading}
       />

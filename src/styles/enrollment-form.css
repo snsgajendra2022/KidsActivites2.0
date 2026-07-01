@@ -486,7 +486,154 @@
   letter-spacing: 0.04em;
 }
 
-/* ─── Documents ─── */
+/* ─── Documents — stacked upload cards ─── */
+.enrollment-documents {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.enrollment-doc-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--enroll-gray-light);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.enrollment-doc-upload__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.enrollment-doc-upload__label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--enroll-navy);
+  line-height: 1.35;
+}
+
+.enrollment-doc-upload__label .enrollment-required {
+  margin-left: 3px;
+  font-size: 12px;
+}
+
+.enrollment-doc-upload__badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--enroll-gray-light);
+  color: var(--enroll-gray);
+}
+
+.enrollment-doc-upload__badge--required {
+  background: color-mix(in srgb, var(--enroll-red) 10%, white);
+  color: var(--enroll-red);
+}
+
+.enrollment-doc-upload__drop {
+  width: 100%;
+}
+
+.enrollment-doc-upload__drop .form-field {
+  margin: 0;
+  width: 100%;
+}
+
+.enrollment-doc-upload__drop .form-field.full {
+  width: 100%;
+}
+
+.enrollment-doc-upload__drop .file-upload {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px 16px;
+  border: 2px dashed color-mix(in srgb, var(--enroll-navy) 18%, var(--enroll-gray-light));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--enroll-form-bg, #f3f4f6) 60%, white);
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.enrollment-doc-upload__drop .file-upload:hover {
+  border-color: var(--enroll-red);
+  background: color-mix(in srgb, var(--enroll-red) 4%, white);
+}
+
+.enrollment-doc-upload__drop .file-upload-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+  color: var(--enroll-navy);
+  opacity: 0.55;
+}
+
+.enrollment-doc-upload__drop .file-upload-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--enroll-navy);
+}
+
+.enrollment-doc-upload__drop .file-upload-hint {
+  font-size: 10px;
+  color: var(--enroll-gray);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.enrollment-doc-upload__drop .upload-item-card {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid var(--enroll-gray-light);
+  background: #fafbfc;
+  padding: 12px 14px;
+}
+
+.enrollment-doc-upload__drop .upload-item-name {
+  font-size: 12px;
+}
+
+.enrollment-doc-upload__drop .upload-item-meta {
+  font-size: 10px;
+}
+
+.enrollment-doc-upload__error {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--enroll-red);
+}
+
+@media (min-width: 768px) {
+  .enrollment-documents {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .enrollment-documents {
+    gap: 16px 18px;
+  }
+
+  .enrollment-doc-upload {
+    padding: 16px 18px;
+  }
+}
+
+/* Legacy doc row — kept for compatibility */
 .enrollment-doc-row {
   border-bottom: 1px solid var(--enroll-gray-light);
   padding-bottom: 10px;
@@ -810,5 +957,17 @@
 
   .enrollment-review-item dt {
     width: auto;
+  }
+
+  .enrollment-documents {
+    gap: 12px;
+  }
+
+  .enrollment-doc-upload {
+    padding: 12px 14px;
+  }
+
+  .enrollment-doc-upload__drop .file-upload {
+    padding: 16px 12px;
   }
 }
