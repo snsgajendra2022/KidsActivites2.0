@@ -19,6 +19,9 @@
 | [User profile](#9-user-profile) | `/users/me` | `src/context/AuthContext.jsx` (local only today) |
 | [Support](#10-support--legal-pages) | `/support/*` | static content + form (not wired) |
 | [Navigation](#11-navigation) | `/navigation` | derived from portal config |
+| [School settings](#12-school-settings) | `/admin/settings/*` | `src/services/settingsService.js` |
+| [Reports](#13-reports) | `/admin/reports/*` | `src/services/reportsService.js` |
+| [Audit logs](#14-audit-logs) | `/admin/audit-logs` | `src/services/auditService.js` |
 
 ---
 
@@ -1802,6 +1805,167 @@ export async function api(path, options = {}) {
 ```
 
 Replace each mock service function with `api('/endpoint', { method, body })` using the contracts above.
+
+---
+
+## 12. School settings
+
+**Frontend:** `src/pages/admin/AdminSettings.jsx` · **Mock:** `src/services/settingsService.js`
+
+### `GET /admin/settings`
+
+School-wide configuration (academic year, admissions, notifications).
+
+**Auth:** School Admin, Admission Officer · permission `manage_school_settings`
+
+**Response `data`:**
+
+```typescript
+interface SchoolSettings {
+  academicYear: string;
+  admissionsOpen: boolean;
+  enrollmentDeadline: string;      // ISO date
+  admissionStartDate: string;
+  timezone: string;
+  currency: string;
+  lateFeePercent: number;
+  gracePeriodDays: number;
+  documents: {
+    requireParentId: boolean;
+    maxUploadSizeMb: number;
+    allowedFormats: string[];
+  };
+  notifications: {
+    emailOnApplicationSubmitted: boolean;
+    emailOnFeeVerified: boolean;
+    smsOnAdmissionConfirmed: boolean;
+    dailyDigest: boolean;
+    parentPhotoAlerts: boolean;
+  };
+  updatedAt: string;
+  updatedBy: string;
+}
+```
+
+### `PUT /admin/settings`
+
+Partial update of school settings. Creates audit log entry `settings.updated`.
+
+**Body:** partial `SchoolSettings` (omit `updatedAt`, `updatedBy` — set server-side).
+
+### `GET /admin/settings/fee-structures`
+
+List default fee breakdowns per class.
+
+**Response `data`:** `FeeStructure[]`
+
+```typescript
+interface FeeStructure {
+  id: string;
+  classApplying: string;
+  label: string;
+  breakdown: FeeBreakdown;
+  total: number;
+  active: boolean;
+  updatedAt: string;
+  updatedBy: string;
+}
+```
+
+### `PUT /admin/settings/fee-structures/:id`
+
+Update fee breakdown for a class. Creates audit log `fee_structure.updated`.
+
+**Body:** `{ breakdown: FeeBreakdown }`
+
+### `PATCH /admin/settings/fee-structures/:id`
+
+Toggle active state.
+
+**Body:** `{ active: boolean }`
+
+---
+
+## 13. Reports
+
+**Frontend:** `src/pages/admin/AdminReports.jsx` · **Mock:** `src/services/reportsService.js`
+
+### `GET /admin/reports/summary`
+
+Aggregated stats for dashboard cards.
+
+**Query:** `periodDays` — `7` | `30` | `90` | `all`
+
+**Response `data`:**
+
+```json
+{
+  "applications": { "total": 12, "underReview": 3, "approved": 7, "rejected": 1 },
+  "fees": { "totalRecords": 5, "collected": 71000, "pending": 75000, "verified": 1 },
+  "communications": { "photosShared": 3, "notificationsSent": 8, "classesReached": 2 },
+  "periodDays": "30"
+}
+```
+
+### `GET /admin/reports/:type`
+
+Detailed report rows. **`:type`** = `applications` | `fees` | `communications`
+
+**Query:** `periodDays`
+
+**Response `data`:** `{ summary: object, rows: array }`
+
+### `POST /admin/reports/:type/export`
+
+Generate CSV export (or return signed download URL in production).
+
+**Body:** `{ periodDays: string }`
+
+**Response `data`:** `{ type, periodDays, rows, exportedAt }`
+
+---
+
+## 14. Audit logs
+
+**Frontend:** `src/pages/admin/AdminAuditLogs.jsx` · **Mock:** `src/services/auditService.js`
+
+### `GET /admin/audit-logs`
+
+Paginated activity log for compliance and accountability.
+
+**Auth:** School Admin, Super Admin · permission `view_audit_logs`
+
+**Query filters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `search` | string | Match user name, summary, resource ID |
+| `action` | string | e.g. `application.approved`, `fee.verified` |
+| `from` | ISO datetime | Start of range |
+| `to` | ISO datetime | End of range |
+| `page` | number | Default 1 |
+| `pageSize` | number | Default 50 |
+
+**Response `data`:** `AuditLogEntry[]`
+
+```typescript
+interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  role: Role;
+  action: string;
+  resource: string;
+  resourceId: string;
+  summary: string;
+  ipAddress: string;
+}
+```
+
+**Actions (enum):** `application.approved`, `application.rejected`, `documents.verified`, `fee.assigned`, `fee.verified`, `fee_structure.updated`, `settings.updated`, `photo.sent`, `message.sent`, `account.created`, `admission.confirmed`
+
+Server should append audit entries on every mutating admin action (see queue job `audit-log`).
 
 ---
 

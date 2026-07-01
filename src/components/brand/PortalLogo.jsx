@@ -24,7 +24,7 @@ export default function PortalLogo({ size = 'md', className = '' }) {
 
   return (
     <div
-      className={`${sizeClass.box} flex shrink-0 items-center justify-center font-bold text-white ${className}`}
+      className={`${sizeClass.box} flex shrink-0 items-center justify-center font-bold text-white border border-white/10 ${className}`}
       style={{ background: 'var(--sb-primary)' }}
     >
       {initials}

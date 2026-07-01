@@ -17,7 +17,9 @@ import ApplicationsList from './pages/admin/ApplicationsList.jsx';
 import ApplicationReview from './pages/admin/ApplicationReview.jsx';
 import AdminFees from './pages/admin/AdminFees.jsx';
 import AdminStudents from './pages/admin/AdminStudents.jsx';
-import AdminPlaceholder from './pages/admin/AdminPlaceholder.jsx';
+import AdminSettings from './pages/admin/AdminSettings.jsx';
+import AdminReports from './pages/admin/AdminReports.jsx';
+import AdminAuditLogs from './pages/admin/AdminAuditLogs.jsx';
 import PortalSettings from './pages/admin/PortalSettings.jsx';
 
 import ParentDashboard from './pages/parent/ParentDashboard.jsx';
@@ -64,9 +66,9 @@ export default function App() {
       <Route path="/admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><SendPhotos /></ProtectedRoute>} />
       <Route path="/admin/chat" element={<ProtectedRoute allowedRoles={CHAT_ADMIN_ROLES}><ChatPage /></ProtectedRoute>} />
       <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={NOTIFICATIONS_ROLES}><NotificationsPage title="Notifications" subtitle="Manage and view all school notifications." /></ProtectedRoute>} />
-      <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminPlaceholder title="Reports" subtitle="Application, fee, and communication reports." /></ProtectedRoute>} />
-      <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPlaceholder title="Settings" subtitle="School configuration and fee structures." /></ProtectedRoute>} />
-      <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPlaceholder title="Audit Logs" subtitle="Track all system actions and changes." /></ProtectedRoute>} />
+      <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminReports /></ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminSettings /></ProtectedRoute>} />
+      <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAuditLogs /></ProtectedRoute>} />
       <Route path="/admin/portal-settings" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><PortalSettings /></ProtectedRoute>} />
 
       {/* Parent routes */}
