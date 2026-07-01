@@ -44,23 +44,14 @@ export function EnrollmentFormHeader({ portalName, school }) {
   );
 }
 
-export function EnrollmentSectionHeader({ step }) {
+export function EnrollmentSectionHeader({ step, title }) {
+  const SECTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const letter = SECTION_LETTERS[step - 1] || 'A';
-  const titles = [
-    'Student Information',
-    'Parent / Guardian Information',
-    'Address Information',
-    'Academic Information',
-    'Medical & Emergency Information',
-    'Required Documents',
-    'Declaration & Signature',
-    'Review & Submit',
-  ];
 
   return (
     <div className="enrollment-section-header">
       <span className="enrollment-section-letter">{letter}</span>
-      <span>{titles[step - 1]}</span>
+      <span>{title}</span>
     </div>
   );
 }
@@ -161,8 +152,9 @@ export function EnrollmentNotesPanel({ children }) {
   );
 }
 
-export function EnrollmentFormStepper({ currentStep, total = 8 }) {
+export function EnrollmentFormStepper({ currentStep, total = 8, sectionLetter }) {
   const percent = Math.round((currentStep / total) * 100);
+  const letter = sectionLetter || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[currentStep - 1] || 'A';
 
   return (
     <div className="enrollment-stepper">
@@ -173,7 +165,7 @@ export function EnrollmentFormStepper({ currentStep, total = 8 }) {
       <div className="enrollment-stepper__track">
         <div className="enrollment-stepper__fill" style={{ width: `${percent}%` }} />
       </div>
-      <p className="enrollment-stepper__label">Section {SECTION_LETTERS[currentStep - 1]}</p>
+      <p className="enrollment-stepper__label">Section {letter}</p>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { DEFAULT_PORTAL_CONFIG } from '../data/defaultPortalConfig.js';
+import { DEFAULT_ENROLLMENT_FORM, cloneEnrollmentFormConfig } from '../data/defaultEnrollmentFormConfig.js';
 import { NAV_BY_ROLE } from '../constants/navigation.js';
 import { buildDefaultMenuVisibility } from '../data/defaultPortalConfig.js';
 import { delay, getStore, setStore } from './mockApi.js';
@@ -14,6 +15,7 @@ function mergeConfig(stored) {
     enrollmentTheme: { ...DEFAULT_PORTAL_CONFIG.enrollmentTheme },
     loginMethods: { ...DEFAULT_PORTAL_CONFIG.loginMethods },
     loginScrollLines: [...DEFAULT_PORTAL_CONFIG.loginScrollLines],
+    enrollmentForm: cloneEnrollmentFormConfig(DEFAULT_ENROLLMENT_FORM),
     menuVisibility: buildDefaultMenuVisibility(NAV_BY_ROLE),
   };
 
@@ -32,6 +34,9 @@ function mergeConfig(stored) {
     loginScrollLines: stored.loginScrollLines?.length
       ? [...stored.loginScrollLines]
       : [...defaults.loginScrollLines],
+    enrollmentForm: stored.enrollmentForm?.steps?.length
+      ? cloneEnrollmentFormConfig(stored.enrollmentForm)
+      : cloneEnrollmentFormConfig(defaults.enrollmentForm),
     menuVisibility: {
       ...defaults.menuVisibility,
       ...(stored.menuVisibility || {}),
@@ -77,6 +82,9 @@ export async function savePortalConfig(updates) {
     loginMethods: updates.loginMethods
       ? { ...current.loginMethods, ...updates.loginMethods }
       : current.loginMethods,
+    enrollmentForm: updates.enrollmentForm
+      ? cloneEnrollmentFormConfig({ ...current.enrollmentForm, ...updates.enrollmentForm })
+      : current.enrollmentForm,
     menuVisibility: updates.menuVisibility
       ? { ...current.menuVisibility, ...updates.menuVisibility }
       : current.menuVisibility,

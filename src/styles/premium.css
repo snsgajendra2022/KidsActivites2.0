@@ -926,4 +926,9 @@ body {
   .enrollment-form-card { padding: 20px; border-radius: var(--radius-xl); }
   .enrollment-sticky-bar { padding: 14px 16px; }
   .premium-hero { padding: 48px 20px 64px; }
+  .bento-stat-value { font-size: 26px; }
+  .bento-stat-label { font-size: 12px; }
+  .welcome-banner { padding: 22px 20px; }
+  .welcome-banner h2 { font-size: 20px; }
+  .welcome-banner p { font-size: 13px; }
 }

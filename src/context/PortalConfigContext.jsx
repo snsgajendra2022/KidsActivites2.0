@@ -69,6 +69,7 @@ export function PortalConfigProvider({ children }) {
       theme: config?.theme,
       enrollmentTheme: config?.enrollmentTheme,
       loginMethods: config?.loginMethods,
+      enrollmentForm: config?.enrollmentForm,
       portalName: config?.portalName || 'SchoolBridge',
       loading,
       reload: load,

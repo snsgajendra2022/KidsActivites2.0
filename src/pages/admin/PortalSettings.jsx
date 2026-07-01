@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield, FileText } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -12,9 +12,12 @@ import { getAllMenuItemsGrouped } from '../../utils/navUtils.js';
 import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
 import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
+import EnrollmentFormBuilder from './EnrollmentFormBuilder.jsx';
+import { cloneEnrollmentFormConfig } from '../../data/defaultEnrollmentFormConfig.js';
 
 const TABS = [
   { id: 'identity', label: 'Portal Identity', icon: Layout },
+  { id: 'enrollment-form', label: 'Enrollment Form', icon: FileText },
   { id: 'login', label: 'Login Access', icon: KeyRound },
   { id: 'theme', label: 'Theme Colors', icon: Palette },
   { id: 'school', label: 'School Details', icon: Menu },
@@ -84,6 +87,7 @@ export default function PortalSettings() {
         enrollmentTheme: { ...config.enrollmentTheme },
         loginMethods: { ...config.loginMethods },
         loginScrollLines: [...(config.loginScrollLines || [])],
+        enrollmentForm: cloneEnrollmentFormConfig(config.enrollmentForm),
       });
     }
   }, [config]);
@@ -241,6 +245,13 @@ export default function PortalSettings() {
               variant="enrollment"
             />
           </div>
+        )}
+
+        {tab === 'enrollment-form' && form?.enrollmentForm && (
+          <EnrollmentFormBuilder
+            value={form.enrollmentForm}
+            onChange={(enrollmentForm) => setForm((f) => ({ ...f, enrollmentForm }))}
+          />
         )}
 
         {tab === 'login' && (

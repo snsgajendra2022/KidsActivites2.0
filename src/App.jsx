@@ -50,7 +50,7 @@ export default function App() {
       <Route path="/admin/applications/:id" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ApplicationReview /></ProtectedRoute>} />
       <Route path="/admin/students" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminStudents /></ProtectedRoute>} />
       <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdminFees /></ProtectedRoute>} />
-      <Route path="/admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPlaceholder title="Photo Sharing" subtitle="View and moderate teacher-shared photos." /></ProtectedRoute>} />
+      <Route path="/admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><SendPhotos /></ProtectedRoute>} />
       <Route path="/admin/chat" element={<ProtectedRoute allowedRoles={CHAT_ADMIN_ROLES}><ChatPage /></ProtectedRoute>} />
       <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={NOTIFICATIONS_ROLES}><AdminPlaceholder title="Notifications" subtitle="Manage and view all school notifications." /></ProtectedRoute>} />
       <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminPlaceholder title="Reports" subtitle="Application, fee, and communication reports." /></ProtectedRoute>} />

@@ -1,0 +1,222 @@
+/* Send Photos — teacher photo sharing form */
+
+.send-photos-page {
+  max-width: 42rem;
+}
+
+.send-photos-card {
+  padding: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .send-photos-card {
+    padding: 1.5rem;
+  }
+}
+
+.send-photos-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.send-photos-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.send-photos-field__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sb-primary);
+}
+
+.send-photos-field__label .required {
+  color: #c81e1e;
+  margin-left: 2px;
+}
+
+.send-photos-type-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+@media (min-width: 480px) {
+  .send-photos-type-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.send-photos-type-btn {
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sb-on-surface-variant);
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.send-photos-type-btn:hover {
+  border-color: color-mix(in srgb, var(--sb-secondary) 35%, transparent);
+  background: var(--sb-surface);
+}
+
+.send-photos-type-btn.is-active {
+  border-color: var(--sb-secondary);
+  background: color-mix(in srgb, var(--sb-secondary) 10%, white);
+  color: var(--sb-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
+}
+
+.send-photos-students {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 12rem;
+  overflow-y: auto;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--sb-surface);
+}
+
+.send-photos-student-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--sb-on-surface);
+  cursor: pointer;
+}
+
+.send-photos-student-row:hover {
+  background: #fff;
+}
+
+.send-photos-student-row input {
+  margin-top: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  accent-color: var(--sb-secondary);
+}
+
+.send-photos-student-row span {
+  line-height: 1.4;
+}
+
+.send-photos-student-row small {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--sb-on-surface-variant);
+  margin-top: 0.125rem;
+}
+
+.send-photos-form .form-field {
+  margin: 0;
+}
+
+.send-photos-form .form-field.full {
+  width: 100%;
+}
+
+.send-photos-form .form-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sb-primary);
+}
+
+.send-photos-form .form-select,
+.send-photos-form .form-textarea {
+  width: 100%;
+  font-size: 0.875rem;
+  border-color: rgba(0, 0, 0, 0.1);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.send-photos-form .form-select {
+  min-height: 2.75rem;
+}
+
+.send-photos-form .form-textarea {
+  min-height: 5.5rem;
+  padding: 0.75rem 0.875rem;
+  resize: vertical;
+}
+
+.send-photos-form .file-upload {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0.75rem;
+  border: 1.5px dashed rgba(0, 0, 0, 0.12);
+  background: var(--sb-surface);
+  padding: 1.25rem 1rem;
+  text-align: center;
+}
+
+.send-photos-form .file-upload:hover {
+  border-color: var(--sb-secondary);
+  background: color-mix(in srgb, var(--sb-secondary) 6%, white);
+}
+
+.send-photos-form .file-upload-text {
+  font-size: 0.875rem;
+}
+
+.send-photos-form .file-upload-hint {
+  font-size: 0.75rem;
+}
+
+.send-photos-form .upload-item-card {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.send-photos-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.send-photos-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: var(--sb-primary);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.send-photos-submit:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.send-photos-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (min-width: 480px) {
+  .send-photos-submit {
+    width: auto;
+    min-width: 10rem;
+  }
+}

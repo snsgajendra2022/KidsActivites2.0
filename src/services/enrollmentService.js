@@ -1,5 +1,7 @@
 import { ENROLLMENT_STATUSES } from '../constants/enrollmentStatuses.js';
-import { INITIAL_APPLICATIONS, EMPTY_ENROLLMENT_FORM } from '../data/mockApplications.js';
+import { INITIAL_APPLICATIONS } from '../data/mockApplications.js';
+import { buildEmptyFormFromConfig } from '../utils/enrollmentFormUtils.js';
+import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js';
 import { delay, getStore, setStore, generateApplicationNo } from './mockApi.js';
 
 const KEY = 'sb_applications';
@@ -119,8 +121,8 @@ export async function createAccount(id) {
   return updateApplicationStatus(id, ENROLLMENT_STATUSES.ACCOUNT_CREATED, 'Parent account created and invitation sent');
 }
 
-export function getEmptyForm() {
-  return JSON.parse(JSON.stringify(EMPTY_ENROLLMENT_FORM));
+export function getEmptyForm(enrollmentForm) {
+  return buildEmptyFormFromConfig(enrollmentForm || DEFAULT_ENROLLMENT_FORM);
 }
 
 export function getDashboardStats() {
