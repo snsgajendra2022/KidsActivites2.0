@@ -166,7 +166,7 @@ export default function Enrollment() {
                 type="button"
                 onClick={handleSaveDraft}
                 disabled={loading}
-                className="enrollment-btn enrollment-btn--outline !py-2 !px-4 !text-[10px]"
+                className="enrollment-btn width-[40%] enrollment-btn--outline !py-2 !px-4 !text-[10px]"
               >
                 Save Draft
               </button>

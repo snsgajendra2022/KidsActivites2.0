@@ -81,15 +81,35 @@
   box-sizing: border-box;
 }
 
-/* Login page header — compact on narrow screens */
+/* Login page header — compact brand row + mobile marquee row */
 .login-public-header .login-header-brand-text {
   display: inline;
+  max-width: 12rem;
 }
 
-@media (max-width: 399px) {
+@media (min-width: 400px) {
   .login-public-header .login-header-brand-text {
-    display: none;
+    max-width: 16rem;
   }
+}
+
+.login-header-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-header-marquee-row {
+  width: 100%;
+  padding: 0 0.75rem 0.4375rem;
+  border-top: 1px solid color-mix(in srgb, var(--sb-primary) 6%, transparent);
+  background: color-mix(in srgb, var(--sb-secondary) 5%, white);
+}
+
+.login-header-marquee-row .login-header-marquee {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sb-secondary) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--sb-primary) 8%, transparent);
+  padding: 0.25rem 0.625rem;
 }
 
 .login-public-header .sb-btn-pill {
@@ -97,7 +117,7 @@
   white-space: nowrap;
 }
 
-/* Login header — marquee inside nav row (right-to-left) */
+/* Login header — marquee inline on desktop (right-to-left) */
 .login-header-marquee-inner {
   overflow: hidden;
   border-radius: 999px;
@@ -129,10 +149,8 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 399px) {
-  .login-header-marquee__icon {
-    display: none;
-  }
+.login-header-marquee-row .login-header-marquee__icon {
+  display: block;
 }
 
 .login-header-marquee__viewport {
@@ -157,10 +175,16 @@
 .login-header-marquee__text {
   flex-shrink: 0;
   padding-right: 0;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1.25rem;
   white-space: nowrap;
+}
+
+@media (min-width: 400px) {
+  .login-header-marquee__text {
+    font-size: 0.75rem;
+  }
 }
 
 @media (min-width: 768px) {
