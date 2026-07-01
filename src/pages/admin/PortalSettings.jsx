@@ -83,6 +83,7 @@ export default function PortalSettings() {
         theme: { ...config.theme },
         enrollmentTheme: { ...config.enrollmentTheme },
         loginMethods: { ...config.loginMethods },
+        loginScrollLines: [...(config.loginScrollLines || [])],
       });
     }
   }, [config]);
@@ -342,6 +343,26 @@ export default function PortalSettings() {
             <p className="mt-4 text-xs text-muted">
               OTP login appears as one option on the login page. Enable mobile, email, or both channels inside OTP login.
             </p>
+
+            <div className="mt-8 border-t border-black/5 pt-6">
+              <p className="mb-2 text-sm font-semibold text-brand">Login Header Scroll Text</p>
+              <p className="mb-3 text-xs text-muted">
+                One announcement per line. They scroll right to left in a single line on the login header.
+              </p>
+              <textarea
+                className="w-full rounded-xl border border-black/10 bg-[#fafbfe] px-4 py-3 text-sm text-brand outline-none focus:border-[var(--sb-secondary)] focus:ring-2 focus:ring-[var(--sb-secondary)]/15"
+                rows={5}
+                value={(form.loginScrollLines || []).join('\n')}
+                onChange={(e) => {
+                  const lines = e.target.value
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean);
+                  setForm((f) => ({ ...f, loginScrollLines: lines }));
+                }}
+                placeholder={'Admissions open for 2026–2027\nFee deadline: 31 July 2026'}
+              />
+            </div>
           </div>
         )}
 

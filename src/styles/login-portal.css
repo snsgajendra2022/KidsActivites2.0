@@ -97,6 +97,98 @@
   white-space: nowrap;
 }
 
+/* Login header — marquee inside nav row (right-to-left) */
+.login-header-marquee-inner {
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sb-secondary) 7%, white);
+  border: 1px solid color-mix(in srgb, var(--sb-primary) 8%, transparent);
+  padding: 0.25rem 0.625rem;
+}
+
+@media (min-width: 640px) {
+  .login-header-marquee-inner {
+    padding: 0.3125rem 0.875rem;
+  }
+}
+
+.login-header-marquee__text {
+  color: color-mix(in srgb, var(--sb-primary) 85%, transparent);
+}
+
+.login-header-marquee {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.login-header-marquee__icon {
+  color: var(--sb-secondary);
+  flex-shrink: 0;
+}
+
+@media (max-width: 399px) {
+  .login-header-marquee__icon {
+    display: none;
+  }
+}
+
+.login-header-marquee__viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 4%,
+    #000 96%,
+    transparent 100%
+  );
+}
+
+.login-header-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: login-header-marquee-rtl 28s linear infinite;
+}
+
+.login-header-marquee__text {
+  flex-shrink: 0;
+  padding-right: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .login-header-marquee__text {
+    font-size: 0.8125rem;
+  }
+}
+
+@keyframes login-header-marquee-rtl {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-header-marquee__track {
+    animation: none;
+    transform: none;
+  }
+
+  .login-header-marquee__text:last-child {
+    display: none;
+  }
+}
+
 .login-portal .font-display {
   font-family: Manrope, Inter, system-ui, sans-serif;
 }

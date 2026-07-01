@@ -35,6 +35,12 @@ export const DEFAULT_PORTAL_CONFIG = {
     mobileOtp: true,
     emailOtp: true,
   },
+  loginScrollLines: [
+    'Admissions open for 2026–2027 — enroll online today',
+    'Last date for fee submission: 31 July 2026',
+    'Track applications, documents & fees in your parent portal',
+    'Need help? Contact admissions@greenvalley.edu.in',
+  ],
   /** role → menuId → visible (false = hidden) */
   menuVisibility: {},
 };

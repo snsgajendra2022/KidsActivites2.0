@@ -13,6 +13,7 @@ function mergeConfig(stored) {
     theme: { ...DEFAULT_PORTAL_CONFIG.theme },
     enrollmentTheme: { ...DEFAULT_PORTAL_CONFIG.enrollmentTheme },
     loginMethods: { ...DEFAULT_PORTAL_CONFIG.loginMethods },
+    loginScrollLines: [...DEFAULT_PORTAL_CONFIG.loginScrollLines],
     menuVisibility: buildDefaultMenuVisibility(NAV_BY_ROLE),
   };
 
@@ -28,6 +29,9 @@ function mergeConfig(stored) {
     theme: { ...defaults.theme, ...(stored.theme || {}) },
     enrollmentTheme: { ...defaults.enrollmentTheme, ...(stored.enrollmentTheme || {}) },
     loginMethods: { ...defaults.loginMethods, ...(stored.loginMethods || {}) },
+    loginScrollLines: stored.loginScrollLines?.length
+      ? [...stored.loginScrollLines]
+      : [...defaults.loginScrollLines],
     menuVisibility: {
       ...defaults.menuVisibility,
       ...(stored.menuVisibility || {}),

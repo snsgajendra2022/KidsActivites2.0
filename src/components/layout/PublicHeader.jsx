@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
+import LoginHeaderScrollText from '../auth/LoginHeaderScrollText.jsx';
 
 const NAV_LINKS = [
   { to: '/enroll', label: 'Admissions' },
@@ -11,7 +12,8 @@ const NAV_LINKS = [
 
 export default function PublicHeader({ glass = false, compact = false, loginMobile = false }) {
   const location = useLocation();
-  const { portalName } = usePortalConfig();
+  const { portalName, config } = usePortalConfig();
+  const loginScrollLines = config?.loginScrollLines;
 
   return (
     <header
@@ -22,7 +24,9 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
       } ${loginMobile ? 'login-public-header' : ''}`}
     >
       <nav
-        className={`mx-auto flex w-full max-w-screen-2xl items-center justify-between gap-2 ${
+        className={`mx-auto flex w-full max-w-screen-2xl items-center gap-2 sm:gap-3 ${
+          loginMobile ? 'justify-start' : 'justify-between'
+        } ${
           loginMobile
             ? 'h-12 px-3'
             : compact
@@ -30,7 +34,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
               : 'h-16 px-4 md:h-[4.5rem] md:px-10'
         }`}
       >
-        <div className="flex min-w-0 items-center gap-4 md:gap-8">
+        <div className="flex min-w-0 shrink-0 items-center gap-4 md:gap-8">
           <Link to="/" className="flex min-w-0 items-center gap-2 md:gap-3">
             <PortalLogo size={loginMobile ? 'sm' : 'md'} />
             <span className={`login-header-brand-text font-display truncate font-bold tracking-tighter text-brand ${
@@ -58,6 +62,13 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
           )}
         </div>
 
+        {loginMobile && loginScrollLines?.length > 0 && (
+          <div className="login-header-marquee-inner min-w-0 flex-1">
+            <LoginHeaderScrollText lines={loginScrollLines} />
+          </div>
+        )}
+
+        {!loginMobile && (
         <div className="flex shrink-0 items-center gap-2 md:gap-4">
           {location.pathname !== '/login' && !loginMobile && (
             <Link
@@ -78,6 +89,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
             </Link>
           )}
         </div>
+        )}
       </nav>
     </header>
   );
