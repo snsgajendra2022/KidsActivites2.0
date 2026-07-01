@@ -1,0 +1,84 @@
+{
+  "users": [
+    {
+      "id": "usr-super-admin",
+      "name": "Rakesh Verma",
+      "email": "superadmin@schoolbridge.demo",
+      "mobile": "9000000001",
+      "password": "123456",
+      "role": "super_admin",
+      "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-school-admin",
+      "name": "Priya Sharma",
+      "email": "admin@schoolbridge.demo",
+      "mobile": "9000000002",
+      "password": "123456",
+      "role": "school_admin",
+      "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-admission",
+      "name": "Anita Desai",
+      "email": "admission@schoolbridge.demo",
+      "mobile": "9000000003",
+      "password": "123456",
+      "role": "admission_officer",
+      "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-accountant",
+      "name": "Vikram Patel",
+      "email": "accountant@schoolbridge.demo",
+      "mobile": "9000000004",
+      "password": "123456",
+      "role": "accountant",
+      "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-teacher",
+      "name": "Meera Iyer",
+      "email": "teacher@schoolbridge.demo",
+      "mobile": "9000000005",
+      "password": "123456",
+      "role": "teacher",
+      "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-parent",
+      "name": "Rajesh Kumar",
+      "email": "parent@schoolbridge.demo",
+      "mobile": "9000000006",
+      "password": "123456",
+      "role": "parent",
+      "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-student",
+      "name": "Aarav Kumar",
+      "email": "student@schoolbridge.demo",
+      "mobile": "9000000007",
+      "password": "123456",
+      "role": "student",
+      "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-support",
+      "name": "Sneha Reddy",
+      "email": "support@schoolbridge.demo",
+      "mobile": "9000000008",
+      "password": "123456",
+      "role": "support_staff",
+      "schoolId": "school-1",
+      "avatar": null
+    }
+  ]
+}

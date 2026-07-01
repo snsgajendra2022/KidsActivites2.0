@@ -35,13 +35,27 @@ export const TEACHER_NAV = [
   { to: '/teacher/messages', label: 'Messages', icon: MessageCircle },
 ];
 
+export const ACCOUNTANT_NAV = [
+  { to: '/admin/fees', label: 'Fees', icon: CreditCard },
+  { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+];
+
+export const SUPPORT_NAV = [
+  { to: '/admin/chat', label: 'Chat', icon: MessageCircle },
+  { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+  { to: '/admin/applications', label: 'Applications', icon: FileText },
+];
+
 export const NAV_BY_ROLE = {
   [ROLES.SUPER_ADMIN]: ADMIN_NAV,
   [ROLES.SCHOOL_ADMIN]: ADMIN_NAV,
   [ROLES.ADMISSION_OFFICER]: ADMIN_NAV,
+  [ROLES.ACCOUNTANT]: ACCOUNTANT_NAV,
   [ROLES.TEACHER]: TEACHER_NAV,
   [ROLES.PARENT]: PARENT_NAV,
   [ROLES.STUDENT]: PARENT_NAV,
+  [ROLES.SUPPORT_STAFF]: SUPPORT_NAV,
 };
 
 export { LogOut, UserCheck };

@@ -1,86 +1,123 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, FileCheck, CreditCard, Users, Shield, ArrowRight } from 'lucide-react';
-import { SCHOOL } from '../data/mockSchool.js';
-import Button from '../components/ui/Button.jsx';
+import { motion } from 'framer-motion';
+import { Shield, FileCheck, CreditCard, Users, ArrowRight, Sparkles, GraduationCap } from 'lucide-react';
+import { SCHOOL } from '../../data/mockSchool.js';
+import PublicLayout from '../../components/layout/PublicLayout.jsx';
+
+const HERO_IMAGE =
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuA1Jp3AHHVfUbFSqzf3O-N5gFgr6s8ML-K8DwGD2GEXOTz15s-4fyzZM4Y1dwZ6vZaWqtLWEKGdZc1bwrXQMzn5bsiPQqN0FxnQdD3b2YNt-S05QXmCsAO0IBilprdNSAsdI39s5hIV7B5YPuyk0f-9esE0RwWHTQT0N5w6Qv9bcBb0Q1upVt_zm2uL6H9KaHy8QbCqOoaRNzNUIsoa0zzl2ZYB9sGHKd1fetYmj5dyKWuq4kD1hxjHmQ';
+
+const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 
 export default function Landing() {
   return (
-    <div>
-      <nav className="landing-nav">
-        <div className="sidebar-brand">
-          <span className="sidebar-brand-icon">SB</span>
-          <span style={{ fontWeight: 700, fontSize: 18, color: 'var(--navy)' }}>SchoolBridge</span>
+    <PublicLayout hideFooter className="!bg-[#f8f9ff]">
+      {/* Hero */}
+      <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden md:min-h-[calc(100vh-4.5rem)]">
+        <div className="absolute inset-0 z-0">
+          <img alt="" className="h-full w-full object-cover" src={HERO_IMAGE} />
+          <div className="hero-gradient absolute inset-0" />
         </div>
-        <div className="btn-group">
-          <Link to="/login"><Button variant="outline">Login</Button></Link>
-          <Link to="/enroll"><Button variant="primary">Apply Now</Button></Link>
-        </div>
-      </nav>
 
-      <section className="landing-hero">
-        <div className="landing-badge"><GraduationCap size={16} /> Admissions Open — {SCHOOL.academicYear}</div>
-        <h1>{SCHOOL.name}</h1>
-        <p>Complete your child&apos;s enrollment online. Submit documents, pay fees, and track admission status — all in one secure platform.</p>
-        <Link to="/enroll"><Button variant="primary" className="btn-lg">Start Enrollment <ArrowRight size={18} /></Button></Link>
-      </section>
-
-      <section className="landing-section">
-        <h2>Why Choose Us</h2>
-        <p>A trusted platform for seamless school admissions and parent communication.</p>
-        <div className="process-steps">
-          {[
-            { icon: Shield, title: 'Secure Process', desc: 'Your data is protected with role-based access and encrypted storage.' },
-            { icon: FileCheck, title: 'Easy Documentation', desc: 'Upload required documents online with real-time status tracking.' },
-            { icon: CreditCard, title: 'Transparent Fees', desc: 'Clear fee breakdown with receipt generation after verification.' },
-            { icon: Users, title: 'Stay Connected', desc: 'Chat with teachers and receive classroom photos after admission.' },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="process-step">
-              <Icon size={28} color="var(--primary)" style={{ marginBottom: 12 }} />
-              <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>{title}</h3>
-              <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)' }}>{desc}</p>
+        <div className="relative z-10 mx-auto w-full max-w-screen-2xl px-4 py-16 md:px-10 md:py-20">
+          <motion.div {...fadeUp} transition={{ duration: 0.5 }} className="max-w-2xl">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
+              <Sparkles size={14} />
+              Admissions Open — {SCHOOL.academicYear}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="landing-section" style={{ background: '#f8fafc' }}>
-        <h2>Admission Process</h2>
-        <p>Follow these simple steps to complete your child&apos;s enrollment.</p>
-        <div className="process-steps">
-          {['Submit Enrollment Form', 'Admin Review & Documents', 'Fee Submission', 'Admission Confirmed', 'Account Created'].map((step, i) => (
-            <div key={step} className="process-step">
-              <div className="process-step-num">{i + 1}</div>
-              <h3 style={{ margin: 0, fontSize: 15 }}>{step}</h3>
+            <h1 className="font-display mb-5 text-4xl font-extrabold leading-tight tracking-[-0.04em] text-white md:text-5xl">
+              Modern School Enrollment,
+              <br />
+              Built for Premium Education
+            </h1>
+            <p className="mb-8 max-w-xl text-lg leading-relaxed text-white/80">
+              Complete your child&apos;s admission online. Submit documents, pay fees, and stay
+              connected — all in one trusted platform.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link
+                to="/enroll"
+                className="btn-hover-lift inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-[#091426]"
+              >
+                Start Enrollment <ArrowRight size={18} />
+              </Link>
+              <Link
+                to="/login"
+                className="btn-hover-lift inline-flex items-center gap-2 rounded-full border border-white/20 bg-[#091426] px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition-premium hover:bg-[#1e293b] hover:text-white"
+              >
+                Parent Login
+              </Link>
             </div>
-          ))}
-        </div>
-        <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <Link to="/enroll"><Button variant="primary" className="btn-lg">Begin Enrollment Application</Button></Link>
+          </motion.div>
         </div>
       </section>
 
-      <section className="landing-section">
-        <h2>Required Documents</h2>
-        <p>Please keep these documents ready before starting the application.</p>
-        <div className="card" style={{ maxWidth: 600, margin: '0 auto' }}>
-          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2, fontSize: 14 }}>
-            <li>Birth Certificate</li>
-            <li>Student Photograph</li>
-            <li>Parent / Guardian ID Proof</li>
-            <li>Address Proof</li>
-            <li>Previous School Report Card</li>
-            <li>Transfer Certificate (if applicable)</li>
-            <li>Medical Certificate (if required)</li>
-          </ul>
+      {/* Features */}
+      <section id="programs" className="px-4 py-16 md:px-10 md:py-20">
+        <div className="mx-auto max-w-screen-2xl">
+          <motion.div {...fadeUp} className="mb-12 text-center">
+            <h2 className="font-display mb-3 text-3xl font-extrabold tracking-tight text-[#091426]">
+              Why Schools Choose SchoolBridge
+            </h2>
+            <p className="text-[#45474c]">
+              A complete platform for admissions, fees, and parent communication.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: Shield, title: 'Secure & Trusted', desc: 'Role-based access, encrypted data, and audit-ready workflows.' },
+              { icon: FileCheck, title: 'Easy Documentation', desc: 'Upload documents online with real-time status tracking.' },
+              { icon: CreditCard, title: 'Transparent Fees', desc: 'Clear fee breakdown with digital receipt generation.' },
+              { icon: Users, title: 'Stay Connected', desc: 'Chat with teachers and receive classroom photos after admission.' },
+            ].map(({ icon: Icon, title, desc }, i) => (
+              <motion.div
+                key={title}
+                className="sb-card p-6 transition-premium hover:-translate-y-0.5 hover:shadow-lg"
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+              >
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#dce9ff] text-[#0058be]">
+                  <Icon size={22} />
+                </div>
+                <h3 className="mb-2 text-base font-bold text-[#091426]">{title}</h3>
+                <p className="text-sm leading-relaxed text-[#45474c]">{desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <footer className="landing-footer">
-        <p style={{ margin: '0 0 8px', fontWeight: 600, color: '#fff' }}>{SCHOOL.name}</p>
-        <p style={{ margin: '0 0 4px' }}>{SCHOOL.address}</p>
-        <p style={{ margin: 0 }}>{SCHOOL.phone} · {SCHOOL.email}</p>
+      {/* School CTA */}
+      <section id="about" className="bg-[#091426] px-4 py-16 text-center text-white md:px-10 md:py-20">
+        <div className="mx-auto max-w-screen-2xl">
+          <GraduationCap size={40} className="mx-auto mb-4 opacity-80" />
+          <h2 className="font-display mb-3 text-3xl font-extrabold">{SCHOOL.name}</h2>
+          <p className="mb-8 text-white/70">{SCHOOL.address}</p>
+          <Link
+            to="/enroll"
+            className="btn-hover-lift inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-[#091426]"
+          >
+            Begin Enrollment Application <ArrowRight size={18} />
+          </Link>
+        </div>
+      </section>
+
+      {/* Contact + footer */}
+      <section id="contact" className="border-t border-black/5 bg-white px-4 py-10 md:px-10">
+        <div className="mx-auto max-w-screen-2xl text-center text-sm text-[#45474c]">
+          {SCHOOL.phone} · {SCHOOL.email}
+        </div>
+      </section>
+
+      <footer className="border-t border-white/5 bg-[#091426] px-4 py-6 md:px-10">
+        <div className="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-4 md:flex-row">
+          <span className="font-display text-lg font-semibold text-white">SchoolBridge</span>
+          <p className="text-xs text-white/40">© 2026 SchoolBridge · {SCHOOL.name}</p>
+        </div>
       </footer>
-    </div>
+    </PublicLayout>
   );
 }

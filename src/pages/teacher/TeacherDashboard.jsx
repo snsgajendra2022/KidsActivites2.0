@@ -1,39 +1,64 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Image, MessageCircle, Users } from 'lucide-react';
-import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
-import { PageHeader, StatCard } from '../../components/ui/index.jsx';
+import { GraduationCap, Image, MessageCircle, Users, Send, ArrowRight } from 'lucide-react';
+import AppLayout from '../../components/layout/AppLayout.jsx';
+import PageTransition from '../../components/ui/PageTransition.jsx';
+import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
+import { WelcomeBanner } from '../../components/dashboard/ChartCards.jsx';
 import { TEACHER_CLASSES } from '../../data/mockPhotos.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function TeacherDashboard() {
+  const { user } = useAuth();
+
   return (
-    <DashboardLayout>
-      <PageHeader title="Teacher Dashboard" subtitle="Manage your classes, students, and parent communication." />
+    <AppLayout>
+      <PageTransition>
+        <div className="premium-page-header">
+          <h1 className="premium-page-title">Teacher Dashboard</h1>
+          <p className="premium-page-subtitle">Welcome, {user?.name}. Manage your classes and parent communication.</p>
+        </div>
 
-      <div className="stats-grid">
-        <StatCard icon={GraduationCap} value={TEACHER_CLASSES.length} label="Assigned Classes" />
-        <StatCard icon={Users} value={54} label="Total Students" />
-        <StatCard icon={Image} value={12} label="Photos Shared" />
-        <StatCard icon={MessageCircle} value={3} label="Unread Messages" />
-      </div>
+        <div className="bento-grid">
+          <WelcomeBanner
+            title="Your Classroom Hub"
+            subtitle="Share photos, send messages, and keep parents connected with classroom updates."
+            actions={
+              <>
+                <Link to="/teacher/photos" className="premium-btn premium-btn-white premium-btn-sm"><Send size={16} /> Send Photos</Link>
+                <Link to="/teacher/messages" className="premium-btn premium-btn-white premium-btn-sm">View Messages</Link>
+              </>
+            }
+          />
 
-      <div className="section-head" style={{ marginTop: 32 }}>
-        <h2 className="section-title">My Classes</h2>
-        <Link to="/teacher/classes" style={{ color: 'var(--primary)', fontWeight: 600, fontSize: 14 }}>View All</Link>
-      </div>
+          <div className="bento-span-3"><BentoStatCard icon={GraduationCap} value={TEACHER_CLASSES.length} label="Assigned Classes" variant="indigo" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={Users} value={54} label="Total Students" change="+3 new" variant="emerald" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={Image} value={12} label="Photos Shared" variant="sky" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={MessageCircle} value={3} label="Unread Messages" variant="amber" /></div>
 
-      <div className="stats-grid">
-        {TEACHER_CLASSES.map((cls) => (
-          <div key={cls.id} className="card">
-            <h3 className="card-title">{cls.name}</h3>
-            <p className="text-muted">{cls.studentCount} students</p>
-            <div className="btn-group" style={{ marginTop: 12 }}>
-              <Link to="/teacher/students"><button className="btn btn-outline btn-sm">Students</button></Link>
-              <Link to="/teacher/photos"><button className="btn btn-primary btn-sm">Send Photos</button></Link>
+          <div className="bento-span-12">
+            <h3 className="card-title" style={{ marginBottom: 16 }}>My Classes</h3>
+            <div className="bento-grid" style={{ gap: 16 }}>
+              {TEACHER_CLASSES.map((cls) => (
+                <div key={cls.id} className="bento-span-6">
+                  <div className="premium-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: 'var(--navy)' }}>{cls.name}</h4>
+                        <p className="text-muted" style={{ margin: 0, fontSize: 13 }}>{cls.studentCount} students · Grade {cls.grade}</p>
+                      </div>
+                      <div className="premium-feature-icon" style={{ width: 40, height: 40, margin: 0 }}><GraduationCap size={20} /></div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                      <Link to="/teacher/students" className="premium-btn premium-btn-secondary premium-btn-sm">Students</Link>
+                      <Link to="/teacher/photos" className="premium-btn premium-btn-primary premium-btn-sm">Send Photos <ArrowRight size={14} /></Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
-    </DashboardLayout>
+        </div>
+      </PageTransition>
+    </AppLayout>
   );
 }

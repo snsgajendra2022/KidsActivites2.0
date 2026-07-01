@@ -1,0 +1,77 @@
+/* SchoolBridge premium login portal — matches enrollment portal design */
+
+.login-portal {
+  --sb-primary: #091426;
+  --sb-secondary: #0058be;
+  --sb-surface: #f8f9ff;
+  --sb-on-surface: #0b1c30;
+  --sb-on-surface-variant: #45474c;
+  --sb-outline-variant: #c5c6cd;
+  --sb-surface-container-high: #dce9ff;
+  font-family: Inter, system-ui, sans-serif;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.login-portal .font-display {
+  font-family: Manrope, Inter, system-ui, sans-serif;
+}
+
+.login-portal .glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+}
+
+.login-portal .hero-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(9, 20, 38, 0.95) 0%,
+    rgba(9, 20, 38, 0.4) 50%,
+    transparent 100%
+  );
+}
+
+.login-portal .transition-premium {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.login-portal .input-premium {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.login-portal .input-premium:focus {
+  border-color: #0058be;
+  box-shadow: 0 0 0 4px rgba(0, 88, 190, 0.1);
+  outline: none;
+}
+
+.login-portal .field-group:focus-within .field-label {
+  color: #0058be;
+}
+
+.login-portal .btn-hover-lift {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.login-portal .btn-hover-lift:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+}
+
+.login-portal .material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  line-height: 1;
+}
+
+.login-portal details.demo-accounts summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Prevent any nested scroll on the login shell */
+.login-portal > main {
+  overscroll-behavior: none;
+}

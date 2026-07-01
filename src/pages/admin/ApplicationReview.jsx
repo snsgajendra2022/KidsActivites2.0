@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
+import {
+  DataTable,
+  TableActionButton,
+  TableActionCell,
+} from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Textarea from '../../components/ui/Textarea.jsx';
@@ -72,21 +77,35 @@ export default function ApplicationReview() {
 
           <div className="card" style={{ marginBottom: 16 }}>
             <h3 className="card-title">Documents</h3>
-            <div className="data-table-wrap" style={{ border: 0 }}>
-              <table className="data-table">
-                <thead><tr><th>Document</th><th>File</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody>
-                  {Object.entries(app.documents || {}).map(([key, doc]) => (
-                    <tr key={key}>
-                      <td>{key.replace(/([A-Z])/g, ' $1')}</td>
-                      <td>{doc?.name || '—'}</td>
-                      <td><span className={`badge badge-${doc?.status === 'verified' ? 'approved' : 'review'}`}>{doc?.status || 'pending'}</span></td>
-                      <td><Button variant="ghost" size="sm">Preview</Button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable nested minWidth={600}>
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>File</th>
+                  <th>Status</th>
+                  <th className="!text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(app.documents || {}).map(([key, doc]) => (
+                  <tr key={key}>
+                    <td className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</td>
+                    <td>{doc?.name || '—'}</td>
+                    <td>
+                      <StatusBadge
+                        status={doc?.status === 'verified' ? 'documents_verified' : 'documents_pending'}
+                        variant={doc?.status === 'verified' ? 'success' : 'warning'}
+                      >
+                        {doc?.status || 'pending'}
+                      </StatusBadge>
+                    </td>
+                    <TableActionCell showDash={false}>
+                      <TableActionButton variant="outline">Preview</TableActionButton>
+                    </TableActionCell>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
           </div>
 
           <div className="card">

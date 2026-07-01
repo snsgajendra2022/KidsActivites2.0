@@ -1,0 +1,301 @@
+/* SchoolBridge global theme — matches login portal design */
+
+:root {
+  --sb-primary: #091426;
+  --sb-secondary: #0058be;
+  --sb-surface: #f8f9ff;
+  --sb-on-surface: #0b1c30;
+  --sb-on-surface-variant: #45474c;
+  --sb-outline-variant: #c5c6cd;
+  --sb-surface-container-high: #dce9ff;
+  --sb-surface-container: #e5eeff;
+
+  /* Bridge legacy premium.css tokens */
+  --primary: #091426;
+  --primary-dark: #061018;
+  --primary-light: #dce9ff;
+  --navy: #091426;
+  --bg: #f8f9ff;
+  --text: #0b1c30;
+  --muted: #45474c;
+  --line: rgba(0, 0, 0, 0.06);
+  --font-display: Manrope, 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+}
+
+body {
+  background: var(--sb-surface);
+  color: var(--sb-on-surface);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: Manrope, Inter, system-ui, sans-serif;
+}
+
+/* ─── Shared utilities ─── */
+.sb-surface {
+  background-color: var(--sb-surface);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(9, 20, 38, 0.06);
+}
+
+.sb-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px rgba(9, 20, 38, 0.04);
+}
+
+.hero-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(9, 20, 38, 0.92) 0%,
+    rgba(9, 20, 38, 0.45) 55%,
+    transparent 100%
+  );
+}
+
+.transition-premium {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.input-premium {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.input-premium:focus {
+  border-color: var(--sb-secondary);
+  box-shadow: 0 0 0 4px rgba(0, 88, 190, 0.1);
+  outline: none;
+}
+
+.field-group:focus-within .field-label {
+  color: var(--sb-secondary);
+}
+
+.btn-hover-lift {
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.btn-hover-lift:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(9, 20, 38, 0.18);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  line-height: 1;
+}
+
+/* ─── Buttons ─── */
+.sb-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: var(--sb-primary);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sb-btn-primary:hover:not(:disabled) {
+  background: #0d1f3d;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px -4px rgba(9, 20, 38, 0.2);
+}
+
+.sb-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
+  color: var(--sb-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sb-btn-secondary:hover {
+  background: var(--sb-surface-container-high);
+}
+
+.sb-btn-pill {
+  border-radius: 9999px;
+  padding: 0.625rem 1.75rem;
+}
+
+/* ─── Page headers ─── */
+.sb-page-header {
+  margin-bottom: 1.5rem;
+}
+
+.sb-page-title {
+  margin: 0;
+  font-family: Manrope, Inter, system-ui, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--sb-primary);
+}
+
+.sb-page-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--sb-on-surface-variant);
+}
+
+/* ─── Premium class bridges (dashboard pages) ─── */
+.premium-page-header {
+  margin-bottom: 1.5rem;
+}
+
+.premium-page-title {
+  margin: 0;
+  font-family: Manrope, Inter, system-ui, sans-serif !important;
+  font-size: 1.75rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em;
+  color: var(--sb-primary) !important;
+}
+
+.premium-page-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--sb-on-surface-variant) !important;
+}
+
+.premium-btn-primary {
+  background: var(--sb-primary) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 0.75rem !important;
+}
+
+.premium-btn-primary:hover {
+  background: #0d1f3d !important;
+}
+
+.premium-btn-secondary {
+  background: #fff !important;
+  color: var(--sb-primary) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 0.75rem !important;
+}
+
+.premium-btn-secondary:hover {
+  background: var(--sb-surface-container-high) !important;
+}
+
+.premium-card,
+.enrollment-form-card,
+.card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 2px 12px rgba(9, 20, 38, 0.04) !important;
+}
+
+.premium-table-wrap {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(9, 20, 38, 0.04);
+}
+
+.premium-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+  background: #fff;
+}
+
+.premium-table th {
+  background: var(--sb-surface) !important;
+  color: var(--sb-on-surface-variant) !important;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  white-space: nowrap;
+}
+
+.premium-table th.text-right,
+.premium-table th.\!text-right {
+  text-align: right;
+}
+
+.premium-table td {
+  border-color: rgba(0, 0, 0, 0.05) !important;
+  vertical-align: middle;
+  padding: 16px 20px;
+}
+
+.premium-table tbody tr:hover td {
+  background: #fafbfe;
+}
+
+.premium-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.premium-table .table-actions-cell {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.premium-table .table-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.enrollment-shell {
+  background: var(--sb-surface) !important;
+  min-height: 100vh;
+}
+
+.enrollment-topbar {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.enrollment-sticky-bar {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Login page lock */
+.login-portal {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.login-portal > main {
+  overscroll-behavior: none;
+}

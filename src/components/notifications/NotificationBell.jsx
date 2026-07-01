@@ -14,7 +14,9 @@ export default function NotificationBell() {
   }, [user]);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -32,26 +34,53 @@ export default function NotificationBell() {
   };
 
   return (
-    <div style={{ position: 'relative' }} ref={ref}>
-      <button className="btn btn-ghost btn-icon" onClick={() => setOpen(!open)} aria-label="Notifications">
-        <Bell size={20} />
-        {unread > 0 && <span className="notif-badge">{unread}</span>}
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/5 bg-white text-[#45474c] transition-premium hover:bg-[#f8f9ff] hover:text-[#091426]"
+        aria-label="Notifications"
+      >
+        <Bell size={18} />
+        {unread > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0058be] px-1 text-[10px] font-bold text-white">
+            {unread}
+          </span>
+        )}
       </button>
+
       {open && (
-        <div className="notif-dropdown">
-          <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--line)' }}>
-            <strong style={{ fontSize: 14 }}>Notifications</strong>
-            {unread > 0 && <button className="btn btn-ghost btn-sm" onClick={handleReadAll}>Mark all read</button>}
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-black/5 bg-white shadow-xl shadow-[#091426]/10">
+          <div className="flex items-center justify-between border-b border-black/5 px-4 py-3">
+            <strong className="text-sm font-semibold text-[#091426]">Notifications</strong>
+            {unread > 0 && (
+              <button
+                type="button"
+                onClick={handleReadAll}
+                className="text-xs font-semibold text-[#0058be] hover:underline"
+              >
+                Mark all read
+              </button>
+            )}
           </div>
           {notifications.length === 0 ? (
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>No notifications yet.</div>
+            <div className="px-4 py-8 text-center text-sm text-[#45474c]">No notifications yet.</div>
           ) : (
-            notifications.slice(0, 8).map((n) => (
-              <div key={n.id} className={`notif-item ${!n.read ? 'unread' : ''}`} onClick={() => handleRead(n.id)}>
-                <strong>{n.title}</strong>
-                <span style={{ color: 'var(--muted)' }}>{n.message}</span>
-              </div>
-            ))
+            <div className="max-h-72 overflow-y-auto">
+              {notifications.slice(0, 8).map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => handleRead(n.id)}
+                  className={`block w-full border-b border-black/5 px-4 py-3 text-left transition-premium hover:bg-[#f8f9ff] ${
+                    !n.read ? 'bg-[#dce9ff]/40' : ''
+                  }`}
+                >
+                  <strong className="block text-sm text-[#091426]">{n.title}</strong>
+                  <span className="mt-0.5 block text-xs text-[#45474c]">{n.message}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}

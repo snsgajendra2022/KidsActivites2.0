@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import Button from './Button.jsx';
 import { ENROLLMENT_STEPS } from '../../constants/enrollmentStatuses.js';
 
-export default function Stepper({ currentStep }) {
+export function Stepper({ currentStep }) {
   return (
     <div className="stepper">
       {ENROLLMENT_STEPS.map((label, i) => {
@@ -109,14 +109,12 @@ export function EmptyState({ icon: Icon, title, description, action }) {
 
 export function PageHeader({ title, subtitle, actions }) {
   return (
-    <div className="page-header">
-      <div className="page-header-row">
-        <div>
-          <h1 className="page-title">{title}</h1>
-          {subtitle && <p className="text-muted">{subtitle}</p>}
-        </div>
-        {actions && <div className="btn-group">{actions}</div>}
+    <div className="sb-page-header flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 className="sb-page-title">{title}</h1>
+        {subtitle && <p className="sb-page-subtitle">{subtitle}</p>}
       </div>
+      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );
 }

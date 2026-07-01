@@ -25,7 +25,12 @@ import SendPhotos from './pages/teacher/SendPhotos.jsx';
 
 import ChatPage from './pages/shared/ChatPage.jsx';
 
-const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
+const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
+const FEES_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
+const REPORTS_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
+const CHAT_ADMIN_ROLES = [...CORE_ADMIN, ROLES.SUPPORT_STAFF];
+const SUPPORT_APP_ROLES = [...CORE_ADMIN, ROLES.SUPPORT_STAFF];
+const NOTIFICATIONS_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT, ROLES.SUPPORT_STAFF];
 const PARENT_ROLES = [ROLES.PARENT, ROLES.STUDENT];
 const TEACHER_ROLES = [ROLES.TEACHER];
 
@@ -37,17 +42,17 @@ export default function App() {
       <Route path="/login" element={<Login />} />
 
       {/* Admin routes */}
-      <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminDashboard /></ProtectedRoute>} />
-      <Route path="/admin/applications" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ApplicationsList /></ProtectedRoute>} />
-      <Route path="/admin/applications/:id" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ApplicationReview /></ProtectedRoute>} />
-      <Route path="/admin/students" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminStudents /></ProtectedRoute>} />
-      <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminFees /></ProtectedRoute>} />
-      <Route path="/admin/photos" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminPlaceholder title="Photo Sharing" subtitle="View and moderate teacher-shared photos." /></ProtectedRoute>} />
-      <Route path="/admin/chat" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><ChatPage /></ProtectedRoute>} />
-      <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminPlaceholder title="Notifications" subtitle="Manage and view all school notifications." /></ProtectedRoute>} />
-      <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminPlaceholder title="Reports" subtitle="Application, fee, and communication reports." /></ProtectedRoute>} />
-      <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminPlaceholder title="Settings" subtitle="School configuration and fee structures." /></ProtectedRoute>} />
-      <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminPlaceholder title="Audit Logs" subtitle="Track all system actions and changes." /></ProtectedRoute>} />
+      <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/admin/applications" element={<ProtectedRoute allowedRoles={SUPPORT_APP_ROLES}><ApplicationsList /></ProtectedRoute>} />
+      <Route path="/admin/applications/:id" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ApplicationReview /></ProtectedRoute>} />
+      <Route path="/admin/students" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminStudents /></ProtectedRoute>} />
+      <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdminFees /></ProtectedRoute>} />
+      <Route path="/admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPlaceholder title="Photo Sharing" subtitle="View and moderate teacher-shared photos." /></ProtectedRoute>} />
+      <Route path="/admin/chat" element={<ProtectedRoute allowedRoles={CHAT_ADMIN_ROLES}><ChatPage /></ProtectedRoute>} />
+      <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={NOTIFICATIONS_ROLES}><AdminPlaceholder title="Notifications" subtitle="Manage and view all school notifications." /></ProtectedRoute>} />
+      <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminPlaceholder title="Reports" subtitle="Application, fee, and communication reports." /></ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPlaceholder title="Settings" subtitle="School configuration and fee structures." /></ProtectedRoute>} />
+      <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPlaceholder title="Audit Logs" subtitle="Track all system actions and changes." /></ProtectedRoute>} />
 
       {/* Parent routes */}
       <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDashboard /></ProtectedRoute>} />

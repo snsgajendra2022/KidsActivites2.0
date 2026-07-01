@@ -2,11 +2,23 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader, EmptyState } from '../../components/ui/index.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
-import Button from '../../components/ui/Button.jsx';
+import {
+  DataTable,
+  TableActionButton,
+  TableActionCell,
+  TablePrimaryCell,
+} from '../../components/ui/DataTable.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
-import { getFees, verifyPayment, rejectPayment } from '../../services/feeService.js';
+import { getFees, verifyPayment } from '../../services/feeService.js';
 import { CreditCard } from 'lucide-react';
+
+function feeStatusKey(status) {
+  if (status === 'verified') return 'fee_verified';
+  if (status === 'payment_submitted') return 'fee_submitted';
+  if (status === 'fee_pending') return 'fee_pending';
+  return status;
+}
 
 export default function AdminFees() {
   const [fees, setFees] = useState([]);
@@ -39,44 +51,61 @@ export default function AdminFees() {
       {fees.length === 0 ? (
         <EmptyState icon={CreditCard} title="No Fee Records Found" description="Fee records will appear here once assigned to applications." />
       ) : (
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Application No.</th>
-                <th>Student</th>
-                <th>Class</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Payment</th>
-                <th>Action</th>
+        <DataTable minWidth={900}>
+          <thead>
+            <tr>
+              <th>Application No.</th>
+              <th>Student</th>
+              <th>Class</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Payment</th>
+              <th className="!text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fees.map((fee) => (
+              <tr key={fee.id}>
+                <TablePrimaryCell>{fee.applicationNo}</TablePrimaryCell>
+                <td>{fee.studentName}</td>
+                <td>{fee.classApplying?.toUpperCase()}</td>
+                <td className="whitespace-nowrap">₹{fee.total?.toLocaleString()}</td>
+                <td><StatusBadge status={feeStatusKey(fee.status)} /></td>
+                <td className="max-w-[160px] truncate text-[#45474c]">
+                  {fee.payment?.transactionId || '—'}
+                </td>
+                <TableActionCell showDash={false}>
+                  {fee.status === 'payment_submitted' && (
+                    <TableActionButton
+                      variant="success"
+                      onClick={() => { setSelected(fee); setModal('verify'); }}
+                    >
+                      Verify Payment
+                    </TableActionButton>
+                  )}
+                  {fee.payment?.receiptNo && (
+                    <TableActionButton variant="outline">Download Receipt</TableActionButton>
+                  )}
+                  {fee.status !== 'payment_submitted' && !fee.payment?.receiptNo && (
+                    <span className="text-sm text-[#45474c]/60">—</span>
+                  )}
+                </TableActionCell>
               </tr>
-            </thead>
-            <tbody>
-              {fees.map((fee) => (
-                <tr key={fee.id}>
-                  <td>{fee.applicationNo}</td>
-                  <td>{fee.studentName}</td>
-                  <td>{fee.classApplying?.toUpperCase()}</td>
-                  <td>₹{fee.total?.toLocaleString()}</td>
-                  <td><StatusBadge status={fee.status === 'verified' ? 'fee_verified' : fee.status === 'payment_submitted' ? 'fee_submitted' : 'fee_pending'} /></td>
-                  <td>{fee.payment?.transactionId || '—'}</td>
-                  <td className="table-actions">
-                    {fee.status === 'payment_submitted' && (
-                      <Button variant="success" size="sm" onClick={() => { setSelected(fee); setModal('verify'); }}>Verify Payment</Button>
-                    )}
-                    {fee.payment?.receiptNo && (
-                      <Button variant="outline" size="sm">Download Receipt</Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </DataTable>
       )}
 
-      <ConfirmModal open={modal === 'verify'} onClose={() => setModal(null)} onConfirm={handleVerify} title="Verify Fee Payment?" message="This will mark the fee as received and generate a receipt." confirmText="Verify Payment" confirmVariant="success" loading={loading} />
+      <ConfirmModal
+        open={modal === 'verify'}
+        onClose={() => setModal(null)}
+        onConfirm={handleVerify}
+        title="Verify Fee Payment?"
+        message="This will mark the fee as received and generate a receipt."
+        confirmText="Verify Payment"
+        confirmVariant="success"
+        loading={loading}
+      />
     </DashboardLayout>
   );
 }

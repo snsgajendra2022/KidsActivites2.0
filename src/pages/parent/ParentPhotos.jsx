@@ -16,9 +16,9 @@ export default function ParentPhotos() {
       {photos.length === 0 ? (
         <EmptyState icon={Image} title="No Photos Shared Yet" description="Teacher-shared photos will appear here." />
       ) : (
-        <div className="photo-grid">
+        <div className="premium-photo-grid">
           {photos.map((photo) => (
-            <div key={photo.id} className="photo-card">
+            <div key={photo.id} className="premium-photo-card">
               <img src={photo.imageUrl} alt={photo.caption} />
               <div className="photo-card-body">
                 <h4>{photo.caption}</h4>

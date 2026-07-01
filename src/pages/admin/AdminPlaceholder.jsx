@@ -5,7 +5,11 @@ export default function AdminPlaceholder({ title, subtitle }) {
   return (
     <DashboardLayout>
       <PageHeader title={title} subtitle={subtitle} />
-      <div className="card"><p className="text-muted">This module is ready for backend integration. See backend.md for API specifications.</p></div>
+      <div className="sb-card p-6">
+        <p className="text-sm text-[#45474c]">
+          This module is ready for backend integration. See backend.md for API specifications.
+        </p>
+      </div>
     </DashboardLayout>
   );
 }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react';
-import { DEMO_USERS } from '../data/mockSchool.js';
+import { authenticate } from '../services/authService.js';
 import { ROLE_DASHBOARD } from '../constants/roles.js';
 
 const AuthContext = createContext(null);
@@ -15,12 +15,8 @@ export function AuthProvider({ children }) {
     }
   });
 
-  const login = async ({ identity, password, role = 'parent' }) => {
-    if (!identity?.trim()) throw new Error('Please enter email or mobile number.');
-    if (password !== '123456') throw new Error('Invalid login credentials.');
-
-    const demoUser = DEMO_USERS[role] || DEMO_USERS.parent;
-    const nextUser = { ...demoUser, identity };
+  const login = async ({ identity, password }) => {
+    const nextUser = authenticate(identity, password);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
     setUser(nextUser);
     return nextUser;
