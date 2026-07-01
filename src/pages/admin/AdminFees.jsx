@@ -9,6 +9,8 @@ import {
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { getFees, verifyPayment } from '../../services/feeService.js';
+import { downloadFeeReceipt } from '../../utils/feeReceipt.js';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { CreditCard } from 'lucide-react';
 
 function feeStatusKey(status) {
@@ -47,6 +49,7 @@ export default function AdminFees() {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { school, portalName } = usePortalConfig();
 
   const load = () => getFees().then(setFees);
   useEffect(() => { load(); }, []);
@@ -65,6 +68,15 @@ export default function AdminFees() {
     }
   };
 
+  const handleDownloadReceipt = (fee) => {
+    try {
+      downloadFeeReceipt(fee, { school, portalName });
+      toast('Receipt downloaded.', 'success');
+    } catch (err) {
+      toast(err.message || 'Unable to download receipt.', 'error');
+    }
+  };
+
   const renderActions = (fee) => (
     <>
       {fee.status === 'payment_submitted' && (
@@ -76,7 +88,9 @@ export default function AdminFees() {
         </TableActionButton>
       )}
       {fee.payment?.receiptNo && (
-        <TableActionButton variant="outline">Download Receipt</TableActionButton>
+        <TableActionButton variant="outline" onClick={() => handleDownloadReceipt(fee)}>
+          Download Receipt
+        </TableActionButton>
       )}
       {fee.status !== 'payment_submitted' && !fee.payment?.receiptNo && (
         <span className="text-sm text-[#45474c]/60">—</span>
