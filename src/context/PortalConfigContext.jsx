@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getPortalConfig, savePortalConfig } from '../services/portalConfigService.js';
-import { getVisibleNavForRole } from '../utils/navUtils.js';
+import { resolveNavItemsForRole } from '../utils/navUtils.js';
 import { applyPortalTheme } from '../utils/themeUtils.js';
 
 const PortalConfigContext = createContext(null);
@@ -57,7 +57,11 @@ export function PortalConfigProvider({ children }) {
   }, [config, updateConfig]);
 
   const getNavItems = useCallback(
-    (role) => getVisibleNavForRole(role, config?.menuVisibility),
+    (role) => resolveNavItemsForRole(role, {
+      menuVisibility: config?.menuVisibility,
+      menuCustomization: config?.menuCustomization,
+      customMenuItems: config?.customMenuItems,
+    }),
     [config],
   );
 

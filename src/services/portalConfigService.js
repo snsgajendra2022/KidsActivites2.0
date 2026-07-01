@@ -19,6 +19,8 @@ function mergeConfig(stored) {
     loginScrollLines: [...DEFAULT_PORTAL_CONFIG.loginScrollLines],
     enrollmentForm: cloneEnrollmentFormConfig(DEFAULT_ENROLLMENT_FORM),
     menuVisibility: buildDefaultMenuVisibility(NAV_BY_ROLE),
+    menuCustomization: {},
+    customMenuItems: [],
   };
 
   if (!stored) return defaults;
@@ -41,6 +43,13 @@ function mergeConfig(stored) {
       ...defaults.menuVisibility,
       ...(stored.menuVisibility || {}),
     },
+    menuCustomization: {
+      ...defaults.menuCustomization,
+      ...(stored.menuCustomization || {}),
+    },
+    customMenuItems: stored.customMenuItems?.length
+      ? [...stored.customMenuItems]
+      : [...defaults.customMenuItems],
   };
 
   Object.keys(NAV_BY_ROLE).forEach((role) => {
@@ -84,6 +93,12 @@ function mockSavePortalConfig(updates) {
     menuVisibility: updates.menuVisibility
       ? { ...current.menuVisibility, ...updates.menuVisibility }
       : current.menuVisibility,
+    menuCustomization: updates.menuCustomization
+      ? { ...current.menuCustomization, ...updates.menuCustomization }
+      : current.menuCustomization,
+    customMenuItems: updates.customMenuItems
+      ? [...updates.customMenuItems]
+      : current.customMenuItems,
   };
   setStore(KEY, next);
   return next;
@@ -122,6 +137,56 @@ export async function setMenuVisibility(role, menuId, visible) {
     apiFn: () => api.patch('/admin/portal-settings/menus', {
       updates: [{ role, menuId, visible }],
     }),
+  });
+}
+
+export async function updateMenuItemCustomization(menuId, patch) {
+  return routeRequest({
+    mockFn: async () => {
+      const current = mockGetPortalConfig();
+      const menuCustomization = {
+        ...current.menuCustomization,
+        [menuId]: { ...current.menuCustomization[menuId], ...patch },
+      };
+      return mockSavePortalConfig({ menuCustomization });
+    },
+    apiFn: () => api.patch(`/admin/portal-settings/menus/${menuId}`, patch),
+  });
+}
+
+export async function saveCustomMenuItems(customMenuItems) {
+  return routeRequest({
+    mockFn: async () => mockSavePortalConfig({ customMenuItems }),
+    apiFn: () => api.put('/admin/portal-settings/menus/custom', { items: customMenuItems }),
+  });
+}
+
+export async function addCustomMenuItem(item) {
+  return routeRequest({
+    mockFn: async () => {
+      const current = mockGetPortalConfig();
+      const customMenuItems = [...current.customMenuItems, item];
+      return mockSavePortalConfig({ customMenuItems });
+    },
+    apiFn: () => api.post('/admin/portal-settings/menus/custom', item),
+  });
+}
+
+export async function removeCustomMenuItem(menuId) {
+  return routeRequest({
+    mockFn: async () => {
+      const current = mockGetPortalConfig();
+      const customMenuItems = current.customMenuItems.filter((i) => i.id !== menuId);
+      const menuVisibility = { ...current.menuVisibility };
+      Object.keys(menuVisibility).forEach((role) => {
+        if (menuVisibility[role]?.[menuId] !== undefined) {
+          const { [menuId]: _, ...rest } = menuVisibility[role];
+          menuVisibility[role] = rest;
+        }
+      });
+      return mockSavePortalConfig({ customMenuItems, menuVisibility });
+    },
+    apiFn: () => api.delete(`/admin/portal-settings/menus/custom/${menuId}`),
   });
 }
 

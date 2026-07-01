@@ -344,6 +344,23 @@ interface PortalConfig {
   loginScrollLines: string[];
   enrollmentForm: EnrollmentFormConfig;
   menuVisibility: Record<Role, Record<string, boolean>>;
+  /** Global overrides for built-in menu items (label + Lucide icon name) */
+  menuCustomization: Record<string, MenuItemCustomization>;
+  /** Super-admin-defined extra sidebar links */
+  customMenuItems: CustomMenuItem[];
+}
+
+interface MenuItemCustomization {
+  label?: string;
+  icon?: string;   // Lucide icon name, e.g. "Home", "FileText"
+}
+
+interface CustomMenuItem {
+  id: string;      // e.g. "custom_1720000000"
+  label: string;
+  icon: string;
+  to: string;      // internal route, must start with /
+  roles: Role[];
 }
 ```
 
@@ -751,7 +768,7 @@ Remove branding asset. `:type` = `logo` | `favicon` | `hero` | `login_hero` | `l
 
 ### `PATCH /admin/portal-settings/menus`
 
-Bulk update sidebar menu visibility per role.
+Bulk update sidebar menu visibility per role. Supports optional label/icon overrides in the same request.
 
 **Auth:** Super Admin
 
@@ -760,14 +777,121 @@ Bulk update sidebar menu visibility per role.
 {
   "updates": [
     { "role": "parent", "menuId": "parent_photos", "visible": false },
-    { "role": "school_admin", "menuId": "admin_audit_logs", "visible": true }
+    { "role": "school_admin", "menuId": "admin_audit_logs", "visible": true },
+    { "menuId": "admin_applications", "label": "Applications", "icon": "ClipboardList" }
   ]
 }
 ```
 
-**Response `200`:** Updated `menuVisibility` map
+| Field | Required | Description |
+|-------|----------|-------------|
+| `role` | For visibility | Role key, e.g. `school_admin` |
+| `menuId` | Yes | Built-in or custom menu id |
+| `visible` | No | Show/hide for that role |
+| `label` | No | Override display label (applies globally for that `menuId`) |
+| `icon` | No | Lucide icon name (see `src/constants/menuIcons.js`) |
 
-**Mock function:** `setMenuVisibility(role, menuId, visible)` (single toggle)
+**Response `200`:** Updated `menuVisibility` and `menuCustomization` maps
+
+**Mock function:** `setMenuVisibility(role, menuId, visible)` · `updateMenuItemCustomization(menuId, patch)`
+
+---
+
+### `PATCH /admin/portal-settings/menus/:menuId`
+
+Update label and/or icon for a built-in menu item.
+
+**Auth:** Super Admin
+
+**Request body:**
+```json
+{
+  "label": "Applications",
+  "icon": "ClipboardList"
+}
+```
+
+**Response `200`:** Updated `menuCustomization` entry for `menuId`
+
+**Mock function:** `updateMenuItemCustomization(menuId, patch)`
+
+---
+
+### `GET /admin/portal-settings/menus/custom`
+
+List all custom sidebar menu items.
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "custom_1720000000",
+      "label": "Help Center",
+      "icon": "HelpCircle",
+      "to": "/support",
+      "roles": ["school_admin", "parent"]
+    }
+  ]
+}
+```
+
+---
+
+### `POST /admin/portal-settings/menus/custom`
+
+Add a custom sidebar menu item.
+
+**Request body:**
+```json
+{
+  "id": "custom_1720000000",
+  "label": "Help Center",
+  "icon": "HelpCircle",
+  "to": "/support",
+  "roles": ["school_admin"]
+}
+```
+
+**Validation:** `to` must start with `/`. `id` must be unique. `roles` must be non-empty.
+
+**Response `201`:** Created `CustomMenuItem` + updated config
+
+**Mock function:** `addCustomMenuItem(item)`
+
+---
+
+### `PUT /admin/portal-settings/menus/custom`
+
+Replace entire custom menu items array (bulk save from portal settings form).
+
+**Request body:**
+```json
+{
+  "items": [
+    {
+      "id": "custom_1720000000",
+      "label": "Help Center",
+      "icon": "HelpCircle",
+      "to": "/support",
+      "roles": ["school_admin", "parent"]
+    }
+  ]
+}
+```
+
+**Mock function:** `saveCustomMenuItems(items)`
+
+---
+
+### `DELETE /admin/portal-settings/menus/custom/:menuId`
+
+Remove a custom menu item and clear its visibility entries.
+
+**Response `200`:** Updated `customMenuItems` array
+
+**Mock function:** `removeCustomMenuItem(menuId)`
 
 ---
 
@@ -1718,7 +1842,7 @@ Returns visible sidebar menu for current user's role.
 
 Filtered server-side using `menuVisibility` from portal config + role permissions.
 
-**Source:** `src/constants/navigation.js` + `portalConfig.menuVisibility`
+**Source:** `src/constants/navigation.js` + `portalConfig.menuVisibility` + `menuCustomization` + `customMenuItems`
 
 ---
 
@@ -1734,6 +1858,10 @@ Filtered server-side using `menuVisibility` from portal config + role permission
 | `getPortalConfig` | GET | `/portal/config` |
 | `savePortalConfig` | PUT | `/admin/portal-settings` |
 | `setMenuVisibility` | PATCH | `/admin/portal-settings/menus` |
+| `updateMenuItemCustomization` | PATCH | `/admin/portal-settings/menus/:menuId` |
+| `addCustomMenuItem` | POST | `/admin/portal-settings/menus/custom` |
+| `saveCustomMenuItems` | PUT | `/admin/portal-settings/menus/custom` |
+| `removeCustomMenuItem` | DELETE | `/admin/portal-settings/menus/custom/:menuId` |
 | `getApplications` | GET | `/admin/applications` |
 | `getApplication` | GET | `/admin/applications/:id` |
 | `getApplicationByParent` | GET | `/enrollment/my-application` |

@@ -1,0 +1,108 @@
+import { Plus, Trash2 } from 'lucide-react';
+import { MENU_ICON_MAP, MENU_ICON_OPTIONS } from '../../constants/menuIcons.js';
+
+function IconPreview({ name, size = 18 }) {
+  const Icon = MENU_ICON_MAP[name] || MENU_ICON_MAP.Circle;
+  return <Icon size={size} />;
+}
+
+function VisibilityToggle({ checked, onChange, label }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+        checked ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+          checked ? 'left-[22px]' : 'left-0.5'
+        }`}
+      />
+    </button>
+  );
+}
+
+export function MenuItemRow({
+  item,
+  label,
+  icon,
+  path,
+  visible,
+  builtin = true,
+  onLabelChange,
+  onIconChange,
+  onPathChange,
+  onVisibleChange,
+  onRemove,
+}) {
+  return (
+    <div className="portal-menu-row">
+      <div className="portal-menu-row__icon-picker">
+        <span className="portal-menu-row__icon-preview" aria-hidden>
+          <IconPreview name={icon} />
+        </span>
+        <select
+          value={icon}
+          onChange={(e) => onIconChange(e.target.value)}
+          className="portal-menu-row__icon-select"
+          aria-label={`Icon for ${label}`}
+        >
+          {MENU_ICON_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="portal-menu-row__fields">
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => onLabelChange(e.target.value)}
+          className="portal-menu-row__label-input"
+          placeholder="Menu label"
+        />
+        <input
+          type="text"
+          value={path}
+          onChange={(e) => onPathChange?.(e.target.value)}
+          className="portal-menu-row__path-input"
+          placeholder="/path"
+          readOnly={builtin}
+          disabled={builtin}
+        />
+      </div>
+
+      <div className="portal-menu-row__actions">
+        <VisibilityToggle
+          checked={visible}
+          onChange={onVisibleChange}
+          label={`${visible ? 'Hide' : 'Show'} ${label}`}
+        />
+        {!builtin && onRemove && (
+          <button
+            type="button"
+            className="portal-menu-row__delete"
+            onClick={onRemove}
+            aria-label={`Remove ${label}`}
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function AddMenuButton({ onClick }) {
+  return (
+    <button type="button" className="portal-menu-add-btn" onClick={onClick}>
+      <Plus size={16} />
+      Add Side Menu Item
+    </button>
+  );
+}

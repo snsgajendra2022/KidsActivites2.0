@@ -43,6 +43,10 @@ export const DEFAULT_PORTAL_CONFIG = {
   ],
   /** role → menuId → visible (false = hidden) */
   menuVisibility: {},
+  /** menuId → { label?, icon? } — overrides built-in sidebar labels/icons */
+  menuCustomization: {},
+  /** Custom sidebar links added by super admin */
+  customMenuItems: [],
 };
 
 export function buildDefaultMenuVisibility(navByRole) {

@@ -10,6 +10,8 @@ import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { readFileAsDataUrl } from '../../services/portalConfigService.js';
 import { getAllMenuItemsGrouped } from '../../utils/navUtils.js';
+import { MenuItemRow, AddMenuButton } from '../../components/admin/PortalMenuEditor.jsx';
+import '../../styles/portal-menu-editor.css';
 import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
 import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
@@ -24,7 +26,7 @@ const TABS = [
   { id: 'theme', label: 'Theme Colors', icon: Palette },
   { id: 'school', label: 'School Details', icon: Menu },
   { id: 'images', label: 'Logo & Images', icon: Image },
-  { id: 'menus', label: 'Menu Visibility', icon: Menu },
+  { id: 'menus', label: 'Side Menu', icon: Menu },
 ];
 
 function ImageUploadField({ label, hint, value, onChange }) {
@@ -71,7 +73,7 @@ function ImageUploadField({ label, hint, value, onChange }) {
 }
 
 export default function PortalSettings() {
-  const { config, updateConfig, setMenuItemVisible } = usePortalConfig();
+  const { config, updateConfig } = usePortalConfig();
   const { toast } = useToast();
   const [tab, setTab] = useState('identity');
   const [saving, setSaving] = useState(false);
@@ -90,6 +92,9 @@ export default function PortalSettings() {
         loginMethods: { ...config.loginMethods },
         loginScrollLines: [...(config.loginScrollLines || [])],
         enrollmentForm: cloneEnrollmentFormConfig(config.enrollmentForm),
+        menuVisibility: JSON.parse(JSON.stringify(config.menuVisibility || {})),
+        menuCustomization: { ...(config.menuCustomization || {}) },
+        customMenuItems: [...(config.customMenuItems || [])],
       });
     }
   }, [config]);
@@ -170,7 +175,14 @@ export default function PortalSettings() {
     }
     setSaving(true);
     try {
-      await updateConfig(form);
+      const menuCustomization = Object.fromEntries(
+        Object.entries(form.menuCustomization || {}).filter(([, v]) => v?.label || v?.icon),
+      );
+      await updateConfig({
+        ...form,
+        menuCustomization,
+        customMenuItems: (form.customMenuItems || []).filter((i) => i.label?.trim() && i.to?.trim()),
+      });
       toast('Portal settings saved. Changes are live across the app.', 'success');
     } catch {
       toast('Failed to save portal settings.', 'error');
@@ -180,6 +192,63 @@ export default function PortalSettings() {
   };
 
   const menuGroups = getAllMenuItemsGrouped();
+
+  const patchMenuCustomization = (menuId, patch) => {
+    setForm((f) => {
+      const current = { ...(f.menuCustomization[menuId] || {}), ...patch };
+      Object.keys(current).forEach((key) => {
+        if (current[key] === undefined || current[key] === '') delete current[key];
+      });
+      const menuCustomization = { ...f.menuCustomization };
+      if (Object.keys(current).length === 0) delete menuCustomization[menuId];
+      else menuCustomization[menuId] = current;
+      return { ...f, menuCustomization };
+    });
+  };
+
+  const setMenuVisible = (role, menuId, visible) => {
+    setForm((f) => ({
+      ...f,
+      menuVisibility: {
+        ...f.menuVisibility,
+        [role]: { ...f.menuVisibility[role], [menuId]: visible },
+      },
+    }));
+  };
+
+  const addCustomMenuItem = (role) => {
+    const item = {
+      id: `custom_${Date.now()}`,
+      label: 'New Menu Item',
+      icon: 'Link',
+      to: '/support',
+      roles: [role],
+    };
+    setForm((f) => ({
+      ...f,
+      customMenuItems: [...(f.customMenuItems || []), item],
+      menuVisibility: {
+        ...f.menuVisibility,
+        [role]: { ...(f.menuVisibility[role] || {}), [item.id]: true },
+      },
+    }));
+  };
+
+  const updateCustomMenuItem = (id, patch) => {
+    setForm((f) => ({
+      ...f,
+      customMenuItems: f.customMenuItems.map((item) => (
+        item.id === id ? { ...item, ...patch } : item
+      )),
+    }));
+  };
+
+  const removeCustomMenuItem = (id) => {
+    setForm((f) => ({
+      ...f,
+      customMenuItems: f.customMenuItems.filter((item) => item.id !== id),
+    }));
+  };
 
   return (
     <AppLayout>
@@ -612,49 +681,71 @@ export default function PortalSettings() {
 
         {tab === 'menus' && (
           <div className="space-y-4">
-            <p className="text-sm text-[#45474c]">
-              Toggle which side menu items each role can see. Hidden items are removed from the sidebar only — routes remain protected by permissions.
+            <p className="portal-menu-hint">
+              Customize sidebar menu labels, icons, and visibility per role. Add new menu links for internal routes.
+              Click <strong>Save Changes</strong> to apply. Hidden items are removed from the sidebar only — routes stay protected by permissions.
             </p>
-            {Object.entries(menuGroups).map(([role, items]) => (
-              <div key={role} className="sb-card overflow-hidden">
-                <div className="border-b border-black/5 bg-[#f8f9ff] px-5 py-3">
-                  <h3 className="font-display text-sm font-bold text-brand">
-                    {ROLE_LABELS[role] || role}
-                  </h3>
+            {Object.entries(menuGroups).map(([role, items]) => {
+              const customForRole = (form.customMenuItems || []).filter((c) => c.roles?.includes(role));
+              return (
+                <div key={role} className="sb-card overflow-hidden">
+                  <div className="border-b border-black/5 bg-[#f8f9ff] px-5 py-3">
+                    <h3 className="font-display text-sm font-bold text-brand">
+                      {ROLE_LABELS[role] || role}
+                    </h3>
+                  </div>
+                  <div className="portal-menu-col-headers">
+                    <span>Icon</span>
+                    <span>Label &amp; Path</span>
+                    <span>Visible</span>
+                  </div>
+                  <div>
+                    {items.map((item) => {
+                      const custom = form.menuCustomization[item.id] || {};
+                      const label = custom.label ?? item.label;
+                      const icon = custom.icon ?? item.iconName ?? 'Circle';
+                      const visible = form.menuVisibility?.[role]?.[item.id] !== false;
+                      return (
+                        <MenuItemRow
+                          key={`${role}-${item.id}`}
+                          item={item}
+                          label={label}
+                          icon={icon}
+                          path={item.to}
+                          visible={visible}
+                          builtin
+                          onLabelChange={(value) => patchMenuCustomization(item.id, {
+                            label: value === item.label ? undefined : value,
+                          })}
+                          onIconChange={(value) => patchMenuCustomization(item.id, { icon: value })}
+                          onVisibleChange={(v) => setMenuVisible(role, item.id, v)}
+                        />
+                      );
+                    })}
+                    {customForRole.map((item) => {
+                      const visible = form.menuVisibility?.[role]?.[item.id] !== false;
+                      return (
+                        <MenuItemRow
+                          key={`${role}-custom-${item.id}`}
+                          item={item}
+                          label={item.label}
+                          icon={item.icon || 'Link'}
+                          path={item.to}
+                          visible={visible}
+                          builtin={false}
+                          onLabelChange={(value) => updateCustomMenuItem(item.id, { label: value })}
+                          onIconChange={(value) => updateCustomMenuItem(item.id, { icon: value })}
+                          onPathChange={(value) => updateCustomMenuItem(item.id, { to: value })}
+                          onVisibleChange={(v) => setMenuVisible(role, item.id, v)}
+                          onRemove={() => removeCustomMenuItem(item.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                  <AddMenuButton onClick={() => addCustomMenuItem(role)} />
                 </div>
-                <div className="divide-y divide-black/5">
-                  {items.map((item) => {
-                    const visible = config.menuVisibility?.[role]?.[item.id] !== false;
-                    return (
-                      <label
-                        key={`${role}-${item.id}`}
-                        className="flex cursor-pointer items-center justify-between gap-4 px-5 py-3 hover:bg-[#fafbfe]"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-brand">{item.label}</p>
-                          <p className="text-xs text-[#6b7a8c]">{item.to}</p>
-                        </div>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={visible}
-                          onClick={() => setMenuItemVisible(role, item.id, !visible)}
-                          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                            visible ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
-                          }`}
-                        >
-                          <span
-                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                              visible ? 'left-[22px]' : 'left-0.5'
-                            }`}
-                          />
-                        </button>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </PageTransition>
