@@ -65,9 +65,11 @@ export const FILE_RULES = {
  * @param {File} file
  * @param {'document'|'photo'|'paymentProof'|'teacherPhoto'|'chatAttachment'} category
  */
-export function validateFile(file, category = 'document') {
+export function validateFile(file, category = 'document', options = {}) {
   const rules = FILE_RULES[category];
   if (!rules) return { valid: false, error: 'Invalid upload category.' };
+
+  const maxSizeMB = options.maxSizeMB ?? rules.maxSizeMB;
 
   const ext = `.${file.name.split('.').pop()?.toLowerCase()}`;
   const extValid = rules.accept.includes(ext);
@@ -77,8 +79,8 @@ export function validateFile(file, category = 'document') {
     return { valid: false, error: `Only ${rules.label} files are allowed.` };
   }
 
-  if (file.size > rules.maxSizeMB * 1024 * 1024) {
-    return { valid: false, error: `File size must be less than ${rules.maxSizeMB} MB.` };
+  if (file.size > maxSizeMB * 1024 * 1024) {
+    return { valid: false, error: `File size must be less than ${maxSizeMB} MB.` };
   }
 
   return { valid: true, error: null };

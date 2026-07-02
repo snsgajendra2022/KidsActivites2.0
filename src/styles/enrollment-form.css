@@ -303,6 +303,19 @@
   color: var(--enroll-red);
 }
 
+.enrollment-form-row__hint {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.enrollment-field-hint {
+  margin: 0.35rem 0 0;
+  font-size: 10px;
+  font-weight: 500;
+  color: #6b7a8c;
+  line-height: 1.4;
+}
+
 .enrollment-form-split {
   display: grid;
   grid-template-columns: 1fr;

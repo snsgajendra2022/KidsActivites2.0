@@ -25,6 +25,7 @@ export default function SmartFileUpload({
   label,
   required = false,
   category = 'document',
+  maxSizeMB,
   value,
   onChange,
   error: externalError,
@@ -75,7 +76,7 @@ export default function SmartFileUpload({
 
   const handleFileSelect = (file) => {
     if (!file) return;
-    const validation = validateFile(file, category);
+    const validation = validateFile(file, category, { maxSizeMB });
     if (!validation.valid) {
       toast.error(validation.error);
       return;

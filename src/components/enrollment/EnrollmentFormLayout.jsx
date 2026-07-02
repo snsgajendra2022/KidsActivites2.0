@@ -61,6 +61,7 @@ export function EnrollmentFormRow({
   wide = false,
   required = false,
   error,
+  footerHint,
   children,
   stacked = false,
 }) {
@@ -82,6 +83,9 @@ export function EnrollmentFormRow({
         <p className="enrollment-form-row__error" role="alert">
           {error}
         </p>
+      )}
+      {!error && footerHint && (
+        <p className="enrollment-form-row__hint enrollment-field-hint">{footerHint}</p>
       )}
     </div>
   );

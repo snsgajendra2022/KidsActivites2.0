@@ -1,7 +1,5 @@
 import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js';
-
-const MOBILE_REGEX = /^[6-9]\d{9}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { validateFieldValue } from './fieldValidation.js';
 
 export function getEnrollmentSteps(config) {
   return config?.steps?.length ? config.steps : DEFAULT_ENROLLMENT_FORM.steps;
@@ -30,6 +28,11 @@ export function buildEmptyFormFromConfig(config) {
           form[step.sectionKey][field.key] = field.defaultValue ?? '';
         }
       });
+      if (step.sectionKey === 'address') {
+        const countryField = (step.fields || []).find((f) => f.type === 'country');
+        form[step.sectionKey].countryCode = countryField?.defaultCountryCode || 'IN';
+        form[step.sectionKey].stateCode = '';
+      }
     }
     if (step.stepType === 'documents') {
       (step.fields || []).forEach((field) => {
@@ -53,37 +56,10 @@ export function buildEmptyFormFromConfig(config) {
   return form;
 }
 
-function validateField(field, value, sectionKey) {
-  const path = `${sectionKey}.${field.key}`;
-  const label = field.label?.toLowerCase() || 'this field';
-
-  if (field.required) {
-    if (field.type === 'checkbox') {
-      if (!value) return { [path]: `Please confirm: ${field.label}.` };
-      return {};
-    }
-    if (field.type === 'file') {
-      if (!value) return { [`documents.${field.key}`]: `Please upload ${label}.` };
-      return {};
-    }
-    if (!value || (typeof value === 'string' && !value.trim())) {
-      return { [path]: `${field.label} is required.` };
-    }
-  }
-
-  if (!value || (typeof value === 'string' && !value.trim())) return {};
-
-  if (field.type === 'email' && !EMAIL_REGEX.test(value)) {
-    return { [path]: 'Please enter a valid email address.' };
-  }
-  if (field.type === 'tel' && field.required && !MOBILE_REGEX.test(String(value).replace(/\D/g, '').slice(-10))) {
-    return { [path]: 'Please enter a valid 10-digit mobile number.' };
-  }
-  if (field.type === 'tel' && value && !MOBILE_REGEX.test(String(value).replace(/\D/g, '').slice(-10))) {
-    return { [path]: 'Please enter a valid 10-digit mobile number.' };
-  }
-
-  return {};
+function validateField(field, value, sectionKey, formSection = {}) {
+  const path = field.type === 'file' ? `documents.${field.key}` : `${sectionKey}.${field.key}`;
+  const error = validateFieldValue(field, value, formSection);
+  return error ? { [path]: error } : {};
 }
 
 export function validateDynamicStep(stepIndex, form, config) {
@@ -94,17 +70,19 @@ export function validateDynamicStep(stepIndex, form, config) {
   const errors = {};
 
   if (step.stepType === 'form') {
+    const formSection = form[step.sectionKey] || {};
     (step.fields || []).forEach((field) => {
-      const value = form[step.sectionKey]?.[field.key];
-      Object.assign(errors, validateField(field, value, step.sectionKey));
+      const value = field.type === 'country'
+        ? formSection.country
+        : formSection[field.key];
+      Object.assign(errors, validateField(field, value, step.sectionKey, formSection));
     });
   }
 
   if (step.stepType === 'documents') {
     (step.fields || []).forEach((field) => {
-      if (field.required && !form.documents?.[field.key]) {
-        errors[`documents.${field.key}`] = `Please upload ${field.label.toLowerCase()}.`;
-      }
+      const value = form.documents?.[field.key];
+      Object.assign(errors, validateField({ ...field, type: 'file' }, value, 'documents'));
     });
   }
 
@@ -117,6 +95,10 @@ export function validateDynamicStep(stepIndex, form, config) {
     if (!form.declaration?.signature) {
       errors.signature = 'Signature is required before submitting.';
     }
+    (step.fields || []).forEach((field) => {
+      const value = form.declaration?.[field.key];
+      Object.assign(errors, validateField(field, value, 'declaration'));
+    });
   }
 
   return {

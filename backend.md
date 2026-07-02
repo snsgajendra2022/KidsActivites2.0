@@ -396,6 +396,18 @@ interface EnrollmentField {
   stacked?: boolean;
   options?: { value: string; label: string }[];
   fileCategory?: 'document' | 'photo';
+  validation?: {
+    preset?: 'name' | 'email' | 'mobile_in' | 'pincode_in' | 'aadhaar' | 'alphabets' | 'alphanumeric' | 'numeric';
+    minLength?: number;
+    maxLength?: number;
+    minAge?: number;
+    maxAge?: number;
+    min?: string;
+    max?: string;
+    pattern?: string;
+    patternMessage?: string;
+    maxSizeMB?: number;
+  };
 }
 
 interface DeclarationItem {
@@ -406,7 +418,8 @@ interface DeclarationItem {
 }
 ```
 
-Default schema: `src/data/defaultEnrollmentFormConfig.js`.
+Default schema: `src/data/defaultEnrollmentFormConfig.js`.  
+Validation engine: `src/utils/fieldValidation.js` · presets: `src/constants/enrollmentValidation.js`
 
 ---
 

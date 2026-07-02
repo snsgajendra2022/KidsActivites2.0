@@ -9,6 +9,15 @@ import {
   cloneEnrollmentFormConfig,
 } from '../../data/defaultEnrollmentFormConfig.js';
 import { newFieldId, newStepId, slugifyFieldKey } from '../../utils/enrollmentFormUtils.js';
+import { VALIDATION_PRESETS, getValidationHint } from '../../constants/enrollmentValidation.js';
+
+function updateFieldValidation(field, patch) {
+  const validation = { ...(field.validation || {}), ...patch };
+  Object.keys(validation).forEach((key) => {
+    if (validation[key] === '' || validation[key] == null) delete validation[key];
+  });
+  return { ...field, validation: Object.keys(validation).length ? validation : undefined };
+}
 
 function parseOptions(text) {
   return text
@@ -122,18 +131,128 @@ function FieldEditor({ field, onChange, onRemove, stepType }) {
       )}
 
       {field.type === 'file' && (
-        <label className="mt-3 block text-sm">
-          <span className="mb-1 block font-semibold text-brand">File category</span>
-          <select
-            className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
-            value={field.fileCategory || 'document'}
-            onChange={(e) => onChange({ ...field, fileCategory: e.target.value })}
-          >
-            <option value="document">Document</option>
-            <option value="photo">Photo</option>
-          </select>
-        </label>
+        <>
+          <label className="mt-3 block text-sm">
+            <span className="mb-1 block font-semibold text-brand">File category</span>
+            <select
+              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              value={field.fileCategory || 'document'}
+              onChange={(e) => onChange({ ...field, fileCategory: e.target.value })}
+            >
+              <option value="document">Document (PDF, JPG, PNG — max 5 MB)</option>
+              <option value="photo">Photo (JPG, PNG, WEBP — max 2 MB)</option>
+            </select>
+          </label>
+        </>
       )}
+
+      <div className="mt-4 rounded-xl border border-black/5 bg-[#fafbfe] p-4">
+        <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted">Validation Rules</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm sm:col-span-2">
+            <span className="mb-1 block font-semibold text-brand">Validation Preset</span>
+            <select
+              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              value={field.validation?.preset || ''}
+              onChange={(e) => onChange(updateFieldValidation(field, { preset: e.target.value || undefined }))}
+            >
+              {VALIDATION_PRESETS.map((p) => (
+                <option key={p.value || 'auto'} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-semibold text-brand">Min Length</span>
+            <input
+              type="number"
+              min="0"
+              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              value={field.validation?.minLength ?? ''}
+              onChange={(e) => onChange(updateFieldValidation(field, {
+                minLength: e.target.value === '' ? undefined : Number(e.target.value),
+              }))}
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-semibold text-brand">Max Length</span>
+            <input
+              type="number"
+              min="1"
+              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              value={field.validation?.maxLength ?? ''}
+              onChange={(e) => onChange(updateFieldValidation(field, {
+                maxLength: e.target.value === '' ? undefined : Number(e.target.value),
+              }))}
+            />
+          </label>
+          {field.type === 'date' && (
+            <>
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-brand">Min Age (years)</span>
+                <input
+                  type="number"
+                  min="0"
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  value={field.validation?.minAge ?? ''}
+                  onChange={(e) => onChange(updateFieldValidation(field, {
+                    minAge: e.target.value === '' ? undefined : Number(e.target.value),
+                  }))}
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-brand">Max Age (years)</span>
+                <input
+                  type="number"
+                  min="0"
+                  className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                  value={field.validation?.maxAge ?? ''}
+                  onChange={(e) => onChange(updateFieldValidation(field, {
+                    maxAge: e.target.value === '' ? undefined : Number(e.target.value),
+                  }))}
+                />
+              </label>
+            </>
+          )}
+          {field.type === 'file' && (
+            <label className="block text-sm">
+              <span className="mb-1 block font-semibold text-brand">Max File Size (MB)</span>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+                value={field.validation?.maxSizeMB ?? ''}
+                onChange={(e) => onChange(updateFieldValidation(field, {
+                  maxSizeMB: e.target.value === '' ? undefined : Number(e.target.value),
+                }))}
+              />
+            </label>
+          )}
+          <label className="block text-sm sm:col-span-2">
+            <span className="mb-1 block font-semibold text-brand">Custom Regex Pattern</span>
+            <input
+              className="w-full rounded-lg border border-black/10 px-3 py-2 font-mono text-xs"
+              value={field.validation?.pattern || ''}
+              onChange={(e) => onChange(updateFieldValidation(field, { pattern: e.target.value || undefined }))}
+              placeholder="^[A-Z0-9]+$"
+            />
+          </label>
+          <label className="block text-sm sm:col-span-2">
+            <span className="mb-1 block font-semibold text-brand">Custom Error Message</span>
+            <input
+              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm"
+              value={field.validation?.patternMessage || ''}
+              onChange={(e) => onChange(updateFieldValidation(field, { patternMessage: e.target.value || undefined }))}
+              placeholder="Shown when validation fails"
+            />
+          </label>
+        </div>
+        {getValidationHint(field) && (
+          <p className="mt-3 text-xs text-muted">
+            Active rules: {getValidationHint(field)}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

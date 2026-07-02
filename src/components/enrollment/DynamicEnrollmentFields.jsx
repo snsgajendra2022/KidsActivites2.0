@@ -1,5 +1,12 @@
 import FileUpload from '../upload/SmartFileUpload.jsx';
 import { SignaturePad } from '../ui/index.jsx';
+import { getFieldInputConstraints, isFieldFilled } from '../../utils/fieldValidation.js';
+import { getValidationHint } from '../../constants/enrollmentValidation.js';
+import {
+  CountrySelect,
+  StateSelect,
+  CitySelect,
+} from './CountryStateCitySelect.jsx';
 import {
   EnrollmentFormRow,
   EnrollmentFormSplit,
@@ -11,9 +18,16 @@ import {
 } from './EnrollmentFormLayout.jsx';
 
 function renderControl(field, value, onChange, form, sectionKey, update) {
+  const section = form[sectionKey] || {};
+  const constraints = getFieldInputConstraints(field, section);
   const common = {
     value: value ?? '',
     onChange: (e) => onChange(typeof e === 'object' && e?.target ? e.target.value : e),
+    ...constraints,
+  };
+
+  const patchSection = (patch) => {
+    Object.entries(patch).forEach(([key, val]) => update(sectionKey, key, val));
   };
 
   switch (field.type) {
@@ -23,6 +37,7 @@ function renderControl(field, value, onChange, form, sectionKey, update) {
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
+          maxLength={constraints.maxLength}
         />
       );
     case 'select':
@@ -68,9 +83,35 @@ function renderControl(field, value, onChange, form, sectionKey, update) {
           fieldKey={field.key}
           label=""
           category={field.fileCategory || 'document'}
+          maxSizeMB={field.validation?.maxSizeMB}
           required={field.required}
           value={value}
           onChange={onChange}
+        />
+      );
+    case 'country':
+      return (
+        <CountrySelect
+          countryCode={section.countryCode}
+          onChange={patchSection}
+        />
+      );
+    case 'state':
+      return (
+        <StateSelect
+          countryCode={section.countryCode}
+          stateCode={section.stateCode}
+          stateName={section.state}
+          onChange={patchSection}
+        />
+      );
+    case 'city':
+      return (
+        <CitySelect
+          countryCode={section.countryCode}
+          stateCode={section.stateCode}
+          value={value}
+          onChange={(city) => update(sectionKey, 'city', city)}
         />
       );
     default:
@@ -101,6 +142,11 @@ function FormFieldRow({ field, form, sectionKey, errors, update }) {
     );
   }
 
+  const section = form[sectionKey] || {};
+  const fieldValue = form[sectionKey]?.[field.key];
+  const filled = isFieldFilled(field, fieldValue, section);
+  const hint = filled || field.type === 'file' ? '' : getValidationHint(field, section);
+
   return (
     <EnrollmentFormRow
       key={field.id}
@@ -109,6 +155,7 @@ function FormFieldRow({ field, form, sectionKey, errors, update }) {
       required={field.required}
       stacked={field.stacked}
       error={errors[errorKey]}
+      footerHint={hint}
     >
       {renderControl(
         field,
@@ -213,6 +260,7 @@ export function DynamicDocumentStepFields({ step, form, errors, updateDoc }) {
                 fieldKey={field.key}
                 label=""
                 category={field.fileCategory || 'document'}
+                maxSizeMB={field.validation?.maxSizeMB}
                 required={field.required}
                 value={form.documents?.[field.key]}
                 onChange={(data) => updateDoc(field.key, data)}
@@ -285,7 +333,7 @@ export function DynamicReviewStep({ form, config }) {
         <div key={step.id} className="enrollment-review-block">
           <h4>{step.title}</h4>
           {Object.entries(form[step.sectionKey] || {})
-            .filter(([, v]) => v !== '' && v !== false && v != null && typeof v !== 'object')
+            .filter(([k, v]) => !['countryCode', 'stateCode'].includes(k) && v !== '' && v !== false && v != null && typeof v !== 'object')
             .map(([k, v]) => (
               <dl key={k} className="enrollment-review-item">
                 <dt>{k.replace(/([A-Z])/g, ' $1').trim()}</dt>
