@@ -632,6 +632,24 @@ a.premium-btn-white:hover {
   color: var(--sb-on-surface-variant);
 }
 
+.notif-dropdown-footer {
+  border-top: 1px solid color-mix(in srgb, var(--sb-primary) 8%, transparent);
+  padding: 0.625rem 0.875rem;
+}
+
+.notif-dropdown-view-all {
+  display: block;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sb-secondary, var(--sb-primary));
+  text-decoration: none;
+}
+
+.notif-dropdown-view-all:hover {
+  text-decoration: underline;
+}
+
 .notif-bell-btn {
   position: relative;
   display: inline-flex;

@@ -9,15 +9,34 @@ function getAll() {
   return getStore(KEY, INITIAL_NOTIFICATIONS);
 }
 
+function sortNotifications(notifications) {
+  return [...notifications].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function toResult(notifications) {
+  const list = Array.isArray(notifications) ? notifications : [];
+  return {
+    notifications: list,
+    unreadCount: list.filter((n) => !n.read).length,
+  };
+}
+
 export async function getNotifications(userId) {
   return routeRequest({
     mockFn: async () => {
       await delay(200);
-      return getAll()
-        .filter((n) => n.userId === userId)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return toResult(
+        sortNotifications(getAll().filter((n) => n.userId === userId)),
+      );
     },
-    apiFn: () => api.get('/notifications'),
+    apiFn: async () => {
+      const { data, meta } = await api.getWithMeta('/notifications');
+      const notifications = Array.isArray(data) ? data : [];
+      return {
+        notifications,
+        unreadCount: Number(meta?.unreadCount ?? notifications.filter((n) => !n.read).length),
+      };
+    },
   });
 }
 

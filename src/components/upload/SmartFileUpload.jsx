@@ -30,6 +30,8 @@ export default function SmartFileUpload({
   onChange,
   error: externalError,
   rejectionReason,
+  applicationId = null,
+  schoolId = null,
 }) {
   const inputRef = useRef(null);
   const abortRef = useRef(null);
@@ -58,6 +60,8 @@ export default function SmartFileUpload({
       isOnline: () => useNetworkStore.getState().isOnline,
       signal: abortRef.current.signal,
       onProgress: (progress) => updateItem(uploadItem.id, { progress }),
+      applicationId,
+      schoolId,
     });
 
     if (result.success) {
@@ -72,7 +76,7 @@ export default function SmartFileUpload({
         toast.error('Upload failed. Please retry.');
       }
     }
-  }, [fieldKey, isOnline, onChange, updateItem]);
+  }, [fieldKey, isOnline, onChange, updateItem, applicationId, schoolId]);
 
   const handleFileSelect = (file) => {
     if (!file) return;

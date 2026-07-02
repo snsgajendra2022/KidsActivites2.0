@@ -2,8 +2,8 @@ import usersData from '../data/users.json';
 import { delay } from './mockApi.js';
 import { api } from './api/client.js';
 import { isApiEnabled } from './api/config.js';
-import { isDemoEmail, isDemoMobile, markDemoSession } from './api/demoMode.js';
-import { clearTokens, setTokens } from './api/tokenStorage.js';
+import { markDemoSession } from './api/demoMode.js';
+import { clearTokens, getRefreshToken, setTokens } from './api/tokenStorage.js';
 
 const DEMO_OTP = '123456';
 const OTP_STORAGE_KEY = 'sb_login_otp';
@@ -110,9 +110,9 @@ export function authenticate(identity, password) {
   };
 }
 
-/** Unified email login — demo mock or live API. */
+/** Unified email login — live API when VITE_API_URL is set, otherwise local mock. */
 export async function loginByEmail(email, password) {
-  if (isDemoEmail(email) || !isApiEnabled()) {
+  if (!isApiEnabled()) {
     await delay(300);
     return authenticateByEmail(email, password);
   }
@@ -126,7 +126,7 @@ export async function loginByEmail(email, password) {
 }
 
 export async function sendLoginOtp(mobile) {
-  if (!isDemoMobile(mobile) && isApiEnabled()) {
+  if (isApiEnabled()) {
     const normalized = normalizeMobile(mobile);
     const data = await api.post('/auth/login/otp/send', { channel: 'mobile', mobile: normalized }, { auth: false });
     return { mobile: data.mobile || normalized, expiresIn: data.expiresIn || 300 };
@@ -145,7 +145,7 @@ export async function sendLoginOtp(mobile) {
 }
 
 export async function sendEmailLoginOtp(email) {
-  if (!isDemoEmail(email) && isApiEnabled()) {
+  if (isApiEnabled()) {
     const trimmed = normalizeIdentity(email).toLowerCase();
     const data = await api.post('/auth/login/otp/send', { channel: 'email', email: trimmed }, { auth: false });
     return { email: data.email || trimmed, expiresIn: data.expiresIn || 300 };
@@ -201,9 +201,7 @@ export function verifyLoginOtpByChannel(channel, target, otp) {
 }
 
 export async function verifyOtpByChannel(channel, target, otp) {
-  const isDemo = channel === 'email' ? isDemoEmail(target) : isDemoMobile(target);
-
-  if (!isDemo && isApiEnabled()) {
+  if (isApiEnabled()) {
     const body = channel === 'email'
       ? { channel: 'email', email: normalizeIdentity(target).toLowerCase(), otp }
       : { channel: 'mobile', mobile: normalizeMobile(target), otp };
@@ -234,7 +232,15 @@ export function findUserById(userId) {
   return usersData.users.find((u) => u.id === userId) || null;
 }
 
-export function logoutSession() {
+export async function logoutSession() {
+  const refreshToken = getRefreshToken();
+  if (isApiEnabled() && refreshToken) {
+    try {
+      await api.post('/auth/logout', { refreshToken }, { auth: false });
+    } catch {
+      // Best-effort server logout; always clear local session.
+    }
+  }
   clearTokens();
   sessionStorage.removeItem(OTP_STORAGE_KEY);
 }

@@ -7,6 +7,22 @@ import { routeRequest } from './api/routeRequest.js';
 
 const KEY = 'sb_fees';
 
+function normalizeFee(fee) {
+  if (!fee) return fee;
+  return {
+    ...fee,
+    total: fee.total != null ? Number(fee.total) : 0,
+    breakdown: fee.breakdown || null,
+    payment: fee.payment || null,
+  };
+}
+
+function normalizeFeeList(data) {
+  if (!data) return [];
+  const list = Array.isArray(data) ? data : [];
+  return list.map(normalizeFee);
+}
+
 function getAll() {
   return getStore(KEY, INITIAL_FEES);
 }
@@ -25,8 +41,8 @@ async function mockGetFees(filters = {}) {
 
 export async function getFees(filters = {}) {
   return routeRequest({
-    mockFn: () => mockGetFees(filters),
-    apiFn: () => api.get('/admin/fees', filters),
+    mockFn: () => mockGetFees(filters).then(normalizeFeeList),
+    apiFn: async () => normalizeFeeList(await api.get('/admin/fees', filters)),
   });
 }
 
@@ -34,9 +50,14 @@ export async function getFeeByApplication(applicationId) {
   return routeRequest({
     mockFn: async () => {
       await delay();
-      return getAll().find((f) => f.applicationId === applicationId) || null;
+      const fee = getAll().find((f) => f.applicationId === applicationId) || null;
+      return normalizeFee(fee);
     },
-    apiFn: () => api.get('/fees/my-fee', { applicationId }),
+    apiFn: async () => {
+      const fees = await api.get('/admin/fees', { applicationId });
+      const list = normalizeFeeList(fees);
+      return list.length > 0 ? list[0] : null;
+    },
   });
 }
 
@@ -67,7 +88,7 @@ export async function assignFee(applicationId, applicationNo, studentName, class
       await updateApplicationStatus(applicationId, ENROLLMENT_STATUSES.FEE_PENDING, 'Fee structure assigned');
       return entry;
     },
-    apiFn: () => api.post(`/admin/applications/${applicationId}/assign-fee`, { breakdown }),
+    apiFn: async () => normalizeFee(await api.post(`/admin/applications/${applicationId}/assign-fee`, { breakdown })),
   });
 }
 
@@ -84,7 +105,7 @@ export async function submitPayment(feeId, payment) {
       await updateApplicationStatus(fees[idx].applicationId, ENROLLMENT_STATUSES.FEE_SUBMITTED, 'Payment proof submitted');
       return fees[idx];
     },
-    apiFn: () => api.post(`/fees/${feeId}/submit-payment`, payment),
+    apiFn: async () => normalizeFee(await api.post(`/fees/${feeId}/submit-payment`, payment)),
   });
 }
 
@@ -106,7 +127,7 @@ export async function verifyPayment(feeId, verifiedBy) {
       await updateApplicationStatus(fees[idx].applicationId, ENROLLMENT_STATUSES.FEE_VERIFIED, 'Payment verified');
       return fees[idx];
     },
-    apiFn: () => api.post(`/admin/fees/${feeId}/verify`, { verifiedBy }),
+    apiFn: async () => normalizeFee(await api.post(`/admin/fees/${feeId}/verify`, { verifiedBy })),
   });
 }
 
@@ -126,7 +147,7 @@ export async function rejectPayment(feeId, reason) {
       saveAll(fees);
       return fees[idx];
     },
-    apiFn: () => api.post(`/admin/fees/${feeId}/reject`, { reason }),
+    apiFn: async () => normalizeFee(await api.post(`/admin/fees/${feeId}/reject`, { reason })),
   });
 }
 

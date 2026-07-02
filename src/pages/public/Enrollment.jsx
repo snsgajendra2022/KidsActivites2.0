@@ -25,6 +25,26 @@ import { DEFAULT_ENROLLMENT_FORM } from '../../data/defaultEnrollmentFormConfig.
 import '../../styles/enrollment-form.css';
 import { enrollmentThemeToCssVars } from '../../constants/enrollmentTheme.js';
 
+const SCHOOL_NAME_FIELD_KEYS = new Set(['schoolName', 'applyingSchool', 'preferredSchool']);
+
+function applySchoolNameDefaults(emptyForm, formConfig, schoolName) {
+  if (!schoolName?.trim()) return emptyForm;
+  const next = { ...emptyForm };
+  getEnrollmentSteps(formConfig).forEach((step) => {
+    if (step.stepType !== 'form' || !step.sectionKey) return;
+    const section = { ...(next[step.sectionKey] || {}) };
+    let changed = false;
+    (step.fields || []).forEach((field) => {
+      if (SCHOOL_NAME_FIELD_KEYS.has(field.key) && !section[field.key]) {
+        section[field.key] = schoolName;
+        changed = true;
+      }
+    });
+    if (changed) next[step.sectionKey] = section;
+  });
+  return next;
+}
+
 export default function Enrollment() {
   const [step, setStep] = useState(1);
   const [draftId, setDraftId] = useState(null);
@@ -46,10 +66,11 @@ export default function Enrollment() {
 
   useEffect(() => {
     if (!configLoading && formConfig?.steps?.length && !formInitialized.current) {
-      setForm(getEmptyForm(formConfig));
+      const empty = applySchoolNameDefaults(getEmptyForm(formConfig), formConfig, school?.name);
+      setForm(empty);
       formInitialized.current = true;
     }
-  }, [configLoading, formConfig]);
+  }, [configLoading, formConfig, school?.name]);
 
   const update = (section, field, value) => {
     setForm((prev) => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
@@ -85,6 +106,20 @@ export default function Enrollment() {
     schoolId: activeSchoolId || user?.schoolId || null,
   };
 
+  const ensureDraft = async () => {
+    if (draftId) return draftId;
+    const saved = await saveDraft(form, null, enrollmentMeta);
+    setDraftId(saved.id);
+    return saved.id;
+  };
+
+  useEffect(() => {
+    if (currentStep?.stepType !== 'documents' || draftId || loading) return;
+    ensureDraft().catch(() => {
+      toast('Unable to prepare document upload. Please save draft and try again.', 'warning');
+    });
+  }, [currentStep?.stepType, draftId, loading]);
+
   const handleSaveDraft = async () => {
     setLoading(true);
     try {
@@ -101,9 +136,10 @@ export default function Enrollment() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const appId = draftId || await ensureDraft();
       const result = await submitApplication(
         form,
-        draftId,
+        appId,
         user?.role === 'parent' ? user.id : null,
         activeSchoolId || user?.schoolId || null,
       );
@@ -117,7 +153,19 @@ export default function Enrollment() {
     }
   };
 
-  const next = () => { if (validateStep()) setStep((s) => Math.min(s + 1, totalSteps)); };
+  const next = async () => {
+    if (!validateStep()) return;
+    const nextStep = Math.min(step + 1, totalSteps);
+    if (!draftId && nextStep > 1) {
+      try {
+        const saved = await saveDraft(form, draftId, enrollmentMeta);
+        setDraftId(saved.id);
+      } catch {
+        // Continue — submit will persist full form
+      }
+    }
+    setStep(nextStep);
+  };
   const back = () => setStep((s) => Math.max(s - 1, 1));
 
   const showNotesSidebar = Boolean(
@@ -173,6 +221,8 @@ export default function Enrollment() {
             form={form}
             errors={errors}
             updateDoc={updateDoc}
+            applicationId={draftId}
+            schoolId={enrollmentMeta.schoolId}
           />
         );
       case 'declaration':

@@ -11,7 +11,23 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173)
 
-**Demo login:** any email/mobile · password `123456` · select role (Parent / Admin / Teacher)
+### Live database (default)
+
+With `VITE_API_URL` set in `.env`, all data comes from the Spring Boot backend — no localStorage mock fallbacks.
+
+1. Start MySQL and the backend (`backend/README.md`), e.g. `http://localhost:8080`
+2. Ensure `.env` has:
+   ```
+   VITE_API_URL=http://localhost:8080/api/v1
+   VITE_TENANT_SLUG=demo
+   VITE_FORCE_MOCK=false
+   VITE_API_FALLBACK_MOCK=false
+   ```
+3. Run `npm run dev` and log in with a user from the database (demo tenant).
+
+**Verify:** DevTools → Network shows requests to `localhost:8080/api/v1`. Application → Local Storage should have `sb_access_token` but not `sb_applications` or `sb_portal_config_*`.
+
+**Offline mock only:** unset `VITE_API_URL` or set `VITE_FORCE_MOCK=true`.
 
 ## Documentation
 

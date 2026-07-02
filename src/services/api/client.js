@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './config.js';
+import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from './config.js';
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from './tokenStorage.js';
 
 class ApiError extends Error {
@@ -11,23 +11,31 @@ class ApiError extends Error {
   }
 }
 
+function parseJsonBody(text) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function throwApiError(res, json, text) {
+  const err = json?.error;
+  throw new ApiError(
+    err?.message || text || `Request failed (${res.status})`,
+    res.status,
+    err?.code,
+    err?.details,
+  );
+}
+
 async function parseResponse(res) {
   const text = await res.text();
-  let json = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = null;
-  }
+  const json = parseJsonBody(text);
 
   if (!res.ok) {
-    const err = json?.error;
-    throw new ApiError(
-      err?.message || text || `Request failed (${res.status})`,
-      res.status,
-      err?.code,
-      err?.details,
-    );
+    throwApiError(res, json, text);
   }
 
   if (json && typeof json.success === 'boolean') {
@@ -40,13 +48,47 @@ async function parseResponse(res) {
   return json;
 }
 
+async function parseResponseWithMeta(res) {
+  const text = await res.text();
+  const json = parseJsonBody(text);
+
+  if (!res.ok) {
+    throwApiError(res, json, text);
+  }
+
+  if (json && typeof json.success === 'boolean') {
+    if (!json.success) {
+      throw new ApiError(json.error?.message || 'Request failed', res.status, json.error?.code);
+    }
+    return { data: json.data, meta: json.meta || {} };
+  }
+
+  return { data: json, meta: {} };
+}
+
+function buildHeaders(extra = {}, { auth = true } = {}) {
+  const reqHeaders = { ...extra };
+
+  const tenantSlug = resolveTenantSlug();
+  if (tenantSlug) {
+    reqHeaders[TENANT_HEADER] = tenantSlug;
+  }
+
+  if (auth) {
+    const token = getAccessToken();
+    if (token) reqHeaders.Authorization = `Bearer ${token}`;
+  }
+
+  return reqHeaders;
+}
+
 async function refreshAccessToken() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
 
   const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: buildHeaders({ 'Content-Type': 'application/json' }, { auth: false }),
     body: JSON.stringify({ refreshToken }),
   });
 
@@ -75,17 +117,12 @@ function buildUrl(path, params) {
   return url.toString();
 }
 
-export async function apiRequest(path, options = {}) {
+async function executeRequest(path, options = {}, parser = parseResponse) {
   const { method = 'GET', body, params, headers = {}, auth = true, retry = true } = options;
 
-  const reqHeaders = { ...headers };
+  const reqHeaders = buildHeaders(headers, { auth });
   if (body !== undefined && !(body instanceof FormData)) {
     reqHeaders['Content-Type'] = 'application/json';
-  }
-
-  if (auth) {
-    const token = getAccessToken();
-    if (token) reqHeaders.Authorization = `Bearer ${token}`;
   }
 
   const res = await fetch(buildUrl(path, params), {
@@ -97,11 +134,19 @@ export async function apiRequest(path, options = {}) {
   if (res.status === 401 && auth && retry) {
     const newToken = await refreshAccessToken();
     if (newToken) {
-      return apiRequest(path, { ...options, retry: false });
+      return executeRequest(path, { ...options, retry: false }, parser);
     }
   }
 
-  return parseResponse(res);
+  return parser(res);
+}
+
+export async function apiRequest(path, options = {}) {
+  return executeRequest(path, options, parseResponse);
+}
+
+export async function apiRequestWithMeta(path, options = {}) {
+  return executeRequest(path, options, parseResponseWithMeta);
 }
 
 export const api = {
@@ -110,6 +155,7 @@ export const api = {
   put: (path, body, opts) => apiRequest(path, { ...opts, method: 'PUT', body }),
   patch: (path, body, opts) => apiRequest(path, { ...opts, method: 'PATCH', body }),
   delete: (path, opts) => apiRequest(path, { ...opts, method: 'DELETE' }),
+  getWithMeta: (path, params, opts) => apiRequestWithMeta(path, { ...opts, method: 'GET', params }),
 };
 
 export { ApiError };

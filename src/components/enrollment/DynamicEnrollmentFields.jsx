@@ -235,7 +235,7 @@ export function DynamicFormStepFields({ step, form, errors, update }) {
   );
 }
 
-export function DynamicDocumentStepFields({ step, form, errors, updateDoc }) {
+export function DynamicDocumentStepFields({ step, form, errors, updateDoc, applicationId, schoolId }) {
   return (
     <div className="enrollment-documents">
       {(step.fields || []).map((field) => {
@@ -264,6 +264,8 @@ export function DynamicDocumentStepFields({ step, form, errors, updateDoc }) {
                 required={field.required}
                 value={form.documents?.[field.key]}
                 onChange={(data) => updateDoc(field.key, data)}
+                applicationId={applicationId}
+                schoolId={schoolId}
               />
             </div>
             {errors[errorKey] && (

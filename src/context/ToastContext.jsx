@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { toast } from 'sonner';
 
 const TYPE_MAP = {
@@ -15,14 +16,14 @@ const TYPE_MAP = {
  * @returns {{ toast: (message: string, type?: string) => void }}
  */
 export function useToast() {
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     const sonnerType = TYPE_MAP[type] || 'success';
     if (sonnerType === 'loading') {
       toast.loading(message);
     } else {
       toast[sonnerType](message);
     }
-  };
+  }, []);
 
   return { toast: showToast };
 }

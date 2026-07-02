@@ -44,7 +44,7 @@ async function mockUploadFile({ file, fieldKey, onProgress, isOnline, signal }) 
   };
 }
 
-async function apiUploadFile({ file, fieldKey, onProgress, applicationId }) {
+async function apiUploadFile({ file, fieldKey, onProgress, applicationId, schoolId }) {
   onProgress?.(5);
   const signed = await api.post('/documents/upload', {
     fileName: file.name,
@@ -53,6 +53,7 @@ async function apiUploadFile({ file, fieldKey, onProgress, applicationId }) {
     category: fieldKey.includes('photo') ? 'photo' : 'document',
     fieldKey,
     applicationId,
+    schoolId,
   });
 
   onProgress?.(30);
@@ -67,6 +68,9 @@ async function apiUploadFile({ file, fieldKey, onProgress, applicationId }) {
     fileKey: signed.fileKey,
     fieldKey,
     applicationId,
+    fileName: file.name,
+    mimeType: file.type,
+    sizeBytes: file.size,
   });
 
   onProgress?.(100);

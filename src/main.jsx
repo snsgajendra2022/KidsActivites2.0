@@ -10,8 +10,14 @@ import './styles/schoolbridge-theme.css';
 import './styles/login-portal.css';
 import { applyPortalTheme } from './utils/themeUtils.js';
 import { DEFAULT_PORTAL_CONFIG } from './data/defaultPortalConfig.js';
+import { isApiEnabled } from './services/api/config.js';
+import { clearMockStorage } from './services/api/clearMockStorage.js';
 
 applyPortalTheme(DEFAULT_PORTAL_CONFIG.theme, DEFAULT_PORTAL_CONFIG.enrollmentTheme);
+
+if (isApiEnabled()) {
+  clearMockStorage();
+}
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>

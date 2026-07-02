@@ -14,6 +14,49 @@ function getAllMessages() {
   return getStore(MSG_KEY, INITIAL_MESSAGES);
 }
 
+export async function getChatContacts() {
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const convs = getConversations();
+      const userIds = new Set(convs.flatMap((c) => c.participants));
+      return Object.entries(convs[0]?.participantNames || {})
+        .filter(([id]) => id !== 'usr-school-admin')
+        .map(([id, name]) => ({
+          id,
+          name,
+          role: id.includes('admin') ? 'admin' : id.includes('teacher') ? 'teacher' : 'parent',
+          email: `${id}@demo`,
+        }));
+    },
+    apiFn: () => api.get('/chat/contacts'),
+  });
+}
+
+export async function createConversation(participantId) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const convs = getConversations();
+      const existing = convs.find((c) => c.participants.includes(participantId));
+      if (existing) return existing;
+      const conv = {
+        id: `conv-${Date.now()}`,
+        participants: ['usr-school-admin', participantId],
+        participantNames: { 'usr-school-admin': 'School Admin', [participantId]: 'Contact' },
+        lastMessage: '',
+        lastMessageAt: new Date().toISOString(),
+        unread: { 'usr-school-admin': 0, [participantId]: 0 },
+        role: 'teacher',
+      };
+      convs.unshift(conv);
+      setStore(CONV_KEY, convs);
+      return conv;
+    },
+    apiFn: () => api.post('/chat/conversations', { participantId }),
+  });
+}
+
 export async function getConversationsForUser(userId) {
   return routeRequest({
     mockFn: async () => {

@@ -7,6 +7,8 @@ import {
   setPublicSchoolId,
 } from '../services/portalConfigService.js';
 import { listSchoolsAdmin } from '../services/schoolService.js';
+import { getNavigationForRole } from '../services/navigationService.js';
+import { isApiEnabled } from '../services/api/config.js';
 import { useTenant } from './TenantContext.jsx';
 import { resolveNavItemsForRole } from '../utils/navUtils.js';
 import { applyPortalTheme } from '../utils/themeUtils.js';
@@ -44,12 +46,32 @@ function resolveActiveSchoolId({
   user,
   urlSchoolId,
   isSchoolPublicRoute,
+  isAdminRoute,
+  isTenantSubdomain,
   isPlatformPublic,
   adminSelectedSchoolId,
   schools,
 }) {
   if (isPlatformPublic) {
     return null;
+  }
+
+  if (isAdminRoute) {
+    if (user?.role === ROLES.SUPER_ADMIN) {
+      return adminSelectedSchoolId
+        || getAdminSelectedSchoolId()
+        || schools[0]?.id
+        || urlSchoolId
+        || null;
+    }
+    if (user?.schoolId) {
+      return user.schoolId;
+    }
+    return urlSchoolId || schools[0]?.id || null;
+  }
+
+  if (isTenantSubdomain && urlSchoolId) {
+    return urlSchoolId;
   }
 
   if (isSchoolPublicRoute && urlSchoolId) {
@@ -79,11 +101,14 @@ export function PortalConfigProvider({ children, user = null }) {
     isPlatformPublic,
     isPlatformEnrollment,
     isAdminRoute,
+    isTenantSubdomain,
   } = useTenant();
 
   const [config, setConfig] = useState(null);
   const [platform, setPlatform] = useState(null);
   const [schools, setSchools] = useState([]);
+  const [apiNavByRole, setApiNavByRole] = useState({});
+  const [navLoadedRoles, setNavLoadedRoles] = useState({});
   const [loading, setLoading] = useState(true);
   const [adminSelectedSchoolId, setAdminSelectedSchoolIdState] = useState(
     () => getAdminSelectedSchoolId(),
@@ -94,11 +119,13 @@ export function PortalConfigProvider({ children, user = null }) {
       user,
       urlSchoolId,
       isSchoolPublicRoute,
+      isAdminRoute,
+      isTenantSubdomain,
       isPlatformPublic,
       adminSelectedSchoolId,
       schools,
     }),
-    [user, urlSchoolId, isSchoolPublicRoute, isPlatformPublic, adminSelectedSchoolId, schools],
+    [user, urlSchoolId, isSchoolPublicRoute, isAdminRoute, isTenantSubdomain, isPlatformPublic, adminSelectedSchoolId, schools],
   );
 
   const isPlatformAdmin = user?.role === ROLES.SUPER_ADMIN;
@@ -152,6 +179,53 @@ export function PortalConfigProvider({ children, user = null }) {
     load(activeSchoolId);
   }, [activeSchoolId, isPlatformPublic, isPlatformEnrollment, platform, load]);
 
+  const refreshNavForRole = useCallback(async (role, portalConfig = config) => {
+    if (!role || !portalConfig) return [];
+    if (!isApiEnabled()) {
+      return resolveNavItemsForRole(role, {
+        menuVisibility: portalConfig.menuVisibility,
+        menuCustomization: portalConfig.menuCustomization,
+        customMenuItems: portalConfig.customMenuItems,
+        menuOrder: portalConfig.menuOrder,
+      });
+    }
+    try {
+      const items = await getNavigationForRole(role, portalConfig);
+      setApiNavByRole((prev) => ({ ...prev, [role]: items }));
+      setNavLoadedRoles((prev) => ({ ...prev, [role]: true }));
+      return items;
+    } catch (err) {
+      console.error('[PortalConfig] Failed to load navigation', err);
+      setNavLoadedRoles((prev) => ({ ...prev, [role]: false }));
+      return resolveNavItemsForRole(role, {
+        menuVisibility: portalConfig.menuVisibility,
+        menuCustomization: portalConfig.menuCustomization,
+        customMenuItems: portalConfig.customMenuItems,
+        menuOrder: portalConfig.menuOrder,
+      });
+    }
+  }, [config]);
+
+  useEffect(() => {
+    setApiNavByRole({});
+    setNavLoadedRoles({});
+  }, [activeSchoolId]);
+
+  useEffect(() => {
+    if (!user?.role || !config) {
+      return;
+    }
+    refreshNavForRole(user.role, config);
+  }, [
+    user?.role,
+    config,
+    config?.menuVisibility,
+    config?.menuCustomization,
+    config?.customMenuItems,
+    config?.menuOrder,
+    refreshNavForRole,
+  ]);
+
   const switchSchool = useCallback(async (schoolId) => {
     if (user?.role === ROLES.SUPER_ADMIN) {
       setAdminSelectedSchoolId(schoolId);
@@ -167,8 +241,11 @@ export function PortalConfigProvider({ children, user = null }) {
     const next = await savePortalConfig(updates, activeSchoolId);
     setConfig(next);
     applyDocumentBranding(next);
+    if (user?.role) {
+      await refreshNavForRole(user.role, next);
+    }
     return next;
-  }, [activeSchoolId]);
+  }, [activeSchoolId, user?.role, refreshNavForRole]);
 
   const updatePlatformConfig = useCallback(async (updates) => {
     const next = await savePlatformConfig(updates);
@@ -197,13 +274,18 @@ export function PortalConfigProvider({ children, user = null }) {
   }, [config, updateConfig]);
 
   const getNavItems = useCallback(
-    (role) => resolveNavItemsForRole(role, {
-      menuVisibility: config?.menuVisibility,
-      menuCustomization: config?.menuCustomization,
-      customMenuItems: config?.customMenuItems,
-      menuOrder: config?.menuOrder,
-    }),
-    [config],
+    (role) => {
+      if (isApiEnabled() && navLoadedRoles[role] && role in apiNavByRole) {
+        return apiNavByRole[role];
+      }
+      return resolveNavItemsForRole(role, {
+        menuVisibility: config?.menuVisibility,
+        menuCustomization: config?.menuCustomization,
+        customMenuItems: config?.customMenuItems,
+        menuOrder: config?.menuOrder,
+      });
+    },
+    [config, apiNavByRole, navLoadedRoles],
   );
 
   const value = useMemo(
@@ -238,6 +320,7 @@ export function PortalConfigProvider({ children, user = null }) {
       switchSchool,
       loading,
       reload: () => load(activeSchoolId),
+      refreshNavForRole,
       updateConfig,
       updatePlatformConfig,
       setMenuItemVisible,
@@ -260,6 +343,7 @@ export function PortalConfigProvider({ children, user = null }) {
       updatePlatformConfig,
       setMenuItemVisible,
       getNavItems,
+      refreshNavForRole,
     ],
   );
 

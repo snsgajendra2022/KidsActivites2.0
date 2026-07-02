@@ -1,17 +1,46 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { ROLE_DASHBOARD } from '../../constants/roles.js';
 import { getNotifications, markAsRead, markAllRead } from '../../services/notificationService.js';
+
+const NOTIFICATIONS_PATH = {
+  school_admin: '/admin/notifications',
+  super_admin: '/admin/notifications',
+  admission_officer: '/admin/notifications',
+  accountant: '/admin/notifications',
+  support_staff: '/admin/notifications',
+  parent: '/parent/notifications',
+  student: '/parent/notifications',
+};
 
 export default function NotificationBell() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const ref = useRef(null);
 
   useEffect(() => {
-    if (user) getNotifications(user.id).then(setNotifications);
-  }, [user]);
+    if (!user?.id) return undefined;
+
+    let cancelled = false;
+    getNotifications(user.id)
+      .then(({ notifications: items, unreadCount: count }) => {
+        if (cancelled) return;
+        setNotifications(Array.isArray(items) ? items : []);
+        setUnreadCount(Number.isFinite(count) ? count : 0);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNotifications([]);
+          setUnreadCount(0);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -35,16 +64,19 @@ export default function NotificationBell() {
     };
   }, [open]);
 
-  const unread = notifications.filter((n) => !n.read).length;
+  const unread = unreadCount;
+  const notificationsPath = NOTIFICATIONS_PATH[user?.role] || ROLE_DASHBOARD[user?.role] || '/';
 
   const handleRead = async (id) => {
     await markAsRead(id);
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
   };
 
   const handleReadAll = async () => {
     await markAllRead(user.id);
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
   };
 
   return (
@@ -91,7 +123,7 @@ export default function NotificationBell() {
                   <button
                     key={n.id}
                     type="button"
-                    onClick={() => handleRead(n.id)}
+                    onClick={() => !n.read && handleRead(n.id)}
                     className={`notif-dropdown-item${!n.read ? ' notif-dropdown-item--unread' : ''}`}
                   >
                     <strong className="notif-dropdown-item-title">{n.title}</strong>
@@ -100,6 +132,15 @@ export default function NotificationBell() {
                 ))}
               </div>
             )}
+            <div className="notif-dropdown-footer">
+              <Link
+                to={notificationsPath}
+                className="notif-dropdown-view-all"
+                onClick={() => setOpen(false)}
+              >
+                View all notifications
+              </Link>
+            </div>
           </div>
         </>
       )}

@@ -5,6 +5,7 @@ import { buildDefaultMenuVisibility } from '../data/defaultPortalConfig.js';
 import { delay, getStore, setStore, removeStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
+import { isApiEnabled } from './api/config.js';
 import { DEFAULT_SCHOOL_ID, schoolToPortalSchool } from '../data/mockSchools.js';
 import { getSchoolById } from './schoolService.js';
 
@@ -14,6 +15,14 @@ export const PUBLIC_SCHOOL_KEY = 'sb_public_school_id';
 export const ADMIN_SCHOOL_KEY = 'sb_admin_selected_school';
 
 const BRANDING_KEYS = ['logoUrl', 'logoIconUrl', 'faviconUrl', 'heroImageUrl', 'loginHeroUrl'];
+
+const BRANDING_FIELD_TO_ASSET_TYPE = {
+  logoUrl: 'logo',
+  logoIconUrl: 'logoIcon',
+  faviconUrl: 'favicon',
+  heroImageUrl: 'hero',
+  loginHeroUrl: 'loginHero',
+};
 
 function configKey(schoolId) {
   return `sb_portal_config_${schoolId}`;
@@ -131,21 +140,29 @@ export function setAdminSelectedSchoolId(schoolId) {
   localStorage.setItem(ADMIN_SCHOOL_KEY, schoolId);
 }
 
-function buildDefaultsForSchool(schoolId) {
-  const school = getSchoolById(schoolId);
+function buildDefaultsForSchool(schoolId, schoolFromApi = null) {
+  const school = schoolFromApi || getSchoolById(schoolId);
+  const baseSchool = school
+    ? schoolToPortalSchool(school)
+    : {
+      ...DEFAULT_PORTAL_CONFIG.school,
+      id: schoolId,
+      name: schoolFromApi?.name || DEFAULT_PORTAL_CONFIG.school.name,
+      slug: schoolFromApi?.slug,
+    };
   return {
     ...DEFAULT_PORTAL_CONFIG,
-    portalName: school.id === 'school-2' ? 'Sunrise Academy Portal' : DEFAULT_PORTAL_CONFIG.portalName,
-    school: schoolToPortalSchool(school),
+    portalName: baseSchool.name || DEFAULT_PORTAL_CONFIG.portalName,
+    school: baseSchool,
     branding: { ...DEFAULT_PORTAL_CONFIG.branding },
-    theme: school.id === 'school-2'
+    theme: school?.id === 'school-2'
       ? { brandColor: '#0F4C5C', accentColor: '#E36414' }
       : { ...DEFAULT_PORTAL_CONFIG.theme },
-    enrollmentTheme: school.id === 'school-2'
+    enrollmentTheme: school?.id === 'school-2'
       ? { brandNavy: '#0F4C5C', brandRed: '#E36414', brandGrayLight: '#E5E7EB', formBg: '#F3F4F6' }
       : { ...DEFAULT_PORTAL_CONFIG.enrollmentTheme },
     loginMethods: { ...DEFAULT_PORTAL_CONFIG.loginMethods },
-    loginScrollLines: school.id === 'school-2'
+    loginScrollLines: school?.id === 'school-2'
       ? [
         'Sunrise Academy admissions 2026–2027 are open',
         'Visit our campus on Saturdays 10 AM – 1 PM',
@@ -160,8 +177,15 @@ function buildDefaultsForSchool(schoolId) {
   };
 }
 
-function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID) {
-  const defaults = buildDefaultsForSchool(schoolId);
+/** Normalize live API portal config to the shape the UI expects. */
+export function normalizeApiPortalConfig(stored) {
+  if (!stored) return null;
+  const schoolId = stored.school?.id || stored.schoolId;
+  return mergeConfig(stored, schoolId, stored.school);
+}
+
+function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID, schoolFromApi = null) {
+  const defaults = buildDefaultsForSchool(schoolId, schoolFromApi);
 
   if (!stored) return defaults;
 
@@ -212,6 +236,58 @@ function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID) {
   });
 
   return merged;
+}
+
+async function dataUrlToFile(dataUrl, fileName = 'upload.png') {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], fileName, { type: blob.type || 'image/png' });
+}
+
+/** Upload a branding image via S3 and register it on portal config. */
+export async function uploadBrandingAsset(file, assetType) {
+  const signed = await api.post('/documents/upload', {
+    fileName: file.name,
+    mimeType: file.type,
+    sizeBytes: file.size,
+    category: 'branding',
+    fieldKey: assetType,
+  });
+
+  await fetch(signed.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+
+  await api.post('/documents/confirm', {
+    fileKey: signed.fileKey,
+    fieldKey: assetType,
+  });
+
+  const registered = await api.post('/admin/portal-settings/assets', {
+    type: assetType,
+    fileKey: signed.fileKey,
+  });
+
+  return registered?.url || registered?.branding?.[`${assetType}Url`] || signed.fileKey;
+}
+
+async function prepareBrandingForSave(branding = {}) {
+  if (!isApiEnabled()) return branding;
+
+  const next = { ...branding };
+  await Promise.all(BRANDING_KEYS.map(async (key) => {
+    const value = next[key];
+    if (!isDataUrl(value)) return;
+    const assetType = BRANDING_FIELD_TO_ASSET_TYPE[key];
+    const file = await dataUrlToFile(value, `${assetType}.png`);
+    const url = await uploadBrandingAsset(file, assetType);
+    next[key] = url;
+    if (key === 'logoIconUrl') next.logoUrl = url;
+    if (key === 'logoUrl' && !next.logoIconUrl) next.logoIconUrl = url;
+  }));
+  return next;
 }
 
 function loadSchoolConfigRaw(schoolId) {
@@ -269,7 +345,10 @@ export async function getPortalConfig(schoolId) {
       await delay(120);
       return mockGetPortalConfig(id);
     },
-    apiFn: () => api.get('/portal/config', { schoolId: id }, { auth: false }),
+    apiFn: async () => {
+      const data = await api.get('/portal/config', undefined, { auth: false });
+      return normalizeApiPortalConfig(data);
+    },
   });
 }
 
@@ -280,7 +359,15 @@ export async function savePortalConfig(updates, schoolId) {
       await delay(300);
       return mockSavePortalConfig(updates, id);
     },
-    apiFn: () => api.put('/admin/portal-settings', { ...updates, schoolId: id }),
+    apiFn: async () => {
+      const branding = updates.branding
+        ? await prepareBrandingForSave(updates.branding)
+        : undefined;
+      const payload = { ...updates };
+      if (branding) payload.branding = branding;
+      const data = await api.put('/admin/portal-settings', payload);
+      return normalizeApiPortalConfig(data);
+    },
   });
 }
 
@@ -295,10 +382,12 @@ export async function setMenuVisibility(role, menuId, visible, schoolId) {
       };
       return mockSavePortalConfig({ menuVisibility }, id);
     },
-    apiFn: () => api.patch('/admin/portal-settings/menus', {
-      schoolId: id,
-      updates: [{ role, menuId, visible }],
-    }),
+    apiFn: async () => {
+      const data = await api.patch('/admin/portal-settings/menus', {
+        items: [{ role, menuId, visible }],
+      });
+      return normalizeApiPortalConfig(data);
+    },
   });
 }
 
@@ -313,7 +402,7 @@ export async function updateMenuItemCustomization(menuId, patch, schoolId) {
       };
       return mockSavePortalConfig({ menuCustomization }, id);
     },
-    apiFn: () => api.patch(`/admin/portal-settings/menus/${menuId}`, { ...patch, schoolId: id }),
+    apiFn: () => api.patch(`/admin/portal-settings/menus/${menuId}`, patch),
   });
 }
 
@@ -321,7 +410,10 @@ export async function saveCustomMenuItems(customMenuItems, schoolId) {
   const id = schoolId || getAdminSelectedSchoolId();
   return routeRequest({
     mockFn: async () => mockSavePortalConfig({ customMenuItems }, id),
-    apiFn: () => api.put('/admin/portal-settings/menus/custom', { items: customMenuItems, schoolId: id }),
+    apiFn: async () => {
+      const data = await api.put('/admin/portal-settings/menus/custom', { items: customMenuItems });
+      return normalizeApiPortalConfig(data);
+    },
   });
 }
 
@@ -333,7 +425,10 @@ export async function addCustomMenuItem(item, schoolId) {
       const customMenuItems = [...current.customMenuItems, item];
       return mockSavePortalConfig({ customMenuItems }, id);
     },
-    apiFn: () => api.post('/admin/portal-settings/menus/custom', { ...item, schoolId: id }),
+    apiFn: async () => {
+      const data = await api.post('/admin/portal-settings/menus/custom', item);
+      return normalizeApiPortalConfig(data);
+    },
   });
 }
 
@@ -352,7 +447,10 @@ export async function removeCustomMenuItem(menuId, schoolId) {
       });
       return mockSavePortalConfig({ customMenuItems, menuVisibility }, id);
     },
-    apiFn: () => api.delete(`/admin/portal-settings/menus/custom/${menuId}`, { schoolId: id }),
+    apiFn: async () => {
+      const data = await api.delete(`/admin/portal-settings/menus/custom/${menuId}`);
+      return normalizeApiPortalConfig(data);
+    },
   });
 }
 
@@ -365,7 +463,10 @@ export async function reorderMenuItems(role, order, schoolId) {
         menuOrder: { ...current.menuOrder, [role]: order },
       }, id);
     },
-    apiFn: () => api.patch('/admin/portal-settings/menus/order', { role, order, schoolId: id }),
+    apiFn: async () => {
+      const data = await api.patch('/admin/portal-settings/menus/order', { role, order });
+      return normalizeApiPortalConfig(data);
+    },
   });
 }
 

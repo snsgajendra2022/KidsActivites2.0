@@ -1,15 +1,19 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useToast } from '../../context/ToastContext.jsx';
 import {
   getConversationsForUser,
   getMessages,
   sendMessage,
   markConversationRead,
+  getChatContacts,
+  createConversation,
 } from '../../services/chatService.js';
+import { subscribeToConversation } from '../../services/chatRealtime.js';
 import {
-  Send, MessageCircle, Search, ArrowLeft, Shield,
+  Send, MessageCircle, Search, ArrowLeft, Shield, Plus, X, Check, CheckCheck,
 } from 'lucide-react';
 import '../../styles/messages.css';
 
@@ -32,8 +36,25 @@ function getOtherParticipant(conv, userId) {
   return conv.participants.find((p) => p !== userId);
 }
 
+function roleLabel(role) {
+  if (role === 'admin') return 'School administration';
+  if (role === 'parent') return 'Parent';
+  return 'Teacher';
+}
+
+function applyReadReceipt(messages, readerId, readAt, currentUserId) {
+  if (!readAt || readerId === currentUserId) return messages;
+  const readTime = new Date(readAt).getTime();
+  return messages.map((m) => (
+    m.senderId === currentUserId && new Date(m.sentAt).getTime() <= readTime
+      ? { ...m, seen: true }
+      : m
+  ));
+}
+
 export default function ChatPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [conversations, setConversations] = useState([]);
   const [active, setActive] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -41,25 +62,148 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [contacts, setContacts] = useState([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactSearch, setContactSearch] = useState('');
   const bottomRef = useRef(null);
 
-  useEffect(() => {
-    if (!user) return;
-    getConversationsForUser(user.id).then((list) => {
-      setConversations(list);
-      if (list.length && !active) setActive(list[0].id);
-    });
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  const activeRef = useRef(null);
+  activeRef.current = active;
+
+  const loadConversations = useCallback(() => {
+    if (!user?.id) return Promise.resolve();
+    setLoadingConversations(true);
+    return getConversationsForUser(user.id)
+      .then((list) => {
+        const items = Array.isArray(list) ? list : [];
+        setConversations(items);
+        if (items.length && !active) {
+          setActive(items[0].id);
+        }
+      })
+      .catch(() => {
+        toast('Unable to load conversations. Please try again.', 'error');
+        setConversations([]);
+      })
+      .finally(() => setLoadingConversations(false));
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!active || !user) return;
-    getMessages(active).then(setMessages);
-    markConversationRead(active, user.id);
-  }, [active, user]);
+    loadConversations();
+  }, [loadConversations]);
+
+  useEffect(() => {
+    if (!active || !user?.id) return undefined;
+
+    let cancelled = false;
+    setLoadingMessages(true);
+    getMessages(active)
+      .then((list) => {
+        if (!cancelled) setMessages(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast('Unable to load messages. Please try again.', 'error');
+          setMessages([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingMessages(false);
+      });
+
+    markConversationRead(active, user.id)
+      .then(() => {
+        setConversations((prev) => prev.map((c) => (
+          c.id === active
+            ? { ...c, unread: { ...c.unread, [user.id]: 0 } }
+            : c
+        )));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const conversationIdsKey = useMemo(
+    () => conversations.map((c) => c.id).sort().join(','),
+    [conversations.map((c) => c.id).sort().join(',')],
+  );
+
+  useEffect(() => {
+    if (!user?.id || !conversationIdsKey) return undefined;
+
+    const conversationIds = conversationIdsKey.split(',');
+    const unsubs = conversationIds.map((conversationId) => subscribeToConversation(conversationId, (payload) => {
+      if (payload?.event === 'message:new' && payload.message) {
+        const msg = payload.message;
+        const isActive = activeRef.current === conversationId;
+
+        if (isActive) {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+          if (msg.senderId !== user.id) {
+            markConversationRead(conversationId, user.id).catch(() => {});
+          }
+        }
+
+        setConversations((prev) => prev.map((c) => {
+          if (c.id !== conversationId) return c;
+          const unreadCount = c.unread?.[user.id] || 0;
+          return {
+            ...c,
+            lastMessage: msg.text,
+            lastMessageAt: msg.sentAt,
+            unread: {
+              ...c.unread,
+              [user.id]: isActive || msg.senderId === user.id ? 0 : unreadCount + 1,
+            },
+          };
+        }));
+        return;
+      }
+
+      if (payload?.event === 'conversation:read') {
+        const { userId: readerId, readAt } = payload;
+        if (activeRef.current === conversationId) {
+          setMessages((prev) => applyReadReceipt(prev, readerId, readAt, user.id));
+        }
+        if (readerId === user.id) {
+          setConversations((prev) => prev.map((c) => (
+            c.id === conversationId
+              ? { ...c, unread: { ...c.unread, [user.id]: 0 } }
+              : c
+          )));
+        }
+      }
+    }));
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [conversationIdsKey, user?.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const openCompose = () => {
+    setComposeOpen(true);
+    setContactsLoading(true);
+    getChatContacts()
+      .then((list) => setContacts(Array.isArray(list) ? list : []))
+      .catch(() => {
+        toast('Unable to load contacts. Please try again.', 'error');
+        setContacts([]);
+      })
+      .finally(() => setContactsLoading(false));
+  };
 
   const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -72,6 +216,13 @@ export default function ChatPage() {
     });
   }, [conversations, search, user?.id]);
 
+  const filteredContacts = useMemo(() => {
+    const q = contactSearch.trim().toLowerCase();
+    if (!q) return contacts;
+    return contacts.filter((c) =>
+      c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q));
+  }, [contacts, contactSearch]);
+
   const activeConv = conversations.find((c) => c.id === active);
   const otherId = activeConv ? getOtherParticipant(activeConv, user?.id) : null;
   const otherName = otherId ? activeConv.participantNames[otherId] : '';
@@ -82,18 +233,39 @@ export default function ChatPage() {
     setMobileChatOpen(true);
   };
 
+  const handleStartConversation = async (contact) => {
+    try {
+      const conv = await createConversation(contact.id);
+      setConversations((prev) => {
+        const exists = prev.some((c) => c.id === conv.id);
+        if (exists) return prev;
+        return [conv, ...prev];
+      });
+      setActive(conv.id);
+      setMobileChatOpen(true);
+      setComposeOpen(false);
+      setContactSearch('');
+    } catch (err) {
+      toast(err.message || 'Unable to start conversation.', 'error');
+    }
+  };
+
   const handleSend = async () => {
-    if (!text.trim() || !active) return;
+    if (!text.trim() || !active || !user?.id) return;
     setSending(true);
     try {
       const msg = await sendMessage(active, user.id, text.trim());
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => (
+        prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, seen: false }]
+      ));
       setText('');
       setConversations((prev) => prev.map((c) => (
         c.id === active
           ? { ...c, lastMessage: msg.text, lastMessageAt: msg.sentAt }
           : c
       )));
+    } catch (err) {
+      toast(err.message || 'Unable to send message. Please try again.', 'error');
     } finally {
       setSending(false);
     }
@@ -103,10 +275,19 @@ export default function ChatPage() {
     <AppLayout>
       <div className="messages-shell">
         <div className={`messages-panel ${mobileChatOpen ? 'messages-panel--chat-open' : ''}`}>
-          {/* Sidebar */}
           <aside className="messages-sidebar">
             <div className="messages-sidebar__head">
-              <h1 className="messages-sidebar__title">Messages</h1>
+              <div className="messages-sidebar__title-row">
+                <h1 className="messages-sidebar__title">Messages</h1>
+                <button
+                  type="button"
+                  className="messages-new-btn"
+                  onClick={openCompose}
+                  aria-label="Start new conversation"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
               <p className="messages-sidebar__subtitle">Secure chat with teachers and school staff</p>
               <div className="messages-search">
                 <Search size={16} className="messages-search__icon" />
@@ -121,7 +302,11 @@ export default function ChatPage() {
             </div>
 
             <div className="messages-list">
-              {filteredConversations.length === 0 ? (
+              {loadingConversations ? (
+                <div className="messages-sidebar-empty">
+                  <p>Loading conversations…</p>
+                </div>
+              ) : filteredConversations.length === 0 ? (
                 <div className="messages-sidebar-empty">
                   <div className="messages-sidebar-empty__icon">
                     <MessageCircle size={28} strokeWidth={1.75} />
@@ -129,9 +314,14 @@ export default function ChatPage() {
                   <h3>{conversations.length === 0 ? 'No messages yet' : 'No matches'}</h3>
                   <p>
                     {conversations.length === 0
-                      ? 'When parents or staff message you, conversations will appear here.'
+                      ? 'Start a conversation with a teacher or parent using the + button.'
                       : 'Try a different search term.'}
                   </p>
+                  {conversations.length === 0 && (
+                    <button type="button" className="messages-new-link" onClick={openCompose}>
+                      Start a conversation
+                    </button>
+                  )}
                 </div>
               ) : (
                 filteredConversations.map((c) => {
@@ -154,7 +344,7 @@ export default function ChatPage() {
                           <span className="messages-conv__time">{formatTime(c.lastMessageAt)}</span>
                         </div>
                         <div className="messages-conv__row">
-                          <p className="messages-conv__preview">{c.lastMessage}</p>
+                          <p className="messages-conv__preview">{c.lastMessage || 'No messages yet'}</p>
                           {unread > 0 && <span className="messages-conv__badge">{unread}</span>}
                         </div>
                       </div>
@@ -165,7 +355,6 @@ export default function ChatPage() {
             </div>
           </aside>
 
-          {/* Main chat */}
           <div className="messages-main">
             {activeConv ? (
               <>
@@ -187,28 +376,43 @@ export default function ChatPage() {
                       {isAdminThread ? (
                         <><Shield size={12} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />School administration</>
                       ) : (
-                        'Available · Teacher'
+                        `Available · ${roleLabel(activeConv.role)}`
                       )}
                     </p>
                   </div>
                 </header>
 
                 <div className="messages-thread-body">
-                  <AnimatePresence>
-                    {messages.map((m) => (
-                      <motion.div
-                        key={m.id}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`messages-bubble ${m.senderId === user.id ? 'messages-bubble--sent' : 'messages-bubble--received'}`}
-                      >
-                        {m.text}
-                        <span className="messages-bubble__time">
-                          {new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+                  {loadingMessages ? (
+                    <p className="messages-thread-loading">Loading messages…</p>
+                  ) : (
+                    <AnimatePresence>
+                      {messages.map((m) => (
+                        <motion.div
+                          key={m.id}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`messages-bubble ${m.senderId === user.id ? 'messages-bubble--sent' : 'messages-bubble--received'}`}
+                        >
+                          {m.text}
+                          <span className="messages-bubble__meta">
+                            <span className="messages-bubble__time">
+                              {new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {m.senderId === user.id && (
+                              <span
+                                className={`messages-bubble__status ${m.seen ? 'messages-bubble__status--seen' : ''}`}
+                                title={m.seen ? 'Seen' : 'Delivered'}
+                                aria-label={m.seen ? 'Seen' : 'Delivered'}
+                              >
+                                {m.seen ? <CheckCheck size={12} /> : <Check size={12} />}
+                              </span>
+                            )}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  )}
                   <div ref={bottomRef} />
                 </div>
 
@@ -245,12 +449,63 @@ export default function ChatPage() {
                 </div>
                 <h2>Select a conversation</h2>
                 <p>
-                  Choose a chat from the sidebar to view messages and reply securely.
+                  Choose a chat from the sidebar or start a new one with the + button.
                 </p>
+                <button type="button" className="messages-new-link" onClick={openCompose}>
+                  Start a conversation
+                </button>
               </div>
             )}
           </div>
         </div>
+
+        {composeOpen && (
+          <div className="messages-compose-modal" role="dialog" aria-modal="true" aria-label="New conversation">
+            <div className="messages-compose-modal__backdrop" onClick={() => setComposeOpen(false)} />
+            <div className="messages-compose-modal__panel">
+              <header className="messages-compose-modal__head">
+                <h2>New conversation</h2>
+                <button type="button" onClick={() => setComposeOpen(false)} aria-label="Close">
+                  <X size={18} />
+                </button>
+              </header>
+              <div className="messages-search">
+                <Search size={16} className="messages-search__icon" />
+                <input
+                  type="search"
+                  placeholder="Search contacts…"
+                  value={contactSearch}
+                  onChange={(e) => setContactSearch(e.target.value)}
+                  aria-label="Search contacts"
+                />
+              </div>
+              <div className="messages-compose-modal__list">
+                {contactsLoading ? (
+                  <p className="messages-compose-modal__empty">Loading contacts…</p>
+                ) : filteredContacts.length === 0 ? (
+                  <p className="messages-compose-modal__empty">No contacts available to message.</p>
+                ) : (
+                  filteredContacts.map((contact) => (
+                    <button
+                      key={contact.id}
+                      type="button"
+                      className="messages-compose-contact"
+                      onClick={() => handleStartConversation(contact)}
+                    >
+                      <div className={`messages-conv__avatar ${contact.role === 'admin' ? 'messages-conv__avatar--admin' : ''}`}>
+                        {getInitials(contact.name)}
+                      </div>
+                      <div className="messages-compose-contact__body">
+                        <p className="messages-conv__name">{contact.name}</p>
+                        <p className="messages-compose-contact__meta">{roleLabel(contact.role)}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

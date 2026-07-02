@@ -291,6 +291,7 @@ export default function PortalSettings() {
         menuCustomization,
         customMenuItems: (form.customMenuItems || []).filter((i) => i.label?.trim() && i.to?.trim()),
         menuOrder: form.menuOrder || {},
+        menuVisibility: form.menuVisibility || {},
       });
       toast('Portal settings saved. Changes are live across the app.', 'success');
     } catch {

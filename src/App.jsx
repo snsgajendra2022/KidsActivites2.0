@@ -3,7 +3,11 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import SchoolRouteGuard from './components/routing/SchoolRouteGuard.jsx';
 import { ROLES } from './constants/roles.js';
 
+import PlatformHomeGate from './components/routing/PlatformHomeGate.jsx';
+import PlatformLoginGate from './components/routing/PlatformLoginGate.jsx';
 import Landing from './pages/public/Landing.jsx';
+import WorkspaceNew from './pages/public/WorkspaceNew.jsx';
+import WorkspaceConfirm from './pages/public/WorkspaceConfirm.jsx';
 import Enrollment from './pages/public/Enrollment.jsx';
 import Login from './pages/auth/Login.jsx';
 import {
@@ -55,8 +59,10 @@ const TEACHER_ROLES = [ROLES.TEACHER];
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<PlatformHomeGate />} />
+      <Route path="/login" element={<PlatformLoginGate />} />
+      <Route path="/workspace/new" element={<WorkspaceNew />} />
+      <Route path="/workspace/confirm" element={<WorkspaceConfirm />} />
       <Route path="/enrollment" element={<Enrollment />} />
       <Route path="/enroll" element={<Navigate to="/enrollment" replace />} />
       <Route path="/security-policy" element={<SecurityPolicy />} />
@@ -65,6 +71,7 @@ export default function App() {
       <Route path="/support" element={<DirectSupport />} />
 
       <Route path="/:schoolSlug" element={<SchoolRouteGuard><Landing /></SchoolRouteGuard>} />
+      <Route path="/:schoolSlug/login" element={<SchoolRouteGuard><Login /></SchoolRouteGuard>} />
       <Route path="/:schoolSlug/enroll" element={<SchoolRouteGuard><Enrollment /></SchoolRouteGuard>} />
 
       {/* Admin routes */}

@@ -7,11 +7,11 @@ import LoginHeaderScrollText from '../auth/LoginHeaderScrollText.jsx';
 export default function PublicHeader({ glass = false, compact = false, loginMobile = false }) {
   const location = useLocation();
   const { portalName, config } = usePortalConfig();
-  const { schoolSlug } = useTenant();
+  const { schoolSlug, isTenantSubdomain } = useTenant();
   const loginScrollLines = config?.loginScrollLines;
 
-  const basePath = schoolSlug ? `/${schoolSlug}` : '/';
-  const enrollPath = schoolSlug ? `/${schoolSlug}/enroll` : '/enrollment';
+  const basePath = isTenantSubdomain ? '/' : (schoolSlug ? `/${schoolSlug}` : '/');
+  const enrollPath = isTenantSubdomain ? '/enrollment' : (schoolSlug ? `/${schoolSlug}/enroll` : '/enrollment');
 
   const navLinks = [
     { to: enrollPath, label: 'Admissions' },

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useToast } from '../../context/ToastContext.jsx';
 import { getNotifications, markAsRead, markAllRead } from '../../services/notificationService.js';
 import '../../styles/notifications.css';
 
@@ -46,18 +47,39 @@ export default function NotificationsPage({
   subtitle = 'Your school notifications and updates.',
 }) {
   const { user, isDemoSession } = useAuth();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) return undefined;
+
+    let cancelled = false;
+    setLoading(true);
+
     getNotifications(user.id)
-      .then(setNotifications)
-      .finally(() => setLoading(false));
+      .then(({ notifications: items, unreadCount: count }) => {
+        if (cancelled) return;
+        setNotifications(Array.isArray(items) ? items : []);
+        setUnreadCount(Number.isFinite(count) ? count : 0);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast('Unable to load notifications. Please try again.', 'error');
+          setNotifications([]);
+          setUnreadCount(0);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
   }, [user?.id]);
 
-  const unread = notifications.filter((n) => !n.read).length;
+  const unread = unreadCount;
 
   const filterCounts = useMemo(() => {
     const counts = { all: notifications.length, unread };
@@ -76,11 +98,13 @@ export default function NotificationsPage({
   const handleRead = async (id) => {
     await markAsRead(id);
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
   };
 
   const handleReadAll = async () => {
     await markAllRead(user.id);
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
   };
 
   const filterLabel = FILTERS.find((f) => f.id === activeFilter)?.label || 'All';

@@ -1,19 +1,18 @@
-import { isApiFallbackMock } from './config.js';
-import { shouldUseMockData } from './demoMode.js';
+import { isApiFallbackMock, isApiEnabled, isForceMock } from './config.js';
 
 /**
- * Route to mock or live API. Demo sessions always use mock data.
- * When API fails and VITE_API_FALLBACK_MOCK is not false, falls back to mock.
+ * Route to mock or live API. Uses apiFn when VITE_API_URL is set unless VITE_FORCE_MOCK=true.
+ * Mock fallback on API errors only when VITE_API_FALLBACK_MOCK=true.
  */
-export async function routeRequest({ mockFn, apiFn, user }) {
-  if (shouldUseMockData(user)) {
+export async function routeRequest({ mockFn, apiFn }) {
+  if (isForceMock() || !isApiEnabled()) {
     return mockFn();
   }
   try {
     return await apiFn();
   } catch (err) {
     if (isApiFallbackMock()) {
-      console.warn('[SchoolBridge] API unavailable, using demo data:', err.message);
+      console.warn('[SchoolBridge] API unavailable, using mock data:', err.message);
       return mockFn();
     }
     throw err;

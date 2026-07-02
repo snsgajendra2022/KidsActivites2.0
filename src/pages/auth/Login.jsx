@@ -1,18 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Mail, X, Shield, Sparkles, Smartphone, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Mail, Shield, Sparkles, Smartphone, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { ROLE_DASHBOARD, ROLE_LABELS } from '../../constants/roles.js';
-import { getDemoAccounts } from '../../services/authService.js';
-import StatusBadge from '../../components/ui/StatusBadge.jsx';
+import { ROLE_DASHBOARD } from '../../constants/roles.js';
 import PublicHeader from '../../components/layout/PublicHeader.jsx';
 import PublicFooter from '../../components/layout/PublicFooter.jsx';
 import PortalLogo from '../../components/brand/PortalLogo.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 
-const DEMO_ACCOUNTS = getDemoAccounts();
-const DEMO_PASSWORD = '123456';
-const DEMO_OTP = '123456';
 const OTP_RESEND_SECONDS = 30;
 
 function detectOtpChannel(identity, { mobileEnabled, emailEnabled }) {
@@ -60,17 +55,6 @@ function otpIdentityHint(channel, { mobileEnabled, emailEnabled }) {
   if (mobileEnabled) return 'Enter your 10-digit registered mobile number.';
   return 'Enter your registered email address.';
 }
-
-const roleBadgeVariant = {
-  super_admin: 'danger',
-  school_admin: 'primary',
-  admission_officer: 'info',
-  accountant: 'warning',
-  teacher: 'success',
-  parent: 'primary',
-  student: 'default',
-  support_staff: 'info',
-};
 
 function OtpInput({ value, onChange, disabled }) {
   const inputsRef = useRef([]);
@@ -145,7 +129,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [demoOpen, setDemoOpen] = useState(false);
   const { login, requestOtp, requestEmailOtp, loginWithOtp, loginWithEmailOtp } = useAuth();
   const navigate = useNavigate();
   const { portalName, school, branding, loginMethods } = usePortalConfig();
@@ -227,19 +210,6 @@ export default function Login() {
     setResendIn(0);
     setSentOtpChannel(null);
     if (next === 'otp') setOtpIdentity('');
-  };
-
-  const fillDemo = (account) => {
-    if (method === 'email') {
-      setEmailForm({ email: account.email, password: DEMO_PASSWORD });
-    } else {
-      setOtpIdentity(mobileOtpEnabled ? account.mobile : account.email);
-      setOtp('');
-      setOtpSent(false);
-      setSentOtpChannel(null);
-    }
-    setError('');
-    setDemoOpen(false);
   };
 
   const handleSendOtp = async () => {
@@ -345,10 +315,6 @@ export default function Login() {
 
   const renderOtpStep = (changeLabel, onChangeTarget) => (
     <>
-      <div className="login-otp-demo">
-        <Shield size={14} className="shrink-0" />
-        <span>Demo OTP: <strong>{DEMO_OTP}</strong> (valid 5 minutes)</span>
-      </div>
       <div className="space-y-2">
         <label className="login-field-label block text-sm font-semibold">Enter 6-digit OTP</label>
         <OtpInput value={otp} onChange={setOtp} disabled={loading} />
@@ -589,14 +555,6 @@ export default function Login() {
                   <ArrowRight size={16} />
                 </Link>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setDemoOpen(true)}
-                className="login-demo-link"
-              >
-                Demo accounts · password {DEMO_PASSWORD} · OTP {DEMO_OTP}
-              </button>
             </div>
           </div>
         </div>
@@ -608,56 +566,6 @@ export default function Login() {
       <div className="login-portal-footer-slot hidden shrink-0 xl:block">
         <PublicFooter compact />
       </div>
-
-      {demoOpen && (
-        <div
-          className="login-modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setDemoOpen(false)}
-        >
-          <div
-            className="glass-card max-h-[min(26rem,85dvh)] w-full max-w-lg overflow-hidden rounded-2xl p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="login-card-title text-lg">Demo Accounts</h3>
-                <p className="login-card-subtitle text-xs">
-                  {method === 'email'
-                    ? 'Tap to fill email'
-                    : 'Tap to fill mobile or email for OTP'} · Password <strong>{DEMO_PASSWORD}</strong> · OTP <strong>{DEMO_OTP}</strong>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDemoOpen(false)}
-                className="rounded-lg p-1 login-card-subtitle hover:bg-black/5"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="grid max-h-[min(18rem,60dvh)] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account.id}
-                  type="button"
-                  onClick={() => fillDemo(account)}
-                  className="rounded-xl border border-black/5 bg-white/70 p-3 text-left transition-all hover:bg-white hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs font-semibold text-brand">{account.name}</span>
-                    <StatusBadge variant={roleBadgeVariant[account.role] || 'default'}>
-                      {ROLE_LABELS[account.role]}
-                    </StatusBadge>
-                  </div>
-                  <p className="mt-1 truncate text-[11px] login-card-subtitle">{account.email}</p>
-                  <p className="truncate text-[11px] font-medium" style={{ color: 'var(--sb-secondary)' }}>+91 {account.mobile}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

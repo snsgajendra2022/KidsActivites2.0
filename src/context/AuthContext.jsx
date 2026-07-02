@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import {
   loginByEmail,
   sendLoginOtp,
@@ -8,6 +8,10 @@ import {
   logoutSession,
 } from '../services/authService.js';
 import { isDemoUser } from '../services/api/demoMode.js';
+import { clearMockStorage } from '../services/api/clearMockStorage.js';
+import { getAccessToken } from '../services/api/tokenStorage.js';
+import { isApiEnabled } from '../services/api/config.js';
+import { getCurrentUser } from '../services/userService.js';
 import { ROLE_DASHBOARD } from '../constants/roles.js';
 import { updateUserProfile, changeUserPassword } from '../services/userService.js';
 
@@ -27,9 +31,48 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+  const [bootstrapping, setBootstrapping] = useState(() => (
+    Boolean(getAccessToken()) && isApiEnabled()
+  ));
+
+  useEffect(() => {
+    if (!isApiEnabled()) {
+      setBootstrapping(false);
+      return;
+    }
+
+    clearMockStorage();
+
+    if (!getAccessToken()) {
+      setBootstrapping(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = await getCurrentUser();
+        if (!cancelled && profile) {
+          persistUser({ ...profile, isDemoSession: false });
+          setUser({ ...profile, isDemoSession: false });
+        }
+      } catch {
+        if (!cancelled) {
+          await logoutSession();
+          localStorage.removeItem(STORAGE_KEY);
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) setBootstrapping(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
 
   const login = async ({ email, password }) => {
     const nextUser = await loginByEmail(email, password);
+    if (isApiEnabled()) clearMockStorage();
     persistUser(nextUser);
     setUser(nextUser);
     return nextUser;
@@ -41,6 +84,7 @@ export function AuthProvider({ children }) {
 
   const loginWithOtp = async ({ mobile, otp }) => {
     const nextUser = await verifyOtp(mobile, otp);
+    if (isApiEnabled()) clearMockStorage();
     persistUser(nextUser);
     setUser(nextUser);
     return nextUser;
@@ -48,13 +92,14 @@ export function AuthProvider({ children }) {
 
   const loginWithEmailOtp = async ({ email, otp }) => {
     const nextUser = await verifyOtpByChannel('email', email, otp);
+    if (isApiEnabled()) clearMockStorage();
     persistUser(nextUser);
     setUser(nextUser);
     return nextUser;
   };
 
-  const logout = () => {
-    logoutSession();
+  const logout = async () => {
+    await logoutSession();
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
   };
@@ -75,6 +120,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       user,
+      bootstrapping,
       login,
       requestOtp,
       requestEmailOtp,
@@ -88,7 +134,7 @@ export function AuthProvider({ children }) {
       role: user?.role,
       dashboardPath: user ? ROLE_DASHBOARD[user.role] : '/login',
     }),
-    [user],
+    [user, bootstrapping],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

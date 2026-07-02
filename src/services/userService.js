@@ -2,6 +2,7 @@ import usersData from '../data/users.json';
 import { delay } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
+import { listTeachers as listTeachersFromService } from './teacherService.js';
 import { authenticateByEmail } from './authService.js';
 import { getSchoolById } from './schoolService.js';
 import { ROLE_LABELS } from '../constants/roles.js';
@@ -65,7 +66,7 @@ export async function listUsers(filters = {}, user) {
 }
 
 export async function listTeachers(schoolId, user) {
-  return listUsers({ schoolId, role: 'teacher' }, user);
+  return listTeachersFromService({ schoolId }, user);
 }
 
 export async function updateUserProfile(user, updates) {

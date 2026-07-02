@@ -23,11 +23,11 @@ const APP_COLUMNS = [
   },
   {
     label: 'Parent Name',
-    render: (app) => app.parent?.fatherName,
+    render: (app) => app.parent?.fatherName || app.parent?.motherName || app.parent?.guardianName,
   },
   {
     label: 'Mobile',
-    render: (app) => app.parent?.fatherMobile,
+    render: (app) => app.parent?.fatherMobile || app.parent?.motherMobile,
   },
   {
     label: 'Status',
@@ -50,8 +50,24 @@ export default function ApplicationsList() {
   const [apps, setApps] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { getApplications().then(setApps); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const filters = statusFilter ? { status: statusFilter } : {};
+    getApplications(filters)
+      .then((data) => {
+        if (!cancelled) setApps(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setApps([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [statusFilter]);
 
   const filtered = apps.filter((a) => {
     const matchSearch = !search || a.student?.fullName?.toLowerCase().includes(search.toLowerCase()) || a.applicationNo?.toLowerCase().includes(search.toLowerCase());
@@ -89,7 +105,7 @@ export default function ApplicationsList() {
         columns={APP_COLUMNS}
         data={filtered}
         minWidth={1000}
-        emptyMessage="No enrollment applications found."
+        emptyMessage={loading ? 'Loading applications…' : 'No enrollment applications found.'}
         renderActions={(app) => (
           <TableActionLink to={`/admin/applications/${app.id}`}>View Application</TableActionLink>
         )}

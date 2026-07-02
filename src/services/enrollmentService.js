@@ -28,7 +28,10 @@ async function mockGetApplications(filters = {}) {
 export async function getApplications(filters = {}) {
   return routeRequest({
     mockFn: () => mockGetApplications(filters),
-    apiFn: () => api.get('/admin/applications', filters),
+    apiFn: async () => {
+      const data = await api.get('/admin/applications', filters);
+      return Array.isArray(data) ? data : [];
+    },
   });
 }
 
@@ -132,7 +135,7 @@ export async function submitApplication(formData, existingId, parentId, schoolId
       saveAll(apps);
       return entry;
     },
-    apiFn: () => api.post('/enrollment/submit', { draftId: existingId, parentId, schoolId, ...formData }),
+    apiFn: () => api.post('/enrollment/submit', { applicationId: existingId, parentId, schoolId, ...formData }),
   });
 }
 
@@ -160,7 +163,7 @@ export async function updateApplicationStatus(id, status, note) {
 export async function requestCorrection(id, reason) {
   return routeRequest({
     mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.CORRECTION_REQUIRED, reason),
-    apiFn: () => api.post(`/admin/applications/${id}/request-correction`, { reason }),
+    apiFn: () => api.post(`/admin/applications/${id}/request-correction`, { note: reason }),
   });
 }
 
@@ -223,7 +226,10 @@ export async function getDashboardStats() {
       await delay(100);
       return computeDashboardStats(getAll());
     },
-    apiFn: () => api.get('/admin/dashboard/stats'),
+    apiFn: async () => {
+      const data = await api.get('/admin/dashboard/stats');
+      return data && typeof data === 'object' ? data : {};
+    },
   });
 }
 

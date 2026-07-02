@@ -1,11 +1,13 @@
 import { delay, getStore, setStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
+import { isApiEnabled, resolveTenantSlug } from './api/config.js';
 import { MOCK_SCHOOLS } from '../data/mockSchools.js';
 
 const SCHOOLS_KEY = 'sb_schools';
 
 function readSchoolsStore() {
+  if (isApiEnabled()) return [];
   const stored = getStore(SCHOOLS_KEY, null);
   if (stored?.length) return stored;
   const seeded = [...MOCK_SCHOOLS];
@@ -26,6 +28,11 @@ export function getSchoolBySlug(slug) {
 
 export function getSchoolById(schoolId) {
   return readSchoolsStore().find((s) => s.id === schoolId) || null;
+}
+
+export async function resolveSchoolBySlug(slug) {
+  if (!slug) return null;
+  return getSchoolBySlugApi(slug);
 }
 
 export async function listSchools() {
@@ -68,7 +75,21 @@ export async function getSchoolBySlugApi(slug) {
       if (!school) throw new Error('School not found');
       return school;
     },
-    apiFn: () => api.get(`/schools/${slug}`, undefined, { auth: false }),
+    apiFn: async () => {
+      const tenantSlug = resolveTenantSlug();
+      const normalized = slug.toLowerCase();
+      if (!tenantSlug || normalized !== tenantSlug.toLowerCase()) {
+        throw new Error('School not found');
+      }
+      const config = await api.get('/portal/config', undefined, { auth: false });
+      const school = config?.school;
+      if (!school?.id) throw new Error('School not found');
+      return {
+        ...school,
+        slug: tenantSlug,
+        status: school.status || 'active',
+      };
+    },
   });
 }
 
