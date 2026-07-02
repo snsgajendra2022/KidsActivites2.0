@@ -73,6 +73,50 @@ function ImageUploadField({ label, hint, value, onChange }) {
   );
 }
 
+function EnrollmentSchoolDetailsSection({ school, onSchoolChange, hint }) {
+  const patch = (field, value) => onSchoolChange({ ...school, [field]: value });
+
+  return (
+    <div className="sb-card grid max-w-3xl gap-4 p-6">
+      <h3 className="font-display text-base font-bold text-brand">Enrollment School Details</h3>
+      {hint && <p className="text-sm text-muted">{hint}</p>}
+      <Input
+        label="School Name"
+        value={school?.name || ''}
+        onChange={(e) => patch('name', e.target.value)}
+        variant="enrollment"
+      />
+      <Input
+        label="Academic Year"
+        value={school?.academicYear || ''}
+        onChange={(e) => patch('academicYear', e.target.value)}
+        variant="enrollment"
+      />
+      <Input
+        label="Address"
+        value={school?.address || ''}
+        onChange={(e) => patch('address', e.target.value)}
+        variant="enrollment"
+      />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Input
+          label="Phone"
+          value={school?.phone || ''}
+          onChange={(e) => patch('phone', e.target.value)}
+          variant="enrollment"
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={school?.email || ''}
+          onChange={(e) => patch('email', e.target.value)}
+          variant="enrollment"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function PortalSettings() {
   const {
     config,
@@ -448,60 +492,11 @@ export default function PortalSettings() {
               />
             </div>
 
-            <div className="sb-card grid max-w-3xl gap-4 p-6">
-              <h3 className="font-display text-base font-bold text-brand">Enrollment School Details</h3>
-              <p className="text-sm text-muted">
-                Shown on the main portal enrollment form at <strong>/enrollment</strong>.
-              </p>
-              <Input
-                label="School Name"
-                value={platformForm.school.name}
-                onChange={(e) => setPlatformForm((f) => ({
-                  ...f,
-                  school: { ...f.school, name: e.target.value },
-                }))}
-                variant="enrollment"
-              />
-              <Input
-                label="Academic Year"
-                value={platformForm.school.academicYear}
-                onChange={(e) => setPlatformForm((f) => ({
-                  ...f,
-                  school: { ...f.school, academicYear: e.target.value },
-                }))}
-                variant="enrollment"
-              />
-              <Input
-                label="Address"
-                value={platformForm.school.address}
-                onChange={(e) => setPlatformForm((f) => ({
-                  ...f,
-                  school: { ...f.school, address: e.target.value },
-                }))}
-                variant="enrollment"
-              />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="Phone"
-                  value={platformForm.school.phone}
-                  onChange={(e) => setPlatformForm((f) => ({
-                    ...f,
-                    school: { ...f.school, phone: e.target.value },
-                  }))}
-                  variant="enrollment"
-                />
-                <Input
-                  label="Email"
-                  type="email"
-                  value={platformForm.school.email}
-                  onChange={(e) => setPlatformForm((f) => ({
-                    ...f,
-                    school: { ...f.school, email: e.target.value },
-                  }))}
-                  variant="enrollment"
-                />
-              </div>
-            </div>
+            <EnrollmentSchoolDetailsSection
+              school={platformForm.school}
+              onSchoolChange={(school) => setPlatformForm((f) => ({ ...f, school }))}
+              hint={<>Shown on the main portal enrollment form at <strong>/enrollment</strong>.</>}
+            />
 
             {platformForm.enrollmentForm && (
               <EnrollmentFormBuilder
@@ -574,10 +569,26 @@ export default function PortalSettings() {
         )}
 
         {tab === 'enrollment-form' && form?.enrollmentForm && (
-          <EnrollmentFormBuilder
-            value={form.enrollmentForm}
-            onChange={(enrollmentForm) => setForm((f) => ({ ...f, enrollmentForm }))}
-          />
+          <div className="space-y-6">
+            <EnrollmentSchoolDetailsSection
+              school={form.school}
+              onSchoolChange={(school) => setForm((f) => ({ ...f, school }))}
+              hint={
+                activeSchoolMeta?.slug ? (
+                  <>
+                    Shown on this school&apos;s enrollment form at{' '}
+                    <strong>/{activeSchoolMeta.slug}/enroll</strong>.
+                  </>
+                ) : (
+                  <>Shown on the school enrollment form.</>
+                )
+              }
+            />
+            <EnrollmentFormBuilder
+              value={form.enrollmentForm}
+              onChange={(enrollmentForm) => setForm((f) => ({ ...f, enrollmentForm }))}
+            />
+          </div>
         )}
 
         {tab === 'login' && (
@@ -856,40 +867,21 @@ export default function PortalSettings() {
         )}
 
         {tab === 'school' && (
-          <div className="sb-card grid max-w-3xl gap-4 p-6">
-            <Input
-              label="School Name"
-              value={form.school.name}
-              onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, name: e.target.value } }))}
-              variant="enrollment"
+          <div className="space-y-4">
+            <EnrollmentSchoolDetailsSection
+              school={form.school}
+              onSchoolChange={(school) => setForm((f) => ({ ...f, school }))}
+              hint={
+                activeSchoolMeta?.slug ? (
+                  <>
+                    Used on the public landing page and enrollment header for{' '}
+                    <strong>/{activeSchoolMeta.slug}</strong>.
+                  </>
+                ) : (
+                  <>School contact details shown on the public school portal.</>
+                )
+              }
             />
-            <Input
-              label="Academic Year"
-              value={form.school.academicYear}
-              onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, academicYear: e.target.value } }))}
-              variant="enrollment"
-            />
-            <Input
-              label="Address"
-              value={form.school.address}
-              onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, address: e.target.value } }))}
-              variant="enrollment"
-            />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Input
-                label="Phone"
-                value={form.school.phone}
-                onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, phone: e.target.value } }))}
-                variant="enrollment"
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={form.school.email}
-                onChange={(e) => setForm((f) => ({ ...f, school: { ...f.school, email: e.target.value } }))}
-                variant="enrollment"
-              />
-            </div>
           </div>
         )}
 

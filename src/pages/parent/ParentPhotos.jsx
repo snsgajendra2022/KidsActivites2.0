@@ -1,10 +1,14 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Image, Calendar, Camera, Expand } from 'lucide-react';
+import { Image } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getPhotos } from '../../services/mediaService.js';
+import { FEATURED_HIGHLIGHT } from '../../data/mockPhotos.js';
 import '../../styles/parent-photos.css';
+
+const INITIAL_VISIBLE_GROUPS = 2;
+const GROUPS_PER_LOAD = 2;
 
 function getInitials(name = '') {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -54,10 +58,69 @@ function groupPhotosByDate(photos) {
   }));
 }
 
+function getPhotoTitle(photo) {
+  return photo.title || photo.caption || 'Classroom moment';
+}
+
+function getPhotoCategory(photo) {
+  if (photo.category) return photo.category;
+  if (photo.className) return photo.className.toUpperCase();
+  return 'ACTIVITY';
+}
+
+function getPhotoGrade(photo) {
+  return photo.grade || photo.className || '';
+}
+
 /** Parent's child id for photo filtering — demo maps parent to aarav */
 function getStudentIdForParent(userId) {
   if (userId === 'usr-parent' || userId === 'usr-student') return 'aarav';
   return null;
+}
+
+function GalleryCard({ photo, onOpen }) {
+  if (photo.type === 'video') {
+    return (
+      <article className="parent-photos-masonry-item">
+        <div className="parent-photos-video-card">
+          <span className="material-symbols-outlined">video_library</span>
+          <h4>{getPhotoTitle(photo)}</h4>
+          <p>{photo.caption || 'Watch the latest classroom recap.'}</p>
+          <button type="button" className="parent-photos-video-card__btn">
+            Watch Now
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article className="parent-photos-masonry-item">
+      <button
+        type="button"
+        className="parent-photos-masonry-item__media"
+        onClick={() => onOpen(photo)}
+        aria-label={`View full size: ${getPhotoTitle(photo)}`}
+      >
+        <img src={photo.imageUrl} alt="" loading="lazy" />
+      </button>
+      <div className="parent-photos-masonry-item__body">
+        <span className="parent-photos-masonry-item__category">{getPhotoCategory(photo)}</span>
+        <h4 className="parent-photos-masonry-item__title">{getPhotoTitle(photo)}</h4>
+        <div className="parent-photos-masonry-item__footer">
+          <div className="parent-photos-masonry-item__teacher">
+            <div className="parent-photos-masonry-item__avatar" aria-hidden>
+              {getInitials(photo.teacherName)}
+            </div>
+            <span className="parent-photos-masonry-item__teacher-name">{photo.teacherName}</span>
+          </div>
+          {getPhotoGrade(photo) && (
+            <span className="parent-photos-masonry-item__grade">{getPhotoGrade(photo)}</span>
+          )}
+        </div>
+      </div>
+    </article>
+  );
 }
 
 export default function ParentPhotos() {
@@ -65,6 +128,7 @@ export default function ParentPhotos() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [visibleGroups, setVisibleGroups] = useState(INITIAL_VISIBLE_GROUPS);
 
   useEffect(() => {
     const studentId = getStudentIdForParent(user?.id);
@@ -78,22 +142,33 @@ export default function ParentPhotos() {
     [photos],
   );
 
-  const classCount = useMemo(
-    () => new Set(photos.map((p) => p.className)).size,
-    [photos],
-  );
-
   const photoGroups = useMemo(
     () => groupPhotosByDate(sortedPhotos),
     [sortedPhotos],
   );
 
-  const lightboxPhoto = lightboxIndex >= 0 ? sortedPhotos[lightboxIndex] : null;
+  const visiblePhotoGroups = useMemo(
+    () => photoGroups.slice(0, visibleGroups),
+    [photoGroups, visibleGroups],
+  );
+
+  const featuredSideCards = useMemo(() => {
+    const heroSide = sortedPhotos.filter((p) => p.heroSide && p.imageUrl);
+    if (heroSide.length >= 2) return heroSide.slice(0, 2);
+    return sortedPhotos.filter((p) => p.featured && p.type !== 'video' && p.imageUrl).slice(0, 2);
+  }, [sortedPhotos]);
+
+  const lightboxPhotos = useMemo(
+    () => sortedPhotos.filter((p) => p.type !== 'video' && p.imageUrl),
+    [sortedPhotos],
+  );
+
+  const lightboxPhoto = lightboxIndex >= 0 ? lightboxPhotos[lightboxIndex] : null;
 
   const openLightbox = useCallback((photo) => {
-    const idx = sortedPhotos.findIndex((p) => p.id === photo.id);
+    const idx = lightboxPhotos.findIndex((p) => p.id === photo.id);
     if (idx >= 0) setLightboxIndex(idx);
-  }, [sortedPhotos]);
+  }, [lightboxPhotos]);
 
   const closeLightbox = useCallback(() => setLightboxIndex(-1), []);
 
@@ -102,38 +177,72 @@ export default function ParentPhotos() {
   }, []);
 
   const showNextPhoto = useCallback(() => {
-    setLightboxIndex((i) => (i < sortedPhotos.length - 1 ? i + 1 : i));
-  }, [sortedPhotos.length]);
+    setLightboxIndex((i) => (i < lightboxPhotos.length - 1 ? i + 1 : i));
+  }, [lightboxPhotos.length]);
+
+  const hasMoreGroups = visibleGroups < photoGroups.length;
 
   return (
     <DashboardLayout>
-      <div className="parent-photos-shell">
-        <header className="parent-photos-hero">
-          <div className="parent-photos-hero__icon" aria-hidden>
-            <Camera size={22} />
+      <div className="parent-photos-page">
+        <section className="parent-photos-highlights">
+          <div className="parent-photos-highlights__header">
+            <div>
+              <h1>School Moments</h1>
+              <p>Capturing growth, one discovery at a time.</p>
+            </div>
+            <div className="parent-photos-highlights__actions">
+              <button type="button" className="parent-photos-icon-btn" aria-label="Filter gallery">
+                <span className="material-symbols-outlined">filter_list</span>
+              </button>
+              <button type="button" className="parent-photos-icon-btn" aria-label="Search gallery">
+                <span className="material-symbols-outlined">search</span>
+              </button>
+            </div>
           </div>
-          <div className="parent-photos-hero__text">
-            <h1>Photos from Teacher</h1>
-            <p>Classroom moments shared by your child&apos;s teacher.</p>
-            {photos.length > 0 && (
-              <div className="parent-photos-stats" style={{ marginTop: '0.75rem' }}>
-                <span className="parent-photos-stat">
-                  <Image size={14} />
-                  <strong>{photos.length}</strong> photo{photos.length !== 1 ? 's' : ''}
-                </span>
-                {classCount > 0 && (
-                  <span className="parent-photos-stat">
-                    <strong>{classCount}</strong> class{classCount !== 1 ? 'es' : ''}
-                  </span>
-                )}
+
+          {!loading && sortedPhotos.length > 0 && (
+            <div className="parent-photos-hero-grid">
+              <button
+                type="button"
+                className="parent-photos-hero-featured"
+                onClick={() => {
+                  const match = sortedPhotos.find((p) => p.imageUrl);
+                  if (match) openLightbox(match);
+                }}
+                aria-label={FEATURED_HIGHLIGHT.title}
+              >
+                <img src={FEATURED_HIGHLIGHT.imageUrl} alt="" />
+                <div className="parent-photos-hero-featured__overlay" />
+                <div className="parent-photos-hero-featured__content">
+                  <span className="parent-photos-hero-badge">{FEATURED_HIGHLIGHT.badge}</span>
+                  <h2>{FEATURED_HIGHLIGHT.title}</h2>
+                  <p>{FEATURED_HIGHLIGHT.subtitle}</p>
+                </div>
+              </button>
+
+              <div className="parent-photos-hero-side">
+                {featuredSideCards.map((photo) => (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    className="parent-photos-hero-side-card"
+                    onClick={() => openLightbox(photo)}
+                    aria-label={getPhotoTitle(photo)}
+                  >
+                    <img src={photo.imageUrl} alt="" />
+                    <div className="parent-photos-hero-side-card__overlay" />
+                    <p className="parent-photos-hero-side-card__title">{getPhotoTitle(photo)}</p>
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
-        </header>
+            </div>
+          )}
+        </section>
 
         {loading ? (
           <div className="parent-photos-loading">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="parent-photos-skeleton" />
             ))}
           </div>
@@ -148,61 +257,36 @@ export default function ParentPhotos() {
             </p>
           </div>
         ) : (
-          <div className="parent-photos-groups">
-            {photoGroups.map((group) => (
-              <section key={group.dateKey} className="parent-photos-group">
-                <header className="parent-photos-group__header">
-                  <Calendar size={15} aria-hidden />
-                  <h2 className="parent-photos-group__title">{group.label}</h2>
-                  <span className="parent-photos-group__count">
-                    {group.photos.length} photo{group.photos.length !== 1 ? 's' : ''}
-                  </span>
-                </header>
-                <div className="parent-photos-grid">
-                  {group.photos.map((photo) => (
-                    <article key={photo.id} className="parent-photos-card">
-                      <button
-                        type="button"
-                        className="parent-photos-card__media"
-                        onClick={() => openLightbox(photo)}
-                        aria-label={`View full size: ${photo.caption || 'Classroom photo'}`}
-                      >
-                        <img
-                          src={photo.imageUrl}
-                          alt=""
-                          loading="lazy"
-                        />
-                        <span className="parent-photos-card__zoom-hint" aria-hidden>
-                          <Expand size={14} />
-                          View
-                        </span>
-                      </button>
-                      <div className="parent-photos-card__body">
-                        {photo.caption ? (
-                          <p className="parent-photos-card__caption">{photo.caption}</p>
-                        ) : (
-                          <p className="parent-photos-card__caption parent-photos-card__caption--muted">
-                            Classroom photo
-                          </p>
-                        )}
-                        <div className="parent-photos-card__footer">
-                          <div className="parent-photos-card__avatar" aria-hidden>
-                            {getInitials(photo.teacherName)}
-                          </div>
-                          <div className="parent-photos-card__meta">
-                            <p className="parent-photos-card__teacher">{photo.teacherName}</p>
-                            {photo.className && (
-                              <p className="parent-photos-card__class">{photo.className}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+          <>
+            <div className="parent-photos-feed">
+              {visiblePhotoGroups.map((group, index) => (
+                <section key={group.dateKey}>
+                  <div className="parent-photos-date-header">
+                    <h3 className={index === 0 ? 'is-recent' : 'is-older'}>{group.label}</h3>
+                    <div className="parent-photos-date-header__line" />
+                  </div>
+                  <div className="parent-photos-masonry">
+                    {group.photos.map((photo) => (
+                      <GalleryCard key={photo.id} photo={photo} onOpen={openLightbox} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+
+            {hasMoreGroups && (
+              <div className="parent-photos-load-more-wrap">
+                <button
+                  type="button"
+                  className="parent-photos-load-more"
+                  onClick={() => setVisibleGroups((n) => n + GROUPS_PER_LOAD)}
+                >
+                  Load Older Memories
+                  <span className="material-symbols-outlined">expand_more</span>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -212,7 +296,7 @@ export default function ParentPhotos() {
         onPrev={showPrevPhoto}
         onNext={showNextPhoto}
         hasPrev={lightboxIndex > 0}
-        hasNext={lightboxIndex >= 0 && lightboxIndex < sortedPhotos.length - 1}
+        hasNext={lightboxIndex >= 0 && lightboxIndex < lightboxPhotos.length - 1}
       />
     </DashboardLayout>
   );

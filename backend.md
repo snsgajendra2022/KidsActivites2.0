@@ -9,7 +9,8 @@
 | Domain | Base path | Mock service |
 |--------|-----------|--------------|
 | [Auth](#1-authentication) | `/auth/*` | `src/services/authService.js` |
-| [Portal config](#2-portal--branding) | `/portal/*`, `/admin/portal-settings/*` | `src/services/portalConfigService.js` |
+| [Portal config (per school)](#2-portal--branding) | `/portal/*`, `/admin/portal-settings/*` | `src/services/portalConfigService.js` |
+| [Platform config](#15-multi-tenant--schools) | `/platform/config`, `/admin/platform-settings` | `src/services/platformConfigService.js` |
 | [Enrollment](#3-enrollment) | `/enrollment/*`, `/admin/applications/*` | `src/services/enrollmentService.js` |
 | [Documents / upload](#4-documents--file-upload) | `/documents/*` | `src/services/uploadService.js` |
 | [Fees](#5-fees) | `/fees/*`, `/admin/fees/*` | `src/services/feeService.js` |
@@ -22,8 +23,9 @@
 | [School settings](#12-school-settings) | `/admin/settings/*` | `src/services/settingsService.js` |
 | [Reports](#13-reports) | `/admin/reports/*` | `src/services/reportsService.js` |
 | [Audit logs](#14-audit-logs) | `/admin/audit-logs` | `src/services/auditService.js` |
-| [Multi-tenant & schools](#15-multi-tenant--schools) | `/schools/*`, `/platform/config`, `/admin/schools/*`, `/admin/users/*` | `src/services/schoolService.js`, `src/services/platformConfigService.js`, `src/services/userService.js` |
+| [Multi-tenant & schools](#15-multi-tenant--schools) | `/schools/*`, `/admin/schools/*`, `/admin/users/*`, `/admin/teachers` | `src/services/schoolService.js`, `src/services/userService.js` |
 | [Teacher classes](#16-teacher-classes) | `/teacher/classes` | `src/services/teacherService.js` |
+| [Parent portal](#17-parent-portal) | `/parent/*` | `src/services/parentService.js`, `src/services/enrollmentService.js` |
 
 ---
 
@@ -243,6 +245,7 @@ interface EnrollmentApplication {
   createdAt?: string;
   updatedAt?: string;
   parentId: string | null;
+  schoolId: string | null;        // tenant school; required on submit for school-scoped enrollments
   assignedReviewer?: string;
   student: Record<string, unknown>;
   parent: Record<string, unknown>;
@@ -267,6 +270,37 @@ interface DocumentRef {
   status?: 'pending' | 'verified' | 'rejected';
 }
 ```
+
+### Platform config (main portal — `/` and `/enrollment`)
+
+Stored separately from per-school portal config. Super Admin edits via **Main Portal (/)** in Portal Settings.
+
+```typescript
+interface PlatformConfig {
+  platformName: string;
+  tagline: string;
+  footerText: string;
+  heroHeadline: string;
+  heroSubtext: string;
+  school: {                        // Enrollment School Details header on /enrollment
+    name: string;
+    academicYear: string;
+    address: string;
+    phone: string;
+    email: string;
+  };
+  branding: {
+    heroImageUrl: string | null;
+    logoIconUrl: string | null;
+    faviconUrl: string | null;
+  };
+  theme: { brandColor: string; accentColor: string };
+  enrollmentTheme: Record<string, string>;
+  enrollmentForm: { steps: EnrollmentFormStep[] };
+}
+```
+
+**Mock storage key:** `sb_platform_config` · **Mock service:** `src/services/platformConfigService.js`
 
 ### Fee record
 
@@ -634,18 +668,20 @@ Parent account activation after admission officer creates account.
 ## 2. Portal & branding
 
 **Mock:** `src/services/portalConfigService.js`  
-**Storage key (mock):** `sb_portal_configs` (object keyed by `schoolId`; legacy `sb_portal_config` migrated to `school-1`)  
-**Public school selection (mock):** `localStorage` key `sb_public_school_id` (default `school-1`)  
-**Admin school selection (mock):** `localStorage` key `sb_admin_selected_school` (super admin only)  
-**Frontend:** `src/context/PortalConfigContext.jsx`, `src/pages/admin/PortalSettings.jsx`
+**Storage (mock):** `sb_portal_config_{schoolId}` per tenant; large branding assets in `sb_portal_branding_{schoolId}`. Legacy keys `sb_portal_config` / `sb_portal_configs` are migrated on first read.  
+**Admin school selection (mock):** `sb_admin_selected_school` — super admin picks active school in **Admin → Schools** before editing School Portal settings.  
+**Public tenant resolution:** URL slug `/{schoolSlug}` → `GET /schools/:slug` → `schoolId` → `GET /portal/config?schoolId=…`  
+**Frontend:** `src/context/PortalConfigContext.jsx`, `src/context/TenantContext.jsx`, `src/pages/admin/PortalSettings.jsx`
+
+> **Two config scopes:** **Platform config** (`GET /platform/config`) powers `/` and `/enrollment`. **Per-school portal config** (`GET /portal/config`) powers `/{slug}` and `/{slug}/enroll`. See [§15](#15-multi-tenant--schools) for platform endpoints.
 
 ### `GET /portal/config`
 
-Public portal branding for landing, login, enroll pages.
+Public portal branding for school landing (`/{slug}`), school login, and school enrollment (`/{slug}/enroll`).
 
 **Auth:** Public
 
-**Query:** `schoolId` (optional) — tenant school, e.g. `school-1`. Resolved from subdomain/slug in production.
+**Query:** `schoolId` (required) — tenant school, e.g. `school-1`. In production, resolve from subdomain or path slug before calling this endpoint.
 
 **Response `200`:**
 ```json
@@ -694,9 +730,9 @@ Public portal branding for landing, login, enroll pages.
 }
 ```
 
-> Public response may omit `menuVisibility` (admin-only). `enrollmentForm` is required for `/enroll` dynamic form.
+> Public response may omit `menuVisibility` (admin-only). `enrollmentForm` and `school` (Enrollment School Details) are required for `/{slug}/enroll`.
 
-**Mock function:** `getPortalConfig()`
+**Mock function:** `getPortalConfig(schoolId)`
 
 ---
 
@@ -728,7 +764,10 @@ Update portal settings (partial merge).
   "footerText": "© 2026 Green Valley School.",
   "school": {
     "name": "Green Valley International School",
-    "phone": "+91 11 4567 8900"
+    "academicYear": "2026–2027",
+    "address": "123 Education Lane, New Delhi, 110001",
+    "phone": "+91 11 4567 8900",
+    "email": "admissions@greenvalley.edu.in"
   },
   "theme": {
     "brandColor": "#1B2E4B",
@@ -751,7 +790,24 @@ Update portal settings (partial merge).
 
 **Response `200`:** Updated full `PortalConfig`
 
-**Mock function:** `savePortalConfig(updates)`
+**Mock function:** `savePortalConfig(updates, schoolId)`
+
+---
+
+### Admin UI: Portal Settings (`/admin/portal-settings`)
+
+| Scope | Who | Save endpoint | Public routes |
+|-------|-----|---------------|---------------|
+| **Main Portal (/)** | Super Admin only | `PUT /admin/platform-settings` | `/`, `/enrollment` |
+| **School Portal** | Super Admin (after selecting school in Admin → Schools) or School Admin | `PUT /admin/portal-settings` | `/{slug}`, `/{slug}/enroll` |
+
+**Enrollment School Details** (`school.name`, `school.academicYear`, `school.address`, `school.phone`, `school.email`) appear in:
+
+- Main Portal — above the enrollment form builder (hint: `/enrollment`)
+- School Portal → **Enrollment Form** tab (hint: `/{slug}/enroll`)
+- School Portal → **School Details** tab (same fields, synced with `school` object)
+
+**School Portal** tabs (per school): Branding, Theme, Login, Enrollment Form, School Details, Side Menus, etc. There is **no school dropdown** on this page — super admin selects the tenant from **Admin → Schools** first.
 
 ---
 
@@ -956,15 +1012,27 @@ Reorder sidebar menu items for a role (top → bottom).
 
 **Mock:** `src/services/enrollmentService.js`  
 **Storage key (mock):** `sb_applications`  
-**Pages:** `/enroll`, `/admin/applications`, `/admin/applications/:id`, parent dashboard
+**Pages:** `/enrollment` (main portal), `/{slug}/enroll` (school portal), `/parent/dashboard`, `/parent/enrollment`, `/admin/applications`, `/admin/applications/:id`
+
+| Route | Form schema source | School header source |
+|-------|-------------------|----------------------|
+| `/enrollment` | `GET /platform/config` → `enrollmentForm` | `platform.school` |
+| `/{slug}/enroll` | `GET /portal/config?schoolId=…` → `enrollmentForm` | `portal.school` |
 
 ### `GET /enrollment/form-schema`
 
-Returns `enrollmentForm` from portal config (alias of public field in `GET /portal/config`).
+Returns `enrollmentForm` for the active enrollment scope.
 
 **Auth:** Public
 
----
+**Query:**
+
+| Param | When | Description |
+|-------|------|-------------|
+| `scope` | optional | `platform` (default for `/enrollment`) or `school` |
+| `schoolId` | required if `scope=school` | Tenant for `/{slug}/enroll` |
+
+Alias fields also appear on `GET /platform/config` (platform) and `GET /portal/config` (school).
 
 ### `GET /enrollment/my-application`
 
@@ -2416,6 +2484,84 @@ Assigned classes for the logged-in teacher.
 ```
 
 **Mock function:** `getTeacherClasses(teacherId)`
+
+---
+
+## 17. Parent portal
+
+**Mock:** `src/services/parentService.js`, `src/services/enrollmentService.js`  
+**Pages:** `/parent/dashboard`, `/parent/enrollment`  
+**Auth:** Parent (`user.schoolId` scopes children to the same school)
+
+### `GET /parent/dashboard`
+
+Parent profile, school info, and all children/applications for the logged-in parent at their school.
+
+**Query:** `schoolId` (optional; inferred from JWT)
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": {
+    "parent": {
+      "id": "usr-parent",
+      "name": "Rajesh Kumar",
+      "email": "parent@schoolbridge.demo",
+      "mobile": "9000000006",
+      "schoolId": "school-1"
+    },
+    "school": {
+      "id": "school-1",
+      "slug": "green-valley",
+      "name": "Green Valley International School",
+      "academicYear": "2026–2027"
+    },
+    "children": [
+      {
+        "applicationId": "app-001",
+        "applicationNo": "GVIS-2026-0001",
+        "status": "under_review",
+        "statusLabel": "Under Review",
+        "student": { "fullName": "Aarav Kumar", "classApplying": "ukg" },
+        "parent": { },
+        "address": { },
+        "statusHistory": [ ]
+      }
+    ],
+    "summary": {
+      "totalChildren": 1,
+      "activeApplications": 1,
+      "pendingActions": 0
+    },
+    "enrollPath": "/green-valley/enroll"
+  }
+}
+```
+
+**Mock function:** `getParentDashboard(parentId, schoolId)`
+
+---
+
+### `GET /parent/children`
+
+List all enrollment applications for the logged-in parent (same school).
+
+**Mock function:** `getApplicationsByParent(parentId)`
+
+---
+
+### `GET /parent/children/:applicationId`
+
+Full detail for one child application (student, parent, address, timeline).
+
+**Mock function:** `getParentChild(parentId, applicationId)`
+
+---
+
+### Enroll another child (same school)
+
+Parents use **`enrollPath`** from the dashboard (e.g. `/green-valley/enroll`). On submit, `POST /enrollment/submit` includes `parentId` and `schoolId` from the authenticated parent session so multiple children link to the same parent and school.
 
 ---
 

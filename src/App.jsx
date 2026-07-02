@@ -85,6 +85,7 @@ export default function App() {
       <Route path="/admin/schools" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminSchools /></ProtectedRoute>} />
 
       {/* Parent routes */}
+      <Route path="/parent" element={<Navigate to="/parent/dashboard" replace />} />
       <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDashboard /></ProtectedRoute>} />
       <Route path="/parent/enrollment" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentEnrollmentStatus /></ProtectedRoute>} />
       <Route path="/parent/fees" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentFees /></ProtectedRoute>} />

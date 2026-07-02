@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { getEmptyForm, saveDraft, submitApplication } from '../../services/enrollmentService.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useUploadStore } from '../../store/uploadStore.js';
@@ -32,7 +33,8 @@ export default function Enrollment() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitted, setSubmitted] = useState(null);
   const { toast } = useToast();
-  const { portalName, school, enrollmentTheme, enrollmentForm, loading: configLoading } = usePortalConfig();
+  const { user } = useAuth();
+  const { portalName, school, enrollmentTheme, enrollmentForm, loading: configLoading, activeSchoolId } = usePortalConfig();
   const enrollCssVars = enrollmentThemeToCssVars(enrollmentTheme);
   const formConfig = enrollmentForm?.steps?.length ? enrollmentForm : DEFAULT_ENROLLMENT_FORM;
   const steps = useMemo(() => getEnrollmentSteps(formConfig), [formConfig]);
@@ -78,10 +80,15 @@ export default function Enrollment() {
     return true;
   };
 
+  const enrollmentMeta = {
+    parentId: user?.role === 'parent' ? user.id : null,
+    schoolId: activeSchoolId || user?.schoolId || null,
+  };
+
   const handleSaveDraft = async () => {
     setLoading(true);
     try {
-      const saved = await saveDraft(form, draftId);
+      const saved = await saveDraft(form, draftId, enrollmentMeta);
       setDraftId(saved.id);
       toast('Application saved successfully.', 'success');
     } catch {
@@ -94,7 +101,12 @@ export default function Enrollment() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const result = await submitApplication(form, draftId);
+      const result = await submitApplication(
+        form,
+        draftId,
+        user?.role === 'parent' ? user.id : null,
+        activeSchoolId || user?.schoolId || null,
+      );
       setSubmitted(result);
       setShowSubmitModal(false);
       toast('Enrollment form submitted successfully.', 'success');
@@ -131,7 +143,9 @@ export default function Enrollment() {
             </div>
             <div className="flex flex-wrap justify-center gap-3">
               <Link to="/" className="enrollment-btn enrollment-btn--outline">Back to Home</Link>
-              <Link to="/login" className="enrollment-btn enrollment-btn--primary">Login to Track Status</Link>
+              <Link to={user?.role === 'parent' ? '/parent/dashboard' : '/login'} className="enrollment-btn enrollment-btn--primary">
+                {user?.role === 'parent' ? 'Go to Parent Dashboard' : 'Login to Track Status'}
+              </Link>
             </div>
           </div>
         </div>

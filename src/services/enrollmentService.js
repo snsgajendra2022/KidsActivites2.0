@@ -46,18 +46,27 @@ export async function getApplicationByParent(parentId) {
   return routeRequest({
     mockFn: async () => {
       await delay();
-      const apps = getAll();
-      return (
-        apps.find((a) => a.parentId === parentId) ||
-        apps.find((a) => a.parentId === 'u-parent' && parentId === 'usr-parent') ||
-        null
-      );
+      const apps = getAll().filter((a) => a.parentId === parentId || (a.parentId === 'u-parent' && parentId === 'usr-parent'));
+      if (!apps.length) return null;
+      return apps.sort((a, b) => new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0))[0];
     },
     apiFn: () => api.get('/enrollment/my-application'),
   });
 }
 
-export async function saveDraft(formData, existingId) {
+export async function getApplicationsByParent(parentId) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      return getAll().filter(
+        (a) => a.parentId === parentId || (a.parentId === 'u-parent' && parentId === 'usr-parent'),
+      );
+    },
+    apiFn: () => api.get('/parent/children'),
+  });
+}
+
+export async function saveDraft(formData, existingId, meta = {}) {
   return routeRequest({
     mockFn: async () => {
       await delay();
@@ -68,6 +77,7 @@ export async function saveDraft(formData, existingId) {
           apps[idx] = {
             ...apps[idx],
             ...formData,
+            ...meta,
             status: ENROLLMENT_STATUSES.DRAFT,
             updatedAt: new Date().toISOString(),
           };
@@ -80,6 +90,7 @@ export async function saveDraft(formData, existingId) {
         applicationNo: null,
         status: ENROLLMENT_STATUSES.DRAFT,
         ...formData,
+        ...meta,
         createdAt: new Date().toISOString(),
       };
       apps.push(draft);
@@ -87,12 +98,12 @@ export async function saveDraft(formData, existingId) {
       return draft;
     },
     apiFn: () => (existingId
-      ? api.put(`/enrollment/draft/${existingId}`, formData)
-      : api.post('/enrollment/draft', formData)),
+      ? api.put(`/enrollment/draft/${existingId}`, { ...formData, ...meta })
+      : api.post('/enrollment/draft', { ...formData, ...meta })),
   });
 }
 
-export async function submitApplication(formData, existingId, parentId) {
+export async function submitApplication(formData, existingId, parentId, schoolId = null) {
   return routeRequest({
     mockFn: async () => {
       await delay(600);
@@ -104,6 +115,7 @@ export async function submitApplication(formData, existingId, parentId) {
         status: ENROLLMENT_STATUSES.SUBMITTED,
         submittedAt: new Date().toISOString(),
         parentId: parentId || null,
+        schoolId: schoolId || formData.schoolId || null,
         assignedReviewer: 'Priya Sharma',
         statusHistory: [
           {
@@ -120,7 +132,7 @@ export async function submitApplication(formData, existingId, parentId) {
       saveAll(apps);
       return entry;
     },
-    apiFn: () => api.post('/enrollment/submit', { draftId: existingId, parentId, ...formData }),
+    apiFn: () => api.post('/enrollment/submit', { draftId: existingId, parentId, schoolId, ...formData }),
   });
 }
 
