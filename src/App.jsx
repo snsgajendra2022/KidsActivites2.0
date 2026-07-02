@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import SchoolRouteGuard from './components/routing/SchoolRouteGuard.jsx';
 import { ROLES } from './constants/roles.js';
 
 import Landing from './pages/public/Landing.jsx';
@@ -55,12 +56,15 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/enroll" element={<Enrollment />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/enroll" element={<Navigate to="/" replace />} />
       <Route path="/security-policy" element={<SecurityPolicy />} />
       <Route path="/terms-of-use" element={<TermsOfUse />} />
       <Route path="/system-status" element={<SystemStatus />} />
       <Route path="/support" element={<DirectSupport />} />
+
+      <Route path="/:schoolSlug" element={<SchoolRouteGuard><Landing /></SchoolRouteGuard>} />
+      <Route path="/:schoolSlug/enroll" element={<SchoolRouteGuard><Enrollment /></SchoolRouteGuard>} />
 
       {/* Admin routes */}
       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminDashboard /></ProtectedRoute>} />

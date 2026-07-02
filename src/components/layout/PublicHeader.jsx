@@ -1,19 +1,24 @@
 import { Link, useLocation } from 'react-router-dom';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { useTenant } from '../../context/TenantContext.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
 import LoginHeaderScrollText from '../auth/LoginHeaderScrollText.jsx';
-
-const NAV_LINKS = [
-  { to: '/enroll', label: 'Admissions' },
-  { to: '/#programs', label: 'Programs', hash: true },
-  { to: '/#about', label: 'About', hash: true },
-  { to: '/#contact', label: 'Contact', hash: true },
-];
 
 export default function PublicHeader({ glass = false, compact = false, loginMobile = false }) {
   const location = useLocation();
   const { portalName, config } = usePortalConfig();
+  const { schoolSlug } = useTenant();
   const loginScrollLines = config?.loginScrollLines;
+
+  const basePath = schoolSlug ? `/${schoolSlug}` : '/';
+  const enrollPath = schoolSlug ? `/${schoolSlug}/enroll` : '/#about';
+
+  const navLinks = [
+    { to: enrollPath, label: 'Admissions' },
+    { to: `${basePath}#programs`, label: 'Programs', hash: true },
+    { to: `${basePath}#about`, label: 'About', hash: true },
+    { to: `${basePath}#contact`, label: 'Contact', hash: true },
+  ];
 
   return (
     <header
@@ -36,7 +41,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
           }`}
         >
           <div className="flex min-w-0 shrink-0 items-center gap-4 md:gap-8">
-            <Link to="/" className="flex min-w-0 items-center gap-2 md:gap-3">
+            <Link to={basePath} className="flex min-w-0 items-center gap-2 md:gap-3">
               <PortalLogo size={loginMobile ? 'sm' : 'md'} />
               <span className={`login-header-brand-text font-display truncate font-bold tracking-tighter text-brand ${
                 loginMobile ? 'text-sm sm:text-base' : 'text-xl md:text-2xl'
@@ -46,7 +51,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
             </Link>
             {!loginMobile && (
               <div className="hidden items-center gap-6 md:flex">
-                {NAV_LINKS.map(({ to, label, hash }) => (
+                {navLinks.map(({ to, label, hash }) => (
                   <Link
                     key={label}
                     to={to}

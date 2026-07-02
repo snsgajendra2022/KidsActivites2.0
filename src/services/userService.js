@@ -3,7 +3,7 @@ import { delay } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
 import { authenticateByEmail } from './authService.js';
-import { getSchoolById } from '../data/mockSchools.js';
+import { getSchoolById } from './schoolService.js';
 import { ROLE_LABELS } from '../constants/roles.js';
 
 function sanitizeUser(user) {

@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from '../context/AuthContext.jsx';
+import { TenantProvider } from '../context/TenantContext.jsx';
 import { PortalConfigProvider } from '../context/PortalConfigContext.jsx';
 
 function PortalConfigBridge({ children }) {
@@ -13,9 +14,11 @@ function PortalConfigBridge({ children }) {
 export function AppWithProviders({ children }) {
   return (
     <AuthProvider>
-      <PortalConfigBridge>
-        {children}
-      </PortalConfigBridge>
+      <TenantProvider>
+        <PortalConfigBridge>
+          {children}
+        </PortalConfigBridge>
+      </TenantProvider>
     </AuthProvider>
   );
 }

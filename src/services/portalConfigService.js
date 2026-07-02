@@ -5,12 +5,8 @@ import { buildDefaultMenuVisibility } from '../data/defaultPortalConfig.js';
 import { delay, getStore, setStore, removeStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
-import {
-  DEFAULT_SCHOOL_ID,
-  MOCK_SCHOOLS,
-  getSchoolById,
-  schoolToPortalSchool,
-} from '../data/mockSchools.js';
+import { DEFAULT_SCHOOL_ID, schoolToPortalSchool } from '../data/mockSchools.js';
+import { getSchoolById } from './schoolService.js';
 
 const LEGACY_SINGLE_KEY = 'sb_portal_config';
 const LEGACY_BULK_KEY = 'sb_portal_configs';

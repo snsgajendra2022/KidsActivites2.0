@@ -1,6 +1,4 @@
-/** @typedef {{ id: string, slug: string, name: string, academicYear: string, address: string, phone: string, email: string, status: 'active' | 'suspended' }} School */
-
-/** @type {School[]} */
+/** Seed data used only when `sb_schools` store is empty on first load. */
 export const MOCK_SCHOOLS = [
   {
     id: 'school-1',
@@ -25,10 +23,6 @@ export const MOCK_SCHOOLS = [
 ];
 
 export const DEFAULT_SCHOOL_ID = 'school-1';
-
-export function getSchoolById(schoolId) {
-  return MOCK_SCHOOLS.find((s) => s.id === schoolId) || MOCK_SCHOOLS[0];
-}
 
 export function schoolToPortalSchool(school) {
   return {

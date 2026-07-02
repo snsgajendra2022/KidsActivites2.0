@@ -7,13 +7,11 @@ import { PageHeader } from '../../components/ui/index.jsx';
 import Input from '../../components/ui/Input.jsx';
 import PortalLogo from '../../components/brand/PortalLogo.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
-import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { readFileAsDataUrl } from '../../services/portalConfigService.js';
 import { getAllMenuItemsGrouped, buildRoleMenuEntries, resolveMenuOrderForRole } from '../../utils/navUtils.js';
 import { MenuItemRow, AddMenuButton } from '../../components/admin/PortalMenuEditor.jsx';
 import '../../styles/portal-menu-editor.css';
-import '../../styles/admin-users.css';
 import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
 import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
@@ -75,16 +73,7 @@ function ImageUploadField({ label, hint, value, onChange }) {
 }
 
 export default function PortalSettings() {
-  const {
-    config,
-    updateConfig,
-    activeSchoolId,
-    schools,
-    isPlatformAdmin,
-    switchSchool,
-    school,
-  } = usePortalConfig();
-  const { user } = useAuth();
+  const { config, updateConfig, activeSchoolId } = usePortalConfig();
   const { toast } = useToast();
   const [tab, setTab] = useState('identity');
   const [saving, setSaving] = useState(false);
@@ -309,32 +298,6 @@ export default function PortalSettings() {
             </button>
           )}
         />
-
-        <div className="portal-school-banner">
-          <div>
-            <p className="portal-school-banner__label">
-              {isPlatformAdmin ? 'Managing school' : 'Your school'}
-            </p>
-            <p className="portal-school-banner__name">{school?.name || '—'}</p>
-            {!isPlatformAdmin && user?.schoolId && (
-              <p className="text-xs text-[#6b7a8c]">Changes apply only to your school portal.</p>
-            )}
-          </div>
-          {isPlatformAdmin && schools.length > 0 && (
-            <select
-              className="portal-school-banner__select"
-              value={activeSchoolId}
-              onChange={async (e) => {
-                await switchSchool(e.target.value);
-                toast(`Switched to ${schools.find((s) => s.id === e.target.value)?.name || 'school'}.`, 'success');
-              }}
-            >
-              {schools.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
           {TABS.map(({ id, label, icon: Icon }) => (

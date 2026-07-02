@@ -22,7 +22,7 @@
 | [School settings](#12-school-settings) | `/admin/settings/*` | `src/services/settingsService.js` |
 | [Reports](#13-reports) | `/admin/reports/*` | `src/services/reportsService.js` |
 | [Audit logs](#14-audit-logs) | `/admin/audit-logs` | `src/services/auditService.js` |
-| [Multi-tenant & schools](#15-multi-tenant--schools) | `/admin/schools/*`, `/admin/users/*` | `src/services/schoolService.js`, `src/services/userService.js` |
+| [Multi-tenant & schools](#15-multi-tenant--schools) | `/schools/*`, `/platform/config`, `/admin/schools/*`, `/admin/users/*` | `src/services/schoolService.js`, `src/services/platformConfigService.js`, `src/services/userService.js` |
 | [Teacher classes](#16-teacher-classes) | `/teacher/classes` | `src/services/teacherService.js` |
 
 ---
@@ -2157,10 +2157,113 @@ Server should append audit entries on every mutating admin action (see queue job
 
 ## 15. Multi-tenant & schools
 
-**Mock:** `src/data/mockSchools.js`, `src/services/schoolService.js`, `src/services/userService.js`  
-**Frontend:** `src/pages/admin/AdminSchools.jsx`, `src/pages/admin/AdminUsers.jsx`, `src/pages/admin/AdminTeachers.jsx`
+**Mock:** `src/data/mockSchools.js` (seed only), `src/services/schoolService.js`, `src/services/platformConfigService.js`, `src/services/userService.js`  
+**Frontend:** `src/pages/public/Landing.jsx` (platform + school), `src/pages/admin/AdminSchools.jsx`, `src/pages/admin/AdminUsers.jsx`, `src/pages/admin/AdminTeachers.jsx`
 
 Each school is a **tenant**. Portal branding, enrollment form, theme, and side menus are stored **per `schoolId`**. Super Admin is platform-level (`user.schoolId = null`) and can switch schools. School Admin manages only their assigned school.
+
+### Public URL routing (frontend)
+
+| Path | Behavior |
+|------|----------|
+| `/` | **Platform home** — original marketing landing page (hero, programs, about). No school picker. Schools are reached via `/{slug}`. |
+| `/{schoolSlug}` | School landing page — tenant resolved from URL slug via `GET /schools/:slug`. |
+| `/{schoolSlug}/enroll` | School enrollment form for that tenant. |
+| `/enroll` | Redirects to `/` (pick a school first). |
+
+Reserved slugs (`admin`, `login`, `parent`, `teacher`, etc.) are not treated as school tenants.
+
+### `GET /platform/config`
+
+**Auth:** None (public)
+
+Platform-level branding for the main homepage (`/`).
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": {
+    "platformName": "SchoolBridge",
+    "tagline": "Multi-school enrollment platform"
+  }
+}
+```
+
+**Mock function:** `getPlatformConfig()`
+
+---
+
+### `PUT /admin/platform-settings`
+
+**Auth:** Super Admin
+
+Update main portal branding shown on `/` (platform homepage).
+
+**Body:**
+```json
+{
+  "platformName": "SchoolBridge",
+  "tagline": "Multi-school enrollment platform"
+}
+```
+
+**Mock function:** `savePlatformConfig(updates)`  
+**Frontend:** `src/pages/admin/AdminSchools.jsx` — Main Portal section
+
+---
+
+### `GET /schools`
+
+**Auth:** None (public)
+
+List all active schools for the platform homepage and school picker.
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "school-1",
+      "slug": "green-valley",
+      "name": "Green Valley International School",
+      "academicYear": "2026–2027",
+      "address": "123 Education Lane, New Delhi, 110001",
+      "phone": "+91 11 4567 8900",
+      "email": "admissions@greenvalley.edu.in",
+      "status": "active"
+    }
+  ]
+}
+```
+
+**Mock function:** `listSchools()`  
+**Storage key:** `sb_schools` (seeded from `MOCK_SCHOOLS` on first load)
+
+---
+
+### `GET /schools/:slug`
+
+**Auth:** None (public)
+
+Resolve a single school by URL slug. Returns `404` if slug is unknown or reserved.
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "school-1",
+    "slug": "green-valley",
+    "name": "Green Valley International School",
+    "academicYear": "2026–2027",
+    "status": "active"
+  }
+}
+```
+
+**Mock function:** `getSchoolBySlugApi(slug)`
 
 ### Database schema (recommended)
 
@@ -2217,7 +2320,7 @@ CREATE TABLE users (
 }
 ```
 
-**Mock function:** `listSchools()`
+**Mock function:** `listSchoolsAdmin()`
 
 ---
 

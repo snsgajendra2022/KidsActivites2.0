@@ -1,13 +1,48 @@
-import { delay } from './mockApi.js';
+import { delay, getStore, setStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
-import { MOCK_SCHOOLS, getSchoolById } from '../data/mockSchools.js';
+import { MOCK_SCHOOLS } from '../data/mockSchools.js';
+
+const SCHOOLS_KEY = 'sb_schools';
+
+function readSchoolsStore() {
+  const stored = getStore(SCHOOLS_KEY, null);
+  if (stored?.length) return stored;
+  const seeded = [...MOCK_SCHOOLS];
+  setStore(SCHOOLS_KEY, seeded);
+  return seeded;
+}
+
+function writeSchoolsStore(schools) {
+  setStore(SCHOOLS_KEY, schools);
+  return schools;
+}
+
+export function getSchoolBySlug(slug) {
+  if (!slug) return null;
+  const normalized = slug.toLowerCase();
+  return readSchoolsStore().find((s) => s.slug.toLowerCase() === normalized) || null;
+}
+
+export function getSchoolById(schoolId) {
+  return readSchoolsStore().find((s) => s.id === schoolId) || null;
+}
 
 export async function listSchools() {
   return routeRequest({
     mockFn: async () => {
       await delay(100);
-      return [...MOCK_SCHOOLS];
+      return [...readSchoolsStore()];
+    },
+    apiFn: () => api.get('/schools', undefined, { auth: false }),
+  });
+}
+
+export async function listSchoolsAdmin() {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(100);
+      return [...readSchoolsStore()];
     },
     apiFn: () => api.get('/admin/schools'),
   });
@@ -22,5 +57,33 @@ export async function getSchool(schoolId) {
       return school;
     },
     apiFn: () => api.get(`/admin/schools/${schoolId}`),
+  });
+}
+
+export async function getSchoolBySlugApi(slug) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(80);
+      const school = getSchoolBySlug(slug);
+      if (!school) throw new Error('School not found');
+      return school;
+    },
+    apiFn: () => api.get(`/schools/${slug}`, undefined, { auth: false }),
+  });
+}
+
+export async function saveSchool(school) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(200);
+      const schools = readSchoolsStore();
+      const index = schools.findIndex((s) => s.id === school.id);
+      const next = index >= 0
+        ? schools.map((s, i) => (i === index ? { ...s, ...school } : s))
+        : [...schools, school];
+      writeSchoolsStore(next);
+      return school;
+    },
+    apiFn: () => api.put(`/admin/schools/${school.id}`, school),
   });
 }
