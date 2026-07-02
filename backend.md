@@ -2169,7 +2169,8 @@ Each school is a **tenant**. Portal branding, enrollment form, theme, and side m
 | `/` | **Platform home** — original marketing landing page (hero, programs, about). No school picker. Schools are reached via `/{slug}`. |
 | `/{schoolSlug}` | School landing page — tenant resolved from URL slug via `GET /schools/:slug`. |
 | `/{schoolSlug}/enroll` | School enrollment form for that tenant. |
-| `/enroll` | Redirects to `/` (pick a school first). |
+| `/enroll` | Redirects to `/enrollment` (main portal enrollment form). |
+| `/enrollment` | Main portal **enrollment form** — school details and form fields configured under super admin **Main Portal (/)** only. |
 
 Reserved slugs (`admin`, `login`, `parent`, `teacher`, etc.) are not treated as school tenants.
 
@@ -2204,12 +2205,26 @@ Update main portal branding shown on `/` (platform homepage).
 ```json
 {
   "platformName": "SchoolBridge",
-  "tagline": "Multi-school enrollment platform"
+  "tagline": "Multi-school enrollment platform",
+  "footerText": "© 2026 SchoolBridge Systems. All rights reserved.",
+  "heroHeadline": "Modern School Enrollment,\nBuilt for Premium Education",
+  "heroSubtext": "Complete your child's admission online...",
+  "school": {
+    "name": "Green Valley International School",
+    "academicYear": "2026–2027",
+    "address": "123 Education Lane, New Delhi, 110001",
+    "phone": "+91 11 4567 8900",
+    "email": "admissions@greenvalley.edu.in"
+  },
+  "enrollmentForm": { "steps": [] },
+  "branding": {
+    "heroImageUrl": "https://..."
+  }
 }
 ```
 
 **Mock function:** `savePlatformConfig(updates)`  
-**Frontend:** `src/pages/admin/AdminSchools.jsx` — Main Portal section
+**Frontend:** `src/pages/admin/PortalSettings.jsx` — **Main Portal (/)** toggle (super admin only)
 
 ---
 

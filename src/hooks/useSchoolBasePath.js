@@ -7,6 +7,7 @@ export function useSchoolBasePath() {
 }
 
 export function useSchoolEnrollPath() {
-  const { schoolSlug } = useTenant();
-  return schoolSlug ? schoolEnrollPath(schoolSlug) : '/';
+  const { schoolSlug, isPlatformPublic } = useTenant();
+  if (schoolSlug) return schoolEnrollPath(schoolSlug);
+  return isPlatformPublic ? '/enrollment' : '/';
 }

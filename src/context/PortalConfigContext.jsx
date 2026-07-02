@@ -12,7 +12,9 @@ import { resolveNavItemsForRole } from '../utils/navUtils.js';
 import { applyPortalTheme } from '../utils/themeUtils.js';
 import { ROLES } from '../constants/roles.js';
 import { getPlatformConfig } from '../services/platformConfigService.js';
+import { savePlatformConfig } from '../services/platformConfigService.js';
 import { DEFAULT_PORTAL_CONFIG } from '../data/defaultPortalConfig.js';
+import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js';
 
 const PortalConfigContext = createContext(null);
 
@@ -42,11 +44,11 @@ function resolveActiveSchoolId({
   user,
   urlSchoolId,
   isSchoolPublicRoute,
-  isPlatformHome,
+  isPlatformPublic,
   adminSelectedSchoolId,
   schools,
 }) {
-  if (isPlatformHome) {
+  if (isPlatformPublic) {
     return null;
   }
 
@@ -74,7 +76,8 @@ export function PortalConfigProvider({ children, user = null }) {
     urlSchoolId,
     schoolSlug,
     isSchoolPublicRoute,
-    isPlatformHome,
+    isPlatformPublic,
+    isPlatformEnrollment,
     isAdminRoute,
   } = useTenant();
 
@@ -91,11 +94,11 @@ export function PortalConfigProvider({ children, user = null }) {
       user,
       urlSchoolId,
       isSchoolPublicRoute,
-      isPlatformHome,
+      isPlatformPublic,
       adminSelectedSchoolId,
       schools,
     }),
-    [user, urlSchoolId, isSchoolPublicRoute, isPlatformHome, adminSelectedSchoolId, schools],
+    [user, urlSchoolId, isSchoolPublicRoute, isPlatformPublic, adminSelectedSchoolId, schools],
   );
 
   const isPlatformAdmin = user?.role === ROLES.SUPER_ADMIN;
@@ -125,9 +128,19 @@ export function PortalConfigProvider({ children, user = null }) {
   }, []);
 
   useEffect(() => {
-    if (isPlatformHome) {
+    if (isPlatformPublic) {
+      if (!platform) {
+        setLoading(true);
+        return;
+      }
       setConfig(null);
       applyPlatformBranding(platform);
+      if (isPlatformEnrollment) {
+        applyPortalTheme(
+          platform.theme || DEFAULT_PORTAL_CONFIG.theme,
+          platform.enrollmentTheme || DEFAULT_PORTAL_CONFIG.enrollmentTheme,
+        );
+      }
       setLoading(false);
       return;
     }
@@ -137,7 +150,7 @@ export function PortalConfigProvider({ children, user = null }) {
     }
     setLoading(true);
     load(activeSchoolId);
-  }, [activeSchoolId, isPlatformHome, platform, load]);
+  }, [activeSchoolId, isPlatformPublic, isPlatformEnrollment, platform, load]);
 
   const switchSchool = useCallback(async (schoolId) => {
     if (user?.role === ROLES.SUPER_ADMIN) {
@@ -156,6 +169,21 @@ export function PortalConfigProvider({ children, user = null }) {
     applyDocumentBranding(next);
     return next;
   }, [activeSchoolId]);
+
+  const updatePlatformConfig = useCallback(async (updates) => {
+    const next = await savePlatformConfig(updates);
+    setPlatform(next);
+    if (isPlatformPublic) {
+      applyPlatformBranding(next);
+    }
+    if (isPlatformEnrollment) {
+      applyPortalTheme(
+        next.theme || DEFAULT_PORTAL_CONFIG.theme,
+        next.enrollmentTheme || DEFAULT_PORTAL_CONFIG.enrollmentTheme,
+      );
+    }
+    return next;
+  }, [isPlatformPublic, isPlatformEnrollment]);
 
   const setMenuItemVisible = useCallback(async (role, menuId, visible) => {
     const nextVisibility = {
@@ -182,18 +210,24 @@ export function PortalConfigProvider({ children, user = null }) {
     () => ({
       config,
       platform,
-      school: config?.school,
-      theme: config?.theme,
-      enrollmentTheme: config?.enrollmentTheme,
+      school: isPlatformEnrollment ? platform?.school : config?.school,
+      theme: isPlatformEnrollment
+        ? (platform?.theme || DEFAULT_PORTAL_CONFIG.theme)
+        : config?.theme,
+      enrollmentTheme: isPlatformEnrollment
+        ? (platform?.enrollmentTheme || DEFAULT_PORTAL_CONFIG.enrollmentTheme)
+        : config?.enrollmentTheme,
       loginMethods: config?.loginMethods,
-      enrollmentForm: config?.enrollmentForm,
-      portalName: isPlatformHome
+      enrollmentForm: isPlatformEnrollment
+        ? (platform?.enrollmentForm || DEFAULT_ENROLLMENT_FORM)
+        : config?.enrollmentForm,
+      portalName: isPlatformPublic
         ? (platform?.platformName || 'SchoolBridge')
         : (config?.portalName || 'SchoolBridge'),
-      footerText: isPlatformHome
+      footerText: isPlatformPublic
         ? (platform?.footerText || DEFAULT_PORTAL_CONFIG.footerText)
         : (config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
-      branding: isPlatformHome
+      branding: isPlatformPublic
         ? { ...DEFAULT_PORTAL_CONFIG.branding, ...(platform?.branding || {}) }
         : config?.branding,
       activeSchoolId,
@@ -205,13 +239,15 @@ export function PortalConfigProvider({ children, user = null }) {
       loading,
       reload: () => load(activeSchoolId),
       updateConfig,
+      updatePlatformConfig,
       setMenuItemVisible,
       getNavItems,
     }),
     [
       config,
       platform,
-      isPlatformHome,
+      isPlatformEnrollment,
+      isPlatformPublic,
       activeSchoolId,
       schoolSlug,
       schools,
@@ -221,6 +257,7 @@ export function PortalConfigProvider({ children, user = null }) {
       loading,
       load,
       updateConfig,
+      updatePlatformConfig,
       setMenuItemVisible,
       getNavItems,
     ],

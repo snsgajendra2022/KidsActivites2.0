@@ -3,6 +3,7 @@ export const RESERVED_SLUGS = new Set([
   'admin',
   'login',
   'enroll',
+  'enrollment',
   'parent',
   'teacher',
   'profile',

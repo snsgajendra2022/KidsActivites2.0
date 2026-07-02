@@ -11,7 +11,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
   const loginScrollLines = config?.loginScrollLines;
 
   const basePath = schoolSlug ? `/${schoolSlug}` : '/';
-  const enrollPath = schoolSlug ? `/${schoolSlug}/enroll` : '/#about';
+  const enrollPath = schoolSlug ? `/${schoolSlug}/enroll` : '/enrollment';
 
   const navLinks = [
     { to: enrollPath, label: 'Admissions' },

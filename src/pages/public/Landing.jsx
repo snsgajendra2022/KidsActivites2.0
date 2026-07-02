@@ -10,11 +10,23 @@ import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 
 const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 
+const DEFAULT_HERO_HEADLINE = ['Modern School Enrollment', 'Built for Premium Education'];
+const DEFAULT_HERO_SUBTEXT =
+  "Complete your child's admission online. Submit documents, pay fees, and stay connected — all in one trusted platform.";
+
+function parseHeroHeadline(headline) {
+  if (!headline?.trim()) return DEFAULT_HERO_HEADLINE;
+  const lines = headline.split('\n').map((line) => line.trim()).filter(Boolean);
+  return lines.length ? lines : DEFAULT_HERO_HEADLINE;
+}
+
 export default function Landing() {
   const { portalName, school, branding, platform } = usePortalConfig();
   const { isPlatformHome } = useTenant();
   const enrollPath = useSchoolEnrollPath();
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
+  const heroLines = parseHeroHeadline(platform?.heroHeadline);
+  const heroSubtext = platform?.heroSubtext?.trim() || DEFAULT_HERO_SUBTEXT;
 
   return (
     <PublicLayout hideFooter className="!sb-surface">
@@ -29,41 +41,37 @@ export default function Landing() {
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
               <Sparkles size={14} />
               {isPlatformHome
-                ? (platform?.tagline || 'School Enrollment Platform')
+                ? (platform?.tagline || 'Multi-school enrollment platform')
                 : `Admissions Open — ${school?.academicYear}`}
             </div>
             <h1 className="font-display mb-5 text-4xl font-extrabold leading-tight tracking-[-0.04em] text-white md:text-5xl">
               {isPlatformHome ? (
                 <>
-                  Modern School Enrollment,
-                  <br />
-                  Built for Premium Education
+                  {heroLines.map((line, index) => (
+                    <span key={line}>
+                      {line}
+                      {index < heroLines.length - 1 && <br />}
+                    </span>
+                  ))}
                 </>
               ) : (
                 school?.name || portalName
               )}
             </h1>
             <p className="mb-8 max-w-xl text-lg leading-relaxed text-white/80">
-              {isPlatformHome ? (
-                <>
-                  Complete your child&apos;s admission online. Submit documents, pay fees, and stay
-                  connected — all in one trusted platform.
-                </>
-              ) : (
+              {isPlatformHome ? heroSubtext : (
                 <>
                   Complete your child&apos;s admission to {school?.name || 'our school'} online. Submit documents, pay fees, and stay connected.
                 </>
               )}
             </p>
             <div className="flex flex-wrap gap-4">
-              {!isPlatformHome && (
-                <Link
-                  to={enrollPath}
-                  className="sb-link-btn sb-link-btn--light btn-hover-lift sb-btn-pill inline-flex items-center gap-2 bg-white text-sm font-semibold shadow-sm"
-                >
-                  Start Enrollment <ArrowRight size={18} />
-                </Link>
-              )}
+              <Link
+                to={enrollPath}
+                className="sb-link-btn sb-link-btn--light btn-hover-lift sb-btn-pill inline-flex items-center gap-2 bg-white text-sm font-semibold shadow-sm"
+              >
+                Start Enrollment <ArrowRight size={18} />
+              </Link>
               <Link
                 to="/login"
                 className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill inline-flex items-center gap-2 border border-white/20 bg-brand text-sm font-semibold shadow-sm transition-premium hover:opacity-90"
@@ -121,14 +129,12 @@ export default function Landing() {
           <p className="mb-8 text-on-primary-muted">
             {isPlatformHome ? (platform?.tagline || 'Professional Grade Enrollment.') : school?.address}
           </p>
-          {!isPlatformHome && (
-            <Link
-              to={enrollPath}
-              className="sb-link-btn sb-link-btn--light btn-hover-lift sb-btn-pill inline-flex items-center gap-2 bg-white text-sm font-semibold shadow-md"
-            >
-              Begin Enrollment Application <ArrowRight size={18} />
-            </Link>
-          )}
+          <Link
+            to={enrollPath}
+            className="sb-link-btn sb-link-btn--light btn-hover-lift sb-btn-pill inline-flex items-center gap-2 bg-white text-sm font-semibold shadow-md"
+          >
+            Begin Enrollment Application <ArrowRight size={18} />
+          </Link>
         </div>
       </section>
 

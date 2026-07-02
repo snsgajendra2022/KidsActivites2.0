@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield, FileText } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield, FileText, Globe } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -16,8 +16,9 @@ import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
 import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import EnrollmentFormBuilder from './EnrollmentFormBuilder.jsx';
-import { cloneEnrollmentFormConfig } from '../../data/defaultEnrollmentFormConfig.js';
+import { cloneEnrollmentFormConfig, DEFAULT_ENROLLMENT_FORM } from '../../data/defaultEnrollmentFormConfig.js';
 import { FOOTER_LINKS } from '../../components/layout/PublicFooter.jsx';
+import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 
 const TABS = [
   { id: 'identity', label: 'Portal Identity', icon: Layout },
@@ -73,11 +74,43 @@ function ImageUploadField({ label, hint, value, onChange }) {
 }
 
 export default function PortalSettings() {
-  const { config, updateConfig, activeSchoolId } = usePortalConfig();
+  const {
+    config,
+    updateConfig,
+    updatePlatformConfig,
+    activeSchoolId,
+    isPlatformAdmin,
+    platform,
+    schools,
+  } = usePortalConfig();
   const { toast } = useToast();
+  const [editTarget, setEditTarget] = useState('school');
   const [tab, setTab] = useState('identity');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(null);
+  const [platformForm, setPlatformForm] = useState(null);
+
+  const activeSchoolMeta = schools.find((s) => s.id === activeSchoolId);
+
+  useEffect(() => {
+    if (platform) {
+      setPlatformForm({
+        platformName: platform.platformName || 'SchoolBridge',
+        tagline: platform.tagline || '',
+        footerText: platform.footerText || DEFAULT_PORTAL_CONFIG.footerText,
+        heroHeadline: platform.heroHeadline || '',
+        heroSubtext: platform.heroSubtext || '',
+        school: { ...(platform.school || DEFAULT_PORTAL_CONFIG.school) },
+        enrollmentForm: cloneEnrollmentFormConfig(
+          platform.enrollmentForm?.steps?.length ? platform.enrollmentForm : DEFAULT_ENROLLMENT_FORM,
+        ),
+        branding: {
+          ...DEFAULT_PORTAL_CONFIG.branding,
+          ...(platform.branding || {}),
+        },
+      });
+    }
+  }, [platform]);
 
   useEffect(() => {
     if (config) {
@@ -149,7 +182,15 @@ export default function PortalSettings() {
     }));
   };
 
-  if (!form) {
+  if (editTarget === 'platform' && isPlatformAdmin) {
+    if (!platformForm) {
+      return (
+        <AppLayout>
+          <div className="p-8 text-sm text-[#45474c]">Loading main portal settings…</div>
+        </AppLayout>
+      );
+    }
+  } else if (!form) {
     return (
       <AppLayout>
         <div className="p-8 text-sm text-[#45474c]">Loading portal settings…</div>
@@ -167,6 +208,28 @@ export default function PortalSettings() {
       }
       return { ...f, loginMethods: next };
     });
+  };
+
+  const handleSavePlatform = async () => {
+    if (!platformForm) return;
+    setSaving(true);
+    try {
+      await updatePlatformConfig({
+        platformName: platformForm.platformName.trim() || 'SchoolBridge',
+        tagline: platformForm.tagline.trim(),
+        footerText: platformForm.footerText.trim(),
+        heroHeadline: platformForm.heroHeadline.trim(),
+        heroSubtext: platformForm.heroSubtext.trim(),
+        school: platformForm.school,
+        enrollmentForm: platformForm.enrollmentForm,
+        branding: platformForm.branding,
+      });
+      toast('Main portal settings saved. Updates appear on / and /enrollment.', 'success');
+    } catch {
+      toast('Failed to save main portal settings.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -285,12 +348,16 @@ export default function PortalSettings() {
       <PageTransition>
         <PageHeader
           title="Portal Branding & Configuration"
-          subtitle="Manage portal name, school branding, images, and side menu visibility for all roles."
+          subtitle={
+            editTarget === 'platform' && isPlatformAdmin
+              ? 'Manage the main homepage (/) and enrollment form (/enrollment).'
+              : 'Manage portal name, school branding, images, and side menu visibility for all roles.'
+          }
           actions={(
             <button
               type="button"
-              onClick={handleSave}
-              disabled={saving}
+              onClick={editTarget === 'platform' && isPlatformAdmin ? handleSavePlatform : handleSave}
+              disabled={saving || (editTarget === 'school' && !form)}
               className="premium-btn premium-btn-primary premium-btn-sm"
             >
               <Save size={16} />
@@ -299,6 +366,164 @@ export default function PortalSettings() {
           )}
         />
 
+        {isPlatformAdmin && (
+          <div className="mb-6 inline-flex rounded-full border border-black/5 bg-white p-1">
+            <button
+              type="button"
+              onClick={() => setEditTarget('platform')}
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                editTarget === 'platform' ? 'sb-tab-active' : 'text-muted hover:text-brand'
+              }`}
+            >
+              <Globe size={16} />
+              Main Portal (/)
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditTarget('school')}
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                editTarget === 'school' ? 'sb-tab-active' : 'text-muted hover:text-brand'
+              }`}
+            >
+              <Layout size={16} />
+              School Portal
+              {activeSchoolMeta ? ` — ${activeSchoolMeta.name}` : ''}
+            </button>
+          </div>
+        )}
+
+        {editTarget === 'platform' && isPlatformAdmin && platformForm && (
+          <div className="grid gap-4">
+            <div className="sb-card grid max-w-3xl gap-4 p-6">
+              <Input
+                label="Platform Name"
+                value={platformForm.platformName}
+                onChange={(e) => setPlatformForm((f) => ({ ...f, platformName: e.target.value }))}
+                variant="enrollment"
+                helper="Shown in header and footer on the main homepage (/)."
+              />
+              <Input
+                label="Platform Tagline"
+                value={platformForm.tagline}
+                onChange={(e) => setPlatformForm((f) => ({ ...f, tagline: e.target.value }))}
+                variant="enrollment"
+                helper="Badge text on hero — e.g. Multi-school enrollment platform."
+              />
+              <Input
+                label="Footer Text"
+                value={platformForm.footerText}
+                onChange={(e) => setPlatformForm((f) => ({ ...f, footerText: e.target.value }))}
+                variant="enrollment"
+              />
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-brand">Hero Headline</label>
+                <textarea
+                  className="w-full rounded-xl border border-black/10 bg-[#fafbfe] px-4 py-3 text-sm text-brand outline-none focus:border-[var(--sb-secondary)] focus:ring-2 focus:ring-[var(--sb-secondary)]/15"
+                  rows={3}
+                  value={platformForm.heroHeadline}
+                  onChange={(e) => setPlatformForm((f) => ({ ...f, heroHeadline: e.target.value }))}
+                  placeholder={'Modern School Enrollment\nBuilt for Premium Education'}
+                />
+                <p className="mt-1 text-xs text-muted">One line per row. Shown on the main homepage hero.</p>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-brand">Hero Description</label>
+                <textarea
+                  className="w-full rounded-xl border border-black/10 bg-[#fafbfe] px-4 py-3 text-sm text-brand outline-none focus:border-[var(--sb-secondary)] focus:ring-2 focus:ring-[var(--sb-secondary)]/15"
+                  rows={4}
+                  value={platformForm.heroSubtext}
+                  onChange={(e) => setPlatformForm((f) => ({ ...f, heroSubtext: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="max-w-3xl">
+              <ImageUploadField
+                label="Landing Hero Image"
+                hint="Full-width background on the main homepage (/)."
+                value={platformForm.branding.heroImageUrl}
+                onChange={(url) => setPlatformForm((f) => ({
+                  ...f,
+                  branding: { ...f.branding, heroImageUrl: url },
+                }))}
+              />
+            </div>
+
+            <div className="sb-card grid max-w-3xl gap-4 p-6">
+              <h3 className="font-display text-base font-bold text-brand">Enrollment School Details</h3>
+              <p className="text-sm text-muted">
+                Shown on the main portal enrollment form at <strong>/enrollment</strong>.
+              </p>
+              <Input
+                label="School Name"
+                value={platformForm.school.name}
+                onChange={(e) => setPlatformForm((f) => ({
+                  ...f,
+                  school: { ...f.school, name: e.target.value },
+                }))}
+                variant="enrollment"
+              />
+              <Input
+                label="Academic Year"
+                value={platformForm.school.academicYear}
+                onChange={(e) => setPlatformForm((f) => ({
+                  ...f,
+                  school: { ...f.school, academicYear: e.target.value },
+                }))}
+                variant="enrollment"
+              />
+              <Input
+                label="Address"
+                value={platformForm.school.address}
+                onChange={(e) => setPlatformForm((f) => ({
+                  ...f,
+                  school: { ...f.school, address: e.target.value },
+                }))}
+                variant="enrollment"
+              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Phone"
+                  value={platformForm.school.phone}
+                  onChange={(e) => setPlatformForm((f) => ({
+                    ...f,
+                    school: { ...f.school, phone: e.target.value },
+                  }))}
+                  variant="enrollment"
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  value={platformForm.school.email}
+                  onChange={(e) => setPlatformForm((f) => ({
+                    ...f,
+                    school: { ...f.school, email: e.target.value },
+                  }))}
+                  variant="enrollment"
+                />
+              </div>
+            </div>
+
+            {platformForm.enrollmentForm && (
+              <EnrollmentFormBuilder
+                value={platformForm.enrollmentForm}
+                onChange={(enrollmentForm) => setPlatformForm((f) => ({ ...f, enrollmentForm }))}
+              />
+            )}
+
+            <p className="max-w-3xl text-xs text-muted">
+              School-specific branding is edited under <strong>School Portal</strong>. Select a school from Admin → Schools first.
+            </p>
+          </div>
+        )}
+
+        {editTarget === 'school' && !form && isPlatformAdmin && (
+          <div className="sb-card max-w-2xl p-6 text-sm text-muted">
+            Select a school from <strong>Admin → Schools</strong>, then return here to edit that school&apos;s portal branding.
+          </div>
+        )}
+
+        {editTarget === 'school' && form && (
+          <>
         <div className="mb-6 flex flex-wrap gap-2">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
@@ -790,6 +1015,8 @@ export default function PortalSettings() {
               );
             })}
           </div>
+        )}
+          </>
         )}
       </PageTransition>
     </AppLayout>

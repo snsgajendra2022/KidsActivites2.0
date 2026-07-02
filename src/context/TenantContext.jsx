@@ -15,13 +15,18 @@ export function TenantProvider({ children }) {
     const isSchoolPublicRoute = Boolean(schoolSlug);
     const isAdminRoute = isAdminPath(pathname);
 
+    const isPlatformHome = pathname === '/';
+    const isPlatformEnrollment = pathname === '/enrollment';
+
     return {
       schoolSlug,
       urlSchoolId,
       school,
       isSchoolPublicRoute,
       isAdminRoute,
-      isPlatformHome: pathname === '/',
+      isPlatformHome,
+      isPlatformEnrollment,
+      isPlatformPublic: isPlatformHome || isPlatformEnrollment,
     };
   }, [pathname]);
 
