@@ -7,7 +7,7 @@
       "mobile": "9000000001",
       "password": "123456",
       "role": "super_admin",
-      "schoolId": "school-1",
+      "schoolId": null,
       "avatar": null
     },
     {
@@ -18,6 +18,16 @@
       "password": "123456",
       "role": "school_admin",
       "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-school-admin-2",
+      "name": "Kavita Nair",
+      "email": "admin@sunrise.edu.in",
+      "mobile": "9000000012",
+      "password": "123456",
+      "role": "school_admin",
+      "schoolId": "school-2",
       "avatar": null
     },
     {
@@ -48,6 +58,16 @@
       "password": "123456",
       "role": "teacher",
       "schoolId": "school-1",
+      "avatar": null
+    },
+    {
+      "id": "usr-teacher-2",
+      "name": "Arjun Menon",
+      "email": "teacher@sunrise.edu.in",
+      "mobile": "9000000013",
+      "password": "123456",
+      "role": "teacher",
+      "schoolId": "school-2",
       "avatar": null
     },
     {

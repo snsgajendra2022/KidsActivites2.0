@@ -4,6 +4,14 @@ import {
 } from 'lucide-react';
 import { ROLES } from './roles.js';
 
+export const PORTAL_BRANDING_NAV = {
+  id: 'admin_portal_settings',
+  to: '/admin/portal-settings',
+  label: 'Portal Branding',
+  icon: Palette,
+  iconName: 'Palette',
+};
+
 export const ADMIN_NAV = [
   { id: 'admin_dashboard', to: '/admin/dashboard', label: 'Dashboard', icon: Home, iconName: 'Home' },
   { id: 'admin_applications', to: '/admin/applications', label: 'Enrollment Applications', icon: FileText, iconName: 'FileText' },
@@ -17,8 +25,16 @@ export const ADMIN_NAV = [
   { id: 'admin_audit_logs', to: '/admin/audit-logs', label: 'Audit Logs', icon: Shield, iconName: 'Shield' },
 ];
 
+export const SCHOOL_ADMIN_NAV = [
+  PORTAL_BRANDING_NAV,
+  { id: 'admin_teachers', to: '/admin/teachers', label: 'Teachers', icon: Users, iconName: 'Users' },
+  ...ADMIN_NAV,
+];
+
 export const SUPER_ADMIN_NAV = [
-  { id: 'admin_portal_settings', to: '/admin/portal-settings', label: 'Portal Branding', icon: Palette, iconName: 'Palette' },
+  { id: 'admin_schools', to: '/admin/schools', label: 'Schools', icon: GraduationCap, iconName: 'GraduationCap' },
+  { id: 'admin_users', to: '/admin/users', label: 'All Users', icon: Users, iconName: 'Users' },
+  PORTAL_BRANDING_NAV,
   ...ADMIN_NAV,
 ];
 
@@ -54,7 +70,7 @@ export const SUPPORT_NAV = [
 
 export const NAV_BY_ROLE = {
   [ROLES.SUPER_ADMIN]: SUPER_ADMIN_NAV,
-  [ROLES.SCHOOL_ADMIN]: ADMIN_NAV,
+  [ROLES.SCHOOL_ADMIN]: SCHOOL_ADMIN_NAV,
   [ROLES.ADMISSION_OFFICER]: ADMIN_NAV,
   [ROLES.ACCOUNTANT]: ACCOUNTANT_NAV,
   [ROLES.TEACHER]: TEACHER_NAV,

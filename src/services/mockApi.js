@@ -10,10 +10,27 @@ function getStore(key, fallback) {
 }
 
 function setStore(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch (err) {
+    if (err?.name === 'QuotaExceededError') {
+      console.warn(`[mockApi] localStorage quota exceeded for key "${key}"`);
+      return false;
+    }
+    throw err;
+  }
 }
 
-export { delay, getStore, setStore };
+function removeStore(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+export { delay, getStore, setStore, removeStore };
 
 export function generateApplicationNo() {
   const year = new Date().getFullYear();

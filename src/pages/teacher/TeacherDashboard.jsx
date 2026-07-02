@@ -45,7 +45,10 @@ export default function TeacherDashboard() {
           <div className="bento-span-3"><BentoStatCard icon={MessageCircle} value={stats?.unreadMessages ?? '—'} label="Unread Messages" variant="amber" /></div>
 
           <div className="bento-span-12">
-            <h3 className="card-title" style={{ marginBottom: 16 }}>My Classes</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 className="card-title" style={{ margin: 0 }}>My Classes</h3>
+              <Link to="/teacher/classes" className="premium-btn premium-btn-secondary premium-btn-sm">View All Classes</Link>
+            </div>
             <div className="bento-grid" style={{ gap: 16 }}>
               {classes.map((cls) => (
                 <div key={cls.id} className="bento-span-6">

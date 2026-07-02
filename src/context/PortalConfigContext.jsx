@@ -1,7 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { getPortalConfig, savePortalConfig } from '../services/portalConfigService.js';
+import {
+  getPortalConfig,
+  savePortalConfig,
+  getPublicSchoolId,
+  getAdminSelectedSchoolId,
+  setAdminSelectedSchoolId,
+  setPublicSchoolId,
+} from '../services/portalConfigService.js';
+import { listSchools } from '../services/schoolService.js';
 import { resolveNavItemsForRole } from '../utils/navUtils.js';
 import { applyPortalTheme } from '../utils/themeUtils.js';
+import { ROLES } from '../constants/roles.js';
+import { DEFAULT_SCHOOL_ID } from '../data/mockSchools.js';
 
 const PortalConfigContext = createContext(null);
 
@@ -22,28 +32,69 @@ function applyDocumentBranding(config) {
   }
 }
 
-export function PortalConfigProvider({ children }) {
-  const [config, setConfig] = useState(null);
-  const [loading, setLoading] = useState(true);
+function resolveSchoolIdForUser(user, adminSelectedSchoolId) {
+  if (!user) return getPublicSchoolId();
+  if (user.role === ROLES.SUPER_ADMIN) {
+    return adminSelectedSchoolId || getAdminSelectedSchoolId();
+  }
+  return user.schoolId || DEFAULT_SCHOOL_ID;
+}
 
-  const load = useCallback(async () => {
-    const data = await getPortalConfig();
-    setConfig(data);
-    applyDocumentBranding(data);
-    setLoading(false);
-    return data;
+export function PortalConfigProvider({ children, user = null }) {
+  const [config, setConfig] = useState(null);
+  const [schools, setSchools] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [adminSelectedSchoolId, setAdminSelectedSchoolIdState] = useState(
+    () => getAdminSelectedSchoolId(),
+  );
+
+  const activeSchoolId = useMemo(
+    () => resolveSchoolIdForUser(user, adminSelectedSchoolId),
+    [user, adminSelectedSchoolId],
+  );
+
+  const isPlatformAdmin = user?.role === ROLES.SUPER_ADMIN;
+
+  const load = useCallback(async (schoolId) => {
+    const id = schoolId || activeSchoolId;
+    try {
+      const data = await getPortalConfig(id);
+      setConfig(data);
+      applyDocumentBranding(data);
+      setLoading(false);
+      return data;
+    } catch (err) {
+      console.error('[PortalConfig] Failed to load config', err);
+      setLoading(false);
+      throw err;
+    }
+  }, [activeSchoolId]);
+
+  useEffect(() => {
+    listSchools().then(setSchools).catch(() => setSchools([]));
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    setLoading(true);
+    load(activeSchoolId);
+  }, [activeSchoolId, load]);
+
+  const switchSchool = useCallback(async (schoolId) => {
+    if (user?.role === ROLES.SUPER_ADMIN) {
+      setAdminSelectedSchoolId(schoolId);
+      setAdminSelectedSchoolIdState(schoolId);
+    } else if (!user) {
+      setPublicSchoolId(schoolId);
+    }
+    return load(schoolId);
+  }, [user, load]);
 
   const updateConfig = useCallback(async (updates) => {
-    const next = await savePortalConfig(updates);
+    const next = await savePortalConfig(updates, activeSchoolId);
     setConfig(next);
     applyDocumentBranding(next);
     return next;
-  }, []);
+  }, [activeSchoolId]);
 
   const setMenuItemVisible = useCallback(async (role, menuId, visible) => {
     const nextVisibility = {
@@ -76,13 +127,28 @@ export function PortalConfigProvider({ children }) {
       loginMethods: config?.loginMethods,
       enrollmentForm: config?.enrollmentForm,
       portalName: config?.portalName || 'SchoolBridge',
+      activeSchoolId,
+      schools,
+      isPlatformAdmin,
+      switchSchool,
       loading,
-      reload: load,
+      reload: () => load(activeSchoolId),
       updateConfig,
       setMenuItemVisible,
       getNavItems,
     }),
-    [config, loading, load, updateConfig, setMenuItemVisible, getNavItems],
+    [
+      config,
+      activeSchoolId,
+      schools,
+      isPlatformAdmin,
+      switchSchool,
+      loading,
+      load,
+      updateConfig,
+      setMenuItemVisible,
+      getNavItems,
+    ],
   );
 
   return (

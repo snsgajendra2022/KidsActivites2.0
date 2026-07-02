@@ -21,6 +21,9 @@ import AdminSettings from './pages/admin/AdminSettings.jsx';
 import AdminReports from './pages/admin/AdminReports.jsx';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs.jsx';
 import PortalSettings from './pages/admin/PortalSettings.jsx';
+import AdminUsers from './pages/admin/AdminUsers.jsx';
+import AdminTeachers from './pages/admin/AdminTeachers.jsx';
+import AdminSchools from './pages/admin/AdminSchools.jsx';
 
 import ParentDashboard from './pages/parent/ParentDashboard.jsx';
 import ParentEnrollmentStatus from './pages/parent/ParentEnrollmentStatus.jsx';
@@ -29,6 +32,7 @@ import ParentDocuments from './pages/parent/ParentDocuments.jsx';
 import ParentPhotos from './pages/parent/ParentPhotos.jsx';
 
 import TeacherDashboard from './pages/teacher/TeacherDashboard.jsx';
+import TeacherClasses from './pages/teacher/TeacherClasses.jsx';
 import TeacherStudents from './pages/teacher/TeacherStudents.jsx';
 import SendPhotos from './pages/teacher/SendPhotos.jsx';
 
@@ -38,6 +42,7 @@ import Profile from './pages/shared/Profile.jsx';
 
 const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
 const SUPER_ADMIN_ONLY = [ROLES.SUPER_ADMIN];
+const PORTAL_SETTINGS_ROLES = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN];
 const FEES_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
 const REPORTS_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
 const CHAT_ADMIN_ROLES = [...CORE_ADMIN, ROLES.SUPPORT_STAFF];
@@ -69,7 +74,10 @@ export default function App() {
       <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminReports /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminSettings /></ProtectedRoute>} />
       <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAuditLogs /></ProtectedRoute>} />
-      <Route path="/admin/portal-settings" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><PortalSettings /></ProtectedRoute>} />
+      <Route path="/admin/portal-settings" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><PortalSettings /></ProtectedRoute>} />
+      <Route path="/admin/users" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminUsers /></ProtectedRoute>} />
+      <Route path="/admin/teachers" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><AdminTeachers /></ProtectedRoute>} />
+      <Route path="/admin/schools" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminSchools /></ProtectedRoute>} />
 
       {/* Parent routes */}
       <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDashboard /></ProtectedRoute>} />
@@ -82,7 +90,7 @@ export default function App() {
 
       {/* Teacher routes */}
       <Route path="/teacher/dashboard" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherDashboard /></ProtectedRoute>} />
-      <Route path="/teacher/classes" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherDashboard /></ProtectedRoute>} />
+      <Route path="/teacher/classes" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherClasses /></ProtectedRoute>} />
       <Route path="/teacher/students" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherStudents /></ProtectedRoute>} />
       <Route path="/teacher/photos" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><SendPhotos /></ProtectedRoute>} />
       <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ChatPage /></ProtectedRoute>} />

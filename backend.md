@@ -22,6 +22,8 @@
 | [School settings](#12-school-settings) | `/admin/settings/*` | `src/services/settingsService.js` |
 | [Reports](#13-reports) | `/admin/reports/*` | `src/services/reportsService.js` |
 | [Audit logs](#14-audit-logs) | `/admin/audit-logs` | `src/services/auditService.js` |
+| [Multi-tenant & schools](#15-multi-tenant--schools) | `/admin/schools/*`, `/admin/users/*` | `src/services/schoolService.js`, `src/services/userService.js` |
+| [Teacher classes](#16-teacher-classes) | `/teacher/classes` | `src/services/teacherService.js` |
 
 ---
 
@@ -179,7 +181,7 @@ interface User {
   email: string;
   mobile: string;          // 10 digits, no country code
   role: Role;
-  schoolId: string;        // e.g. "school-1"
+  schoolId: string | null;  // null for super_admin (platform-level)
   avatar: string | null;
   identity?: string;       // login identifier used (email or mobile)
   loginMethod?: 'email' | 'otp' | 'email_otp' | 'password';
@@ -632,7 +634,9 @@ Parent account activation after admission officer creates account.
 ## 2. Portal & branding
 
 **Mock:** `src/services/portalConfigService.js`  
-**Storage key (mock):** `sb_portal_config`  
+**Storage key (mock):** `sb_portal_configs` (object keyed by `schoolId`; legacy `sb_portal_config` migrated to `school-1`)  
+**Public school selection (mock):** `localStorage` key `sb_public_school_id` (default `school-1`)  
+**Admin school selection (mock):** `localStorage` key `sb_admin_selected_school` (super admin only)  
 **Frontend:** `src/context/PortalConfigContext.jsx`, `src/pages/admin/PortalSettings.jsx`
 
 ### `GET /portal/config`
@@ -640,6 +644,8 @@ Parent account activation after admission officer creates account.
 Public portal branding for landing, login, enroll pages.
 
 **Auth:** Public
+
+**Query:** `schoolId` (optional) — tenant school, e.g. `school-1`. Resolved from subdomain/slug in production.
 
 **Response `200`:**
 ```json
@@ -698,7 +704,10 @@ Public portal branding for landing, login, enroll pages.
 
 Full config including `menuVisibility`.
 
-**Auth:** Super Admin · permission `manage_portal_settings`
+**Auth:** Super Admin, School Admin · permission `manage_portal_settings`  
+**Scope:** School Admin may only read/update config for `user.schoolId`. Super Admin passes `schoolId` in query/body (platform-wide).
+
+**Query:** `schoolId` (required for super admin when managing a specific tenant)
 
 **Response `200`:** Full `PortalConfig` object
 
@@ -708,11 +717,12 @@ Full config including `menuVisibility`.
 
 Update portal settings (partial merge).
 
-**Auth:** Super Admin
+**Auth:** Super Admin, School Admin
 
 **Request body (any subset):**
 ```json
 {
+  "schoolId": "school-1",
   "portalName": "Green Valley Portal",
   "tagline": "Admissions 2026–2027",
   "footerText": "© 2026 Green Valley School.",
@@ -2145,6 +2155,152 @@ Server should append audit entries on every mutating admin action (see queue job
 
 ---
 
+## 15. Multi-tenant & schools
+
+**Mock:** `src/data/mockSchools.js`, `src/services/schoolService.js`, `src/services/userService.js`  
+**Frontend:** `src/pages/admin/AdminSchools.jsx`, `src/pages/admin/AdminUsers.jsx`, `src/pages/admin/AdminTeachers.jsx`
+
+Each school is a **tenant**. Portal branding, enrollment form, theme, and side menus are stored **per `schoolId`**. Super Admin is platform-level (`user.schoolId = null`) and can switch schools. School Admin manages only their assigned school.
+
+### Database schema (recommended)
+
+```sql
+CREATE TABLE schools (
+  id            TEXT PRIMARY KEY,
+  slug          TEXT UNIQUE NOT NULL,
+  name          TEXT NOT NULL,
+  academic_year TEXT,
+  address       TEXT,
+  phone         TEXT,
+  email         TEXT,
+  status        TEXT NOT NULL DEFAULT 'active',
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE portal_configs (
+  school_id     TEXT PRIMARY KEY REFERENCES schools(id) ON DELETE CASCADE,
+  config_json   JSONB NOT NULL,
+  updated_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE users (
+  id            TEXT PRIMARY KEY,
+  school_id     TEXT REFERENCES schools(id),  -- NULL for super_admin
+  name          TEXT NOT NULL,
+  email         TEXT UNIQUE NOT NULL,
+  mobile        TEXT,
+  role          TEXT NOT NULL,
+  password_hash TEXT,
+  avatar_url    TEXT,
+  status        TEXT NOT NULL DEFAULT 'active',
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### `GET /admin/schools`
+
+**Auth:** Super Admin
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "school-1",
+      "slug": "green-valley",
+      "name": "Green Valley International School",
+      "academicYear": "2026–2027",
+      "status": "active"
+    }
+  ]
+}
+```
+
+**Mock function:** `listSchools()`
+
+---
+
+### `GET /admin/schools/:schoolId`
+
+**Auth:** Super Admin
+
+**Mock function:** `getSchool(schoolId)`
+
+---
+
+### `GET /admin/users`
+
+List users across the platform (super admin) or scoped to a school.
+
+**Auth:** Super Admin
+
+**Query:** `schoolId?`, `role?`, `search?`
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "usr-teacher",
+      "name": "Meera Iyer",
+      "email": "teacher@schoolbridge.demo",
+      "mobile": "9000000005",
+      "role": "teacher",
+      "schoolId": "school-1",
+      "schoolName": "Green Valley International School"
+    }
+  ]
+}
+```
+
+**Mock function:** `listUsers({ schoolId, role, search })`
+
+---
+
+### `GET /admin/teachers`
+
+**Auth:** School Admin, Super Admin
+
+**Query:** `schoolId` (required for super admin; inferred from JWT for school admin)
+
+**Mock function:** `listTeachers(schoolId)`
+
+---
+
+## 16. Teacher classes
+
+**Mock:** `src/services/teacherService.js`, `src/data/mockPhotos.js` (`TEACHER_CLASSES`)  
+**Frontend:** `src/pages/teacher/TeacherClasses.jsx` — route `/teacher/classes`
+
+### `GET /teacher/classes`
+
+Assigned classes for the logged-in teacher.
+
+**Auth:** Teacher
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "class-ukg-a",
+      "name": "UKG-A",
+      "section": "A",
+      "grade": "UKG",
+      "studentCount": 28,
+      "schoolId": "school-1"
+    }
+  ]
+}
+```
+
+**Mock function:** `getTeacherClasses(teacherId)`
+
+---
+
 ## Backend stack (recommended)
 
 | Library | Purpose |
@@ -2167,8 +2323,8 @@ Server should append audit entries on every mutating admin action (see queue job
 
 | Role | Key access |
 |------|------------|
-| Super Admin | All schools, portal settings, menu visibility |
-| School Admin | Full school management |
+| Super Admin | All schools, all users, portal settings (any school), platform config |
+| School Admin | Own school portal branding, teachers list, full school management |
 | Admission Officer | Applications, documents, approve for fee |
 | Accountant | Fees, payments, receipts |
 | Teacher | Assigned classes, photos, chat |

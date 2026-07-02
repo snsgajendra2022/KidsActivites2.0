@@ -1,0 +1,106 @@
+.teacher-classes-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .teacher-classes-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .teacher-classes-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .teacher-classes-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.teacher-class-card {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(27, 46, 75, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.teacher-class-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.teacher-class-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  color: var(--primary, #0058be);
+  flex-shrink: 0;
+}
+
+.teacher-class-card__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--navy, #1b2e4b);
+}
+
+.teacher-class-card__meta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #6b7a8c;
+}
+
+.teacher-class-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.teacher-class-card__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #45474c;
+}
+
+.teacher-class-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.teacher-classes-quick {
+  margin-top: 1.5rem;
+}
+
+.teacher-classes-quick__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary, #0058be);
+  text-decoration: none;
+}
+
+.teacher-classes-quick__link:hover {
+  text-decoration: underline;
+}
