@@ -4,7 +4,6 @@ import { Shield, FileCheck, CreditCard, Users, ArrowRight, Sparkles, GraduationC
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
 import PublicFooter from '../../components/layout/PublicFooter.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
-import { useTenant } from '../../context/TenantContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
@@ -23,7 +22,6 @@ function parseHeroHeadline(headline) {
 
 export default function Landing() {
   const { portalName, school, branding, platform } = usePortalConfig();
-  const { isPlatformHome, schoolSlug } = useTenant();
   const { loginPath } = useTenantPath();
   const enrollPath = useSchoolEnrollPath();
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;

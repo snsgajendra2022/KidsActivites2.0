@@ -1,6 +1,5 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { ROLE_DASHBOARD } from '../constants/roles.js';
 import { useTenantPath } from '../hooks/useTenantPath.js';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
