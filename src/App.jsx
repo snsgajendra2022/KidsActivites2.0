@@ -1,6 +1,6 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
-import SchoolRouteGuard from './components/routing/SchoolRouteGuard.jsx';
+import TenantPathGate from './components/routing/TenantPathGate.jsx';
 import { ROLES } from './constants/roles.js';
 
 import PlatformHomeGate from './components/routing/PlatformHomeGate.jsx';
@@ -63,14 +63,20 @@ const NOTIFICATIONS_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT, ROLES.SUPPORT_STAF
 const PARENT_ROLES = [ROLES.PARENT, ROLES.STUDENT];
 const TEACHER_ROLES = [ROLES.TEACHER];
 
+function TenantLayout() {
+  return (
+    <TenantPathGate>
+      <Outlet />
+    </TenantPathGate>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
+      {/* Platform routes (no tenant prefix) */}
       <Route path="/" element={<PlatformHomeGate />} />
       <Route path="/login" element={<PlatformLoginGate />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/register-school" element={<RegisterSchool />} />
       <Route path="/workspace/new" element={<WorkspaceNew />} />
       <Route path="/workspace/confirm" element={<WorkspaceConfirm />} />
@@ -81,48 +87,55 @@ export default function App() {
       <Route path="/system-status" element={<SystemStatus />} />
       <Route path="/support" element={<DirectSupport />} />
 
-      <Route path="/:schoolSlug" element={<SchoolRouteGuard><Landing /></SchoolRouteGuard>} />
-      <Route path="/:schoolSlug/login" element={<SchoolRouteGuard><Login /></SchoolRouteGuard>} />
-      <Route path="/:schoolSlug/enroll" element={<SchoolRouteGuard><Enrollment /></SchoolRouteGuard>} />
+      {/* Tenant-scoped routes: /{tenantSlug}/... */}
+      <Route path="/:tenantSlug" element={<TenantLayout />}>
+        <Route index element={<Landing />} />
+        <Route path="login" element={<Login />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
+        <Route path="verify-email" element={<VerifyEmail />} />
+        <Route path="enroll" element={<Enrollment />} />
+        <Route path="enrollment" element={<Navigate to="enroll" replace />} />
 
-      {/* Admin routes */}
-      <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminDashboard /></ProtectedRoute>} />
-      <Route path="/admin/applications" element={<ProtectedRoute allowedRoles={SUPPORT_APP_ROLES}><ApplicationsList /></ProtectedRoute>} />
-      <Route path="/admin/applications/:id" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ApplicationReview /></ProtectedRoute>} />
-      <Route path="/admin/students" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminStudents /></ProtectedRoute>} />
-      <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdminFees /></ProtectedRoute>} />
-      <Route path="/admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPhotos /></ProtectedRoute>} />
-      <Route path="/admin/chat" element={<ProtectedRoute allowedRoles={CHAT_ADMIN_ROLES}><ChatPage /></ProtectedRoute>} />
-      <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={NOTIFICATIONS_ROLES}><NotificationsPage title="Notifications" subtitle="Manage and view all school notifications." /></ProtectedRoute>} />
-      <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminReports /></ProtectedRoute>} />
-      <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminSettings /></ProtectedRoute>} />
-      <Route path="/admin/class-management" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminClassManagement /></ProtectedRoute>} />
-      <Route path="/admin/albums" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAlbums /></ProtectedRoute>} />
-      <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAuditLogs /></ProtectedRoute>} />
-      <Route path="/admin/portal-settings" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><PortalSettings /></ProtectedRoute>} />
-      <Route path="/admin/users" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminUsers /></ProtectedRoute>} />
-      <Route path="/admin/teachers" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><AdminTeachers /></ProtectedRoute>} />
-      <Route path="/admin/schools" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminSchools /></ProtectedRoute>} />
+        {/* Admin routes */}
+        <Route path="admin/dashboard" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="admin/applications" element={<ProtectedRoute allowedRoles={SUPPORT_APP_ROLES}><ApplicationsList /></ProtectedRoute>} />
+        <Route path="admin/applications/:id" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ApplicationReview /></ProtectedRoute>} />
+        <Route path="admin/students" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminStudents /></ProtectedRoute>} />
+        <Route path="admin/fees" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdminFees /></ProtectedRoute>} />
+        <Route path="admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPhotos /></ProtectedRoute>} />
+        <Route path="admin/chat" element={<ProtectedRoute allowedRoles={CHAT_ADMIN_ROLES}><ChatPage /></ProtectedRoute>} />
+        <Route path="admin/notifications" element={<ProtectedRoute allowedRoles={NOTIFICATIONS_ROLES}><NotificationsPage title="Notifications" subtitle="Manage and view all school notifications." /></ProtectedRoute>} />
+        <Route path="admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminReports /></ProtectedRoute>} />
+        <Route path="admin/settings" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminSettings /></ProtectedRoute>} />
+        <Route path="admin/class-management" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminClassManagement /></ProtectedRoute>} />
+        <Route path="admin/albums" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAlbums /></ProtectedRoute>} />
+        <Route path="admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAuditLogs /></ProtectedRoute>} />
+        <Route path="admin/portal-settings" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><PortalSettings /></ProtectedRoute>} />
+        <Route path="admin/users" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminUsers /></ProtectedRoute>} />
+        <Route path="admin/teachers" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><AdminTeachers /></ProtectedRoute>} />
+        <Route path="admin/schools" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminSchools /></ProtectedRoute>} />
 
-      {/* Parent routes */}
-      <Route path="/parent" element={<Navigate to="/parent/dashboard" replace />} />
-      <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDashboard /></ProtectedRoute>} />
-      <Route path="/parent/enrollment" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentEnrollmentStatus /></ProtectedRoute>} />
-      <Route path="/parent/fees" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentFees /></ProtectedRoute>} />
-      <Route path="/parent/documents" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDocuments /></ProtectedRoute>} />
-      <Route path="/parent/photos" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentPhotos /></ProtectedRoute>} />
-      <Route path="/parent/messages" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ChatPage /></ProtectedRoute>} />
-      <Route path="/parent/notifications" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><NotificationsPage title="Notifications" subtitle="Your enrollment and school notifications." /></ProtectedRoute>} />
+        {/* Parent routes */}
+        <Route path="parent" element={<Navigate to="dashboard" replace />} />
+        <Route path="parent/dashboard" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDashboard /></ProtectedRoute>} />
+        <Route path="parent/enrollment" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentEnrollmentStatus /></ProtectedRoute>} />
+        <Route path="parent/fees" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentFees /></ProtectedRoute>} />
+        <Route path="parent/documents" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDocuments /></ProtectedRoute>} />
+        <Route path="parent/photos" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentPhotos /></ProtectedRoute>} />
+        <Route path="parent/messages" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ChatPage /></ProtectedRoute>} />
+        <Route path="parent/notifications" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><NotificationsPage title="Notifications" subtitle="Your enrollment and school notifications." /></ProtectedRoute>} />
 
-      {/* Teacher routes */}
-      <Route path="/teacher/dashboard" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherDashboard /></ProtectedRoute>} />
-      <Route path="/teacher/classes" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherClasses /></ProtectedRoute>} />
-      <Route path="/teacher/students" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherStudents /></ProtectedRoute>} />
-      <Route path="/teacher/photos" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><SendPhotos /></ProtectedRoute>} />
-      <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ChatPage /></ProtectedRoute>} />
+        {/* Teacher routes */}
+        <Route path="teacher/dashboard" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherDashboard /></ProtectedRoute>} />
+        <Route path="teacher/classes" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherClasses /></ProtectedRoute>} />
+        <Route path="teacher/students" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherStudents /></ProtectedRoute>} />
+        <Route path="teacher/photos" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><SendPhotos /></ProtectedRoute>} />
+        <Route path="teacher/messages" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ChatPage /></ProtectedRoute>} />
 
-      {/* Shared authenticated routes */}
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        {/* Shared authenticated routes */}
+        <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

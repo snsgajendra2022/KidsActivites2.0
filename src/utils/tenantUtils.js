@@ -1,11 +1,11 @@
-import { isReservedSlug } from '../constants/reservedSlugs.js';
+import { isReservedSlug, isValidTenantSlug } from '../constants/reservedSlugs.js';
 import { getSchoolBySlug } from '../services/schoolService.js';
 import { isApiEnabled } from '../services/api/config.js';
 
-/** First URL segment when it is not a reserved route (e.g. admin, login). */
+/** First URL segment when it is a valid tenant slug (not a reserved route). */
 export function extractSlugSegment(pathname) {
   const segment = pathname.split('/').filter(Boolean)[0];
-  if (!segment || isReservedSlug(segment)) return null;
+  if (!isValidTenantSlug(segment)) return null;
   return segment;
 }
 
@@ -18,11 +18,33 @@ export function extractSchoolSlugFromPath(pathname) {
   return school?.slug ?? null;
 }
 
+/** Strip `/{tenantSlug}` prefix from a pathname when present. */
+export function stripTenantPrefix(pathname, tenantSlug) {
+  if (!tenantSlug || !pathname) return pathname;
+  const prefix = `/${tenantSlug}`;
+  if (pathname === prefix) return '/';
+  if (pathname.startsWith(`${prefix}/`)) return pathname.slice(prefix.length);
+  return pathname;
+}
+
+/** Prefix an app-relative path with `/{tenantSlug}` when not already prefixed. */
+export function prefixTenantPath(path, tenantSlug) {
+  if (!path || !tenantSlug) return path;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  if (normalized === `/${tenantSlug}` || normalized.startsWith(`/${tenantSlug}/`)) {
+    return normalized;
+  }
+  return `/${tenantSlug}${normalized}`;
+}
+
 export function isAdminPath(pathname) {
-  return pathname.startsWith('/admin')
-    || pathname.startsWith('/parent')
-    || pathname.startsWith('/teacher')
-    || pathname === '/profile';
+  const tenantSlug = extractSlugSegment(pathname);
+  const routePath = stripTenantPrefix(pathname, tenantSlug);
+  return routePath.startsWith('/admin')
+    || routePath.startsWith('/parent')
+    || routePath.startsWith('/teacher')
+    || routePath === '/profile';
 }
 
 export function getSchoolBasePath(schoolSlug) {
@@ -30,7 +52,7 @@ export function getSchoolBasePath(schoolSlug) {
 }
 
 export function schoolEnrollPath(schoolSlug) {
-  return schoolSlug ? `/${schoolSlug}/enroll` : '/';
+  return schoolSlug ? `/${schoolSlug}/enroll` : '/enrollment';
 }
 
 export function schoolLoginPath(schoolSlug) {

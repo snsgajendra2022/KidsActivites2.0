@@ -10,6 +10,7 @@ import {
   checkPublicWorkspaceSlug,
   registerSchool,
   slugifyName,
+  buildWorkspaceLoginUrl,
 } from '../../services/workspaceService.js';
 import { ApiError } from '../../services/api/client.js';
 
@@ -96,7 +97,7 @@ export default function RegisterSchool() {
         termsAccepted: true,
       });
       toast.success(result.message || 'Workspace created successfully');
-      window.location.href = result.workspaceUrl;
+      window.location.href = buildWorkspaceLoginUrl(form.workspaceSlug.trim());
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Registration failed');
     } finally {
@@ -121,7 +122,7 @@ export default function RegisterSchool() {
 
         <h1 className="font-display mb-2 text-3xl font-bold text-brand">Register your school</h1>
         <p className="mb-8 text-muted">
-          Create your SchoolBridge workspace with a unique subdomain. You&apos;ll be redirected to sign in when ready.
+          Create your SchoolBridge workspace with a unique URL slug. You&apos;ll be redirected to sign in when ready.
         </p>
 
         <form onSubmit={handleSubmit} className="sb-card space-y-5 p-6 md:p-8">

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, Shield, Sparkles, Smartphone, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { ROLE_DASHBOARD } from '../../constants/roles.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import PublicHeader from '../../components/layout/PublicHeader.jsx';
 import PublicFooter from '../../components/layout/PublicFooter.jsx';
 import PortalLogo from '../../components/brand/PortalLogo.jsx';
@@ -131,6 +131,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login, requestOtp, requestEmailOtp, loginWithOtp, loginWithEmailOtp } = useAuth();
   const navigate = useNavigate();
+  const { roleDashboard, tenantPath } = useTenantPath();
   const { portalName, school, branding, loginMethods } = usePortalConfig();
   const heroImage = branding?.loginHeroUrl || branding?.heroImageUrl;
 
@@ -250,7 +251,7 @@ export default function Login() {
     setLoading(true);
     try {
       const user = await login(emailForm);
-      navigate(ROLE_DASHBOARD[user.role] || '/');
+      navigate(roleDashboard(user.role) || tenantPath('/'));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -267,7 +268,7 @@ export default function Login() {
       const user = channel === 'email'
         ? await loginWithEmailOtp({ email: otpIdentity.trim(), otp })
         : await loginWithOtp({ mobile: otpIdentity.replace(/\D/g, ''), otp });
-      navigate(ROLE_DASHBOARD[user.role] || '/');
+      navigate(roleDashboard(user.role) || tenantPath('/'));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -456,7 +457,7 @@ export default function Login() {
                       <label className="field-label login-field-label block" htmlFor="password">
                         Password
                       </label>
-                      <Link to="/forgot-password" className="text-xs font-semibold hover:underline" style={{ color: 'var(--sb-secondary)' }}>
+                      <Link to={tenantPath('/forgot-password')} className="text-xs font-semibold hover:underline" style={{ color: 'var(--sb-secondary)' }}>
                         Forgot password?
                       </Link>
                     </div>
@@ -550,7 +551,7 @@ export default function Login() {
 
               <div className="login-enroll-section">
                 <p className="login-enroll-section__label">New Applicant</p>
-                <Link to="/enroll" className="login-enroll-btn group">
+                <Link to={tenantPath('/enroll')} className="login-enroll-btn group">
                   Start Admission Process
                   <ArrowRight size={16} />
                 </Link>

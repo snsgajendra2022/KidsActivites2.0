@@ -11,6 +11,23 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173)
 
+Open [http://localhost:5173](http://localhost:5173) — platform home and school registration stay at the root.
+
+### Path-based tenant URLs (LAN / multi-machine dev)
+
+Tenant context is selected from the **first URL path segment**, not subdomain or `.env`:
+
+| URL | Tenant |
+|-----|--------|
+| `http://localhost:5173/sns/login` | `sns` |
+| `http://192.168.1.58:5173/demo/admin/dashboard` | `demo` |
+
+- Platform routes (no tenant prefix): `/`, `/register-school`, `/workspace/new`, `/workspace/confirm`
+- All school routes: `/{tenantSlug}/login`, `/{tenantSlug}/admin/*`, `/{tenantSlug}/parent/*`, `/{tenantSlug}/teacher/*`, `/{tenantSlug}/enroll`
+- Root `/login` shows the workspace picker — enter a slug to go to `/{slug}/login`
+- `VITE_TENANT_SLUG` is optional last-resort fallback only; path takes priority
+- Subdomain hosts (`demo.localhost`) still work for backward compatibility
+
 ### Live database (default)
 
 With `VITE_API_URL` set in `.env`, all data comes from the Spring Boot backend — no localStorage mock fallbacks.
@@ -19,11 +36,10 @@ With `VITE_API_URL` set in `.env`, all data comes from the Spring Boot backend �
 2. Ensure `.env` has:
    ```
    VITE_API_URL=http://localhost:8080/api/v1
-   VITE_TENANT_SLUG=demo
    VITE_FORCE_MOCK=false
    VITE_API_FALLBACK_MOCK=false
    ```
-3. Run `npm run dev` and log in with a user from the database (demo tenant).
+3. Run `npm run dev` and open `http://localhost:5173/demo/login` (or your tenant slug).
 
 **Verify:** DevTools → Network shows requests to `localhost:8080/api/v1`. Application → Local Storage should have `sb_access_token` but not `sb_applications` or `sb_portal_config_*`.
 

@@ -1,17 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
+import { useSchoolBasePath, useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 import PortalLogo from '../brand/PortalLogo.jsx';
 import LoginHeaderScrollText from '../auth/LoginHeaderScrollText.jsx';
 
 export default function PublicHeader({ glass = false, compact = false, loginMobile = false }) {
   const location = useLocation();
   const { portalName, config } = usePortalConfig();
-  const { schoolSlug, isTenantSubdomain } = useTenant();
+  const { isTenantRoute } = useTenant();
+  const { loginPath } = useTenantPath();
+  const basePath = useSchoolBasePath() || '/';
+  const enrollPath = useSchoolEnrollPath();
   const loginScrollLines = config?.loginScrollLines;
-
-  const basePath = isTenantSubdomain ? '/' : (schoolSlug ? `/${schoolSlug}` : '/');
-  const enrollPath = isTenantSubdomain ? '/enrollment' : (schoolSlug ? `/${schoolSlug}/enroll` : '/enrollment');
 
   const navLinks = [
     { to: enrollPath, label: 'Admissions' },
@@ -19,6 +21,10 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
     { to: `${basePath}#about`, label: 'About', hash: true },
     { to: `${basePath}#contact`, label: 'Contact', hash: true },
   ];
+
+  const onLoginPage = isTenantRoute
+    ? location.pathname.endsWith('/login')
+    : location.pathname === '/login';
 
   return (
     <header
@@ -76,17 +82,17 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
 
           {!loginMobile && (
             <div className="flex shrink-0 items-center gap-2 md:gap-4">
-              {location.pathname !== '/login' && (
+              {!onLoginPage && (
                 <Link
-                  to="/login"
+                  to={loginPath}
                   className="hidden text-sm font-semibold text-brand/60 transition-premium hover:text-brand md:block px-3 py-2"
                 >
                   Staff Portal
                 </Link>
               )}
-              {location.pathname !== '/login' && (
+              {!onLoginPage && (
                 <Link
-                  to="/login"
+                  to={loginPath}
                   className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill bg-brand text-sm font-semibold transition-premium hover:opacity-90"
                 >
                   Login

@@ -1,32 +1,39 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { extractSlugSegment, isAdminPath } from '../utils/tenantUtils.js';
+import {
+  extractSlugSegment,
+  isAdminPath,
+  stripTenantPrefix,
+} from '../utils/tenantUtils.js';
 import { getSchoolBySlug, resolveSchoolBySlug } from '../services/schoolService.js';
-import { isApiEnabled, isTenantSubdomainHost, resolveTenantSlug } from '../services/api/config.js';
+import {
+  isApiEnabled,
+  isTenantSubdomainHost,
+  resolveTenantSlug,
+} from '../services/api/config.js';
 
 const TenantContext = createContext(null);
 
 function provisionalSchoolId(slug) {
   if (!slug || !isApiEnabled()) return null;
-  const tenant = resolveTenantSlug();
-  if (tenant && slug.toLowerCase() === tenant.toLowerCase()) {
-    return `school-${tenant}`;
-  }
-  return null;
+  return `school-${slug}`;
 }
 
 export function TenantProvider({ children }) {
   const { pathname } = useLocation();
-  const segment = useMemo(() => extractSlugSegment(pathname), [pathname]);
-  const tenantSlug = useMemo(() => resolveTenantSlug(), []);
+  const pathTenantSlug = useMemo(() => extractSlugSegment(pathname), [pathname]);
+  const tenantSlug = useMemo(() => resolveTenantSlug(), [pathname]);
   const isTenantSubdomain = useMemo(
-    () => isTenantSubdomainHost() && Boolean(tenantSlug),
-    [tenantSlug],
+    () => isTenantSubdomainHost() && Boolean(tenantSlug) && !pathTenantSlug,
+    [tenantSlug, pathTenantSlug],
   );
-  const effectiveSlug = useMemo(
-    () => segment || (isTenantSubdomain ? tenantSlug : null),
-    [segment, isTenantSubdomain, tenantSlug],
+  const isTenantRoute = Boolean(pathTenantSlug);
+  const effectiveSlug = pathTenantSlug || (isTenantSubdomain ? tenantSlug : null);
+  const routePath = useMemo(
+    () => stripTenantPrefix(pathname, pathTenantSlug),
+    [pathname, pathTenantSlug],
   );
+
   const [school, setSchool] = useState(null);
   const [schoolResolving, setSchoolResolving] = useState(false);
 
@@ -60,19 +67,21 @@ export function TenantProvider({ children }) {
   }, [effectiveSlug]);
 
   const value = useMemo(() => {
-    const schoolSlug = school?.slug ?? (isTenantSubdomain ? tenantSlug : null);
+    const schoolSlug = school?.slug ?? effectiveSlug;
     const urlSchoolId = school?.id ?? provisionalSchoolId(effectiveSlug);
     const isSchoolPublicRoute = Boolean(effectiveSlug);
     const isAdminRoute = isAdminPath(pathname);
 
-    const isPlatformHome = pathname === '/' && !isTenantSubdomain;
-    const isPlatformEnrollment = pathname === '/enrollment' && !isTenantSubdomain;
-    const isPlatformLogin = pathname === '/login' && !isTenantSubdomain;
-    const isWorkspaceRoute = pathname.startsWith('/workspace');
-    const isRegisterSchoolRoute = pathname === '/register-school';
+    const isPlatformHome = routePath === '/' && !isTenantRoute && !isTenantSubdomain;
+    const isPlatformEnrollment = routePath === '/enrollment' && !isTenantRoute;
+    const isPlatformLogin = routePath === '/login' && !isTenantRoute;
+    const isWorkspaceRoute = routePath.startsWith('/workspace');
+    const isRegisterSchoolRoute = routePath === '/register-school';
 
     return {
-      tenantSlug,
+      tenantSlug: effectiveSlug,
+      pathTenantSlug,
+      isTenantRoute,
       isTenantSubdomain,
       schoolSlug,
       urlSchoolId,
@@ -87,7 +96,16 @@ export function TenantProvider({ children }) {
       isRegisterSchoolRoute,
       isPlatformPublic: isPlatformHome || isPlatformEnrollment || isPlatformLogin || isWorkspaceRoute || isRegisterSchoolRoute,
     };
-  }, [pathname, effectiveSlug, isTenantSubdomain, tenantSlug, school, schoolResolving]);
+  }, [
+    pathname,
+    routePath,
+    effectiveSlug,
+    pathTenantSlug,
+    isTenantRoute,
+    isTenantSubdomain,
+    school,
+    schoolResolving,
+  ]);
 
   return (
     <TenantContext.Provider value={value}>

@@ -11,6 +11,7 @@ import { getNavigationForRole } from '../services/navigationService.js';
 import { isApiEnabled } from '../services/api/config.js';
 import { useTenant } from './TenantContext.jsx';
 import { resolveNavItemsForRole } from '../utils/navUtils.js';
+import { prefixTenantPath } from '../utils/tenantUtils.js';
 import { applyPortalTheme } from '../utils/themeUtils.js';
 import { ROLES } from '../constants/roles.js';
 import { getPlatformConfig } from '../services/platformConfigService.js';
@@ -48,6 +49,7 @@ function resolveActiveSchoolId({
   isSchoolPublicRoute,
   isAdminRoute,
   isTenantSubdomain,
+  isTenantRoute,
   isPlatformPublic,
   adminSelectedSchoolId,
   schools,
@@ -70,7 +72,7 @@ function resolveActiveSchoolId({
     return urlSchoolId || schools[0]?.id || null;
   }
 
-  if (isTenantSubdomain && urlSchoolId) {
+  if ((isTenantSubdomain || isTenantRoute) && urlSchoolId) {
     return urlSchoolId;
   }
 
@@ -102,6 +104,8 @@ export function PortalConfigProvider({ children, user = null }) {
     isPlatformEnrollment,
     isAdminRoute,
     isTenantSubdomain,
+    isTenantRoute,
+    tenantSlug,
   } = useTenant();
 
   const [config, setConfig] = useState(null);
@@ -121,11 +125,12 @@ export function PortalConfigProvider({ children, user = null }) {
       isSchoolPublicRoute,
       isAdminRoute,
       isTenantSubdomain,
+      isTenantRoute,
       isPlatformPublic,
       adminSelectedSchoolId,
       schools,
     }),
-    [user, urlSchoolId, isSchoolPublicRoute, isAdminRoute, isTenantSubdomain, isPlatformPublic, adminSelectedSchoolId, schools],
+    [user, urlSchoolId, isSchoolPublicRoute, isAdminRoute, isTenantSubdomain, isTenantRoute, isPlatformPublic, adminSelectedSchoolId, schools],
   );
 
   const isPlatformAdmin = user?.role === ROLES.SUPER_ADMIN;
@@ -275,17 +280,21 @@ export function PortalConfigProvider({ children, user = null }) {
 
   const getNavItems = useCallback(
     (role) => {
+      let items;
       if (isApiEnabled() && navLoadedRoles[role] && role in apiNavByRole) {
-        return apiNavByRole[role];
+        items = apiNavByRole[role];
+      } else {
+        items = resolveNavItemsForRole(role, {
+          menuVisibility: config?.menuVisibility,
+          menuCustomization: config?.menuCustomization,
+          customMenuItems: config?.customMenuItems,
+          menuOrder: config?.menuOrder,
+        });
       }
-      return resolveNavItemsForRole(role, {
-        menuVisibility: config?.menuVisibility,
-        menuCustomization: config?.menuCustomization,
-        customMenuItems: config?.customMenuItems,
-        menuOrder: config?.menuOrder,
-      });
+      if (!tenantSlug) return items;
+      return items.map((item) => ({ ...item, to: prefixTenantPath(item.to, tenantSlug) }));
     },
-    [config, apiNavByRole, navLoadedRoles],
+    [config, apiNavByRole, navLoadedRoles, tenantSlug],
   );
 
   const value = useMemo(

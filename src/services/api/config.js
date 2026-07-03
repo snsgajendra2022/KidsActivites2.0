@@ -1,3 +1,6 @@
+import { isValidTenantSlug } from '../../constants/reservedSlugs.js';
+import { extractSlugSegment } from '../../utils/tenantUtils.js';
+
 /** Tenant header required by Spring Boot multi-tenant backend. */
 export const TENANT_HEADER = 'X-Tenant-Slug';
 
@@ -31,29 +34,34 @@ export function isTenantSubdomainHost() {
   return false;
 }
 
+function resolveTenantSlugFromSubdomainHost() {
+  if (typeof window === 'undefined') return null;
+  const host = window.location.hostname.toLowerCase();
+
+  const prodMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.schoolbridge\.(?:app|com)$/);
+  if (prodMatch && prodMatch[1] !== 'www' && isValidTenantSlug(prodMatch[1])) return prodMatch[1];
+
+  const localMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.localhost$/);
+  if (localMatch && isValidTenantSlug(localMatch[1])) return localMatch[1];
+
+  return null;
+}
+
 /**
  * Resolve tenant slug for API requests.
- * Priority: frontend hostname subdomain → VITE_TENANT_SLUG → demo (local backend).
+ * Priority: URL path `/{slug}/...` → subdomain host → VITE_TENANT_SLUG (dev fallback).
  */
 export function resolveTenantSlug() {
   if (typeof window !== 'undefined') {
-    const host = window.location.hostname.toLowerCase();
+    const fromPath = extractSlugSegment(window.location.pathname);
+    if (fromPath) return fromPath;
 
-    const prodMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.schoolbridge\.(?:app|com)$/);
-    if (prodMatch && prodMatch[1] !== 'www') return prodMatch[1];
-
-    const localMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.localhost$/);
-    if (localMatch) return localMatch[1];
+    const fromSubdomain = resolveTenantSlugFromSubdomainHost();
+    if (fromSubdomain) return fromSubdomain;
   }
 
   const fromEnv = import.meta.env.VITE_TENANT_SLUG?.trim();
-  if (fromEnv) return fromEnv;
-
-  if (RAW_API_URL.includes('localhost') || RAW_API_URL.includes('127.0.0.1')) {
-    if (!isProductionMode()) {
-      return 'demo';
-    }
-  }
+  if (fromEnv && isValidTenantSlug(fromEnv)) return fromEnv;
 
   return null;
 }

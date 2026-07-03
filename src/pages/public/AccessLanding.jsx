@@ -17,8 +17,6 @@ import PublicFooter from '../../components/layout/PublicFooter.jsx';
 import FormInput from '../../components/ui/FormInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
-import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
-import { buildWorkspaceLoginUrl } from '../../services/workspaceService.js';
 
 const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 
@@ -45,10 +43,6 @@ export default function AccessLanding() {
     e.preventDefault();
     const slug = workspaceSlug.trim().toLowerCase();
     if (!slug) return;
-    if (window.location.hostname.includes('localhost')) {
-      window.location.href = buildWorkspaceLoginUrl(slug);
-      return;
-    }
     navigate(`/${slug}/login`);
   }
 
@@ -118,7 +112,7 @@ export default function AccessLanding() {
                 placeholder="your-school"
                 value={workspaceSlug}
                 onChange={(e) => setWorkspaceSlug(e.target.value)}
-                helper="e.g. green-valley → green-valley.localhost:5173"
+                helper="e.g. green-valley → /green-valley/login"
                 className="flex-1"
               />
               <Button type="submit" variant="primary" size="lg" className="shrink-0 sm:self-end">

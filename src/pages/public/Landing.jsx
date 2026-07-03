@@ -7,7 +7,7 @@ import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
-import { schoolLoginPath } from '../../utils/tenantUtils.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 
 const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 
@@ -23,9 +23,9 @@ function parseHeroHeadline(headline) {
 
 export default function Landing() {
   const { portalName, school, branding, platform } = usePortalConfig();
-  const { isPlatformHome, schoolSlug, isTenantSubdomain } = useTenant();
+  const { isPlatformHome, schoolSlug } = useTenant();
+  const { loginPath } = useTenantPath();
   const enrollPath = useSchoolEnrollPath();
-  const loginPath = isTenantSubdomain || isPlatformHome ? '/login' : schoolLoginPath(schoolSlug);
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
   const heroLines = parseHeroHeadline(platform?.heroHeadline);
   const heroSubtext = platform?.heroSubtext?.trim() || DEFAULT_HERO_SUBTEXT;

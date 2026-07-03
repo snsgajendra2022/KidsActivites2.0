@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../../services/authService.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 
 export default function ResetPassword() {
+  const { loginPath, tenantPath } = useTenantPath();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const [password, setPassword] = useState('');
@@ -38,7 +40,7 @@ export default function ResetPassword() {
       <div style={{ maxWidth: 420, margin: '4rem auto', padding: '1rem' }}>
         <h1>Invalid link</h1>
         <p>This reset link is missing or invalid.</p>
-        <Link to="/forgot-password">Request a new link</Link>
+        <Link to={tenantPath('/forgot-password')}>Request a new link</Link>
       </div>
     );
   }
@@ -71,7 +73,7 @@ export default function ResetPassword() {
           {loading ? 'Saving…' : 'Update password'}
         </button>
       </form>
-      <p><Link to="/login">Back to login</Link></p>
+      <p><Link to={loginPath}>Back to login</Link></p>
     </div>
   );
 }

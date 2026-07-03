@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { forgotPassword } from '../../services/authService.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 
 export default function ForgotPassword() {
+  const { loginPath } = useTenantPath();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -43,7 +45,7 @@ export default function ForgotPassword() {
           {loading ? 'Sending…' : 'Send reset link'}
         </button>
       </form>
-      <p><Link to="/login">Back to login</Link></p>
+      <p><Link to={loginPath}>Back to login</Link></p>
     </div>
   );
 }

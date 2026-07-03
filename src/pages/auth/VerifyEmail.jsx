@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { verifyEmail } from '../../services/authService.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 
 export default function VerifyEmail() {
+  const { loginPath } = useTenantPath();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const [message, setMessage] = useState('');
@@ -27,7 +29,7 @@ export default function VerifyEmail() {
       {loading && <p>Verifying…</p>}
       {error && <p className="form-error">{error}</p>}
       {message && <p className="form-success">{message}</p>}
-      <p><Link to="/login">Go to login</Link></p>
+      <p><Link to={loginPath}>Go to login</Link></p>
     </div>
   );
 }

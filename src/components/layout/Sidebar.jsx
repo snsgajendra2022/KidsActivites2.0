@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import { ChevronLeft, X } from 'lucide-react';
-import { ROLE_LABELS, ROLE_DASHBOARD } from '../../constants/roles.js';
+import { ROLE_LABELS } from '../../constants/roles.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
 
@@ -24,8 +25,9 @@ function sidebarLinkClass({ isActive }) {
 
 export default function Sidebar({ user, open, onClose, collapsed, onToggleCollapse }) {
   const { portalName, school, getNavItems } = usePortalConfig();
+  const { roleDashboard } = useTenantPath();
   const navItems = getNavItems(user?.role);
-  const homePath = ROLE_DASHBOARD[user?.role] || '/';
+  const homePath = roleDashboard(user?.role) || '/';
 
   return (
     <>

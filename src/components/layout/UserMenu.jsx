@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, LogOut, User, Settings } from 'lucide-react';
-import { ROLE_LABELS, ROLE_DASHBOARD } from '../../constants/roles.js';
+import { ROLE_LABELS } from '../../constants/roles.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { isDemoUser } from '../../services/api/demoMode.js';
 
 export default function UserMenu({ user, onLogout }) {
@@ -16,7 +17,8 @@ export default function UserMenu({ user, onLogout }) {
       .slice(0, 2)
       .toUpperCase() || 'U';
 
-  const homePath = ROLE_DASHBOARD[user?.role] || '/';
+  const { roleDashboard, tenantPath } = useTenantPath();
+  const homePath = roleDashboard(user?.role) || '/';
 
   useEffect(() => {
     const handler = (e) => {
@@ -80,7 +82,7 @@ export default function UserMenu({ user, onLogout }) {
               My Dashboard
             </Link>
             <Link
-              to="/profile"
+              to={tenantPath('/profile')}
               onClick={() => setOpen(false)}
               className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-brand-muted hover:text-brand"
               role="menuitem"

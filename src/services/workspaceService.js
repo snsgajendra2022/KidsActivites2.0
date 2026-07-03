@@ -34,10 +34,9 @@ export function slugifyName(name) {
     .slice(0, 63);
 }
 
-/** Build tenant login URL for dev (subdomain) or prod. */
+/** Build tenant login URL using path-based routing (works on any host/LAN). */
 export function buildWorkspaceLoginUrl(slug) {
-  if (typeof window !== 'undefined' && window.location.hostname.includes('localhost')) {
-    return `http://${slug}.localhost:5173/login`;
-  }
-  return `https://${slug}.schoolbridge.com/login`;
+  if (typeof window === 'undefined') return `/${slug}/login`;
+  const { protocol, host } = window.location;
+  return `${protocol}//${host}/${slug}/login`;
 }
