@@ -1,7 +1,23 @@
 /** Tenant header required by Spring Boot multi-tenant backend. */
 export const TENANT_HEADER = 'X-Tenant-Slug';
 
-const RAW_API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+/** Ensure base URL ends with /api/v1 (common misconfig: .../api without /v1). */
+export function normalizeApiBaseUrl(raw) {
+  if (!raw) return '';
+  const trimmed = raw.replace(/\/$/, '');
+  if (/\/api$/i.test(trimmed)) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        '[SchoolBridge] VITE_API_URL should end with /api/v1 — auto-correcting to',
+        `${trimmed}/v1`,
+      );
+    }
+    return `${trimmed}/v1`;
+  }
+  return trimmed;
+}
+
+const RAW_API_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL || '');
 
 /**
  * True when the browser host is a tenant subdomain (e.g. ankits-workspace.localhost).
