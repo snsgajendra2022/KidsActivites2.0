@@ -244,3 +244,35 @@ export async function logoutSession() {
   clearTokens();
   sessionStorage.removeItem(OTP_STORAGE_KEY);
 }
+
+export async function forgotPassword(email) {
+  if (!isApiEnabled()) {
+    await delay(300);
+    return { message: 'If an account exists, a reset link has been sent.' };
+  }
+  return api.post('/auth/forgot-password', { email }, { auth: false });
+}
+
+export async function resetPassword(token, newPassword) {
+  if (!isApiEnabled()) {
+    await delay(300);
+    return { message: 'Password updated successfully' };
+  }
+  return api.post('/auth/reset-password', { token, newPassword }, { auth: false });
+}
+
+export async function verifyEmail(token) {
+  if (!isApiEnabled()) {
+    await delay(300);
+    return { message: 'Email verified successfully' };
+  }
+  return api.post('/auth/verify-email', { token }, { auth: false });
+}
+
+export async function resendVerification(email) {
+  if (!isApiEnabled()) {
+    await delay(300);
+    return { message: 'Verification email sent' };
+  }
+  return api.post('/auth/resend-verification', { email }, { auth: false });
+}

@@ -138,6 +138,19 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
     if (newToken) {
       return executeRequest(path, { ...options, retry: false }, parser);
     }
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      clearTokens();
+      window.location.assign('/login');
+    }
+  }
+
+  if (res.status === 403 && typeof window !== 'undefined') {
+    const text = await res.clone().text();
+    const json = parseJsonBody(text);
+    const code = json?.error?.code;
+    if (code === 'TENANT_SUSPENDED' || code === 'TENANT_ARCHIVED' || code === 'TENANT_FAILED') {
+      throw new ApiError(json.error?.message || 'Workspace unavailable', 403, code);
+    }
   }
 
   return parser(res);

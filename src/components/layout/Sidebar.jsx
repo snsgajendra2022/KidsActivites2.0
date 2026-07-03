@@ -79,27 +79,32 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           </div>
         </div>
 
-        {!collapsed && (
-          <p className="px-5 pb-1 pt-4 text-[10px] font-bold uppercase tracking-widest text-[#6b7a8c]/80">
-            Main Menu
-          </p>
-        )}
-
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-          {navItems.map(({ id, to, label, icon: Icon }) => (
-            <NavLink
-              key={id || to}
-              to={to}
-              onClick={onClose}
-              className={sidebarLinkClass}
-              title={collapsed ? label : undefined}
-            >
-              <Icon size={18} className="shrink-0 transition-colors duration-200" />
-              {!collapsed && (
-                <span className="truncate transition-colors duration-200">{label}</span>
-              )}
-            </NavLink>
-          ))}
+          {navItems.map(({ id, to, label, icon: Icon, section }, index) => {
+            const prevSection = navItems[index - 1]?.section;
+            const showSection = !collapsed && section && section !== prevSection;
+
+            return (
+              <div key={id || to}>
+                {showSection && (
+                  <p className="sidebar-nav-section px-2 pb-1 pt-4 text-[10px] font-bold uppercase tracking-widest text-[#6b7a8c]/80 first:pt-2">
+                    {section}
+                  </p>
+                )}
+                <NavLink
+                  to={to}
+                  onClick={onClose}
+                  className={sidebarLinkClass}
+                  title={collapsed ? label : undefined}
+                >
+                  <Icon size={18} className="shrink-0 transition-colors duration-200" />
+                  {!collapsed && (
+                    <span className="truncate transition-colors duration-200">{label}</span>
+                  )}
+                </NavLink>
+              </div>
+            );
+          })}
         </nav>
 
         {!collapsed && user && (

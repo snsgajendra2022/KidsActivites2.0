@@ -19,6 +19,7 @@ function mapApiNavItem(item, role) {
       typeof item.icon === 'string' ? item.icon : item.iconName,
       builtin?.icon,
     ),
+    section: item.section || builtin?.section,
     custom: item.custom === true,
   };
 }

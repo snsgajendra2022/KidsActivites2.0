@@ -456,9 +456,9 @@ export default function Login() {
                       <label className="field-label login-field-label block" htmlFor="password">
                         Password
                       </label>
-                      <button type="button" className="text-xs font-semibold hover:underline" style={{ color: 'var(--sb-secondary)' }}>
+                      <Link to="/forgot-password" className="text-xs font-semibold hover:underline" style={{ color: 'var(--sb-secondary)' }}>
                         Forgot password?
-                      </button>
+                      </Link>
                     </div>
                     <div className="login-password-wrap">
                       <input

@@ -34,7 +34,9 @@ export function resolveTenantSlug() {
   if (fromEnv) return fromEnv;
 
   if (RAW_API_URL.includes('localhost') || RAW_API_URL.includes('127.0.0.1')) {
-    return 'demo';
+    if (!isProductionMode()) {
+      return 'demo';
+    }
   }
 
   return null;
