@@ -120,9 +120,17 @@ function buildUrl(path, params) {
 }
 
 async function executeRequest(path, options = {}, parser = parseResponse) {
-  const { method = 'GET', body, params, headers = {}, auth = true, retry = true } = options;
+  const {
+    method = 'GET',
+    body,
+    params,
+    headers = {},
+    auth = true,
+    retry = true,
+    skipTenantHeader = false,
+  } = options;
 
-  const reqHeaders = buildHeaders(headers, { auth });
+  const reqHeaders = buildHeaders(headers, { auth, skipTenantHeader });
   if (body !== undefined && !(body instanceof FormData)) {
     reqHeaders['Content-Type'] = 'application/json';
   }

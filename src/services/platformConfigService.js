@@ -24,6 +24,10 @@ const DEFAULT_PLATFORM_CONFIG = {
   enrollmentForm: cloneEnrollmentFormConfig(DEFAULT_ENROLLMENT_FORM),
 };
 
+export function getDefaultPlatformConfig() {
+  return mergePlatformConfig(null);
+}
+
 function mergePlatformConfig(stored) {
   const base = { ...DEFAULT_PLATFORM_CONFIG, ...(stored || {}) };
   return {
@@ -53,7 +57,7 @@ export async function getPlatformConfig() {
       await delay(80);
       return mergePlatformConfig(getStore(PLATFORM_KEY, null));
     },
-    apiFn: () => api.get('/platform/config', undefined, { auth: false }),
+    apiFn: () => api.get('/platform/config', undefined, { auth: false, skipTenantHeader: true }),
   });
 }
 

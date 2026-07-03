@@ -17,6 +17,7 @@ import PublicFooter from '../../components/layout/PublicFooter.jsx';
 import FormInput from '../../components/ui/FormInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 
 const fadeUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 

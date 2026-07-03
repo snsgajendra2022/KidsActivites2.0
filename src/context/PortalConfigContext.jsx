@@ -14,8 +14,11 @@ import { resolveNavItemsForRole } from '../utils/navUtils.js';
 import { prefixTenantPath } from '../utils/tenantUtils.js';
 import { applyPortalTheme } from '../utils/themeUtils.js';
 import { ROLES } from '../constants/roles.js';
-import { getPlatformConfig } from '../services/platformConfigService.js';
-import { savePlatformConfig } from '../services/platformConfigService.js';
+import {
+  getDefaultPlatformConfig,
+  getPlatformConfig,
+  savePlatformConfig,
+} from '../services/platformConfigService.js';
 import { DEFAULT_PORTAL_CONFIG } from '../data/defaultPortalConfig.js';
 import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js';
 
@@ -156,21 +159,23 @@ export function PortalConfigProvider({ children, user = null }) {
 
   useEffect(() => {
     listSchoolsAdmin().then(setSchools).catch(() => setSchools([]));
-    getPlatformConfig().then(setPlatform).catch(() => setPlatform(null));
+    getPlatformConfig()
+      .then(setPlatform)
+      .catch((err) => {
+        console.warn('[PortalConfig] Platform config unavailable, using defaults:', err?.message);
+        setPlatform(getDefaultPlatformConfig());
+      });
   }, []);
 
   useEffect(() => {
     if (isPlatformPublic) {
-      if (!platform) {
-        setLoading(true);
-        return;
-      }
+      const activePlatform = platform ?? getDefaultPlatformConfig();
       setConfig(null);
-      applyPlatformBranding(platform);
+      applyPlatformBranding(activePlatform);
       if (isPlatformEnrollment) {
         applyPortalTheme(
-          platform.theme || DEFAULT_PORTAL_CONFIG.theme,
-          platform.enrollmentTheme || DEFAULT_PORTAL_CONFIG.enrollmentTheme,
+          activePlatform.theme || DEFAULT_PORTAL_CONFIG.theme,
+          activePlatform.enrollmentTheme || DEFAULT_PORTAL_CONFIG.enrollmentTheme,
         );
       }
       setLoading(false);
