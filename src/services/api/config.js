@@ -22,6 +22,43 @@ export function normalizeApiBaseUrl(raw) {
 
 const RAW_API_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL || '');
 
+function isLocalhostHost(hostname) {
+  const h = (hostname ?? '').toLowerCase();
+  return h === 'localhost' || h === '127.0.0.1';
+}
+
+function apiUrlPointsToLocalhost(apiUrl) {
+  if (!apiUrl) return false;
+  try {
+    return isLocalhostHost(new URL(apiUrl).hostname);
+  } catch {
+    return /localhost|127\.0\.0\.1/i.test(apiUrl);
+  }
+}
+
+/** In dev, rewrite localhost API URL when the app is opened via LAN IP. */
+function rewriteApiUrlForLanDev(apiUrl) {
+  if (!import.meta.env.DEV || typeof window === 'undefined' || !apiUrl) return apiUrl;
+  if (!apiUrlPointsToLocalhost(apiUrl)) return apiUrl;
+
+  const browserHost = window.location.hostname;
+  if (isLocalhostHost(browserHost)) return apiUrl;
+
+  try {
+    const parsed = new URL(apiUrl);
+    const port = parsed.port || '8081';
+    const rewritten = `${parsed.protocol}//${browserHost}:${port}${parsed.pathname}${parsed.search}`;
+    console.warn(
+      '[SchoolBridge] VITE_API_URL points at localhost but the app is open on',
+      `${browserHost}; rewriting API base to`,
+      rewritten,
+    );
+    return rewritten;
+  } catch {
+    return apiUrl;
+  }
+}
+
 /**
  * True when the browser host is a tenant subdomain (e.g. ankits-workspace.localhost).
  */
@@ -71,7 +108,7 @@ export function resolveTenantSlug() {
  * Uses VITE_API_URL when set; in production derives tenant API subdomain.
  */
 export function resolveApiBaseUrl() {
-  if (RAW_API_URL) return RAW_API_URL;
+  if (RAW_API_URL) return rewriteApiUrlForLanDev(RAW_API_URL);
 
   if (isProductionMode()) {
     const tenant = resolveTenantSlug();
