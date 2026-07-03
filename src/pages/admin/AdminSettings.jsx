@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Bell, Calendar, IndianRupee, Save, Settings } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Bell, Calendar, GraduationCap, IndianRupee, Save, Settings, Tv } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Input from '../../components/ui/Input.jsx';
@@ -21,12 +22,31 @@ import {
 } from '../../services/settingsService.js';
 import { calculateTotal } from '../../data/mockFees.js';
 import '../../styles/admin-modules.css';
+import '../../styles/class-management.css';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Settings },
+  { id: 'classes', label: 'Class & Fees', icon: GraduationCap, href: '/admin/class-management' },
   { id: 'fees', label: 'Fee Structures', icon: IndianRupee },
   { id: 'notifications', label: 'Notifications', icon: Bell },
 ];
+
+function ClassManagementHubCard() {
+  return (
+    <div className="admin-settings-hub">
+      <Link to="/admin/class-management" className="admin-settings-hub-card">
+        <GraduationCap size={22} />
+        <h3>Class &amp; Fees Management</h3>
+        <p>Add daycare classes, assign teachers, and define class-wise fee structures.</p>
+      </Link>
+      <Link to="/admin/albums" className="admin-settings-hub-card">
+        <Tv size={22} />
+        <h3>Class Albums &amp; TV Playback</h3>
+        <p>Manage class album codes for TV slideshows and classroom media.</p>
+      </Link>
+    </div>
+  );
+}
 
 const FEE_FIELDS = [
   { key: 'admissionFee', label: 'Admission Fee' },
@@ -74,17 +94,26 @@ function ToggleRow({ label, description, checked, onChange }) {
 export default function AdminSettings() {
   const { user, isDemoSession } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [tab, setTab] = useState('general');
   const [settings, setSettings] = useState(null);
   const [feeStructures, setFeeStructures] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [editFee, setEditFee] = useState(null);
   const [feeForm, setFeeForm] = useState({});
 
   const load = async () => {
-    const [s, fees] = await Promise.all([getSchoolSettings(), getFeeStructures()]);
-    setSettings(s);
-    setFeeStructures(fees);
+    setLoadError(null);
+    try {
+      const [s, fees] = await Promise.all([getSchoolSettings(), getFeeStructures()]);
+      setSettings(s);
+      setFeeStructures(fees);
+    } catch {
+      setLoadError('Failed to load school settings.');
+      setSettings(null);
+      setFeeStructures([]);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -135,7 +164,15 @@ export default function AdminSettings() {
     return (
       <DashboardLayout>
         <PageHeader title="Settings" subtitle="School configuration and fee structures." />
-        <div className="admin-modules-loading" />
+        <ClassManagementHubCard />
+        {loadError ? (
+          <div className="sb-card admin-modules-panel">
+            <p>{loadError}</p>
+            <Button variant="primary" onClick={load}>Retry</Button>
+          </div>
+        ) : (
+          <div className="admin-modules-loading" />
+        )}
       </DashboardLayout>
     );
   }
@@ -150,13 +187,21 @@ export default function AdminSettings() {
         )}
       />
 
+      <ClassManagementHubCard />
+
       <div className="admin-modules-tabs">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, label, icon: Icon, href }) => (
           <button
             key={id}
             type="button"
             className={`admin-modules-tab ${tab === id ? 'active' : ''}`}
-            onClick={() => setTab(id)}
+            onClick={() => {
+              if (href) {
+                navigate(href);
+                return;
+              }
+              setTab(id);
+            }}
           >
             <Icon size={16} />
             {label}

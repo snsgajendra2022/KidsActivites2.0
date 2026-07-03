@@ -70,12 +70,15 @@ export default function AdminTeachers() {
   const [selected, setSelected] = useState(null);
   const [classSelection, setClassSelection] = useState([]);
   const [tempPassword, setTempPassword] = useState(null);
+  const [classOptions, setClassOptions] = useState([]);
 
   const schoolId = user?.role === ROLES.SUPER_ADMIN
     ? activeSchoolId
     : (user?.schoolId || activeSchoolId);
 
-  const classOptions = useMemo(() => getAssignableClassOptions(), []);
+  useEffect(() => {
+    getAssignableClassOptions().then(setClassOptions).catch(() => setClassOptions([]));
+  }, []);
 
   const loadTeachers = useCallback(() => {
     if (!schoolId) return Promise.resolve();

@@ -2,6 +2,7 @@ import { getPhotos } from './mediaService.js';
 import { getConversationsForUser } from './chatService.js';
 import usersData from '../data/users.json';
 import { TEACHER_CLASSES, CLASS_STUDENTS } from '../data/mockPhotos.js';
+import { fetchAssignableClassOptions } from './classManagementService.js';
 import { delay } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
@@ -119,7 +120,15 @@ export async function assignTeacherClasses(teacherId, classesAssigned, user) {
 }
 
 /** Available class options for assignment UI */
-export function getAssignableClassOptions() {
+export async function getAssignableClassOptions() {
+  try {
+    const options = await fetchAssignableClassOptions();
+    if (options.length > 0) {
+      return options.map((o) => o.label);
+    }
+  } catch {
+    // fall through to mock
+  }
   return TEACHER_CLASSES.map((c) => c.name);
 }
 

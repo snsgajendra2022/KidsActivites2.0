@@ -6,6 +6,7 @@ import { ROLES } from './constants/roles.js';
 import PlatformHomeGate from './components/routing/PlatformHomeGate.jsx';
 import PlatformLoginGate from './components/routing/PlatformLoginGate.jsx';
 import Landing from './pages/public/Landing.jsx';
+import RegisterSchool from './pages/public/RegisterSchool.jsx';
 import WorkspaceNew from './pages/public/WorkspaceNew.jsx';
 import WorkspaceConfirm from './pages/public/WorkspaceConfirm.jsx';
 import Enrollment from './pages/public/Enrollment.jsx';
@@ -23,12 +24,15 @@ import ApplicationReview from './pages/admin/ApplicationReview.jsx';
 import AdminFees from './pages/admin/AdminFees.jsx';
 import AdminStudents from './pages/admin/AdminStudents.jsx';
 import AdminSettings from './pages/admin/AdminSettings.jsx';
+import AdminClassManagement from './pages/admin/AdminClassManagement.jsx';
 import AdminReports from './pages/admin/AdminReports.jsx';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs.jsx';
 import PortalSettings from './pages/admin/PortalSettings.jsx';
 import AdminUsers from './pages/admin/AdminUsers.jsx';
 import AdminTeachers from './pages/admin/AdminTeachers.jsx';
 import AdminSchools from './pages/admin/AdminSchools.jsx';
+import AdminPhotos from './pages/admin/AdminPhotos.jsx';
+import AdminAlbums from './pages/admin/AdminAlbums.jsx';
 
 import ParentDashboard from './pages/parent/ParentDashboard.jsx';
 import ParentEnrollmentStatus from './pages/parent/ParentEnrollmentStatus.jsx';
@@ -61,6 +65,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<PlatformHomeGate />} />
       <Route path="/login" element={<PlatformLoginGate />} />
+      <Route path="/register-school" element={<RegisterSchool />} />
       <Route path="/workspace/new" element={<WorkspaceNew />} />
       <Route path="/workspace/confirm" element={<WorkspaceConfirm />} />
       <Route path="/enrollment" element={<Enrollment />} />
@@ -80,11 +85,13 @@ export default function App() {
       <Route path="/admin/applications/:id" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ApplicationReview /></ProtectedRoute>} />
       <Route path="/admin/students" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminStudents /></ProtectedRoute>} />
       <Route path="/admin/fees" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdminFees /></ProtectedRoute>} />
-      <Route path="/admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><SendPhotos /></ProtectedRoute>} />
+      <Route path="/admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPhotos /></ProtectedRoute>} />
       <Route path="/admin/chat" element={<ProtectedRoute allowedRoles={CHAT_ADMIN_ROLES}><ChatPage /></ProtectedRoute>} />
       <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={NOTIFICATIONS_ROLES}><NotificationsPage title="Notifications" subtitle="Manage and view all school notifications." /></ProtectedRoute>} />
       <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><AdminReports /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminSettings /></ProtectedRoute>} />
+      <Route path="/admin/class-management" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminClassManagement /></ProtectedRoute>} />
+      <Route path="/admin/albums" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAlbums /></ProtectedRoute>} />
       <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAuditLogs /></ProtectedRoute>} />
       <Route path="/admin/portal-settings" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><PortalSettings /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminUsers /></ProtectedRoute>} />

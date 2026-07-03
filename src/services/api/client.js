@@ -66,12 +66,14 @@ async function parseResponseWithMeta(res) {
   return { data: json, meta: {} };
 }
 
-function buildHeaders(extra = {}, { auth = true } = {}) {
+function buildHeaders(extra = {}, { auth = true, skipTenantHeader = false } = {}) {
   const reqHeaders = { ...extra };
 
-  const tenantSlug = resolveTenantSlug();
-  if (tenantSlug) {
-    reqHeaders[TENANT_HEADER] = tenantSlug;
+  if (!skipTenantHeader) {
+    const tenantSlug = resolveTenantSlug();
+    if (tenantSlug) {
+      reqHeaders[TENANT_HEADER] = tenantSlug;
+    }
   }
 
   if (auth) {

@@ -69,6 +69,7 @@ export function TenantProvider({ children }) {
     const isPlatformEnrollment = pathname === '/enrollment' && !isTenantSubdomain;
     const isPlatformLogin = pathname === '/login' && !isTenantSubdomain;
     const isWorkspaceRoute = pathname.startsWith('/workspace');
+    const isRegisterSchoolRoute = pathname === '/register-school';
 
     return {
       tenantSlug,
@@ -83,7 +84,8 @@ export function TenantProvider({ children }) {
       isPlatformEnrollment,
       isPlatformLogin,
       isWorkspaceRoute,
-      isPlatformPublic: isPlatformHome || isPlatformEnrollment || isPlatformLogin || isWorkspaceRoute,
+      isRegisterSchoolRoute,
+      isPlatformPublic: isPlatformHome || isPlatformEnrollment || isPlatformLogin || isWorkspaceRoute || isRegisterSchoolRoute,
     };
   }, [pathname, effectiveSlug, isTenantSubdomain, tenantSlug, school, schoolResolving]);
 

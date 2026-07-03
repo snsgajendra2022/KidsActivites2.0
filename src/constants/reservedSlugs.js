@@ -12,6 +12,7 @@ export const RESERVED_SLUGS = new Set([
   'system-status',
   'support',
   'workspace',
+  'register-school',
 ]);
 
 export function isReservedSlug(slug) {

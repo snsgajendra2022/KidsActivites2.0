@@ -1,6 +1,6 @@
 import {
   BarChart3, Bell, CreditCard, FileText, FolderOpen, GraduationCap,
-  Home, Image, LogOut, MessageCircle, Palette, Settings, Shield, UserCheck, Users,
+  Home, Image, LogOut, MessageCircle, Palette, Settings, Shield, UserCheck, Users, ClipboardList, Tv,
 } from 'lucide-react';
 import { ROLES } from './roles.js';
 
@@ -21,6 +21,8 @@ export const ADMIN_NAV = [
   { id: 'admin_chat', to: '/admin/chat', label: 'Chat', icon: MessageCircle, iconName: 'MessageCircle' },
   { id: 'admin_notifications', to: '/admin/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell' },
   { id: 'admin_reports', to: '/admin/reports', label: 'Reports', icon: BarChart3, iconName: 'BarChart3' },
+  { id: 'admin_class_management', to: '/admin/class-management', label: 'Class Management', icon: ClipboardList, iconName: 'ClipboardList' },
+  { id: 'admin_albums', to: '/admin/albums', label: 'Class Albums', icon: Tv, iconName: 'Tv' },
   { id: 'admin_settings', to: '/admin/settings', label: 'Settings', icon: Settings, iconName: 'Settings' },
   { id: 'admin_audit_logs', to: '/admin/audit-logs', label: 'Audit Logs', icon: Shield, iconName: 'Shield' },
 ];

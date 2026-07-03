@@ -21,13 +21,68 @@ export async function getSchoolSettings() {
   return routeRequest({
     mockFn: async () => {
       await delay();
-      return getSettingsStore();
+      return normalizeSchoolSettings(getSettingsStore());
     },
-    apiFn: () => api.get('/admin/settings'),
+    apiFn: async () => normalizeSchoolSettings(await api.get('/admin/settings')),
   });
 }
 
+export function normalizeSchoolSettings(settings) {
+  if (!settings) return { ...INITIAL_SCHOOL_SETTINGS };
+  return {
+    ...INITIAL_SCHOOL_SETTINGS,
+    ...settings,
+    documents: { ...INITIAL_SCHOOL_SETTINGS.documents, ...(settings.documents || {}) },
+    notifications: { ...INITIAL_SCHOOL_SETTINGS.notifications, ...(settings.notifications || {}) },
+  };
+}
+
+export function resolveFeeBreakdownForClass(structures, classApplying) {
+  const fallback = {
+    admissionFee: 15000,
+    registrationFee: 5000,
+    tuitionFee: 42000,
+    transportFee: 10000,
+    activityFee: 3000,
+    discount: 0,
+  };
+  if (!classApplying || !structures?.length) return fallback;
+  const normalized = String(classApplying).trim().toLowerCase();
+  const match = structures.find(
+    (structure) => structure.active && String(structure.classApplying).toLowerCase() === normalized,
+  );
+  return match?.breakdown ? { ...match.breakdown } : fallback;
+}
+
+function buildSettingsPatch(settings) {
+  const {
+    academicYear,
+    admissionsOpen,
+    enrollmentDeadline,
+    admissionStartDate,
+    timezone,
+    currency,
+    lateFeePercent,
+    gracePeriodDays,
+    documents,
+    notifications,
+  } = settings;
+  return {
+    academicYear,
+    admissionsOpen,
+    enrollmentDeadline,
+    admissionStartDate,
+    timezone,
+    currency,
+    lateFeePercent,
+    gracePeriodDays,
+    documents,
+    notifications,
+  };
+}
+
 export async function updateSchoolSettings(patch, updatedBy = 'Admin') {
+  const payload = buildSettingsPatch(patch);
   return routeRequest({
     mockFn: async () => {
       await delay(300);
@@ -51,7 +106,7 @@ export async function updateSchoolSettings(patch, updatedBy = 'Admin') {
       });
       return next;
     },
-    apiFn: () => api.put('/admin/settings', patch),
+    apiFn: () => api.put('/admin/settings', payload),
   });
 }
 

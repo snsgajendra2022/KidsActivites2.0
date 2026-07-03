@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { isReservedSlug } from '../../constants/reservedSlugs.js';
 import { getSchoolBySlug, resolveSchoolBySlug } from '../../services/schoolService.js';
 import { isApiEnabled } from '../../services/api/config.js';
+import InvalidWorkspace from '../../pages/public/InvalidWorkspace.jsx';
 
 export default function SchoolRouteGuard({ children }) {
   const { schoolSlug } = useParams();
@@ -47,7 +48,7 @@ export default function SchoolRouteGuard({ children }) {
   }
 
   if (!school) {
-    return <Navigate to="/" replace />;
+    return <InvalidWorkspace />;
   }
 
   return children;

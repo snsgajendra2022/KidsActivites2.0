@@ -1,0 +1,122 @@
+.class-mgmt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.class-mgmt-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.class-mgmt-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--sb-border, #e2e8f0);
+  border-radius: 0.5rem;
+  min-width: 220px;
+}
+
+.class-mgmt-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font: inherit;
+}
+
+.class-mgmt-assignment-head {
+  margin: 1rem 0;
+}
+
+.class-mgmt-teacher-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.class-mgmt-teacher-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--sb-border, #e2e8f0);
+  border-radius: 0.5rem;
+}
+
+.class-mgmt-teacher-list li div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.class-mgmt-teacher-list span,
+.class-mgmt-teacher-list small {
+  color: var(--sb-muted, #64748b);
+  font-size: 0.875rem;
+}
+
+.class-mgmt-empty {
+  color: var(--sb-muted, #64748b);
+  padding: 1.5rem 0;
+}
+
+.admin-settings-hub {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-settings-hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--sb-border, #e2e8f0);
+  border-radius: 0.75rem;
+  background: var(--sb-surface, #fff);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.admin-settings-hub-card:hover {
+  border-color: var(--sb-primary, #4f46e5);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.08);
+}
+
+.admin-settings-hub-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.admin-settings-hub-card p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--sb-muted, #64748b);
+}
+
+.admin-link-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--sb-primary, #4f46e5);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.admin-form-span-2 {
+  grid-column: 1 / -1;
+}

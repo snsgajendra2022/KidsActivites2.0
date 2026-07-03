@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useProgressiveImageSrc } from '../../hooks/useProgressiveImageSrc.js';
 import '../../styles/photo-lightbox.css';
+import '../../styles/progressive-image.css';
 
 export default function PhotoLightbox({
   photo,
@@ -10,6 +12,15 @@ export default function PhotoLightbox({
   hasPrev,
   hasNext,
 }) {
+  const studioImage = photo?.studioImage || (photo?.variants ? photo : null);
+  const { src: progressiveSrc, loading, qualityLabel } = useProgressiveImageSrc(
+    studioImage,
+    { enabled: !!studioImage },
+  );
+  const imgSrc = studioImage
+    ? progressiveSrc
+    : (photo?.previewUrl || photo?.imageUrl);
+
   useEffect(() => {
     if (!photo) return undefined;
 
@@ -60,11 +71,16 @@ export default function PhotoLightbox({
       )}
 
       <div className="photo-lightbox__content" onClick={(e) => e.stopPropagation()}>
-        <img
-          src={photo.imageUrl}
-          alt={photo.caption || 'Classroom photo'}
-          className="photo-lightbox__image"
-        />
+        <div className="photo-lightbox__image-wrap">
+          <img
+            src={imgSrc}
+            alt={photo.caption || 'Classroom photo'}
+            className={`photo-lightbox__image progressive-image ${loading ? 'is-upgrading' : 'is-ready'}`}
+          />
+          {studioImage && loading && qualityLabel ? (
+            <span className="photo-lightbox__quality">{qualityLabel}</span>
+          ) : null}
+        </div>
         <div className="photo-lightbox__info">
           {photo.caption ? (
             <p className="photo-lightbox__caption">{photo.caption}</p>

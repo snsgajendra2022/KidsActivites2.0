@@ -18,6 +18,8 @@ import {
   verifyDocuments, confirmAdmission, createAccount,
 } from '../../services/enrollmentService.js';
 import { assignFee, verifyPayment, rejectPayment, getFeeByApplication } from '../../services/feeService.js';
+import { getFeeStructures, resolveFeeBreakdownForClass } from '../../services/settingsService.js';
+import { listClassFees, listClasses, resolveFeeBreakdownFromClassFees } from '../../services/classManagementService.js';
 import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import DocumentPreviewModal from '../../components/documents/DocumentPreviewModal.jsx';
@@ -131,6 +133,8 @@ export default function ApplicationReview() {
   const { user } = useAuth();
   const [app, setApp] = useState(null);
   const [fee, setFee] = useState(null);
+  const [feeStructures, setFeeStructures] = useState([]);
+  const [managedClasses, setManagedClasses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -142,7 +146,11 @@ export default function ApplicationReview() {
     setPageLoading(true);
     setLoadError(null);
     try {
-      const data = await getApplication(id);
+      const [data, structures, daycareClasses] = await Promise.all([
+        getApplication(id),
+        getFeeStructures(),
+        listClasses({ status: 'active' }),
+      ]);
       if (!data) {
         setApp(null);
         setFee(null);
@@ -150,6 +158,8 @@ export default function ApplicationReview() {
         return;
       }
       setApp(data);
+      setFeeStructures(structures);
+      setManagedClasses(daycareClasses);
       setFee(await getFeeByApplication(data.id));
     } catch {
       setApp(null);
@@ -365,7 +375,28 @@ export default function ApplicationReview() {
 
         <ConfirmModal open={modal === 'approve'} onClose={() => setModal(null)} onConfirm={() => act(() => approveApplication(id), 'Application approved successfully.')} title="Approve Application?" message="This will approve the application and assign fee to the parent." confirmText="Approve Application" loading={loading} />
 
-        <ConfirmModal open={modal === 'assignFee'} onClose={() => setModal(null)} onConfirm={() => act(() => assignFee(app.id, app.applicationNo, app.student?.fullName, app.student?.classApplying, { admissionFee: 15000, registrationFee: 5000, tuitionFee: 42000, transportFee: 10000, activityFee: 3000, discount: 0 }), 'Fee assigned successfully.')} title="Assign Fee?" message="Default fee structure will be assigned for this class." confirmText="Assign Fee" loading={loading} />
+        <ConfirmModal open={modal === 'assignFee'} onClose={() => setModal(null)} onConfirm={async () => {
+          const classCode = app.student?.classApplying;
+          const matchedClass = managedClasses.find(
+            (c) => c.code?.toLowerCase() === String(classCode || '').toLowerCase(),
+          );
+          let breakdown = resolveFeeBreakdownForClass(feeStructures, classCode);
+          if (matchedClass) {
+            try {
+              const classFees = await listClassFees(matchedClass.id);
+              const fromClassFees = resolveFeeBreakdownFromClassFees(classFees);
+              if (Object.keys(fromClassFees).length > 1) {
+                breakdown = fromClassFees;
+              }
+            } catch {
+              // use legacy fee structure fallback
+            }
+          }
+          return act(
+            () => assignFee(app.id, app.applicationNo, app.student?.fullName, classCode, breakdown),
+            'Fee assigned successfully.',
+          );
+        }} title="Assign Fee?" message={`Fee structure for ${app.student?.classApplying?.toUpperCase() || 'this class'} will be applied from Class Management or Settings.`} confirmText="Assign Fee" loading={loading} />
 
         <ConfirmModal open={modal === 'verifyPayment'} onClose={() => setModal(null)} onConfirm={() => act(() => verifyPayment(fee.id, user?.name || 'Admin'), 'Fee payment verified successfully.')} title="Verify Fee Payment?" message="This will mark the fee as received and allow the admission process to continue." confirmText="Verify Payment" confirmVariant="success" loading={loading} />
 

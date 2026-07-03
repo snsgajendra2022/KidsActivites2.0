@@ -41,10 +41,18 @@ function buildApplicationsReport(apps, periodDays) {
   return {
     summary: {
       total: filtered.length,
-      underReview: filtered.filter((a) => a.status === ENROLLMENT_STATUSES.UNDER_REVIEW).length,
+      underReview: filtered.filter((a) => [
+        ENROLLMENT_STATUSES.SUBMITTED,
+        ENROLLMENT_STATUSES.UNDER_REVIEW,
+        ENROLLMENT_STATUSES.CORRECTION_REQUIRED,
+        ENROLLMENT_STATUSES.DOCUMENTS_PENDING,
+        ENROLLMENT_STATUSES.DOCUMENTS_VERIFIED,
+      ].includes(a.status)).length,
       approved: filtered.filter((a) => [
         ENROLLMENT_STATUSES.FEE_PENDING,
         ENROLLMENT_STATUSES.FEE_SUBMITTED,
+        ENROLLMENT_STATUSES.FEE_VERIFIED,
+        ENROLLMENT_STATUSES.APPROVED,
         ENROLLMENT_STATUSES.ADMISSION_CONFIRMED,
         ENROLLMENT_STATUSES.ACCOUNT_CREATED,
       ].includes(a.status)).length,

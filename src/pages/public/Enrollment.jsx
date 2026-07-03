@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { getEmptyForm, saveDraft, submitApplication } from '../../services/enrollmentService.js';
+import { getEmptyForm, saveDraft, submitApplication, getAdmissionsStatus } from '../../services/enrollmentService.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useUploadStore } from '../../store/uploadStore.js';
 import {
@@ -52,6 +52,7 @@ export default function Enrollment() {
   const [loading, setLoading] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitted, setSubmitted] = useState(null);
+  const [admissions, setAdmissions] = useState({ admissionsOpen: true });
   const { toast } = useToast();
   const { user } = useAuth();
   const { portalName, school, enrollmentTheme, enrollmentForm, loading: configLoading, activeSchoolId } = usePortalConfig();
@@ -71,6 +72,12 @@ export default function Enrollment() {
       formInitialized.current = true;
     }
   }, [configLoading, formConfig, school?.name]);
+
+  useEffect(() => {
+    getAdmissionsStatus()
+      .then(setAdmissions)
+      .catch(() => setAdmissions({ admissionsOpen: true }));
+  }, []);
 
   const update = (section, field, value) => {
     setForm((prev) => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
@@ -172,6 +179,25 @@ export default function Enrollment() {
     currentStep?.notes
     && ['form', 'documents', 'declaration'].includes(currentStep?.stepType),
   );
+
+  if (!admissions.admissionsOpen) {
+    return (
+      <div className="enrollment-form-viewport" style={enrollCssVars}>
+        <NetworkBanner />
+        <div className="enrollment-form-shell">
+          <EnrollmentFormHeader portalName={portalName} school={school} />
+          <div className="sb-card enrollment-closed-card">
+            <h2>Admissions Currently Closed</h2>
+            <p>
+              This school is not accepting new enrollment applications right now.
+              {admissions.enrollmentDeadline ? ` The deadline was ${admissions.enrollmentDeadline}.` : ''}
+            </p>
+            <Link to="/" className="enrollment-btn enrollment-btn--primary">Back to Home</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (

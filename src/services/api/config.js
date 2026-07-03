@@ -11,6 +11,7 @@ export function isTenantSubdomainHost() {
   const host = window.location.hostname.toLowerCase();
   if (/^[a-z0-9][a-z0-9-]*\.localhost$/.test(host)) return true;
   if (/^[a-z0-9][a-z0-9-]*\.schoolbridge\.app$/.test(host) && !host.startsWith('www.')) return true;
+  if (/^[a-z0-9][a-z0-9-]*\.schoolbridge\.com$/.test(host) && !host.startsWith('www.')) return true;
   return false;
 }
 
@@ -22,7 +23,7 @@ export function resolveTenantSlug() {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname.toLowerCase();
 
-    const prodMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.schoolbridge\.app$/);
+    const prodMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.schoolbridge\.(?:app|com)$/);
     if (prodMatch && prodMatch[1] !== 'www') return prodMatch[1];
 
     const localMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.localhost$/);

@@ -1,13 +1,24 @@
-import { useEffect, useState } from 'react';
-import { Camera, Send, Users, User, GraduationCap } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon,
+} from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
-import SmartFileUpload from '../../components/upload/SmartFileUpload.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { sendPhotos } from '../../services/mediaService.js';
-import { getTeacherClasses, getTeacherStudents } from '../../services/teacherService.js';
+import {
+  UPLOAD_TARGETS,
+  getTeacherAlbumClasses,
+  uploadTeacherAlbumMedia,
+} from '../../services/classAlbumService.js';
+import { getTeacherStudents } from '../../services/teacherService.js';
 import '../../styles/send-photos.css';
+
+const UPLOAD_TARGET_OPTIONS = [
+  { value: UPLOAD_TARGETS.CLASS_ALBUM, label: 'Class Album', icon: ImageIcon },
+  { value: UPLOAD_TARGETS.PARENT_DIRECT, label: 'Parent Direct', icon: User },
+  { value: UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT, label: 'Album + Parents', icon: Tv },
+];
 
 const SEND_TYPES = [
   { value: 'class', label: 'Entire Class', icon: GraduationCap },
@@ -15,83 +26,100 @@ const SEND_TYPES = [
   { value: 'individual', label: 'Individual', icon: User },
 ];
 
+const SUCCESS_MESSAGES = {
+  [UPLOAD_TARGETS.CLASS_ALBUM]: 'Uploaded to class album successfully.',
+  [UPLOAD_TARGETS.PARENT_DIRECT]: 'Photo sent to parent successfully.',
+  [UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT]: 'Uploaded to class album and shared with parents successfully.',
+};
+
 export default function SendPhotos() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [classes, setClasses] = useState([]);
+  const [albumClasses, setAlbumClasses] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
+  const [uploadTarget, setUploadTarget] = useState(UPLOAD_TARGETS.CLASS_ALBUM);
   const [form, setForm] = useState({
     classId: '',
     recipients: 'class',
     studentIds: [],
     caption: '',
-    photos: null,
+    files: [],
   });
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
-    getTeacherClasses(user.id).then(setClasses);
+    getTeacherAlbumClasses().then(setAlbumClasses).catch(() => setAlbumClasses([]));
     getTeacherStudents(user.id).then(setAllStudents);
   }, [user?.id]);
 
   const students = allStudents.filter((s) => s.classId === form.classId);
-  const selectedClass = classes.find((c) => c.id === form.classId);
+  const selectedClass = albumClasses.find((c) => c.classId === form.classId);
+  const selectedAlbum = selectedClass?.album;
 
-  const toggleStudent = (id) => {
-    setForm((prev) => ({
-      ...prev,
-      studentIds: prev.studentIds.includes(id)
-        ? prev.studentIds.filter((sid) => sid !== id)
-        : [...prev.studentIds, id],
-    }));
+  const needsClass = true;
+  const needsStudent = uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
+    || (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT && form.recipients !== 'class');
+
+  const footerHint = useMemo(() => {
+    if (!form.classId && needsClass) return 'Select a class to continue';
+    if (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM) {
+      return selectedAlbum
+        ? `${selectedClass?.className} · Album ${selectedAlbum.albumCode}`
+        : selectedClass?.className;
+    }
+    if (uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT) {
+      return form.studentIds.length ? `${form.studentIds.length} parent(s) selected` : 'Select a student';
+    }
+    return `${selectedClass?.className || 'Class'} · Album + parents`;
+  }, [form, needsClass, selectedAlbum, selectedClass, uploadTarget]);
+
+  const onFilesChange = (e) => {
+    setForm((prev) => ({ ...prev, files: Array.from(e.target.files || []) }));
   };
 
-  const handlePreview = () => {
-    if (!form.classId) {
+  const validate = () => {
+    if (needsClass && !form.classId) {
       toast('Please select a class.', 'warning');
-      return;
+      return false;
     }
-    if (form.recipients !== 'class' && form.studentIds.length === 0) {
+    if (uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT && form.studentIds.length === 0) {
+      toast('Please select a student.', 'warning');
+      return false;
+    }
+    if (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT
+      && form.recipients !== 'class' && form.studentIds.length === 0) {
       toast('Please select at least one student.', 'warning');
-      return;
+      return false;
     }
-    if (!form.photos) {
-      toast('Please upload at least one photo.', 'warning');
-      return;
+    if (form.files.length === 0) {
+      toast('Please choose at least one image.', 'warning');
+      return false;
     }
-    setShowConfirm(true);
+    return true;
   };
 
   const handleSend = async () => {
     setLoading(true);
     try {
-      await sendPhotos({
-        teacherId: user?.id,
-        teacherName: user?.name,
-        className: selectedClass?.name || '',
+      const studentId = form.studentIds[0] || null;
+      await uploadTeacherAlbumMedia({
+        uploadTarget,
+        classId: form.classId || null,
+        studentId,
         caption: form.caption,
-        recipients: form.recipients,
-        studentIds: form.studentIds,
+        files: form.files,
       });
-      toast('Photos sent successfully.', 'success');
+      toast(SUCCESS_MESSAGES[uploadTarget], 'success');
       setShowConfirm(false);
-      setForm({ classId: '', recipients: 'class', studentIds: [], caption: '', photos: null });
-    } catch {
-      toast('Photo upload failed. Please try again.', 'error');
+      setForm({ classId: '', recipients: 'class', studentIds: [], caption: '', files: [] });
+    } catch (err) {
+      toast(err?.message || 'Upload failed. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
-
-  const recipientSummary = form.recipients === 'class'
-    ? 'the entire class'
-    : `${form.studentIds.length} selected parent(s)`;
-
-  const footerHint = selectedClass
-    ? `${selectedClass.name} · ${form.recipients === 'class' ? 'All parents' : `${form.studentIds.length} selected`}`
-    : 'Select a class to continue';
 
   return (
     <DashboardLayout>
@@ -102,75 +130,102 @@ export default function SendPhotos() {
               <Camera size={22} />
             </div>
             <div className="send-photos-intro__text">
-              <h1>Send Photos</h1>
-              <p>Share classroom moments with parents — pick a class, choose recipients, and upload.</p>
+              <h1>Share Classroom Media</h1>
+              <p>Upload to a class album for TV playback, send directly to parents, or both.</p>
             </div>
           </header>
 
           <div className="send-photos-card">
-            <span className="send-photos-card__label">Class &amp; recipients</span>
+            <span className="send-photos-card__label">Upload target</span>
+            <div className="send-photos-pills" role="group" aria-label="Upload target">
+              {UPLOAD_TARGET_OPTIONS.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`send-photos-pill ${uploadTarget === value ? 'is-active' : ''}`}
+                  onClick={() => setUploadTarget(value)}
+                >
+                  <Icon size={15} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            {classes.length === 0 ? (
-              <p className="send-photos-classes-empty">No classes assigned yet.</p>
-            ) : (
-              <div className="send-photos-classes">
-                {classes.map((cls) => (
-                  <button
-                    key={cls.id}
-                    type="button"
-                    className={`send-photos-class-chip ${form.classId === cls.id ? 'is-selected' : ''}`}
-                    onClick={() => setForm({
-                      ...form,
-                      classId: cls.id,
-                      studentIds: [],
-                    })}
-                  >
-                    <span className="send-photos-class-chip__name">{cls.name}</span>
-                    <span className="send-photos-class-chip__meta">{cls.studentCount} students</span>
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="send-photos-card">
+            <span className="send-photos-card__label">
+              {needsClass ? 'Class' : 'Student'}
+            </span>
 
-            {form.classId && (
-              <div className="send-photos-recipients">
-                <span className="send-photos-card__label" style={{ marginBottom: 0 }}>Send to</span>
-                <div className="send-photos-pills" role="group" aria-label="Recipient type">
-                  {SEND_TYPES.map(({ value, label, icon: Icon }) => (
+            {needsClass && (
+              albumClasses.length === 0 ? (
+                <p className="send-photos-classes-empty">No classes assigned yet.</p>
+              ) : (
+                <div className="send-photos-classes">
+                  {albumClasses.map((cls) => (
                     <button
-                      key={value}
+                      key={cls.classId}
                       type="button"
-                      className={`send-photos-pill ${form.recipients === value ? 'is-active' : ''}`}
-                      onClick={() => setForm({ ...form, recipients: value, studentIds: [] })}
+                      className={`send-photos-class-chip ${form.classId === cls.classId ? 'is-selected' : ''}`}
+                      onClick={() => setForm({ ...form, classId: cls.classId, studentIds: [] })}
                     >
-                      <Icon size={15} />
-                      {label}
+                      <span className="send-photos-class-chip__name">{cls.className}</span>
+                      {cls.album?.albumCode && (
+                        <span className="send-photos-class-chip__meta">{cls.album.albumCode}</span>
+                      )}
                     </button>
                   ))}
                 </div>
+              )
+            )}
 
-                {form.recipients !== 'class' && (
-                  <div className="send-photos-student-grid">
-                    {students.length === 0 ? (
-                      <p className="send-photos-classes-empty">No students in this class.</p>
-                    ) : (
-                      students.map((s) => (
-                        <label
-                          key={s.id}
-                          className={`send-photos-student-chip ${form.studentIds.includes(s.id) ? 'is-selected' : ''}`}
+            {needsStudent && form.classId && uploadTarget !== UPLOAD_TARGETS.CLASS_ALBUM && (
+              <div className="send-photos-recipients">
+                {uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT && (
+                  <>
+                    <span className="send-photos-card__label" style={{ marginBottom: 0 }}>Share with</span>
+                    <div className="send-photos-pills">
+                      {SEND_TYPES.map(({ value, label, icon: Icon }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={`send-photos-pill ${form.recipients === value ? 'is-active' : ''}`}
+                          onClick={() => setForm({ ...form, recipients: value, studentIds: [] })}
                         >
-                          <input
-                            type="checkbox"
-                            checked={form.studentIds.includes(s.id)}
-                            onChange={() => toggleStudent(s.id)}
-                          />
-                          <div className="send-photos-student-chip__text">
-                            <strong>{s.name}</strong>
-                            <span>{s.parentName}</span>
-                          </div>
-                        </label>
-                      ))
-                    )}
+                          <Icon size={15} />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {(uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT || form.recipients !== 'class') && (
+                  <div className="send-photos-student-grid">
+                    {students.map((s) => (
+                      <label
+                        key={s.id}
+                        className={`send-photos-student-chip ${form.studentIds.includes(s.id) ? 'is-selected' : ''}`}
+                      >
+                        <input
+                          type={uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT ? 'radio' : 'checkbox'}
+                          name="student"
+                          checked={form.studentIds.includes(s.id)}
+                          onChange={() => setForm({
+                            ...form,
+                            studentIds: uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
+                              ? [s.id]
+                              : (form.studentIds.includes(s.id)
+                                ? form.studentIds.filter((id) => id !== s.id)
+                                : [...form.studentIds, s.id]),
+                          })}
+                        />
+                        <div className="send-photos-student-chip__text">
+                          <strong>{s.name}</strong>
+                          <span>{s.parentName}</span>
+                        </div>
+                      </label>
+                    ))}
                   </div>
                 )}
               </div>
@@ -178,17 +233,16 @@ export default function SendPhotos() {
           </div>
 
           <div className="send-photos-card send-photos-upload-card send-photos-form">
-            <span className="send-photos-card__label">Photo &amp; caption</span>
-
-            <SmartFileUpload
-              fieldKey="teacherPhotos"
-              label="Upload Photos"
-              category="teacherPhoto"
-              required
-              value={form.photos}
-              onChange={(data) => setForm({ ...form, photos: data })}
+            <span className="send-photos-card__label">Media &amp; caption</span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={onFilesChange}
             />
-
+            {form.files.length > 0 && (
+              <p className="send-photos-classes-empty">{form.files.length} file(s) selected</p>
+            )}
             <div className="form-field full">
               <label className="form-label" htmlFor="photo-caption">Caption</label>
               <textarea
@@ -209,8 +263,8 @@ export default function SendPhotos() {
             <button
               type="button"
               className="send-photos-submit"
-              onClick={handlePreview}
-              disabled={loading || !form.classId}
+              onClick={() => { if (validate()) setShowConfirm(true); }}
+              disabled={loading}
             >
               <Send size={17} />
               Preview &amp; Send
@@ -223,9 +277,9 @@ export default function SendPhotos() {
         open={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleSend}
-        title="Send photos?"
-        message={`Photos will be delivered to ${recipientSummary}${selectedClass ? ` in ${selectedClass.name}` : ''}.`}
-        confirmText="Send Photos"
+        title="Upload media?"
+        message={`This will upload ${form.files.length} file(s) using the selected target.`}
+        confirmText="Upload"
         loading={loading}
       />
     </DashboardLayout>

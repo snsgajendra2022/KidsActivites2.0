@@ -107,6 +107,10 @@ export default function AdminReports() {
       ]);
       setSummary(sum);
       setReport(data);
+    } catch {
+      toast('Failed to load reports. Check that you are signed in and the API is running.', 'error');
+      setSummary(null);
+      setReport(null);
     } finally {
       setLoading(false);
     }
@@ -118,24 +122,24 @@ export default function AdminReports() {
     if (!summary) return [];
     if (tab === 'applications') {
       return [
-        { icon: FileText, label: 'Total Applications', value: summary.applications.total, variant: 'indigo' },
-        { icon: BarChart3, label: 'Under Review', value: summary.applications.underReview, variant: 'amber' },
-        { icon: FileText, label: 'Approved', value: summary.applications.approved, variant: 'emerald' },
-        { icon: FileText, label: 'Rejected', value: summary.applications.rejected, variant: 'rose' },
+        { icon: FileText, label: 'Total Applications', value: summary.applications?.total ?? 0, variant: 'indigo' },
+        { icon: BarChart3, label: 'Pending Review', value: summary.applications?.underReview ?? 0, variant: 'amber' },
+        { icon: FileText, label: 'In Progress', value: summary.applications?.approved ?? 0, variant: 'emerald' },
+        { icon: FileText, label: 'Rejected', value: summary.applications?.rejected ?? 0, variant: 'rose' },
       ];
     }
     if (tab === 'fees') {
       return [
-        { icon: IndianRupee, label: 'Fee Records', value: summary.fees.totalRecords, variant: 'indigo' },
-        { icon: IndianRupee, label: 'Collected', value: `₹${summary.fees.collected?.toLocaleString()}`, variant: 'emerald' },
-        { icon: IndianRupee, label: 'Pending', value: `₹${summary.fees.pending?.toLocaleString()}`, variant: 'amber' },
-        { icon: IndianRupee, label: 'Verified', value: summary.fees.verified, variant: 'sky' },
+        { icon: IndianRupee, label: 'Fee Records', value: summary.fees?.totalRecords ?? 0, variant: 'indigo' },
+        { icon: IndianRupee, label: 'Collected', value: `₹${(summary.fees?.collected ?? 0).toLocaleString()}`, variant: 'emerald' },
+        { icon: IndianRupee, label: 'Pending', value: `₹${(summary.fees?.pending ?? 0).toLocaleString()}`, variant: 'amber' },
+        { icon: IndianRupee, label: 'Verified', value: summary.fees?.verified ?? 0, variant: 'sky' },
       ];
     }
     return [
-      { icon: MessageSquare, label: 'Photos Shared', value: summary.communications.photosShared, variant: 'indigo' },
-      { icon: MessageSquare, label: 'Notifications', value: summary.communications.notificationsSent, variant: 'amber' },
-      { icon: MessageSquare, label: 'Classes Reached', value: summary.communications.classesReached, variant: 'emerald' },
+      { icon: MessageSquare, label: 'Photos Shared', value: summary.communications?.photosShared ?? 0, variant: 'indigo' },
+      { icon: MessageSquare, label: 'Notifications', value: summary.communications?.notificationsSent ?? 0, variant: 'amber' },
+      { icon: MessageSquare, label: 'Classes Reached', value: summary.communications?.classesReached ?? 0, variant: 'emerald' },
     ];
   }, [summary, tab]);
 

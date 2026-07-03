@@ -1,7 +1,7 @@
 import {
   BarChart3, Bell, BookOpen, Calendar, Circle, CreditCard, FileText, FolderOpen,
   GraduationCap, HelpCircle, Home, Image, LayoutDashboard, Link, MessageCircle,
-  Palette, Settings, Shield, Star, Users, ClipboardList, Megaphone,
+  Palette, Settings, Shield, Star, Users, ClipboardList, Megaphone, Tv,
 } from 'lucide-react';
 
 /** Lucide icon name → component (sidebar-safe icons only). */
@@ -27,6 +27,7 @@ export const MENU_ICON_MAP = {
   Star,
   ClipboardList,
   Megaphone,
+  Tv,
   Circle,
 };
 

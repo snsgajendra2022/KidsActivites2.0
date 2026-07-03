@@ -25,6 +25,17 @@ async function mockGetApplications(filters = {}) {
   return apps;
 }
 
+export async function getAdmissionsStatus() {
+  return routeRequest({
+    mockFn: async () => ({
+      admissionsOpen: true,
+      enrollmentDeadline: '2026-07-31',
+      admissionStartDate: '2026-04-01',
+    }),
+    apiFn: () => api.get('/enrollment/admissions', undefined, { auth: false }),
+  });
+}
+
 export async function getApplications(filters = {}) {
   return routeRequest({
     mockFn: () => mockGetApplications(filters),
