@@ -157,15 +157,24 @@ export function PortalConfigProvider({ children, user = null }) {
     }
   }, []);
 
+  const isTenantContext = isTenantRoute || isTenantSubdomain;
+
   useEffect(() => {
-    listSchoolsAdmin().then(setSchools).catch(() => setSchools([]));
-    getPlatformConfig()
-      .then(setPlatform)
-      .catch((err) => {
-        console.warn('[PortalConfig] Platform config unavailable, using defaults:', err?.message);
-        setPlatform(getDefaultPlatformConfig());
-      });
-  }, []);
+    if (isTenantContext) {
+      return;
+    }
+    if (isAdminRoute) {
+      listSchoolsAdmin().then(setSchools).catch(() => setSchools([]));
+    }
+    if (isPlatformPublic || isAdminRoute) {
+      getPlatformConfig()
+        .then(setPlatform)
+        .catch((err) => {
+          console.warn('[PortalConfig] Platform config unavailable, using defaults:', err?.message);
+          setPlatform(getDefaultPlatformConfig());
+        });
+    }
+  }, [isTenantContext, isAdminRoute, isPlatformPublic]);
 
   useEffect(() => {
     if (isPlatformPublic) {
