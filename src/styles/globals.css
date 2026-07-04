@@ -1,0 +1,126 @@
+/* SchoolBridge — global base styles */
+
+body {
+  background: var(--sb-surface);
+  color: var(--sb-on-surface);
+  font-family: var(--sb-font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display,
+.sb-heading {
+  font-family: var(--sb-font-heading);
+}
+
+/* Page structure */
+.sb-page {
+  min-height: 100vh;
+  background: var(--sb-surface);
+  color: var(--sb-on-surface);
+}
+
+.sb-page--warm {
+  background: linear-gradient(180deg, var(--sb-cream) 0%, var(--sb-ivory) 40%);
+}
+
+.sb-section {
+  padding: 3.5rem 1rem;
+}
+
+@media (min-width: 768px) {
+  .sb-section {
+    padding: var(--sb-section-gap) 2.5rem;
+  }
+}
+
+.sb-section--cream {
+  background: var(--sb-cream);
+}
+
+.sb-section--navy {
+  background: var(--sb-navy);
+  color: var(--sb-on-primary);
+}
+
+.sb-container {
+  width: 100%;
+  max-width: var(--sb-container-max);
+  margin-inline: auto;
+}
+
+.sb-eyebrow {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sb-gold);
+  margin-bottom: 0.75rem;
+}
+
+.sb-section--navy .sb-eyebrow {
+  color: color-mix(in srgb, var(--sb-gold) 85%, white);
+}
+
+.sb-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: min(85vh, 42rem);
+  display: flex;
+  align-items: center;
+}
+
+.sb-hero__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--sb-navy) 92%, transparent) 0%,
+    color-mix(in srgb, var(--sb-deep-blue) 55%, transparent) 50%,
+    color-mix(in srgb, var(--sb-navy) 30%, transparent) 100%
+  );
+}
+
+.sb-hero__content {
+  position: relative;
+  z-index: 1;
+}
+
+.sb-surface {
+  background-color: var(--sb-surface);
+}
+
+.sb-surface-warm {
+  background-color: var(--sb-cream);
+}
+
+/* Theme utilities */
+.text-brand { color: var(--sb-primary); }
+.text-accent { color: var(--sb-gold); }
+.text-muted { color: var(--sb-muted); }
+.bg-brand { background-color: var(--sb-primary); }
+.bg-accent { background-color: var(--sb-gold); }
+.bg-brand-muted { background-color: var(--sb-surface-container-high); }
+.bg-brand-soft { background-color: color-mix(in srgb, var(--sb-navy) 6%, #fff); }
+.border-brand { border-color: var(--sb-primary); }
+.text-on-primary { color: var(--sb-on-primary); }
+.text-on-primary-muted { color: var(--sb-on-primary-muted); }
+.text-on-primary-subtle { color: var(--sb-on-primary-subtle); }
+
+.transition-premium {
+  transition: all var(--sb-transition);
+}
+
+.hero-gradient {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--sb-navy) 92%, transparent) 0%,
+    color-mix(in srgb, var(--sb-deep-blue) 50%, transparent) 55%,
+    transparent 100%
+  );
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  line-height: 1;
+}

@@ -2,9 +2,15 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../../services/authService.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import { useTenant } from '../../context/TenantContext.jsx';
+import AuthSplitLayout from '../../components/layout/AuthSplitLayout.jsx';
+import FormPanel from '../../components/ui/FormPanel.jsx';
+import PremiumCard from '../../components/ui/PremiumCard.jsx';
+import Button from '../../components/ui/Button.jsx';
 
 export default function ResetPassword() {
   const { loginPath, tenantPath } = useTenantPath();
+  const { tenantSlug } = useTenant();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const [password, setPassword] = useState('');
@@ -37,43 +43,71 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div style={{ maxWidth: 420, margin: '4rem auto', padding: '1rem' }}>
-        <h1>Invalid link</h1>
-        <p>This reset link is missing or invalid.</p>
-        <Link to={tenantPath('/forgot-password')}>Request a new link</Link>
-      </div>
+      <AuthSplitLayout
+        title="Invalid link"
+        subtitle="This reset link is missing or has expired."
+        workspaceSlug={tenantSlug}
+        footerLink={{ to: tenantPath('/forgot-password'), label: 'Request a new link' }}
+      >
+        <PremiumCard className="text-center">
+          <p className="text-sm text-muted">
+            <Link to={tenantPath('/forgot-password')} className="font-semibold text-accent hover:underline">
+              Request a new reset link
+            </Link>
+          </p>
+        </PremiumCard>
+      </AuthSplitLayout>
     );
   }
 
   return (
-    <div className="auth-page" style={{ maxWidth: 420, margin: '4rem auto', padding: '1rem' }}>
-      <h1>Reset password</h1>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="password">New password</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-        />
-        <label htmlFor="confirm">Confirm password</label>
-        <input
-          id="confirm"
-          type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-          minLength={8}
-        />
-        {error && <p className="form-error">{error}</p>}
-        {message && <p className="form-success">{message}</p>}
-        <button type="submit" disabled={loading}>
-          {loading ? 'Saving…' : 'Update password'}
-        </button>
-      </form>
-      <p><Link to={loginPath}>Back to login</Link></p>
-    </div>
+    <AuthSplitLayout
+      title="Reset password"
+      subtitle="Choose a new password for your account."
+      workspaceSlug={tenantSlug}
+      visualTitle="Set a new password"
+      visualSubtitle="Use at least 8 characters. Avoid reusing passwords from other services."
+      footerLink={{ to: loginPath, label: 'Back to login' }}
+    >
+      <FormPanel>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="form-field">
+            <label className="form-label" htmlFor="password">New password</label>
+            <input
+              id="password"
+              className="sb-input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="form-field">
+            <label className="form-label" htmlFor="confirm">Confirm password</label>
+            <input
+              id="confirm"
+              className="sb-input"
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+          </div>
+          {error && (
+            <div className="sb-alert sb-alert--error" role="alert">{error}</div>
+          )}
+          {message && (
+            <div className="sb-alert sb-alert--success" role="status">{message}</div>
+          )}
+          <Button type="submit" variant="primary" size="lg" loading={loading} disabled={loading} className="sb-button-primary w-full">
+            Update password
+          </Button>
+        </form>
+      </FormPanel>
+    </AuthSplitLayout>
   );
 }

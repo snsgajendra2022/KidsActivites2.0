@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getPhotos } from '../../services/mediaService.js';
+import { getParentDashboard } from '../../services/parentService.js';
 import { FEATURED_HIGHLIGHT } from '../../data/mockPhotos.js';
 import '../../styles/parent-photos.css';
 
@@ -72,10 +73,9 @@ function getPhotoGrade(photo) {
   return photo.grade || photo.className || '';
 }
 
-/** Parent's child id for photo filtering — demo maps parent to aarav */
-function getStudentIdForParent(userId) {
-  if (userId === 'usr-parent' || userId === 'usr-student') return 'aarav';
-  return null;
+/** Parent's child application ids for photo filtering */
+function getChildApplicationIds(children = []) {
+  return children.map((c) => c.applicationId).filter(Boolean);
 }
 
 function GalleryCard({ photo, onOpen }) {
@@ -131,11 +131,26 @@ export default function ParentPhotos() {
   const [visibleGroups, setVisibleGroups] = useState(INITIAL_VISIBLE_GROUPS);
 
   useEffect(() => {
-    const studentId = getStudentIdForParent(user?.id);
-    getPhotos(studentId ? { studentId } : {})
+    if (!user?.id) return;
+    getParentDashboard(user.id, user.schoolId, user)
+      .then(async (dashboard) => {
+        const childIds = getChildApplicationIds(dashboard?.children);
+        if (childIds.length === 0) {
+          return [];
+        }
+        const photosByChild = await Promise.all(
+          childIds.map((studentId) => getPhotos({ studentId }).catch(() => [])),
+        );
+        const merged = new Map();
+        photosByChild.flat().forEach((photo) => {
+          if (photo?.id) merged.set(photo.id, photo);
+        });
+        return Array.from(merged.values());
+      })
       .then(setPhotos)
+      .catch(() => setPhotos([]))
       .finally(() => setLoading(false));
-  }, [user?.id]);
+  }, [user?.id, user?.schoolId]);
 
   const sortedPhotos = useMemo(
     () => [...photos].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)),

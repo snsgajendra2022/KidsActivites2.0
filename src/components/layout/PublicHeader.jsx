@@ -31,7 +31,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
       className={`relative z-50 shrink-0 border-b backdrop-blur-md transition-premium ${
         glass
           ? 'border-white/20 bg-white/80'
-          : 'border-black/5 bg-white/90'
+          : 'border-[var(--sb-border)] bg-[var(--sb-ivory)]/95'
       } ${loginMobile ? 'login-public-header' : ''}`}
     >
       <div className={`mx-auto w-full max-w-screen-2xl ${loginMobile ? 'login-header-inner' : ''}`}>
@@ -93,7 +93,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
               {!onLoginPage && (
                 <Link
                   to={loginPath}
-                  className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill bg-brand text-sm font-semibold transition-premium hover:opacity-90"
+                  className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill bg-brand text-sm font-semibold transition-premium hover:opacity-90 border border-[color-mix(in_srgb,var(--sb-gold)_30%,transparent)]"
                 >
                   Login
                 </Link>

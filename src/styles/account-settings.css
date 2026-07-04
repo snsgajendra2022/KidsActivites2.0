@@ -16,10 +16,6 @@
 
 .account-settings-profile {
   overflow: hidden;
-  border-radius: 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(9, 20, 38, 0.04);
 }
 
 .account-settings-profile__hero {
@@ -110,11 +106,11 @@
 }
 
 .account-settings-panel {
-  border-radius: 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(9, 20, 38, 0.04);
   overflow: hidden;
+}
+
+.account-settings-panel-form {
+  display: block;
 }
 
 .account-settings-panel__head {
@@ -198,9 +194,9 @@
   box-sizing: border-box;
   min-height: 2.75rem;
   padding: 0 0.875rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: var(--sb-surface, #f8f9ff);
+  border-radius: var(--sb-radius);
+  border: 1px solid var(--sb-border);
+  background: #fff;
   font-size: 0.875rem;
   color: var(--sb-on-surface);
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -208,8 +204,8 @@
 
 .account-settings-field input:focus {
   outline: none;
-  border-color: var(--sb-secondary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
+  border-color: var(--sb-gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-gold) 20%, transparent);
 }
 
 .account-settings-field input:disabled {

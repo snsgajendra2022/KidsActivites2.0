@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Baby, ClipboardCheck, FileCheck, Play, Users, Lock, ArrowLeft,
+} from 'lucide-react';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getEmptyForm, saveDraft, submitApplication, getAdmissionsStatus } from '../../services/enrollmentService.js';
@@ -18,14 +21,36 @@ import {
   DynamicReviewStep,
 } from '../../components/enrollment/DynamicEnrollmentFields.jsx';
 import NetworkBanner from '../../components/layout/NetworkBanner.jsx';
+import PublicHero from '../../components/ui/PublicHero.jsx';
+import ProcessJourney from '../../components/ui/ProcessJourney.jsx';
+import PremiumCard from '../../components/ui/PremiumCard.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { getEnrollmentSteps, validateDynamicStep } from '../../utils/enrollmentFormUtils.js';
 import { DEFAULT_ENROLLMENT_FORM } from '../../data/defaultEnrollmentFormConfig.js';
+import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import '../../styles/enrollment-form.css';
 import { enrollmentThemeToCssVars } from '../../constants/enrollmentTheme.js';
 
 const SCHOOL_NAME_FIELD_KEYS = new Set(['schoolName', 'applyingSchool', 'preferredSchool']);
+
+const ENROLLMENT_JOURNEY = [
+  { icon: Play, title: 'Start Application', description: 'Begin your admission application online.' },
+  { icon: Users, title: 'Family Details', description: 'Parent and guardian contact information.' },
+  { icon: Baby, title: 'Child Information', description: 'Student details, address, and academics.' },
+  { icon: FileCheck, title: 'Documents', description: 'Upload required certificates and ID proofs.' },
+  { icon: ClipboardCheck, title: 'Review & Submit', description: 'Declaration, signature, and final review.' },
+];
+
+function resolveJourneyIndex(stepConfig, stepNum) {
+  if (!stepConfig || stepNum <= 1) return 0;
+  const type = stepConfig.stepType;
+  if (type === 'documents') return 3;
+  if (type === 'declaration' || type === 'review') return 4;
+  if (stepConfig.sectionKey === 'parent') return 1;
+  return 2;
+}
 
 function applySchoolNameDefaults(emptyForm, formConfig, schoolName) {
   if (!schoolName?.trim()) return emptyForm;
@@ -53,14 +78,17 @@ export default function Enrollment() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitted, setSubmitted] = useState(null);
   const [admissions, setAdmissions] = useState({ admissionsOpen: true });
+  const [draftSavedAt, setDraftSavedAt] = useState(null);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { portalName, school, enrollmentTheme, enrollmentForm, loading: configLoading, activeSchoolId } = usePortalConfig();
+  const { portalName, school, branding, enrollmentTheme, enrollmentForm, loading: configLoading, activeSchoolId } = usePortalConfig();
+  const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
   const enrollCssVars = enrollmentThemeToCssVars(enrollmentTheme);
   const formConfig = enrollmentForm?.steps?.length ? enrollmentForm : DEFAULT_ENROLLMENT_FORM;
   const steps = useMemo(() => getEnrollmentSteps(formConfig), [formConfig]);
   const totalSteps = steps.length;
   const currentStep = steps[step - 1];
+  const journeyIndex = resolveJourneyIndex(currentStep, step);
   const formInitialized = useRef(false);
 
   const [form, setForm] = useState(() => getEmptyForm(formConfig));
@@ -132,6 +160,7 @@ export default function Enrollment() {
     try {
       const saved = await saveDraft(form, draftId, enrollmentMeta);
       setDraftId(saved.id);
+      setDraftSavedAt(Date.now());
       toast('Application saved successfully.', 'success');
     } catch {
       toast('Unable to save draft. Please try again.', 'error');
@@ -167,6 +196,7 @@ export default function Enrollment() {
       try {
         const saved = await saveDraft(form, draftId, enrollmentMeta);
         setDraftId(saved.id);
+        setDraftSavedAt(Date.now());
       } catch {
         // Continue — submit will persist full form
       }
@@ -182,18 +212,33 @@ export default function Enrollment() {
 
   if (!admissions.admissionsOpen) {
     return (
-      <div className="enrollment-form-viewport" style={enrollCssVars}>
+      <div className="enrollment-form-viewport enrollment-form-viewport--premium" style={enrollCssVars}>
         <NetworkBanner />
+        <PublicHero
+          className="enrollment-hero enrollment-hero--compact"
+          imageUrl={heroImage}
+          eyebrow="Admissions Closed"
+          title="Enrollment Unavailable"
+          subtitle={`${school?.name || portalName} is not accepting new applications at this time.`}
+        />
         <div className="enrollment-form-shell">
-          <EnrollmentFormHeader portalName={portalName} school={school} />
-          <div className="sb-card enrollment-closed-card">
-            <h2>Admissions Currently Closed</h2>
-            <p>
-              This school is not accepting new enrollment applications right now.
-              {admissions.enrollmentDeadline ? ` The deadline was ${admissions.enrollmentDeadline}.` : ''}
-            </p>
-            <Link to="/" className="enrollment-btn enrollment-btn--primary">Back to Home</Link>
-          </div>
+          <PremiumCard className="enrollment-closed-card mx-auto max-w-lg text-center" goldAccent>
+            <EmptyState
+              icon={Lock}
+              title="Admissions Currently Closed"
+              description={(
+                <>
+                  This school is not accepting new enrollment applications right now.
+                  {admissions.enrollmentDeadline ? ` The deadline was ${admissions.enrollmentDeadline}.` : ''}
+                </>
+              )}
+              action={(
+                <Link to="/" className="sb-button-primary sb-btn-pill mt-4 inline-flex">
+                  Back to Home
+                </Link>
+              )}
+            />
+          </PremiumCard>
         </div>
       </div>
     );
@@ -201,27 +246,27 @@ export default function Enrollment() {
 
   if (submitted) {
     return (
-      <div className="enrollment-form-viewport" style={enrollCssVars}>
+      <div className="enrollment-form-viewport enrollment-form-viewport--premium" style={enrollCssVars}>
         <NetworkBanner />
         <div className="enrollment-form-wrap flex items-center">
-          <div className="enrollment-success-card">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl text-green-700">✓</div>
-            <h1 className="mb-2 text-2xl font-black uppercase text-[#1B2E4B]">Application Submitted</h1>
-            <p className="mb-6 text-sm text-gray-600">
+          <PremiumCard className="enrollment-success-card" elevated goldAccent>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--sb-forest)_12%,white)] text-2xl text-[var(--sb-forest)]">✓</div>
+            <h1 className="mb-2 font-display text-2xl font-bold text-brand">Application Submitted</h1>
+            <p className="mb-6 text-sm text-muted">
               Your enrollment application has been sent to the school admin for verification.
             </p>
-            <div className="mb-6 border border-gray-200 bg-gray-50 p-4 text-left text-sm">
+            <div className="mb-6 rounded-lg border border-[var(--sb-border)] bg-[var(--sb-cream)] p-4 text-left text-sm">
               <div className="mb-2"><strong>Application Number:</strong> {submitted.applicationNo}</div>
               <div className="mb-2"><strong>Student:</strong> {submitted.student?.fullName}</div>
               <StatusBadge variant="success">{submitted.status}</StatusBadge>
             </div>
             <div className="flex flex-wrap justify-center gap-3">
-              <Link to="/" className="enrollment-btn enrollment-btn--outline">Back to Home</Link>
-              <Link to={user?.role === 'parent' ? '/parent/dashboard' : '/login'} className="enrollment-btn enrollment-btn--primary">
+              <Link to="/" className="sb-button-secondary">Back to Home</Link>
+              <Link to={user?.role === 'parent' ? '/parent/dashboard' : '/login'} className="sb-button-primary">
                 {user?.role === 'parent' ? 'Go to Parent Dashboard' : 'Login to Track Status'}
               </Link>
             </div>
-          </div>
+          </PremiumCard>
         </div>
       </div>
     );
@@ -268,35 +313,60 @@ export default function Enrollment() {
   };
 
   return (
-    <div className="enrollment-form-viewport" style={enrollCssVars}>
+    <div className="enrollment-form-viewport enrollment-form-viewport--premium" style={enrollCssVars}>
       <NetworkBanner />
+
+      <PublicHero
+        className="enrollment-hero enrollment-hero--compact"
+        imageUrl={heroImage}
+        eyebrow={school?.academicYear ? `Admissions ${school.academicYear}` : 'Online Admissions'}
+        title="Student Enrollment"
+        subtitle={`Apply to ${school?.name || portalName}. Your progress is saved automatically as you complete each step.`}
+      />
+
+      <ProcessJourney
+        className="enrollment-journey !py-6 md:!py-8"
+        compact
+        steps={ENROLLMENT_JOURNEY}
+        activeIndex={journeyIndex}
+      />
 
       <div className="enrollment-form-wrap">
         <div className="enrollment-page-container">
           <EnrollmentFormHeader portalName={portalName} school={school} />
 
           <main className="enrollment-form-main">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <Link to="/" className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-[#1B2E4B]">
-                ← Back to Home
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <Link to="/" className="enrollment-back-link inline-flex items-center gap-1">
+                <ArrowLeft size={14} />
+                Back to Home
               </Link>
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={loading}
-                className="enrollment-btn enrollment-btn--outline !py-2 !px-4 !text-[10px]"
-              >
-                Save Draft
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {(draftId || draftSavedAt) && (
+                  <span className="enrollment-draft-badge" title="Your application draft is stored securely">
+                    {loading ? 'Saving draft…' : 'Draft saved'}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={loading}
+                  className="sb-button-secondary enrollment-save-draft-btn"
+                >
+                  Save Draft
+                </button>
+              </div>
             </div>
 
             <EnrollmentFormStepper currentStep={step} total={totalSteps} />
             <EnrollmentSectionHeader step={step} title={currentStep?.title || 'Enrollment'} />
 
             <div className={`enrollment-step-grid ${showNotesSidebar ? 'enrollment-step-grid--with-notes' : ''}`}>
-              <div className="enrollment-form-fields">
-                {renderStepContent()}
-              </div>
+              <PremiumCard className="enrollment-form-section-card" goldAccent>
+                <div className="enrollment-form-fields">
+                  {renderStepContent()}
+                </div>
+              </PremiumCard>
 
               {showNotesSidebar && (
                 <EnrollmentNotesPanel>{currentStep.notes}</EnrollmentNotesPanel>
@@ -306,24 +376,24 @@ export default function Enrollment() {
             <div className="enrollment-form-actions">
               <div className="enrollment-form-actions__left">
                 {step > 1 && (
-                  <button type="button" onClick={back} className="enrollment-btn enrollment-btn--outline">
+                  <button type="button" onClick={back} className="sb-button-secondary">
                     Back
                   </button>
                 )}
-                <button type="button" onClick={handleSaveDraft} disabled={loading} className="enrollment-btn enrollment-btn--outline">
+                <button type="button" onClick={handleSaveDraft} disabled={loading} className="sb-button-secondary">
                   Save Draft
                 </button>
               </div>
 
               {step < totalSteps ? (
-                <button type="button" onClick={next} className="enrollment-btn enrollment-btn--primary">
+                <button type="button" onClick={next} className="sb-button-primary">
                   Continue →
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => { if (validateStep()) setShowSubmitModal(true); }}
-                  className="enrollment-btn enrollment-btn--accent"
+                  className="sb-button-gold"
                 >
                   Submit Application
                 </button>

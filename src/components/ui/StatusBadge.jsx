@@ -1,12 +1,12 @@
 import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
 
 const variants = {
-  default: 'bg-stone-100/80 text-slate-600 ring-stone-200/60',
-  primary: 'bg-slate-100/80 text-slate-600 ring-slate-200/60',
-  success: 'bg-emerald-50/80 text-emerald-600 ring-emerald-100/80',
-  warning: 'bg-amber-50/80 text-amber-600 ring-amber-100/80',
-  danger: 'bg-rose-50/80 text-rose-600 ring-rose-100/80',
-  info: 'bg-sky-50/80 text-sky-600 ring-sky-100/80',
+  default: 'sb-status-badge sb-status-badge--default',
+  primary: 'sb-status-badge sb-status-badge--default',
+  success: 'sb-status-badge sb-status-badge--success',
+  warning: 'sb-status-badge sb-status-badge--warning',
+  danger: 'sb-status-badge sb-status-badge--danger',
+  info: 'sb-status-badge sb-status-badge--info',
 };
 
 const FEE_STATUS_LABELS = {
@@ -47,7 +47,7 @@ export default function StatusBadge({ children, status, variant, className = '' 
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${variants[resolvedVariant] || variants.default} ${className}`}
+      className={`${variants[resolvedVariant] || variants.default} ${className}`}
     >
       {label}
     </span>

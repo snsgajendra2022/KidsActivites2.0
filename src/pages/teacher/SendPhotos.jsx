@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon,
+  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { ApiError } from '../../services/api/client.js';
 import {
   UPLOAD_TARGETS,
   getTeacherAlbumClasses,
@@ -54,8 +55,15 @@ export default function SendPhotos() {
     getTeacherStudents(user.id).then(setAllStudents);
   }, [user?.id]);
 
+  const activeAlbumClasses = useMemo(
+    () => albumClasses.filter(
+      (c) => !c.classStatus || c.classStatus.toLowerCase() === 'active',
+    ),
+    [albumClasses],
+  );
+
   const students = allStudents.filter((s) => s.classId === form.classId);
-  const selectedClass = albumClasses.find((c) => c.classId === form.classId);
+  const selectedClass = activeAlbumClasses.find((c) => c.classId === form.classId);
   const selectedAlbum = selectedClass?.album;
 
   const needsClass = true;
@@ -115,7 +123,11 @@ export default function SendPhotos() {
       setShowConfirm(false);
       setForm({ classId: '', recipients: 'class', studentIds: [], caption: '', files: [] });
     } catch (err) {
-      toast(err?.message || 'Upload failed. Please try again.', 'error');
+      if (err instanceof ApiError && err.code === 'CLASS_INACTIVE') {
+        toast('This class is inactive. Please contact admin.', 'error');
+      } else {
+        toast(err?.message || 'Upload failed. Please try again.', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -137,19 +149,28 @@ export default function SendPhotos() {
 
           <div className="send-photos-card">
             <span className="send-photos-card__label">Upload target</span>
-            <div className="send-photos-pills" role="group" aria-label="Upload target">
+            <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Upload target">
               {UPLOAD_TARGET_OPTIONS.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
-                  className={`send-photos-pill ${uploadTarget === value ? 'is-active' : ''}`}
+                  className={`send-photos-target-card text-left ${uploadTarget === value ? 'send-photos-target-card--active' : ''}`}
                   onClick={() => setUploadTarget(value)}
                 >
-                  <Icon size={15} />
-                  {label}
+                  <Icon size={20} className="mb-2 text-accent" />
+                  <span className="block text-sm font-bold text-brand">{label}</span>
                 </button>
               ))}
             </div>
+            {(uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT || uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT) && (
+              <div className="send-photos-privacy-warning mt-4">
+                <ShieldAlert size={18} className="shrink-0 text-accent" aria-hidden />
+                <p>
+                  <strong>Privacy reminder:</strong> Parent-direct photos are visible only to authorized guardians.
+                  Confirm you have consent before sharing identifiable student images.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="send-photos-card">
@@ -158,11 +179,11 @@ export default function SendPhotos() {
             </span>
 
             {needsClass && (
-              albumClasses.length === 0 ? (
+              activeAlbumClasses.length === 0 ? (
                 <p className="send-photos-classes-empty">No classes assigned yet.</p>
               ) : (
                 <div className="send-photos-classes">
-                  {albumClasses.map((cls) => (
+                  {activeAlbumClasses.map((cls) => (
                     <button
                       key={cls.classId}
                       type="button"

@@ -1,368 +1,29 @@
-/* SchoolBridge premium login portal — inherits :root theme from themeUtils */
-
-.login-portal {
-  --sb-surface: #f8f9ff;
-  --sb-on-surface: #0b1c30;
-  --sb-on-surface-variant: #45474c;
-  --sb-outline-variant: #c5c6cd;
-  font-family: Inter, system-ui, sans-serif;
-  width: 100%;
-  max-width: 100vw;
-  overflow: hidden;
-  height: 100dvh;
-  height: 100svh;
-  max-height: 100dvh;
-  max-height: 100svh;
-}
-
-.login-portal-main {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  overscroll-behavior: none;
-}
-
-.login-portal-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.login-portal-body {
-  display: flex;
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-  box-sizing: border-box;
-}
-
-/* Mobile + tablet: only the login card scrolls */
-@media (max-width: 1279px) {
-  .login-portal-body {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: stretch;
-    padding: 0.375rem 0.75rem;
-    padding-bottom: max(0.375rem, env(safe-area-inset-bottom));
-  }
-
-  .login-portal-card-wrap {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    max-width: 100%;
-    width: 100%;
-  }
-
-  .login-portal-card {
-    flex: 1;
-    min-height: 0;
-    max-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
-  }
-}
-
-@media (min-width: 1280px) {
-  .login-portal-body {
-    min-height: 100%;
-    height: 100%;
-    padding-top: 0;
-    padding-bottom: 0;
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .login-portal-card {
-    overflow: hidden;
-    max-height: none;
-    flex: none;
-  }
-}
-
-.login-portal-card-wrap {
-  width: 100%;
-  max-width: min(28rem, 100%);
-  box-sizing: border-box;
-}
-
-.login-portal-card {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.login-portal-footer-slot {
-  flex-shrink: 0;
-}
-
-.login-portal-footer-slot--minimal {
-  padding-bottom: env(safe-area-inset-bottom, 0);
-}
-
-.login-portal-card .input-premium,
-.login-portal-card .login-password-wrap,
-.login-portal-card .login-identity-wrap {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Login page header — compact brand row + mobile marquee row */
-.login-public-header .login-header-brand-text {
-  display: inline;
-  max-width: 12rem;
-}
-
-@media (min-width: 400px) {
-  .login-public-header .login-header-brand-text {
-    max-width: 16rem;
-  }
-}
-
-.login-header-inner {
-  display: flex;
-  flex-direction: column;
-}
-
-.login-header-marquee-row {
-  width: 100%;
-  padding: 0 0.75rem 0.4375rem;
-  border-top: 1px solid color-mix(in srgb, var(--sb-primary) 6%, transparent);
-  background: color-mix(in srgb, var(--sb-secondary) 5%, white);
-}
-
-.login-header-marquee-row .login-header-marquee {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--sb-secondary) 8%, white);
-  border: 1px solid color-mix(in srgb, var(--sb-primary) 8%, transparent);
-  padding: 0.25rem 0.625rem;
-}
-
-.login-public-header .sb-btn-pill {
-  padding: 0.4375rem 0.875rem;
-  white-space: nowrap;
-}
-
-/* Login header — marquee inline on desktop (right-to-left) */
-.login-header-marquee-inner {
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--sb-secondary) 7%, white);
-  border: 1px solid color-mix(in srgb, var(--sb-primary) 8%, transparent);
-  padding: 0.25rem 0.625rem;
-}
-
-@media (min-width: 640px) {
-  .login-header-marquee-inner {
-    padding: 0.3125rem 0.875rem;
-  }
-}
-
-.login-header-marquee {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  min-width: 0;
-}
-
-.login-header-marquee__icon {
-  color: var(--sb-secondary);
-  flex-shrink: 0;
-}
-
-.login-header-marquee-row .login-header-marquee__icon {
-  display: block;
-}
-
-.login-header-marquee__viewport {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-/* Horizontal — desktop only (right to left) */
-.login-header-marquee--horizontal .login-header-marquee__viewport {
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    #000 4%,
-    #000 96%,
-    transparent 100%
-  );
-}
-
-.login-header-marquee__track--horizontal {
-  display: flex;
-  width: max-content;
-  animation: login-header-marquee-rtl 28s linear infinite;
-}
-
-/* Vertical — mobile only (bottom to top) */
-.login-header-marquee--vertical .login-header-marquee__viewport {
-  height: 1.25rem;
-  mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 14%,
-    #000 86%,
-    transparent 100%
-  );
-}
-
-.login-header-marquee__track--vertical {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  animation: login-header-marquee-vertical calc(var(--marquee-lines, 4) * 3.5s) linear infinite;
-}
-
-.login-header-marquee__line {
-  flex-shrink: 0;
-  height: 1.25rem;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  line-height: 1.25rem;
-  color: color-mix(in srgb, var(--sb-primary) 85%, transparent);
-}
-
-.login-header-marquee__text {
-  flex-shrink: 0;
-  padding-right: 0;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  line-height: 1.25rem;
-  white-space: nowrap;
-  color: color-mix(in srgb, var(--sb-primary) 85%, transparent);
-}
-
-@media (min-width: 400px) {
-  .login-header-marquee__text,
-  .login-header-marquee__line {
-    font-size: 0.75rem;
-  }
-}
-
-@media (min-width: 768px) {
-  .login-header-marquee__text {
-    font-size: 0.8125rem;
-  }
-}
-
-@keyframes login-header-marquee-rtl {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes login-header-marquee-vertical {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-50%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .login-header-marquee__track--horizontal,
-  .login-header-marquee__track--vertical {
-    animation: none;
-    transform: none;
-  }
-
-  .login-header-marquee--horizontal .login-header-marquee__text:last-child {
-    display: none;
-  }
-
-  .login-header-marquee--vertical .login-header-marquee__line:nth-child(n + 2) {
-    display: none;
-  }
-}
-
-.login-portal .font-display {
-  font-family: Manrope, Inter, system-ui, sans-serif;
-}
-
-.login-portal .glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
-}
-
-.login-portal .hero-gradient {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--sb-primary) 95%, transparent) 0%,
-    color-mix(in srgb, var(--sb-primary) 40%, transparent) 50%,
-    transparent 100%
-  );
-}
-
-.login-portal .transition-premium {
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.login-portal .input-premium {
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.login-portal .input-premium:focus {
-  border-color: var(--sb-secondary);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
-  outline: none;
-}
+/* SchoolBridge login — form controls inside AuthSplitLayout */
 
 .login-portal .field-group:focus-within .field-label {
-  color: var(--sb-secondary);
+  color: var(--sb-gold);
 }
 
-.login-portal .btn-hover-lift {
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+.login-card-subtitle {
+  font-size: 12px;
+  color: var(--sb-on-surface-variant, #45474c);
 }
 
-.login-portal .btn-hover-lift:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+.login-field-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--sb-primary) 80%, transparent);
 }
 
-.login-portal .material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
-  line-height: 1;
+.login-muted-text {
+  color: #6b7a8c;
 }
 
-.login-portal details.demo-accounts summary::-webkit-details-marker {
-  display: none;
-}
-
-/* Prevent bounce on locked layout */
-.login-portal > main {
-  overscroll-behavior: none;
-}
-
-/* Login method switch — bottom of card */
+/* Login method switch */
 .login-method-footer {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--sb-border);
   text-align: center;
 }
 
@@ -372,7 +33,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #9aa3b2;
+  color: var(--sb-muted);
 }
 
 .login-method-switch {
@@ -384,72 +45,17 @@
   padding: 10px 4px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--sb-secondary);
+  color: var(--sb-gold);
   background: transparent;
   border: none;
-  border-radius: 0;
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  outline: none;
-  box-shadow: none;
   transition: color 0.15s ease;
-  user-select: none;
 }
 
 .login-method-switch:hover {
-  color: var(--sb-primary);
+  color: var(--sb-navy);
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-
-.login-method-switch:active,
-.login-method-switch:focus,
-.login-method-switch:focus-visible {
-  outline: none;
-  transform: none;
-  box-shadow: none;
-  opacity: 1;
-  background: transparent;
-}
-
-/* Mobile prefix field */
-.login-phone-wrap {
-  display: flex;
-  align-items: stretch;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.5);
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.login-phone-wrap:focus-within {
-  border-color: var(--sb-secondary);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
-}
-
-.login-phone-prefix {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--sb-primary);
-  background: color-mix(in srgb, var(--sb-primary) 4%, transparent);
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
-  white-space: nowrap;
-}
-
-.login-phone-input {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  background: transparent;
-  padding: 12px 14px;
-  font-size: 14px;
-  outline: none;
 }
 
 /* OTP boxes */
@@ -466,134 +72,39 @@
   text-align: center;
   font-size: 18px;
   font-weight: 700;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--sb-primary);
+  border-radius: var(--sb-radius);
+  border: 1px solid var(--sb-border);
+  background: #fff;
+  color: var(--sb-navy);
   outline: none;
   transition: all 0.2s ease;
 }
 
 .login-otp-box:focus {
-  border-color: var(--sb-secondary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
-  background: #fff;
-}
-
-.login-otp-demo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--sb-secondary) 10%, #fff);
-  border: 1px solid color-mix(in srgb, var(--sb-secondary) 20%, transparent);
-  padding: 10px 12px;
-  font-size: 12px;
-  color: var(--sb-secondary);
+  border-color: var(--sb-gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-gold) 20%, transparent);
 }
 
 .login-submit-btn {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 12px;
-  background: var(--sb-primary);
-  padding: 14px 20px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff !important;
-  border: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  min-height: 2.75rem;
 }
 
-.login-submit-btn:hover:not(:disabled) {
-  opacity: 0.92;
-}
-
-.login-submit-btn:active:not(:disabled) {
-  transform: scale(0.99);
-  opacity: 0.88;
-}
-
-.login-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* New applicant / enroll CTA */
-.login-enroll-section {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.login-enroll-section__label {
-  margin: 0 0 0.5rem;
-  text-align: center;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #9aa3b2;
-}
-
-.login-enroll-btn {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--sb-primary) 15%, transparent);
-  background: #fff;
-  padding: 12px 18px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--sb-primary) !important;
-  text-decoration: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.login-enroll-btn:hover,
-.login-enroll-btn:focus-visible {
-  background: var(--sb-surface-container-high);
-  border-color: var(--sb-primary);
-  color: var(--sb-primary) !important;
-}
-
-.login-enroll-btn svg {
-  color: var(--sb-primary) !important;
-  transition: transform 0.2s ease;
-}
-
-.login-enroll-btn:hover svg {
-  transform: translateX(2px);
-}
-
-.login-method-alternates {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.login-identity-wrap {
+/* Identity & password fields */
+.login-identity-wrap,
+.login-password-wrap {
   display: flex;
   align-items: stretch;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--sb-radius);
+  border: 1px solid var(--sb-border);
+  background: #fff;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: all var(--sb-transition);
 }
 
-.login-identity-wrap:focus-within {
-  border-color: var(--sb-secondary);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
+.login-identity-wrap:focus-within,
+.login-password-wrap:focus-within {
+  border-color: var(--sb-gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-gold) 20%, transparent);
 }
 
 .login-identity-icon {
@@ -602,36 +113,12 @@
   justify-content: center;
   width: 44px;
   flex-shrink: 0;
-  color: var(--sb-primary);
-  background: color-mix(in srgb, var(--sb-primary) 4%, transparent);
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  color: var(--sb-navy);
+  background: var(--sb-cream);
+  border-right: 1px solid var(--sb-border);
 }
 
-.login-identity-input {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  background: transparent;
-  padding: 12px 14px;
-  font-size: 14px;
-  outline: none;
-}
-
-.login-password-wrap {
-  display: flex;
-  align-items: stretch;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.6);
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.login-password-wrap:focus-within {
-  border-color: var(--sb-secondary);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
-}
-
+.login-identity-input,
 .login-password-input {
   flex: 1;
   min-width: 0;
@@ -650,92 +137,32 @@
   flex-shrink: 0;
   border: none;
   background: transparent;
-  color: #9aa3b2;
+  color: var(--sb-muted);
   cursor: pointer;
-  transition: color 0.15s ease;
 }
 
 .login-password-toggle:hover {
-  color: var(--sb-primary);
+  color: var(--sb-navy);
 }
 
-.login-demo-link {
+/* New applicant CTA */
+.login-enroll-section {
   margin-top: 0.75rem;
-  width: 100%;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--sb-border);
+}
+
+.login-enroll-section__label {
+  margin: 0 0 0.5rem;
   text-align: center;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #9aa3b2;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color 0.15s ease;
+  letter-spacing: 0.1em;
+  color: var(--sb-muted);
 }
 
-.login-demo-link:hover {
-  color: var(--sb-primary);
-}
-
-/* Login card text — theme-aware */
-.login-card-title {
-  font-family: Manrope, Inter, system-ui, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--sb-primary);
-}
-
-@media (min-width: 768px) {
-  .login-card-title {
-    font-size: 1.5rem;
-  }
-}
-
-.login-card-subtitle {
-  font-size: 12px;
-  color: var(--sb-on-surface-variant, #45474c);
-}
-
-.login-field-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--sb-primary) 80%, transparent);
-}
-
-.login-muted-text {
-  color: #6b7a8c;
-}
-
-.login-modal-overlay {
-  background: color-mix(in srgb, var(--sb-primary) 50%, transparent);
-}
-
-/* Narrow mobile: 320px – 380px */
 @media (max-width: 380px) {
-  .login-portal-body {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
-
-  .login-portal-card {
-    padding: 0.875rem !important;
-    border-radius: 1.25rem;
-  }
-
-  .login-card-title {
-    font-size: 1.125rem;
-  }
-
-  .login-card-subtitle {
-    font-size: 11px;
-  }
-
-  .login-field-label {
-    font-size: 13px;
-  }
-
   .login-otp-grid {
     gap: 4px;
   }
@@ -743,34 +170,6 @@
   .login-otp-box {
     font-size: 15px;
     max-height: 42px;
-    border-radius: 8px;
-  }
-
-  .login-otp-demo {
-    padding: 8px 10px;
-    font-size: 11px;
-  }
-
-  .login-submit-btn {
-    padding: 12px 16px;
-    font-size: 14px;
-  }
-
-  .login-enroll-btn {
-    padding: 10px 14px;
-    font-size: 13px;
-  }
-
-  .login-method-switch {
-    font-size: 12px;
-    padding: 8px 2px;
-  }
-
-  .login-demo-link {
-    font-size: 9px;
-    letter-spacing: 0.06em;
-    line-height: 1.4;
-    white-space: normal;
   }
 
   .login-identity-icon,
@@ -782,18 +181,5 @@
   .login-password-input {
     padding: 10px 12px;
     font-size: 13px;
-  }
-
-  .login-portal .input-premium {
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-}
-
-/* 331px and similar small phones */
-@media (max-width: 360px) {
-  .login-enroll-btn span,
-  .login-enroll-btn {
-    gap: 6px;
   }
 }

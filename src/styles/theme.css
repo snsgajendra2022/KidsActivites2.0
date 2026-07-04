@@ -1,0 +1,72 @@
+/* SchoolBridge Premium Theme — design tokens */
+
+:root {
+  /* Brand palette */
+  --sb-navy: #0B1F3A;
+  --sb-deep-blue: #102E52;
+  --sb-gold: #C9A24A;
+  --sb-cream: #F7F1E3;
+  --sb-ivory: #FBF8F1;
+  --sb-forest: #2F5D50;
+  --sb-slate: #243447;
+  --sb-muted: #6B7280;
+  --sb-border: #E5E0D5;
+
+  /* Semantic aliases */
+  --sb-primary: var(--sb-navy);
+  --sb-secondary: var(--sb-gold);
+  --sb-accent: var(--sb-gold);
+  --sb-surface: var(--sb-ivory);
+  --sb-surface-warm: var(--sb-cream);
+  --sb-on-surface: var(--sb-slate);
+  --sb-on-surface-variant: var(--sb-muted);
+  --sb-outline-variant: var(--sb-border);
+  --sb-surface-container-high: color-mix(in srgb, var(--sb-gold) 12%, var(--sb-ivory));
+  --sb-surface-container: color-mix(in srgb, var(--sb-navy) 4%, var(--sb-ivory));
+
+  /* Typography */
+  --sb-font-heading: Georgia, 'Times New Roman', serif;
+  --sb-font-body: Inter, system-ui, -apple-system, sans-serif;
+  --font-display: var(--sb-font-heading);
+  --font-main: var(--sb-font-body);
+
+  /* Legacy bridges (global.css, premium.css, enrollment) */
+  --primary: var(--sb-navy);
+  --primary-dark: #061018;
+  --primary-light: color-mix(in srgb, var(--sb-gold) 18%, var(--sb-ivory));
+  --navy: var(--sb-navy);
+  --bg: var(--sb-ivory);
+  --text: var(--sb-slate);
+  --muted: var(--sb-muted);
+  --line: var(--sb-border);
+  --card: #ffffff;
+  --success: var(--sb-forest);
+  --success-light: color-mix(in srgb, var(--sb-forest) 12%, white);
+  --warning: #b45309;
+  --warning-light: #fffbeb;
+  --danger: #b91c1c;
+  --danger-light: #fef2f2;
+  --info: var(--sb-deep-blue);
+  --info-light: color-mix(in srgb, var(--sb-deep-blue) 10%, white);
+
+  /* On-primary (footer, hero CTAs) */
+  --sb-on-primary: #ffffff;
+  --sb-on-primary-muted: rgba(255, 255, 255, 0.72);
+  --sb-on-primary-subtle: rgba(255, 255, 255, 0.55);
+  --sb-on-primary-faint: rgba(255, 255, 255, 0.4);
+
+  /* Spacing & radii */
+  --sb-radius: 0.75rem;
+  --sb-radius-lg: 1rem;
+  --sb-radius-xl: 1.25rem;
+  --sb-section-gap: 5rem;
+  --sb-container-max: 80rem;
+
+  /* Shadows */
+  --sb-shadow-sm: 0 2px 12px rgba(11, 31, 58, 0.06);
+  --sb-shadow-md: 0 8px 32px rgba(11, 31, 58, 0.1);
+  --sb-shadow-lg: 0 16px 48px rgba(11, 31, 58, 0.14);
+
+  /* Transitions */
+  --sb-transition: 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}

@@ -8,6 +8,7 @@ import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
+import LoadingState from '../../components/ui/LoadingState.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getParentDashboard } from '../../services/parentService.js';
 import { getFeeByApplication } from '../../services/feeService.js';
@@ -45,7 +46,7 @@ export default function ParentDashboard() {
   if (loading) {
     return (
       <AppLayout>
-        <p className="p-8 text-sm text-[#45474c]">Loading your dashboard…</p>
+        <LoadingState message="Loading your dashboard…" />
       </AppLayout>
     );
   }

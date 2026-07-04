@@ -1,36 +1,4 @@
-/* SchoolBridge global theme — matches login portal design */
-
-:root {
-  --sb-primary: #091426;
-  --sb-secondary: #0058be;
-  --sb-surface: #f8f9ff;
-  --sb-on-surface: #0b1c30;
-  --sb-on-surface-variant: #45474c;
-  --sb-outline-variant: #c5c6cd;
-  --sb-surface-container-high: #dce9ff;
-  --sb-surface-container: #e5eeff;
-
-  /* Bridge legacy premium.css tokens */
-  --primary: #091426;
-  --primary-dark: #061018;
-  --primary-light: #dce9ff;
-  --navy: #091426;
-  --bg: #f8f9ff;
-  --text: #0b1c30;
-  --muted: #45474c;
-  --line: rgba(0, 0, 0, 0.06);
-  --font-display: Manrope, 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
-}
-
-body {
-  background: var(--sb-surface);
-  color: var(--sb-on-surface);
-  font-family: Inter, system-ui, sans-serif;
-}
-
-.font-display {
-  font-family: Manrope, Inter, system-ui, sans-serif;
-}
+/* SchoolBridge theme bridges — tokens live in theme.css */
 
 /* ─── Shared utilities ─── */
 .sb-surface {

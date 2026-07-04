@@ -1,4 +1,5 @@
-const DEFAULT_BRAND = '#1B2E4B';
+const DEFAULT_BRAND = '#0B1F3A';
+const DEFAULT_ACCENT = '#C9A24A';
 
 function hexToRgb(hex) {
   const h = hex.replace('#', '');
@@ -24,7 +25,7 @@ function mixHex(hex, target, amount) {
 /** Apply single brand color across the entire app via CSS variables */
 export function applyPortalTheme(theme = {}, enrollmentTheme = {}) {
   const brand = theme.brandColor || DEFAULT_BRAND;
-  const accent = theme.accentColor || brand;
+  const accent = theme.accentColor || DEFAULT_ACCENT;
   const root = document.documentElement;
 
   const enrollNavy = enrollmentTheme.brandNavy || brand;
@@ -50,8 +51,8 @@ export function applyPortalTheme(theme = {}, enrollmentTheme = {}) {
 }
 
 export const THEME_PRESETS = [
-  { name: 'Institutional Navy', brandColor: '#1B2E4B', accentColor: '#C81E1E' },
-  { name: 'SchoolBridge Blue', brandColor: '#091426', accentColor: '#0058be' },
+  { name: 'Institutional Navy', brandColor: '#0B1F3A', accentColor: '#C9A24A' },
+  { name: 'SchoolBridge Classic', brandColor: '#091426', accentColor: '#C9A24A' },
   { name: 'Forest Green', brandColor: '#1B4332', accentColor: '#2D6A4F' },
   { name: 'Royal Purple', brandColor: '#3C1874', accentColor: '#7B2CBF' },
   { name: 'Crimson', brandColor: '#7F1D1D', accentColor: '#DC2626' },

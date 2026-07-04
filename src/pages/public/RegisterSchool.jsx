@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, X, GraduationCap } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
 import FormInput from '../../components/ui/FormInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Select from '../../components/ui/Select.jsx';
+import FormPanel from '../../components/ui/FormPanel.jsx';
+import WorkspaceUrlPreview from '../../components/ui/WorkspaceUrlPreview.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
   checkPublicWorkspaceSlug,
@@ -114,163 +116,182 @@ export default function RegisterSchool() {
         : 'Lowercase letters, numbers, and hyphens only';
 
   return (
-    <PublicLayout className="!sb-surface">
-      <div className="mx-auto max-w-xl px-4 py-12 md:py-16">
-        <Link to="/" className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-brand">
-          <ArrowLeft size={16} /> Back
-        </Link>
-
-        <h1 className="font-display mb-2 text-3xl font-bold text-brand">Register your school</h1>
-        <p className="mb-8 text-muted">
-          Create your SchoolBridge workspace with a unique URL slug. You&apos;ll be redirected to sign in when ready.
-        </p>
-
-        <form onSubmit={handleSubmit} className="sb-card space-y-5 p-6 md:p-8">
-          <FormInput
-            label="School name"
-            name="schoolName"
-            required
-            value={form.schoolName}
-            onChange={(e) => updateField('schoolName', e.target.value)}
-            placeholder="Green Valley International School"
-          />
-
-          <div>
-            <FormInput
-              label="Workspace slug"
-              name="workspaceSlug"
-              required
-              value={form.workspaceSlug}
-              onChange={(e) => {
-                setSlugTouched(true);
-                updateField('workspaceSlug', e.target.value);
-              }}
-              placeholder="green-valley"
-              helper={slugHelper}
-              error={slugStatus.available === false ? slugStatus.reason : undefined}
-            />
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
-              {slugStatus.checking && <Loader2 size={12} className="animate-spin" />}
-              {slugStatus.available === true && !slugStatus.checking && (
-                <span className="flex items-center gap-1 text-emerald-600">
-                  <Check size={12} /> Available
-                </span>
-              )}
-              {slugStatus.available === false && !slugStatus.checking && (
-                <span className="flex items-center gap-1 text-rose-600">
-                  <X size={12} /> Unavailable
-                </span>
-              )}
-            </div>
-            {slugStatus.suggestions?.length > 0 && (
-              <div className="mt-2 text-xs text-muted">
-                Try:{' '}
-                {slugStatus.suggestions.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className="mr-2 text-brand underline"
-                    onClick={() => {
-                      setSlugTouched(true);
-                      updateField('workspaceSlug', s);
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
+    <PublicLayout className="!sb-surface sb-page">
+      <div className="register-split">
+        <div className="register-split__hero">
+          <Link to="/" className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white">
+            <ArrowLeft size={16} /> Back
+          </Link>
+          <p className="sb-eyebrow">SchoolBridge Platform</p>
+          <h1 className="font-display mb-4 text-3xl font-bold leading-tight md:text-4xl">
+            Register your school workspace
+          </h1>
+          <p className="mb-8 max-w-md text-base leading-relaxed text-white/75">
+            Create your dedicated SchoolBridge portal with a unique URL. Manage admissions, fees, and parent communication from one place.
+          </p>
+          <div className="flex items-center gap-3 text-sm text-white/60">
+            <GraduationCap size={20} className="text-[var(--sb-gold)]" />
+            Trusted by schools and daycares worldwide
           </div>
+        </div>
 
-          <Select
-            label="School type"
-            value={form.schoolType}
-            onChange={(e) => updateField('schoolType', e.target.value)}
-            options={SCHOOL_TYPES}
-          />
+        <div className="register-split__form">
+          <div className="mx-auto max-w-lg">
+            <FormPanel
+              title="Workspace details"
+              subtitle="You'll be redirected to sign in when your workspace is ready."
+              as="form"
+              onSubmit={handleSubmit}
+              className="space-y-5"
+            >
+              <FormInput
+                label="School name"
+                name="schoolName"
+                required
+                value={form.schoolName}
+                onChange={(e) => updateField('schoolName', e.target.value)}
+                placeholder="Green Valley International School"
+              />
 
-          <FormInput
-            label="Address"
-            name="address"
-            value={form.address}
-            onChange={(e) => updateField('address', e.target.value)}
-            placeholder="123 Main St, City"
-          />
+              <div>
+                <FormInput
+                  label="Workspace slug"
+                  name="workspaceSlug"
+                  required
+                  value={form.workspaceSlug}
+                  onChange={(e) => {
+                    setSlugTouched(true);
+                    updateField('workspaceSlug', e.target.value);
+                  }}
+                  placeholder="green-valley"
+                  helper={slugHelper}
+                  error={slugStatus.available === false ? slugStatus.reason : undefined}
+                />
+                <WorkspaceUrlPreview slug={form.workspaceSlug} />
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                  {slugStatus.checking && <Loader2 size={12} className="animate-spin" />}
+                  {slugStatus.available === true && !slugStatus.checking && (
+                    <span className="flex items-center gap-1 text-[var(--sb-forest)]">
+                      <Check size={12} /> Available
+                    </span>
+                  )}
+                  {slugStatus.available === false && !slugStatus.checking && (
+                    <span className="flex items-center gap-1 text-rose-600">
+                      <X size={12} /> Unavailable
+                    </span>
+                  )}
+                </div>
+                {slugStatus.suggestions?.length > 0 && (
+                  <div className="mt-2 text-xs text-muted">
+                    Try:{' '}
+                    {slugStatus.suggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className="mr-2 text-accent underline"
+                        onClick={() => {
+                          setSlugTouched(true);
+                          updateField('workspaceSlug', s);
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-          <FormInput
-            label="Owner name"
-            name="ownerName"
-            required
-            value={form.ownerName}
-            onChange={(e) => updateField('ownerName', e.target.value)}
-            placeholder="Jane Smith"
-          />
+              <Select
+                label="School type"
+                value={form.schoolType}
+                onChange={(e) => updateField('schoolType', e.target.value)}
+                options={SCHOOL_TYPES}
+              />
 
-          <FormInput
-            label="Owner email"
-            name="ownerEmail"
-            type="email"
-            required
-            value={form.ownerEmail}
-            onChange={(e) => updateField('ownerEmail', e.target.value)}
-            placeholder="admin@school.edu"
-          />
+              <FormInput
+                label="Address"
+                name="address"
+                value={form.address}
+                onChange={(e) => updateField('address', e.target.value)}
+                placeholder="123 Main St, City"
+              />
 
-          <FormInput
-            label="Phone"
-            name="ownerPhone"
-            type="tel"
-            value={form.ownerPhone}
-            onChange={(e) => updateField('ownerPhone', e.target.value)}
-            placeholder="+91 98765 43210"
-          />
+              <FormInput
+                label="Owner name"
+                name="ownerName"
+                required
+                value={form.ownerName}
+                onChange={(e) => updateField('ownerName', e.target.value)}
+                placeholder="Jane Smith"
+              />
 
-          <FormInput
-            label="Password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            value={form.password}
-            onChange={(e) => updateField('password', e.target.value)}
-            helper="At least 8 characters"
-          />
+              <FormInput
+                label="Owner email"
+                name="ownerEmail"
+                type="email"
+                required
+                value={form.ownerEmail}
+                onChange={(e) => updateField('ownerEmail', e.target.value)}
+                placeholder="admin@school.edu"
+              />
 
-          <FormInput
-            label="Confirm password"
-            name="confirmPassword"
-            type="password"
-            required
-            value={form.confirmPassword}
-            onChange={(e) => updateField('confirmPassword', e.target.value)}
-          />
+              <FormInput
+                label="Phone"
+                name="ownerPhone"
+                type="tel"
+                value={form.ownerPhone}
+                onChange={(e) => updateField('ownerPhone', e.target.value)}
+                placeholder="+91 98765 43210"
+              />
 
-          <label className="flex items-start gap-2 text-sm text-muted">
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={form.termsAccepted}
-              onChange={(e) => updateField('termsAccepted', e.target.checked)}
-            />
-            <span>
-              I agree to the{' '}
-              <Link to="/terms-of-use" className="text-brand underline" target="_blank">
-                terms of service
-              </Link>
-            </span>
-          </label>
+              <FormInput
+                label="Password"
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                value={form.password}
+                onChange={(e) => updateField('password', e.target.value)}
+                helper="At least 8 characters"
+              />
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            loading={submitting}
-            disabled={submitting || slugStatus.available === false || slugStatus.checking}
-            className="w-full"
-          >
-            Create workspace
-          </Button>
-        </form>
+              <FormInput
+                label="Confirm password"
+                name="confirmPassword"
+                type="password"
+                required
+                value={form.confirmPassword}
+                onChange={(e) => updateField('confirmPassword', e.target.value)}
+              />
+
+              <label className="flex items-start gap-2 text-sm text-muted">
+                <input
+                  type="checkbox"
+                  className="mt-1 accent-[var(--sb-gold)]"
+                  checked={form.termsAccepted}
+                  onChange={(e) => updateField('termsAccepted', e.target.checked)}
+                />
+                <span>
+                  I agree to the{' '}
+                  <Link to="/terms-of-use" className="text-accent underline" target="_blank">
+                    terms of service
+                  </Link>
+                </span>
+              </label>
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={submitting}
+                disabled={submitting || slugStatus.available === false || slugStatus.checking}
+                className="w-full"
+              >
+                Create workspace
+              </Button>
+            </FormPanel>
+          </div>
+        </div>
       </div>
     </PublicLayout>
   );

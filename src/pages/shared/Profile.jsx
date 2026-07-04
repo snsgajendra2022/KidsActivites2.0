@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
-import { PageHeader } from '../../components/ui/index.jsx';
+import { PageHeader, PremiumCard } from '../../components/ui/index.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
@@ -133,7 +133,7 @@ export default function Profile() {
             </>
           )}
           actions={(
-            <Link to={dashboardPath} className="account-settings-back">
+            <Link to={dashboardPath} className="account-settings-back sb-button-secondary">
               <ArrowLeft size={16} />
               Back to Dashboard
             </Link>
@@ -141,7 +141,7 @@ export default function Profile() {
         />
 
         <div className="account-settings-layout">
-          <aside className="account-settings-profile">
+          <PremiumCard className="account-settings-profile !p-0" padding={false} elevated>
             <div className="account-settings-profile__hero">
               <div className="account-settings-avatar" aria-hidden>
                 {initials}
@@ -161,10 +161,11 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-          </aside>
+          </PremiumCard>
 
           <div className="account-settings-forms">
-            <form onSubmit={handleProfileSave} className="account-settings-panel">
+            <PremiumCard className="account-settings-panel !p-0" padding={false} elevated>
+            <form onSubmit={handleProfileSave} className="account-settings-panel-form">
               <div className="account-settings-panel__head">
                 <div className="account-settings-panel__icon account-settings-panel__icon--profile">
                   <User size={18} />
@@ -220,15 +221,17 @@ export default function Profile() {
                 <button
                   type="submit"
                   disabled={savingProfile}
-                  className="account-settings-btn account-settings-btn--primary"
+                  className="sb-button-primary account-settings-btn"
                 >
                   <Save size={16} />
                   {savingProfile ? 'Saving…' : 'Save Profile'}
                 </button>
               </div>
             </form>
+            </PremiumCard>
 
-            <form onSubmit={handlePasswordSave} className="account-settings-panel">
+            <PremiumCard className="account-settings-panel !p-0" padding={false} elevated>
+            <form onSubmit={handlePasswordSave} className="account-settings-panel-form">
               <div className="account-settings-panel__head">
                 <div className="account-settings-panel__icon account-settings-panel__icon--security">
                   <KeyRound size={18} />
@@ -274,13 +277,14 @@ export default function Profile() {
                 <button
                   type="submit"
                   disabled={savingPassword}
-                  className="account-settings-btn account-settings-btn--secondary"
+                  className="sb-button-secondary account-settings-btn"
                 >
                   <KeyRound size={16} />
                   {savingPassword ? 'Updating…' : 'Update Password'}
                 </button>
               </div>
             </form>
+            </PremiumCard>
           </div>
         </div>
       </PageTransition>

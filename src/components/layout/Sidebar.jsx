@@ -10,16 +10,14 @@ function sidebarLinkClass({ isActive }) {
     return [
       'sidebar-nav-link sidebar-nav-link-active',
       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
-      'bg-[var(--sb-primary)] text-white shadow-sm',
-      '[&_span]:text-white [&_svg]:text-white',
+      'bg-[var(--sb-gold)] text-[var(--sb-navy)] shadow-sm',
     ].join(' ');
   }
   return [
     'sidebar-nav-link',
     'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
-    'text-muted hover:bg-brand-muted hover:text-brand',
-    '[&_svg]:text-[#6b7a8c] hover:[&_svg]:text-[var(--sb-primary)]',
-    '[&_span]:text-muted hover:[&_span]:text-brand',
+    'text-white/70 hover:bg-white/10 hover:text-[var(--sb-gold)]',
+    '[&_svg]:text-white/50 hover:[&_svg]:text-[var(--sb-gold)]',
   ].join(' ');
 }
 
@@ -41,11 +39,11 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
       />
 
       <aside
-        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-black/5 bg-white transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 ${
-          open ? 'translate-x-0 shadow-xl shadow-[#091426]/10' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
+        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-[color-mix(in_srgb,var(--sb-gold)_15%,transparent)] transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 ${
+          open ? 'translate-x-0 shadow-xl shadow-black/20' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
         } ${collapsed ? 'w-[4.5rem]' : 'w-72'}`}
       >
-        <div className="sidebar-top relative flex h-16 shrink-0 items-center border-b border-black/5 px-3">
+        <div className="sidebar-top relative flex h-16 shrink-0 items-center border-b border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] px-3">
           <Link
             to={homePath}
             onClick={onClose}
@@ -54,8 +52,8 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             <PortalLogo size="md" />
             {!collapsed && (
               <div className="min-w-0">
-                <div className="font-display truncate text-sm font-bold text-brand">{portalName}</div>
-                <div className="truncate text-[11px] text-[#6b7a8c]">{school?.name}</div>
+                <div className="font-display truncate text-sm font-bold text-white">{portalName}</div>
+                <div className="truncate text-[11px] text-white/50">{school?.name}</div>
               </div>
             )}
           </Link>
@@ -110,11 +108,11 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
         </nav>
 
         {!collapsed && user && (
-          <div className="shrink-0 border-t border-black/5 p-4">
-            <div className="rounded-xl bg-brand-muted p-3 ring-1 ring-black/5">
-              <div className="truncate text-sm font-semibold text-brand">{user.name}</div>
-              <div className="mt-0.5 text-xs text-[#6b7a8c]">{ROLE_LABELS[user.role]}</div>
-              <div className="mt-2 text-[10px] font-medium text-[#6b7a8c]/80">{school?.academicYear}</div>
+          <div className="shrink-0 border-t border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] p-4">
+            <div className="rounded-xl bg-[color-mix(in_srgb,var(--sb-gold)_10%,var(--sb-deep-blue))] p-3 ring-1 ring-[color-mix(in_srgb,var(--sb-gold)_15%,transparent)]">
+              <div className="truncate text-sm font-semibold text-white">{user.name}</div>
+              <div className="mt-0.5 text-xs text-white/50">{ROLE_LABELS[user.role]}</div>
+              <div className="mt-2 text-[10px] font-medium text-white/40">{school?.academicYear}</div>
             </div>
           </div>
         )}

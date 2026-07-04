@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../../components/layout/AppLayout.jsx';
+import { EmptyState, LoadingState } from '../../components/ui/index.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
@@ -281,7 +282,7 @@ export default function ChatPage() {
                 <h1 className="messages-sidebar__title">Messages</h1>
                 <button
                   type="button"
-                  className="messages-new-btn"
+                  className="messages-new-btn sb-button-primary"
                   onClick={openCompose}
                   aria-label="Start new conversation"
                 >
@@ -303,26 +304,23 @@ export default function ChatPage() {
 
             <div className="messages-list">
               {loadingConversations ? (
-                <div className="messages-sidebar-empty">
-                  <p>Loading conversations…</p>
-                </div>
+                <LoadingState message="Loading conversations…" className="messages-sidebar-empty" />
               ) : filteredConversations.length === 0 ? (
-                <div className="messages-sidebar-empty">
-                  <div className="messages-sidebar-empty__icon">
-                    <MessageCircle size={28} strokeWidth={1.75} />
-                  </div>
-                  <h3>{conversations.length === 0 ? 'No messages yet' : 'No matches'}</h3>
-                  <p>
-                    {conversations.length === 0
+                <EmptyState
+                  className="messages-sidebar-empty !py-8"
+                  icon={MessageCircle}
+                  title={conversations.length === 0 ? 'No messages yet' : 'No matches'}
+                  description={
+                    conversations.length === 0
                       ? 'Start a conversation with a teacher or parent using the + button.'
-                      : 'Try a different search term.'}
-                  </p>
-                  {conversations.length === 0 && (
-                    <button type="button" className="messages-new-link" onClick={openCompose}>
+                      : 'Try a different search term.'
+                  }
+                  action={conversations.length === 0 ? (
+                    <button type="button" className="sb-button-primary messages-new-link" onClick={openCompose}>
                       Start a conversation
                     </button>
-                  )}
-                </div>
+                  ) : null}
+                />
               ) : (
                 filteredConversations.map((c) => {
                   const oid = getOtherParticipant(c, user.id);
@@ -384,7 +382,7 @@ export default function ChatPage() {
 
                 <div className="messages-thread-body">
                   {loadingMessages ? (
-                    <p className="messages-thread-loading">Loading messages…</p>
+                    <LoadingState message="Loading messages…" className="messages-thread-loading" />
                   ) : (
                     <AnimatePresence>
                       {messages.map((m) => (
@@ -433,7 +431,7 @@ export default function ChatPage() {
                   </div>
                   <button
                     type="button"
-                    className="messages-compose__send"
+                    className="messages-compose__send sb-button-primary"
                     onClick={handleSend}
                     disabled={sending || !text.trim()}
                     aria-label="Send message"
@@ -444,16 +442,16 @@ export default function ChatPage() {
               </>
             ) : (
               <div className="messages-main__empty">
-                <div className="messages-main__empty-icon">
-                  <MessageCircle size={32} strokeWidth={1.75} />
-                </div>
-                <h2>Select a conversation</h2>
-                <p>
-                  Choose a chat from the sidebar or start a new one with the + button.
-                </p>
-                <button type="button" className="messages-new-link" onClick={openCompose}>
-                  Start a conversation
-                </button>
+                <EmptyState
+                  icon={MessageCircle}
+                  title="Select a conversation"
+                  description="Choose a chat from the sidebar or start a new one with the + button."
+                  action={(
+                    <button type="button" className="sb-button-primary messages-new-link" onClick={openCompose}>
+                      Start a conversation
+                    </button>
+                  )}
+                />
               </div>
             )}
           </div>
@@ -481,7 +479,7 @@ export default function ChatPage() {
               </div>
               <div className="messages-compose-modal__list">
                 {contactsLoading ? (
-                  <p className="messages-compose-modal__empty">Loading contacts…</p>
+                  <LoadingState message="Loading contacts…" className="messages-compose-modal__empty" />
                 ) : filteredContacts.length === 0 ? (
                   <p className="messages-compose-modal__empty">No contacts available to message.</p>
                 ) : (

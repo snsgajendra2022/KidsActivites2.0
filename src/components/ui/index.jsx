@@ -2,6 +2,19 @@ import { useRef, useEffect, useState } from 'react';
 import Button from './Button.jsx';
 import { ENROLLMENT_STEPS } from '../../constants/enrollmentStatuses.js';
 
+export { default as PublicHero } from './PublicHero.jsx';
+export { default as ProcessJourney } from './ProcessJourney.jsx';
+export { default as PremiumCTA } from './PremiumCTA.jsx';
+export { default as SectionHeader } from './SectionHeader.jsx';
+export { default as StatusBadge } from './StatusBadge.jsx';
+export { default as EmptyState } from './EmptyState.jsx';
+export { default as LoadingState } from './LoadingState.jsx';
+export { default as PremiumCard } from './PremiumCard.jsx';
+export { default as DashboardCard } from './DashboardCard.jsx';
+export { default as FormPanel } from './FormPanel.jsx';
+export { default as PageHeader } from './PageHeader.jsx';
+export { default as WorkspaceUrlPreview } from './WorkspaceUrlPreview.jsx';
+
 export function Stepper({ currentStep }) {
   return (
     <div className="stepper">
@@ -27,7 +40,7 @@ export function SignaturePad({ onChange, value }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = '#1e3a5f';
+    ctx.strokeStyle = '#0B1F3A';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
   }, []);
@@ -92,29 +105,6 @@ export function SignaturePad({ onChange, value }) {
         <Button variant="ghost" size="sm" onClick={clear}>Clear Signature</Button>
         {value && <span className="text-small" style={{ color: 'var(--success)' }}>Signature captured</span>}
       </div>
-    </div>
-  );
-}
-
-export function EmptyState({ icon: Icon, title, description, action }) {
-  return (
-    <div className="empty-state">
-      {Icon && <div className="empty-state-icon"><Icon size={48} /></div>}
-      <h3>{title}</h3>
-      <p>{description}</p>
-      {action}
-    </div>
-  );
-}
-
-export function PageHeader({ title, subtitle, actions }) {
-  return (
-    <div className="sb-page-header flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="sb-page-title">{title}</h1>
-        {subtitle && <p className="sb-page-subtitle">{subtitle}</p>}
-      </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );
 }

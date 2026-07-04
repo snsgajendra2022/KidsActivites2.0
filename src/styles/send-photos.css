@@ -38,17 +38,18 @@
   width: 3rem;
   height: 3rem;
   border-radius: 0.875rem;
-  background: linear-gradient(135deg, var(--sb-primary), color-mix(in srgb, var(--sb-primary) 70%, var(--sb-secondary)));
-  color: #fff;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--sb-primary) 20%, transparent);
+  background: linear-gradient(135deg, var(--sb-navy), var(--sb-deep-blue));
+  color: var(--sb-gold);
+  box-shadow: 0 4px 14px rgba(11, 31, 58, 0.2);
 }
 
 .send-photos-intro__text h1 {
   margin: 0 0 0.2rem;
+  font-family: var(--sb-font-heading);
   font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--sb-primary);
+  color: var(--sb-navy);
 }
 
 .send-photos-intro__text p {
@@ -61,10 +62,10 @@
 /* ─── Cards ─── */
 .send-photos-card {
   background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--sb-border);
   border-radius: 1.125rem;
   padding: 1.25rem;
-  box-shadow: 0 2px 12px rgba(9, 20, 38, 0.04);
+  box-shadow: var(--sb-shadow-sm);
 }
 
 @media (min-width: 640px) {
@@ -175,8 +176,8 @@
 }
 
 .send-photos-pill.is-active {
-  border-color: var(--sb-secondary);
-  background: var(--sb-primary);
+  border-color: var(--sb-gold);
+  background: var(--sb-navy);
   color: #fff;
 }
 
@@ -340,7 +341,7 @@
   margin-top: 0.25rem;
   padding: 1rem 1.25rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, var(--sb-primary), color-mix(in srgb, var(--sb-primary) 82%, var(--sb-secondary)));
+  background: linear-gradient(135deg, var(--sb-navy), var(--sb-deep-blue));
   color: #fff;
 }
 

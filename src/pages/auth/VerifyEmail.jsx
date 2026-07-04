@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { verifyEmail } from '../../services/authService.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import { useTenant } from '../../context/TenantContext.jsx';
+import AuthSplitLayout from '../../components/layout/AuthSplitLayout.jsx';
+import LoadingState from '../../components/ui/LoadingState.jsx';
+import PremiumCard from '../../components/ui/PremiumCard.jsx';
 
 export default function VerifyEmail() {
   const { loginPath } = useTenantPath();
+  const { tenantSlug } = useTenant();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const [message, setMessage] = useState('');
@@ -24,12 +30,33 @@ export default function VerifyEmail() {
   }, [token]);
 
   return (
-    <div style={{ maxWidth: 420, margin: '4rem auto', padding: '1rem', textAlign: 'center' }}>
-      <h1>Verify email</h1>
-      {loading && <p>Verifying…</p>}
-      {error && <p className="form-error">{error}</p>}
-      {message && <p className="form-success">{message}</p>}
-      <p><Link to={loginPath}>Go to login</Link></p>
-    </div>
+    <AuthSplitLayout
+      title="Verify email"
+      subtitle={loading ? 'Please wait while we verify your email.' : error ? 'Verification could not be completed.' : 'Your email has been confirmed.'}
+      workspaceSlug={tenantSlug}
+      visualTitle="Email verification"
+      visualSubtitle="Confirming your email helps us keep your school workspace secure."
+      footerLink={{ to: loginPath, label: 'Go to login' }}
+    >
+      {loading && <LoadingState message="Verifying your email…" />}
+      {!loading && error && (
+        <PremiumCard className="text-center">
+          <XCircle size={48} className="mx-auto mb-4 text-rose-500" />
+          <p className="text-sm text-rose-600">{error}</p>
+          <p className="mt-4 text-sm text-muted">
+            <Link to={loginPath} className="font-semibold text-accent hover:underline">Return to login</Link>
+          </p>
+        </PremiumCard>
+      )}
+      {!loading && message && (
+        <PremiumCard className="text-center">
+          <CheckCircle size={48} className="mx-auto mb-4 text-[var(--sb-forest)]" />
+          <p className="text-sm text-[var(--sb-forest)]">{message}</p>
+          <p className="mt-4 text-sm text-muted">
+            <Link to={loginPath} className="font-semibold text-accent hover:underline">Sign in to continue</Link>
+          </p>
+        </PremiumCard>
+      )}
+    </AuthSplitLayout>
   );
 }

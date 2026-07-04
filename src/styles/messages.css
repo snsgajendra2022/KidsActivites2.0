@@ -363,19 +363,19 @@
 
 .messages-bubble--sent {
   align-self: flex-end;
-  background: linear-gradient(135deg, var(--sb-primary), color-mix(in srgb, var(--sb-primary) 85%, var(--sb-secondary)));
+  background: linear-gradient(135deg, var(--sb-navy), color-mix(in srgb, var(--sb-navy) 80%, var(--sb-gold)));
   color: #fff;
   border-bottom-right-radius: 0.25rem;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--sb-primary) 20%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--sb-navy) 18%, transparent);
 }
 
 .messages-bubble--received {
   align-self: flex-start;
-  background: #fff;
+  background: var(--sb-cream);
   color: var(--sb-on-surface);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid color-mix(in srgb, var(--sb-gold) 18%, var(--sb-border));
   border-bottom-left-radius: 0.25rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(9, 20, 38, 0.04);
 }
 
 .messages-bubble__meta {
@@ -507,22 +507,24 @@
   gap: 0.75rem;
 }
 
-.messages-new-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  border-radius: 0.625rem;
-  background: var(--sb-primary, #2563eb);
-  color: #fff;
-  cursor: pointer;
-  flex-shrink: 0;
+.messages-compose__send.sb-button-primary {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
 }
 
-.messages-new-btn:hover {
-  filter: brightness(1.05);
+.messages-new-btn.sb-button-primary {
+  width: 2rem;
+  height: 2rem;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0.625rem;
+}
+
+.messages-new-link.sb-button-primary {
+  margin-top: 0.75rem;
 }
 
 .messages-new-link {

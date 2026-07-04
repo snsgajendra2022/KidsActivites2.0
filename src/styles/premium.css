@@ -1,45 +1,24 @@
-/* SchoolBridge Premium 2026 Design System */
+/* SchoolBridge Premium 2026 — layout/components; tokens in theme.css */
 
 :root {
-  --primary: #4f46e5;
-  --primary-dark: #4338ca;
-  --primary-light: #eef2ff;
-  --primary-glow: rgba(79, 70, 229, 0.15);
-  --accent: #0ea5e9;
-  --accent-emerald: #10b981;
-  --navy: #0f172a;
-  --navy-soft: #1e293b;
-  --success: #059669;
-  --success-light: #ecfdf5;
-  --warning: #d97706;
-  --warning-light: #fffbeb;
-  --danger: #dc2626;
-  --danger-light: #fef2f2;
-  --info: #0284c7;
-  --info-light: #f0f9ff;
-  --bg: #f4f6fb;
+  --primary: var(--sb-navy);
+  --primary-dark: var(--sb-deep-blue);
+  --primary-light: var(--sb-surface-container-high);
+  --primary-glow: color-mix(in srgb, var(--sb-gold) 20%, transparent);
+  --accent: var(--sb-gold);
+  --accent-emerald: var(--sb-forest);
+  --navy: var(--sb-navy);
+  --navy-soft: var(--sb-deep-blue);
+  --bg: var(--sb-ivory);
   --bg-elevated: #ffffff;
-  --text: #0f172a;
-  --text-secondary: #475569;
-  --muted: #64748b;
+  --text: var(--sb-slate);
+  --text-secondary: var(--sb-muted);
+  --muted: var(--sb-muted);
   --card: #ffffff;
-  --line: #e8ecf4;
-  --line-soft: #f1f5f9;
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.12);
-  --shadow-glow: 0 0 0 1px rgba(79, 70, 229, 0.08), 0 8px 32px rgba(79, 70, 229, 0.12);
-  --radius: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 22px;
-  --radius-2xl: 28px;
-  --sidebar-width: 272px;
-  --sidebar-collapsed: 80px;
-  --header-height: 68px;
-  --font-display: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
-  --font-main: Inter, system-ui, sans-serif;
-  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --line: var(--sb-border);
+  --line-soft: var(--sb-cream);
+  --font-display: var(--sb-font-heading);
+  --font-main: var(--sb-font-body);
 }
 
 body {
@@ -345,7 +324,7 @@ body {
 
 /* ─── Welcome Banner ─── */
 .welcome-banner {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #312e81 100%);
+  background: linear-gradient(135deg, var(--sb-navy) 0%, var(--sb-deep-blue) 50%, color-mix(in srgb, var(--sb-gold) 25%, var(--sb-deep-blue)) 100%);
   border-radius: var(--radius-2xl);
   padding: 32px 36px;
   color: #fff;
