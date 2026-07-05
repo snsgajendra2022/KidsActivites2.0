@@ -148,11 +148,12 @@ a.premium-btn-white:hover {
 
 .sb-page-title {
   margin: 0;
-  font-family: Manrope, Inter, system-ui, sans-serif;
+  font-family: var(--sb-font-heading);
+  font-style: italic;
+  font-weight: 400;
   font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--sb-primary);
+  letter-spacing: -0.02em;
+  color: var(--sb-purple-dark);
 }
 
 .sb-page-subtitle {
@@ -168,10 +169,11 @@ a.premium-btn-white:hover {
 
 .premium-page-title {
   margin: 0;
-  font-family: Manrope, Inter, system-ui, sans-serif !important;
+  font-family: var(--sb-font-heading) !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
   font-size: 1.75rem !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   color: var(--sb-primary) !important;
 }
 

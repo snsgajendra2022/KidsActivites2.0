@@ -125,6 +125,19 @@ export async function loginByEmail(email, password) {
   );
 }
 
+/** Apply tokens from QR login poll response. */
+export async function loginWithQrTokens(data) {
+  if (!data?.accessToken || !data?.user) {
+    throw new Error('QR login did not return a valid session.');
+  }
+  setTokens(data.accessToken, data.refreshToken);
+  if (isApiEnabled()) clearMockStorage();
+  return markDemoSession(
+    { ...data.user, loginMethod: 'qr_web' },
+    false,
+  );
+}
+
 export async function sendLoginOtp(mobile) {
   if (isApiEnabled()) {
     const normalized = normalizeMobile(mobile);

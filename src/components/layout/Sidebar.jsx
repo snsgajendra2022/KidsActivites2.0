@@ -10,7 +10,7 @@ function sidebarLinkClass({ isActive }) {
     return [
       'sidebar-nav-link sidebar-nav-link-active',
       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
-      'bg-[var(--sb-gold)] text-[var(--sb-navy)] shadow-sm',
+      'bg-[var(--sb-gold)] text-[var(--sb-purple-dark)] shadow-sm',
     ].join(' ');
   }
   return [
@@ -33,7 +33,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
         className={`fixed inset-0 z-40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
-        style={{ background: 'color-mix(in srgb, var(--sb-primary) 30%, transparent)' }}
+        style={{ background: 'color-mix(in srgb, var(--sb-footer) 30%, transparent)' }}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -109,7 +109,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
 
         {!collapsed && user && (
           <div className="shrink-0 border-t border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] p-4">
-            <div className="rounded-xl bg-[color-mix(in_srgb,var(--sb-gold)_10%,var(--sb-deep-blue))] p-3 ring-1 ring-[color-mix(in_srgb,var(--sb-gold)_15%,transparent)]">
+            <div className="rounded-xl bg-[color-mix(in_srgb,var(--sb-purple)_15%,var(--sb-footer))] p-3 ring-1 ring-[color-mix(in_srgb,var(--sb-purple-soft)_20%,transparent)]">
               <div className="truncate text-sm font-semibold text-white">{user.name}</div>
               <div className="mt-0.5 text-xs text-white/50">{ROLE_LABELS[user.role]}</div>
               <div className="mt-2 text-[10px] font-medium text-white/40">{school?.academicYear}</div>

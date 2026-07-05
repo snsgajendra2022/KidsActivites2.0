@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
+  <defs>
+    <linearGradient id="tlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8DDF0"/>
+      <stop offset="100%" style="stop-color:#B899C9"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" rx="16" fill="url(#tlGrad)"/>
+  <rect x="40" y="60" width="560" height="280" rx="8" fill="#FAF7F2" opacity="0.5"/>
+  <circle cx="320" cy="200" r="40" fill="#7A238C" opacity="0.85"/>
+  <polygon points="310,180 310,220 340,200" fill="#fff"/>
+</svg>

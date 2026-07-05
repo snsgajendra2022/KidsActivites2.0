@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Mail, Shield, Smartphone, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Mail, Shield, Smartphone, Eye, EyeOff, QrCode } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import AuthSplitLayout from '../../components/layout/AuthSplitLayout.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import '../../styles/login-portal.css';
+import QrLoginPanel from '../../components/auth/QrLoginPanel.jsx';
 
 const OTP_RESEND_SECONDS = 30;
 
@@ -129,7 +130,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, requestOtp, requestEmailOtp, loginWithOtp, loginWithEmailOtp } = useAuth();
+  const { login, requestOtp, requestEmailOtp, loginWithOtp, loginWithEmailOtp, loginWithQr } = useAuth();
   const navigate = useNavigate();
   const { tenantSlug } = useTenant();
   const { roleDashboard, tenantPath } = useTenantPath();
@@ -139,8 +140,9 @@ export default function Login() {
   const emailLoginEnabled = isMethodEnabled('emailLogin');
   const mobileOtpEnabled = isMethodEnabled('mobileOtp');
   const emailOtpEnabled = isMethodEnabled('emailOtp');
+  const qrLoginEnabled = isMethodEnabled('qrLogin');
   const otpLoginEnabled = mobileOtpEnabled || emailOtpEnabled;
-  const anyLoginEnabled = emailLoginEnabled || otpLoginEnabled;
+  const anyLoginEnabled = emailLoginEnabled || otpLoginEnabled || qrLoginEnabled;
 
   const otpChannelOptions = { mobileEnabled: mobileOtpEnabled, emailEnabled: emailOtpEnabled };
   const activeOtpChannel = sentOtpChannel || detectOtpChannel(otpIdentity, otpChannelOptions);
@@ -148,6 +150,7 @@ export default function Login() {
 
   const pickDefaultMethod = () => {
     if (emailLoginEnabled) return 'email';
+    if (qrLoginEnabled) return 'qr';
     if (otpLoginEnabled) return 'otp';
     return 'email';
   };
@@ -156,9 +159,10 @@ export default function Login() {
     setMethod((current) => {
       if (current === 'email' && emailLoginEnabled) return 'email';
       if (current === 'otp' && otpLoginEnabled) return 'otp';
+      if (current === 'qr' && qrLoginEnabled) return 'qr';
       return pickDefaultMethod();
     });
-  }, [emailLoginEnabled, otpLoginEnabled]);
+  }, [emailLoginEnabled, otpLoginEnabled, qrLoginEnabled]);
 
   const welcomeBlurb = (() => {
     if (!anyLoginEnabled) {
@@ -280,22 +284,43 @@ export default function Login() {
       : 'you@school.edu.in';
 
   const renderMethodFooter = () => {
-    if (!emailLoginEnabled || !otpLoginEnabled) return null;
-    const isEmail = method === 'email';
+    const alternatives = [];
+    if (emailLoginEnabled && method !== 'email') alternatives.push({ key: 'email', label: 'Email & Password', icon: Mail });
+    if (otpLoginEnabled && method !== 'otp') alternatives.push({ key: 'otp', label: 'OTP', icon: Shield });
+    if (qrLoginEnabled && method !== 'qr') alternatives.push({ key: 'qr', label: 'QR Login', icon: QrCode });
+    if (!alternatives.length) return null;
     return (
       <div className="login-method-footer">
         <p className="login-method-footer__or">or continue with</p>
-        <button
-          type="button"
-          className="login-method-switch"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => switchMethod(isEmail ? 'otp' : 'email')}
-        >
-          {isEmail ? <Shield size={16} /> : <Mail size={16} />}
-          {isEmail ? 'Sign in with OTP' : 'Sign in with Email & Password'}
-        </button>
+        <div className="flex flex-col gap-2">
+          {alternatives.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              className="login-method-switch"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => switchMethod(key)}
+            >
+              <Icon size={16} />
+              Sign in with {label}
+            </button>
+          ))}
+        </div>
       </div>
     );
+  };
+
+  const handleQrApproved = async (tokenPayload) => {
+    setError('');
+    setLoading(true);
+    try {
+      const user = await loginWithQr(tokenPayload);
+      navigate(roleDashboard(user.role) || tenantPath('/'));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderOtpStep = (changeLabel, onChangeTarget) => (
@@ -364,6 +389,17 @@ export default function Login() {
                   ? '6-digit code sent to your mobile'
                   : '6-digit code sent to your email'}
             </p>
+          </div>
+        </div>
+      )}
+      {qrLoginEnabled && (
+        <div className="auth-split__feature">
+          <div className="auth-split__feature-icon">
+            <QrCode size={18} />
+          </div>
+          <div>
+            <p className="auth-split__feature-label">QR Login</p>
+            <p className="auth-split__feature-text">Scan with the SchoolBridge mobile app</p>
           </div>
         </div>
       )}
@@ -509,6 +545,11 @@ export default function Login() {
 
           {renderMethodFooter()}
         </form>
+      ) : method === 'qr' && qrLoginEnabled ? (
+        <div className="space-y-4">
+          <QrLoginPanel onApproved={handleQrApproved} onError={setError} />
+          {renderMethodFooter()}
+        </div>
       ) : null}
 
       <div className="login-enroll-section">

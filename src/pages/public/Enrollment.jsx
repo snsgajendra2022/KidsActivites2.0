@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Baby, ClipboardCheck, FileCheck, Play, Users, Lock, ArrowLeft,
+  Lock, ArrowLeft,
 } from 'lucide-react';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -21,8 +21,8 @@ import {
   DynamicReviewStep,
 } from '../../components/enrollment/DynamicEnrollmentFields.jsx';
 import NetworkBanner from '../../components/layout/NetworkBanner.jsx';
-import PublicHero from '../../components/ui/PublicHero.jsx';
-import ProcessJourney from '../../components/ui/ProcessJourney.jsx';
+import CinematicHero from '../../components/public/CinematicHero.jsx';
+import JourneyNav from '../../components/public/JourneyNav.jsx';
 import PremiumCard from '../../components/ui/PremiumCard.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
@@ -36,11 +36,11 @@ import { enrollmentThemeToCssVars } from '../../constants/enrollmentTheme.js';
 const SCHOOL_NAME_FIELD_KEYS = new Set(['schoolName', 'applyingSchool', 'preferredSchool']);
 
 const ENROLLMENT_JOURNEY = [
-  { icon: Play, title: 'Start Application', description: 'Begin your admission application online.' },
-  { icon: Users, title: 'Family Details', description: 'Parent and guardian contact information.' },
-  { icon: Baby, title: 'Child Information', description: 'Student details, address, and academics.' },
-  { icon: FileCheck, title: 'Documents', description: 'Upload required certificates and ID proofs.' },
-  { icon: ClipboardCheck, title: 'Review & Submit', description: 'Declaration, signature, and final review.' },
+  { label: 'Start' },
+  { label: 'Family' },
+  { label: 'Child' },
+  { label: 'Documents' },
+  { label: 'Submit' },
 ];
 
 function resolveJourneyIndex(stepConfig, stepNum) {
@@ -212,12 +212,12 @@ export default function Enrollment() {
 
   if (!admissions.admissionsOpen) {
     return (
-      <div className="enrollment-form-viewport enrollment-form-viewport--premium" style={enrollCssVars}>
+      <div className="enrollment-form-viewport enrollment-form-viewport--premium enrollment-form-viewport--editorial" style={enrollCssVars}>
         <NetworkBanner />
-        <PublicHero
-          className="enrollment-hero enrollment-hero--compact"
+        <CinematicHero
+          compact
           imageUrl={heroImage}
-          eyebrow="Admissions Closed"
+          badge="Admissions Closed"
           title="Enrollment Unavailable"
           subtitle={`${school?.name || portalName} is not accepting new applications at this time.`}
         />
@@ -246,7 +246,7 @@ export default function Enrollment() {
 
   if (submitted) {
     return (
-      <div className="enrollment-form-viewport enrollment-form-viewport--premium" style={enrollCssVars}>
+      <div className="enrollment-form-viewport enrollment-form-viewport--premium enrollment-form-viewport--editorial" style={enrollCssVars}>
         <NetworkBanner />
         <div className="enrollment-form-wrap flex items-center">
           <PremiumCard className="enrollment-success-card" elevated goldAccent>
@@ -313,22 +313,21 @@ export default function Enrollment() {
   };
 
   return (
-    <div className="enrollment-form-viewport enrollment-form-viewport--premium" style={enrollCssVars}>
+    <div className="enrollment-form-viewport enrollment-form-viewport--premium enrollment-form-viewport--editorial" style={enrollCssVars}>
       <NetworkBanner />
 
-      <PublicHero
-        className="enrollment-hero enrollment-hero--compact"
+      <CinematicHero
+        compact
         imageUrl={heroImage}
-        eyebrow={school?.academicYear ? `Admissions ${school.academicYear}` : 'Online Admissions'}
+        badge={school?.academicYear ? `Admissions ${school.academicYear}` : 'Online Admissions'}
         title="Student Enrollment"
         subtitle={`Apply to ${school?.name || portalName}. Your progress is saved automatically as you complete each step.`}
       />
 
-      <ProcessJourney
-        className="enrollment-journey !py-6 md:!py-8"
-        compact
+      <JourneyNav
         steps={ENROLLMENT_JOURNEY}
         activeIndex={journeyIndex}
+        compact
       />
 
       <div className="enrollment-form-wrap">

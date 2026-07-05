@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom';
-import { Shield, FileCheck, CreditCard, Users, ArrowRight, Sparkles, GraduationCap } from 'lucide-react';
+import { ArrowRight, Sparkles, GraduationCap } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
-import PublicFooter from '../../components/layout/PublicFooter.jsx';
-import PublicHero from '../../components/ui/PublicHero.jsx';
-import ProcessJourney from '../../components/ui/ProcessJourney.jsx';
-import PremiumCTA from '../../components/ui/PremiumCTA.jsx';
+import CinematicHero from '../../components/public/CinematicHero.jsx';
+import JourneyNav from '../../components/public/JourneyNav.jsx';
+import EditorialTimeline from '../../components/public/EditorialTimeline.jsx';
+import MapFeatureSection from '../../components/public/MapFeatureSection.jsx';
+import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
+import EditorialFooter from '../../components/public/EditorialFooter.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
@@ -14,6 +15,36 @@ import { useTenantPath } from '../../hooks/useTenantPath.js';
 const DEFAULT_HERO_HEADLINE = ['Modern School Enrollment', 'Built for Premium Education'];
 const DEFAULT_HERO_SUBTEXT =
   "Complete your child's admission online. Submit documents, pay fees, and stay connected — all in one trusted platform.";
+
+const LANDING_JOURNEY = [
+  { label: 'Discover' },
+  { label: 'Apply' },
+  { label: 'Documents' },
+  { label: 'Connect' },
+];
+
+const TIMELINE_STEPS = [
+  {
+    title: 'Secure & Trusted',
+    description: 'Role-based access, encrypted data, and audit-ready workflows designed for schools you can trust.',
+    showPlay: true,
+  },
+  {
+    title: 'Easy Documentation',
+    description: 'Upload documents online with real-time status tracking — no more lost paperwork or repeated visits.',
+    showPlay: true,
+  },
+  {
+    title: 'Transparent Fees',
+    description: 'Clear fee breakdown with digital receipt generation so families always know where they stand.',
+    showPlay: false,
+  },
+  {
+    title: 'Stay Connected',
+    description: 'Chat with teachers and receive classroom photos after admission — your school community, online.',
+    showPlay: true,
+  },
+];
 
 function parseHeroHeadline(headline) {
   if (!headline?.trim()) return DEFAULT_HERO_HEADLINE;
@@ -48,8 +79,8 @@ export default function Landing() {
     : `Complete your child's admission to ${school?.name || 'our school'} online. Submit documents, pay fees, and stay connected.`;
 
   return (
-    <PublicLayout hideFooter className="!sb-surface sb-page">
-      <PublicHero
+    <PublicLayout hideFooter className="sb-editorial-page">
+      <CinematicHero
         imageUrl={heroImage}
         badge={(
           <>
@@ -63,8 +94,7 @@ export default function Landing() {
         subtitle={heroSubtitle}
         primaryAction={{
           to: enrollPath,
-          label: <>Start Enrollment <ArrowRight size={18} className="inline ml-1" /></>,
-          className: 'sb-button-gold sb-btn-pill btn-hover-lift inline-flex items-center gap-2',
+          label: <>Start Enrollment <ArrowRight size={18} /></>,
         }}
         secondaryAction={{
           to: loginPath,
@@ -72,36 +102,34 @@ export default function Landing() {
         }}
       />
 
-      <ProcessJourney
+      <JourneyNav steps={LANDING_JOURNEY} activeIndex={0} />
+
+      <EditorialTimeline
         title={`Why Schools Choose ${portalName}`}
         subtitle="A complete platform for admissions, fees, and parent communication."
-        steps={[
-          { icon: Shield, title: 'Secure & Trusted', desc: 'Role-based access, encrypted data, and audit-ready workflows.' },
-          { icon: FileCheck, title: 'Easy Documentation', desc: 'Upload documents online with real-time status tracking.' },
-          { icon: CreditCard, title: 'Transparent Fees', desc: 'Clear fee breakdown with digital receipt generation.' },
-          { icon: Users, title: 'Stay Connected', desc: 'Chat with teachers and receive classroom photos after admission.' },
-        ]}
+        steps={TIMELINE_STEPS}
       />
 
-      <PremiumCTA
-        icon={GraduationCap}
+      <MapFeatureSection
+        title={isPlatformHome ? 'Schools Across the Region' : 'Visit Our Campus'}
+        subtitle={isPlatformHome
+          ? 'SchoolBridge connects families with schools in their community.'
+          : `Experience ${school?.name || 'our school'} in person or explore online.`}
+        address={isPlatformHome ? undefined : school?.address}
+      />
+
+      <FinalImageCTA
         title={isPlatformHome ? portalName : school?.name}
-        subtitle={isPlatformHome ? (platform?.tagline || 'Professional Grade Enrollment.') : school?.address}
+        subtitle={isPlatformHome
+          ? (platform?.tagline || 'Professional Grade Enrollment.')
+          : school?.address}
         action={{
           to: enrollPath,
-          label: <>Begin Enrollment Application <ArrowRight size={18} className="inline ml-1" /></>,
+          label: <>Begin Enrollment Application <ArrowRight size={18} /></>,
         }}
       />
 
-      <section id="contact" className="border-t border-[var(--sb-border)] bg-white px-4 py-10 md:px-10">
-        <div className="sb-container text-center text-sm text-muted">
-          {isPlatformHome
-            ? 'Contact your school directly for admissions assistance.'
-            : `${school?.phone} · ${school?.email}`}
-        </div>
-      </section>
-
-      <PublicFooter compact />
+      <EditorialFooter compact />
     </PublicLayout>
   );
 }

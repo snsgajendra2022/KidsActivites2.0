@@ -34,6 +34,7 @@ export const DEFAULT_PORTAL_CONFIG = {
     emailLogin: true,
     mobileOtp: true,
     emailOtp: true,
+    qrLogin: true,
   },
   loginScrollLines: [
     'Admissions open for 2026–2027 — enroll online today',

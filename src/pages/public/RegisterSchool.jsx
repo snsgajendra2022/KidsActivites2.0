@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Loader2, X, GraduationCap } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, X } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
+import CinematicHero from '../../components/public/CinematicHero.jsx';
+import JourneyNav from '../../components/public/JourneyNav.jsx';
 import FormInput from '../../components/ui/FormInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Select from '../../components/ui/Select.jsx';
-import FormPanel from '../../components/ui/FormPanel.jsx';
 import WorkspaceUrlPreview from '../../components/ui/WorkspaceUrlPreview.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
@@ -20,6 +21,14 @@ const SCHOOL_TYPES = [
   { value: 'School', label: 'School' },
   { value: 'Daycare', label: 'Daycare' },
   { value: 'Preschool', label: 'Preschool' },
+];
+
+const REGISTER_JOURNEY = [
+  { label: 'Workspace' },
+  { label: 'School' },
+  { label: 'Owner' },
+  { label: 'Setup' },
+  { label: 'Dashboard' },
 ];
 
 export default function RegisterSchool() {
@@ -116,34 +125,35 @@ export default function RegisterSchool() {
         : 'Lowercase letters, numbers, and hyphens only';
 
   return (
-    <PublicLayout className="!sb-surface sb-page">
-      <div className="register-split">
-        <div className="register-split__hero">
-          <Link to="/" className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white">
+    <PublicLayout className="sb-editorial-page">
+      <CinematicHero
+        compact
+        badge="SchoolBridge Platform"
+        title="Register your school workspace"
+        subtitle="Create your dedicated SchoolBridge portal with a unique URL. Manage admissions, fees, and parent communication from one place."
+      />
+
+      <JourneyNav steps={REGISTER_JOURNEY} activeIndex={1} compact />
+
+      <div className="sb-register-layout">
+        <div className="sb-register-layout__hero">
+          <Link to="/" className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white">
             <ArrowLeft size={16} /> Back
           </Link>
-          <p className="sb-eyebrow">SchoolBridge Platform</p>
-          <h1 className="font-display mb-4 text-3xl font-bold leading-tight md:text-4xl">
-            Register your school workspace
-          </h1>
-          <p className="mb-8 max-w-md text-base leading-relaxed text-white/75">
-            Create your dedicated SchoolBridge portal with a unique URL. Manage admissions, fees, and parent communication from one place.
-          </p>
-          <div className="flex items-center gap-3 text-sm text-white/60">
-            <GraduationCap size={20} className="text-[var(--sb-gold)]" />
+          <h2 className="sb-editorial-heading sb-editorial-heading--light mb-4">
             Trusted by schools and daycares worldwide
-          </div>
+          </h2>
+          <p className="max-w-md text-base leading-relaxed text-white/75">
+            Your workspace includes admissions, fee management, parent communication, and classroom photo sharing — all in one secure portal.
+          </p>
         </div>
 
-        <div className="register-split__form">
-          <div className="mx-auto max-w-lg">
-            <FormPanel
-              title="Workspace details"
-              subtitle="You'll be redirected to sign in when your workspace is ready."
-              as="form"
-              onSubmit={handleSubmit}
-              className="space-y-5"
-            >
+        <div className="sb-register-layout__form">
+          <div className="sb-register-layout__form-card">
+            <h2>Workspace details</h2>
+            <p className="form-subtitle">You&apos;ll be redirected to sign in when your workspace is ready.</p>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
               <FormInput
                 label="School name"
                 name="schoolName"
@@ -267,7 +277,7 @@ export default function RegisterSchool() {
               <label className="flex items-start gap-2 text-sm text-muted">
                 <input
                   type="checkbox"
-                  className="mt-1 accent-[var(--sb-gold)]"
+                  className="mt-1 accent-[var(--sb-purple)]"
                   checked={form.termsAccepted}
                   onChange={(e) => updateField('termsAccepted', e.target.checked)}
                 />
@@ -285,11 +295,11 @@ export default function RegisterSchool() {
                 size="lg"
                 loading={submitting}
                 disabled={submitting || slugStatus.available === false || slugStatus.checking}
-                className="w-full"
+                className="sb-purple-cta w-full !border-0"
               >
                 Create workspace
               </Button>
-            </FormPanel>
+            </form>
           </div>
         </div>
       </div>

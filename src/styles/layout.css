@@ -1,9 +1,9 @@
 /* SchoolBridge — layout (portal shell, sidebar, auth split) */
 
-/* App shell */
+/* App shell — editorial purple sidebar */
 .app-sidebar {
-  background: var(--sb-navy) !important;
-  border-right: 1px solid color-mix(in srgb, var(--sb-gold) 15%, transparent) !important;
+  background: var(--sb-footer) !important;
+  border-right: 1px solid color-mix(in srgb, var(--sb-purple-soft) 20%, transparent) !important;
   color: rgba(255, 255, 255, 0.85);
 }
 
@@ -45,22 +45,22 @@
 .app-sidebar .sidebar-nav-link-active,
 .app-sidebar .sidebar-nav-link-active span,
 .app-sidebar .sidebar-nav-link-active svg {
-  color: var(--sb-navy) !important;
+  color: var(--sb-purple-dark) !important;
 }
 
 .app-sidebar .sidebar-nav-link-active {
-  background: var(--sb-gold) !important;
-  box-shadow: 0 2px 12px rgba(201, 162, 74, 0.35);
+  background: linear-gradient(135deg, var(--sb-gold) 0%, color-mix(in srgb, var(--sb-gold) 85%, white) 100%) !important;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--sb-gold) 35%, transparent);
 }
 
 .app-sidebar .sidebar-collapse-btn {
-  border-color: color-mix(in srgb, var(--sb-gold) 20%, transparent);
-  background: color-mix(in srgb, var(--sb-gold) 8%, var(--sb-navy));
+  border-color: color-mix(in srgb, var(--sb-purple-soft) 25%, transparent);
+  background: color-mix(in srgb, var(--sb-purple) 15%, var(--sb-footer));
   color: rgba(255, 255, 255, 0.7);
 }
 
 .app-sidebar .sidebar-collapse-btn:hover {
-  background: color-mix(in srgb, var(--sb-gold) 18%, var(--sb-navy));
+  background: color-mix(in srgb, var(--sb-purple) 30%, var(--sb-footer));
   color: var(--sb-gold);
 }
 
@@ -287,27 +287,36 @@
 /* Parent portal warm theme */
 .parent-portal-warm main,
 .parent-portal-warm .premium-content {
-  background: linear-gradient(180deg, var(--sb-cream) 0%, var(--sb-ivory) 24rem);
+  background: linear-gradient(180deg, var(--sb-cream) 0%, var(--sb-lavender) 24rem);
+}
+
+/* Dashboard cream cards */
+.premium-card,
+.sb-card,
+.dashboard-card {
+  background: var(--sb-cream);
+  border-color: var(--sb-line);
 }
 
 /* Send photos upload cards */
 .send-photos-target-card {
-  border: 2px solid var(--sb-border);
+  border: 2px solid var(--sb-line);
   border-radius: var(--sb-radius-lg);
   padding: 1.25rem;
-  background: #fff;
+  background: var(--sb-cream);
   cursor: pointer;
   transition: all var(--sb-transition);
 }
 
 .send-photos-target-card:hover {
-  border-color: color-mix(in srgb, var(--sb-gold) 45%, var(--sb-border));
+  border-color: var(--sb-purple-soft);
+  background: var(--sb-lavender);
 }
 
 .send-photos-target-card--active {
-  border-color: var(--sb-gold);
-  background: color-mix(in srgb, var(--sb-gold) 8%, white);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-gold) 18%, transparent);
+  border-color: var(--sb-purple);
+  background: color-mix(in srgb, var(--sb-purple) 6%, var(--sb-cream));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-purple) 15%, transparent);
 }
 
 .send-photos-privacy-warning {
@@ -315,9 +324,9 @@
   gap: 0.75rem;
   padding: 1rem 1.125rem;
   border-radius: var(--sb-radius);
-  background: color-mix(in srgb, var(--sb-gold) 12%, var(--sb-cream));
-  border: 1px solid color-mix(in srgb, var(--sb-gold) 35%, var(--sb-border));
-  color: var(--sb-slate);
+  background: color-mix(in srgb, var(--sb-purple) 8%, var(--sb-lavender));
+  border: 1px solid var(--sb-line);
+  color: var(--sb-ink);
   font-size: 0.8125rem;
   line-height: 1.5;
 }

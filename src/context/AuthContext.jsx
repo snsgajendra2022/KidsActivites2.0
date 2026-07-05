@@ -6,6 +6,7 @@ import {
   verifyOtp,
   verifyOtpByChannel,
   logoutSession,
+  loginWithQrTokens,
 } from '../services/authService.js';
 import { isDemoUser } from '../services/api/demoMode.js';
 import { clearMockStorage } from '../services/api/clearMockStorage.js';
@@ -98,6 +99,13 @@ export function AuthProvider({ children }) {
     return nextUser;
   };
 
+  const loginWithQr = async (tokenPayload) => {
+    const nextUser = await loginWithQrTokens(tokenPayload);
+    persistUser(nextUser);
+    setUser(nextUser);
+    return nextUser;
+  };
+
   const logout = async () => {
     await logoutSession();
     localStorage.removeItem(STORAGE_KEY);
@@ -126,6 +134,7 @@ export function AuthProvider({ children }) {
       requestEmailOtp,
       loginWithOtp,
       loginWithEmailOtp,
+      loginWithQr,
       logout,
       updateProfile,
       changePassword,

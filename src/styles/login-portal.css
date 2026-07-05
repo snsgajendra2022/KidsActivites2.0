@@ -12,7 +12,7 @@
 .login-field-label {
   font-size: 14px;
   font-weight: 600;
-  color: color-mix(in srgb, var(--sb-primary) 80%, transparent);
+  color: color-mix(in srgb, var(--sb-purple-dark) 80%, transparent);
 }
 
 .login-muted-text {
@@ -73,16 +73,16 @@
   font-size: 18px;
   font-weight: 700;
   border-radius: var(--sb-radius);
-  border: 1px solid var(--sb-border);
+  border: 1px solid var(--sb-line);
   background: #fff;
-  color: var(--sb-navy);
+  color: var(--sb-purple-dark);
   outline: none;
   transition: all 0.2s ease;
 }
 
 .login-otp-box:focus {
-  border-color: var(--sb-gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-gold) 20%, transparent);
+  border-color: var(--sb-purple);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-purple) 20%, transparent);
 }
 
 .login-submit-btn {
@@ -103,8 +103,8 @@
 
 .login-identity-wrap:focus-within,
 .login-password-wrap:focus-within {
-  border-color: var(--sb-gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-gold) 20%, transparent);
+  border-color: var(--sb-purple);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-purple) 20%, transparent);
 }
 
 .login-identity-icon {
@@ -113,9 +113,9 @@
   justify-content: center;
   width: 44px;
   flex-shrink: 0;
-  color: var(--sb-navy);
-  background: var(--sb-cream);
-  border-right: 1px solid var(--sb-border);
+  color: var(--sb-purple-dark);
+  background: var(--sb-lavender);
+  border-right: 1px solid var(--sb-line);
 }
 
 .login-identity-input,

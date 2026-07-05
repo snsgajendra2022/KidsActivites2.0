@@ -3,20 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   Building2,
-  CreditCard,
-  FileCheck,
-  GraduationCap,
   LogIn,
-  Shield,
   Sparkles,
-  Users,
 } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
-import PublicFooter from '../../components/layout/PublicFooter.jsx';
-import PublicHero from '../../components/ui/PublicHero.jsx';
-import ProcessJourney from '../../components/ui/ProcessJourney.jsx';
-import PremiumCTA from '../../components/ui/PremiumCTA.jsx';
-import PremiumCard from '../../components/ui/PremiumCard.jsx';
+import CinematicHero from '../../components/public/CinematicHero.jsx';
+import JourneyNav from '../../components/public/JourneyNav.jsx';
+import EditorialTimeline from '../../components/public/EditorialTimeline.jsx';
+import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
+import EditorialFooter from '../../components/public/EditorialFooter.jsx';
 import FormInput from '../../components/ui/FormInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
@@ -25,6 +20,36 @@ import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 const DEFAULT_HERO_HEADLINE = ['Modern School Operations', 'Built for Growing Institutions'];
 const DEFAULT_HERO_SUBTEXT =
   'Launch your school workspace in minutes. Manage enrollment, fees, and parent communication on one trusted platform.';
+
+const ACCESS_JOURNEY = [
+  { label: 'Discover' },
+  { label: 'Create' },
+  { label: 'Configure' },
+  { label: 'Launch' },
+];
+
+const TIMELINE_STEPS = [
+  {
+    title: 'Secure & Trusted',
+    description: 'Role-based access, encrypted data, and audit-ready workflows.',
+    showPlay: true,
+  },
+  {
+    title: 'Easy Documentation',
+    description: 'Upload documents online with real-time status tracking.',
+    showPlay: false,
+  },
+  {
+    title: 'Transparent Fees',
+    description: 'Clear fee breakdown with digital receipt generation.',
+    showPlay: false,
+  },
+  {
+    title: 'Stay Connected',
+    description: 'Chat with teachers and receive classroom photos after admission.',
+    showPlay: true,
+  },
+];
 
 function parseHeroHeadline(headline) {
   if (!headline?.trim()) return DEFAULT_HERO_HEADLINE;
@@ -49,8 +74,8 @@ export default function AccessLanding() {
   }
 
   return (
-    <PublicLayout hideFooter className="!sb-surface sb-page">
-      <PublicHero
+    <PublicLayout hideFooter className="sb-editorial-page">
+      <CinematicHero
         imageUrl={heroImage}
         badge={(
           <>
@@ -67,35 +92,34 @@ export default function AccessLanding() {
         subtitle={heroSubtext}
         primaryAction={{
           to: '/workspace/new',
-          label: <>Create Workspace <ArrowRight size={18} className="inline ml-1" /></>,
-          className: 'sb-button-gold sb-btn-pill btn-hover-lift inline-flex items-center gap-2',
+          label: <>Create Workspace <ArrowRight size={18} /></>,
         }}
       />
 
-      <section className="sb-section sb-section--cream border-b border-[var(--sb-border)]">
-        <div className="sb-container grid gap-8 lg:grid-cols-2">
-          <PremiumCard goldAccent>
-            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-muted text-accent">
+      <JourneyNav steps={ACCESS_JOURNEY} activeIndex={0} />
+
+      <section className="sb-editorial-section sb-editorial-section--lavender">
+        <div className="sb-container sb-access-cards">
+          <div className="sb-access-card">
+            <div className="sb-access-card__icon">
               <Building2 size={22} />
             </div>
-            <h2 className="font-display mb-2 text-2xl font-bold text-brand">New to SchoolBridge?</h2>
-            <p className="mb-6 text-sm leading-relaxed text-muted">
+            <h2>New to SchoolBridge?</h2>
+            <p>
               Request a dedicated workspace for your school. We&apos;ll send a confirmation email and provision your
               tenant after you verify.
             </p>
-            <Link to="/workspace/new" className="sb-button-primary inline-flex items-center gap-2">
+            <Link to="/workspace/new" className="sb-purple-cta">
               Start workspace setup <ArrowRight size={16} />
             </Link>
-          </PremiumCard>
+          </div>
 
-          <PremiumCard goldAccent>
-            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-muted text-accent">
+          <div className="sb-access-card">
+            <div className="sb-access-card__icon">
               <LogIn size={22} />
             </div>
-            <h2 className="font-display mb-2 text-2xl font-bold text-brand">Sign in to your workspace</h2>
-            <p className="mb-6 text-sm leading-relaxed text-muted">
-              Enter your school workspace slug to open your portal login.
-            </p>
+            <h2>Sign in to your workspace</h2>
+            <p>Enter your school workspace slug to open your portal login.</p>
             <form onSubmit={handleSignIn} className="flex flex-col gap-3 sm:flex-row">
               <FormInput
                 name="workspaceSlug"
@@ -105,36 +129,30 @@ export default function AccessLanding() {
                 helper="e.g. green-valley → /green-valley/login"
                 className="flex-1"
               />
-              <Button type="submit" variant="primary" size="lg" className="shrink-0 sm:self-end">
+              <Button type="submit" variant="primary" size="lg" className="sb-purple-cta shrink-0 sm:self-end !border-0">
                 Continue
               </Button>
             </form>
-          </PremiumCard>
+          </div>
         </div>
       </section>
 
-      <ProcessJourney
+      <EditorialTimeline
         title={`Why Schools Choose ${portalName}`}
         subtitle="A complete platform for admissions, fees, and parent communication."
-        steps={[
-          { icon: Shield, title: 'Secure & Trusted', desc: 'Role-based access, encrypted data, and audit-ready workflows.' },
-          { icon: FileCheck, title: 'Easy Documentation', desc: 'Upload documents online with real-time status tracking.' },
-          { icon: CreditCard, title: 'Transparent Fees', desc: 'Clear fee breakdown with digital receipt generation.' },
-          { icon: Users, title: 'Stay Connected', desc: 'Chat with teachers and receive classroom photos after admission.' },
-        ]}
+        steps={TIMELINE_STEPS}
       />
 
-      <PremiumCTA
-        icon={GraduationCap}
+      <FinalImageCTA
         title={portalName}
         subtitle={platform?.tagline || 'Professional grade enrollment and school operations.'}
         action={{
           to: '/workspace/new',
-          label: <>Create your workspace <ArrowRight size={18} className="inline ml-1" /></>,
+          label: <>Create your workspace <ArrowRight size={18} /></>,
         }}
       />
 
-      <PublicFooter compact />
+      <EditorialFooter compact />
     </PublicLayout>
   );
 }

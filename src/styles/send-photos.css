@@ -38,18 +38,19 @@
   width: 3rem;
   height: 3rem;
   border-radius: 0.875rem;
-  background: linear-gradient(135deg, var(--sb-navy), var(--sb-deep-blue));
+  background: linear-gradient(135deg, var(--sb-purple-dark), var(--sb-purple));
   color: var(--sb-gold);
-  box-shadow: 0 4px 14px rgba(11, 31, 58, 0.2);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--sb-purple) 25%, transparent);
 }
 
 .send-photos-intro__text h1 {
   margin: 0 0 0.2rem;
   font-family: var(--sb-font-heading);
+  font-style: italic;
+  font-weight: 400;
   font-size: 1.375rem;
-  font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--sb-navy);
+  color: var(--sb-purple-dark);
 }
 
 .send-photos-intro__text p {

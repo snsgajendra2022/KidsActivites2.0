@@ -20,7 +20,7 @@ export default function AuthSplitLayout({
   const workspaceHost = typeof window !== 'undefined' ? window.location.host : null;
 
   return (
-    <div className={`sb-page flex min-h-dvh flex-col ${className}`.trim()}>
+    <div className={`sb-page sb-editorial-page sb-editorial-auth flex min-h-dvh flex-col ${className}`.trim()}>
       <PublicHeader compact />
       <div className="auth-split flex-1">
         <div className="auth-split__visual">

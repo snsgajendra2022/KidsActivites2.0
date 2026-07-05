@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield, FileText, Globe } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield, FileText, Globe, QrCode } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -245,7 +245,7 @@ export default function PortalSettings() {
   const setLoginMethod = (key, enabled) => {
     setForm((f) => {
       const next = { ...f.loginMethods, [key]: enabled };
-      const count = (next.emailLogin ? 1 : 0) + (next.mobileOtp ? 1 : 0) + (next.emailOtp ? 1 : 0);
+      const count = (next.emailLogin ? 1 : 0) + (next.mobileOtp ? 1 : 0) + (next.emailOtp ? 1 : 0) + (next.qrLogin ? 1 : 0);
       if (count === 0) {
         toast('At least one login method must remain enabled.', 'warning');
         return f;
@@ -277,7 +277,7 @@ export default function PortalSettings() {
   };
 
   const handleSave = async () => {
-    if (!form.loginMethods?.emailLogin && !form.loginMethods?.mobileOtp && !form.loginMethods?.emailOtp) {
+    if (!form.loginMethods?.emailLogin && !form.loginMethods?.mobileOtp && !form.loginMethods?.emailOtp && !form.loginMethods?.qrLogin) {
       toast('Enable at least one login method.', 'error');
       return;
     }
@@ -621,6 +621,33 @@ export default function PortalSettings() {
                   <span
                     className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
                       form.loginMethods.emailLogin !== false ? 'left-[22px]' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-[#fafbfe]">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-muted text-accent">
+                    <QrCode size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-brand">QR Login</p>
+                    <p className="text-xs text-muted">Sign in on web by scanning with the SchoolBridge mobile app</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.loginMethods.qrLogin !== false}
+                  onClick={() => setLoginMethod('qrLogin', form.loginMethods.qrLogin === false)}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    form.loginMethods.qrLogin !== false ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      form.loginMethods.qrLogin !== false ? 'left-[22px]' : 'left-0.5'
                     }`}
                   />
                 </button>

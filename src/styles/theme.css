@@ -1,16 +1,25 @@
 /* SchoolBridge Premium Theme — design tokens */
 
 :root {
-  /* Brand palette */
+  /* Brand palette — navy (portal/admin) */
   --sb-navy: #0B1F3A;
   --sb-deep-blue: #102E52;
   --sb-gold: #C9A24A;
-  --sb-cream: #F7F1E3;
+  --sb-cream: #FAF7F2;
   --sb-ivory: #FBF8F1;
   --sb-forest: #2F5D50;
   --sb-slate: #243447;
-  --sb-muted: #6B7280;
+  --sb-muted: #756A7D;
   --sb-border: #E5E0D5;
+
+  /* Editorial purple palette (public admissions) */
+  --sb-purple: #7A238C;
+  --sb-purple-dark: #35134A;
+  --sb-purple-soft: #B899C9;
+  --sb-lavender: #E8DDF0;
+  --sb-ink: #20152A;
+  --sb-line: #C9A6D8;
+  --sb-footer: #21184B;
 
   /* Semantic aliases */
   --sb-primary: var(--sb-navy);

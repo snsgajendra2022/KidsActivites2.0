@@ -450,12 +450,12 @@
   justify-content: center;
   text-align: center;
   padding: 4rem 2rem;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--sb-line);
   border-radius: 1.25rem;
   background:
-    radial-gradient(ellipse 70% 50% at 50% 0%, color-mix(in srgb, #1a365d 6%, transparent), transparent 70%),
-    #fff;
-  box-shadow: 0 2px 12px rgba(9, 20, 38, 0.04);
+    radial-gradient(ellipse 70% 50% at 50% 0%, color-mix(in srgb, var(--sb-purple) 8%, transparent), transparent 70%),
+    var(--sb-cream);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--sb-purple) 4%, transparent);
 }
 
 .parent-photos-empty__icon {
@@ -466,17 +466,18 @@
   height: 5rem;
   margin-bottom: 1.25rem;
   border-radius: 1.25rem;
-  background: #1a365d;
+  background: var(--sb-purple-dark);
   color: #fff;
-  box-shadow: 0 8px 28px rgba(26, 54, 93, 0.22);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--sb-purple) 25%, transparent);
 }
 
 .parent-photos-empty h2 {
   margin: 0 0 0.5rem;
-  font-family: Manrope, 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  font-family: var(--sb-font-heading);
+  font-style: italic;
+  font-weight: 400;
   font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--sb-primary);
+  color: var(--sb-purple-dark);
 }
 
 .parent-photos-empty p {
