@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Tv, Copy, RefreshCw, Archive, Eye } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Tv, Copy, RefreshCw, Archive, Eye, Play } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
+import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
   backfillAlbums,
@@ -14,12 +15,28 @@ import {
 } from '../../services/classAlbumService.js';
 import '../../styles/admin-albums.css';
 
+function toLightboxPhoto(item, albumDetail) {
+  return {
+    id: item.id,
+    mediaType: item.mediaType,
+    caption: item.caption || item.fileName,
+    className: albumDetail?.className,
+    thumbnailUrl: item.thumbnailUrl,
+    previewUrl: item.previewUrl || item.imageUrl,
+    streamUrl: item.streamUrl || item.playbackUrl,
+    renditions: item.renditions,
+    processingStatus: item.processingStatus,
+    status: item.status,
+  };
+}
+
 export default function AdminAlbums() {
   const { toast } = useToast();
   const [albums, setAlbums] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lightboxIndex, setLightboxIndex] = useState(-1);
 
   const loadAlbums = useCallback(async () => {
     setLoading(true);
@@ -37,6 +54,7 @@ export default function AdminAlbums() {
 
   const openDetail = async (albumId) => {
     setSelectedId(albumId);
+    setLightboxIndex(-1);
     try {
       const data = await getAdminAlbum(albumId);
       setDetail(data);
@@ -44,6 +62,12 @@ export default function AdminAlbums() {
       toast(err?.message || 'Failed to load album.', 'error');
     }
   };
+
+  const lightboxPhotos = useMemo(
+    () => (detail?.media || []).map((item) => toLightboxPhoto(item, detail)),
+    [detail],
+  );
+  const lightboxPhoto = lightboxIndex >= 0 ? lightboxPhotos[lightboxIndex] : null;
 
   const copyCode = async (code) => {
     try {
@@ -222,9 +246,27 @@ export default function AdminAlbums() {
                   </Button>
                 </div>
                 <div className="admin-albums-media-grid">
-                  {(detail.media || []).map((item) => (
+                  {(detail.media || []).map((item, index) => (
                     <article key={item.id} className="admin-albums-media-card">
-                      {item.thumbnailUrl && <img src={item.thumbnailUrl} alt="" />}
+                      <button
+                        type="button"
+                        className="admin-albums-media-card__preview"
+                        onClick={() => setLightboxIndex(index)}
+                        aria-label={`View ${item.caption || item.fileName || 'media'}`}
+                      >
+                        {item.thumbnailUrl ? (
+                          <img src={item.thumbnailUrl} alt="" />
+                        ) : (
+                          <div className="admin-albums-media-card__placeholder">
+                            {item.mediaType === 'VIDEO' ? <Play size={24} /> : <Eye size={24} />}
+                          </div>
+                        )}
+                        {item.mediaType === 'VIDEO' && (
+                          <span className="admin-albums-media-card__badge" aria-hidden>
+                            <Play size={12} />
+                          </span>
+                        )}
+                      </button>
                       <p>{item.caption || item.fileName || 'Media'}</p>
                       <button type="button" onClick={() => toggleShowOnTv(item)}>
                         TV: {item.showOnTv ? 'On' : 'Off'}
@@ -237,6 +279,15 @@ export default function AdminAlbums() {
           </div>
         )}
       </div>
+
+      <PhotoLightbox
+        photo={lightboxPhoto}
+        onClose={() => setLightboxIndex(-1)}
+        onPrev={() => setLightboxIndex((i) => Math.max(0, i - 1))}
+        onNext={() => setLightboxIndex((i) => Math.min(lightboxPhotos.length - 1, i + 1))}
+        hasPrev={lightboxIndex > 0}
+        hasNext={lightboxIndex >= 0 && lightboxIndex < lightboxPhotos.length - 1}
+      />
     </DashboardLayout>
   );
 }

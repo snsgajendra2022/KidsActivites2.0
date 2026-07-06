@@ -1,0 +1,12 @@
+# SchoolBridge Frontend — API configuration
+# Copy to .env or .env.local and adjust when backend is running.
+
+# Live API base URL (required for database-backed data)
+# Local machine only:
+# Spring Boot backend (see backend/README.md)
+# VITE_API_URL=http://192.168.1.40:8081/api/v1
+# VITE_TENANT_SLUG=demo
+
+# # Live API only — mocks require explicit opt-in
+# VITE_FORCE_MOCK=false
+# VITE_API_FALLBACK_MOCK=false

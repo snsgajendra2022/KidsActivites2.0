@@ -24,11 +24,7 @@ export default function CinematicHero({
       </div>
 
       <div className="sb-hero-frame">
-        <div className="sb-hero-frame__logo">
-          <PortalLogo size="md" />
-          <span className="sb-hero-frame__logo-text">SchoolBridge</span>
-        </div>
-
+        {/* Logo removed from hero per request */}
         <div className="sb-hero-frame__body">
           {badge && <div className="sb-hero-frame__badge">{badge}</div>}
           <h1 className="sb-hero-title">{title}</h1>
