@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 
 function getCellValue(row, column) {
   if (column.render) return column.render(row);
@@ -287,8 +288,9 @@ export function TableActionButton({ variant = 'outline', children, className = '
 }
 
 export function TableActionLink({ to, variant = 'outline', children, className = '' }) {
+  const { tenantPath } = useTenantPath();
   return (
-    <Link to={to} className={`table-action-btn table-action-btn-${variant} ${className}`}>
+    <Link to={tenantPath(to)} className={`table-action-btn table-action-btn-${variant} ${className}`}>
       {children}
     </Link>
   );

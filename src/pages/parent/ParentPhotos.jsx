@@ -79,7 +79,7 @@ function getChildApplicationIds(children = []) {
 }
 
 function GalleryCard({ photo, onOpen }) {
-  if (photo.type === 'video') {
+  if (photo.type === 'video' || photo.mediaType === 'VIDEO') {
     return (
       <article className="parent-photos-masonry-item">
         <div className="parent-photos-video-card">
@@ -170,11 +170,11 @@ export default function ParentPhotos() {
   const featuredSideCards = useMemo(() => {
     const heroSide = sortedPhotos.filter((p) => p.heroSide && p.imageUrl);
     if (heroSide.length >= 2) return heroSide.slice(0, 2);
-    return sortedPhotos.filter((p) => p.featured && p.type !== 'video' && p.imageUrl).slice(0, 2);
+    return sortedPhotos.filter((p) => p.featured && p.type !== 'video' && p.mediaType !== 'VIDEO' && p.imageUrl).slice(0, 2);
   }, [sortedPhotos]);
 
   const lightboxPhotos = useMemo(
-    () => sortedPhotos.filter((p) => p.type !== 'video' && p.imageUrl),
+    () => sortedPhotos.filter((p) => p.type !== 'video' && p.mediaType !== 'VIDEO' && p.imageUrl),
     [sortedPhotos],
   );
 

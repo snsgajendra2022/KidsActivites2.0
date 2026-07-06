@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert,
+  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, Play,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
@@ -27,9 +27,25 @@ const SEND_TYPES = [
   { value: 'individual', label: 'Individual', icon: User },
 ];
 
+const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,image/*,video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm,.m4v';
+
+function isAcceptedMediaFile(file) {
+  if (!file) return false;
+  if (file.type.startsWith('image/') || file.type.startsWith('video/')) return true;
+  const name = (file.name || '').toLowerCase();
+  return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.mov', '.webm', '.m4v'].some((ext) => name.endsWith(ext));
+}
+
+function isVideoFile(file) {
+  if (!file) return false;
+  if (file.type.startsWith('video/')) return true;
+  const name = (file.name || '').toLowerCase();
+  return ['.mp4', '.mov', '.webm', '.m4v'].some((ext) => name.endsWith(ext));
+}
+
 const SUCCESS_MESSAGES = {
   [UPLOAD_TARGETS.CLASS_ALBUM]: 'Uploaded to class album successfully.',
-  [UPLOAD_TARGETS.PARENT_DIRECT]: 'Photo sent to parent successfully.',
+  [UPLOAD_TARGETS.PARENT_DIRECT]: 'Media sent to parent successfully.',
   [UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT]: 'Uploaded to class album and shared with parents successfully.',
 };
 
@@ -54,6 +70,20 @@ export default function SendPhotos() {
     getTeacherAlbumClasses().then(setAlbumClasses).catch(() => setAlbumClasses([]));
     getTeacherStudents(user.id).then(setAllStudents);
   }, [user?.id]);
+
+  const filePreviewUrls = useMemo(() => {
+    const urls = new Map();
+    form.files.forEach((file) => {
+      if (!isVideoFile(file)) {
+        urls.set(file, URL.createObjectURL(file));
+      }
+    });
+    return urls;
+  }, [form.files]);
+
+  useEffect(() => () => {
+    filePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  }, [filePreviewUrls]);
 
   const activeAlbumClasses = useMemo(
     () => albumClasses.filter(
@@ -84,7 +114,11 @@ export default function SendPhotos() {
   }, [form, needsClass, selectedAlbum, selectedClass, uploadTarget]);
 
   const onFilesChange = (e) => {
-    setForm((prev) => ({ ...prev, files: Array.from(e.target.files || []) }));
+    const picked = Array.from(e.target.files || []).filter(isAcceptedMediaFile);
+    if (picked.length < (e.target.files?.length || 0)) {
+      toast('Some files were skipped. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
+    }
+    setForm((prev) => ({ ...prev, files: picked }));
   };
 
   const validate = () => {
@@ -102,7 +136,11 @@ export default function SendPhotos() {
       return false;
     }
     if (form.files.length === 0) {
-      toast('Please choose at least one image.', 'warning');
+      toast('Please choose at least one image or video.', 'warning');
+      return false;
+    }
+    if (form.files.some((f) => !isAcceptedMediaFile(f))) {
+      toast('Unsupported file type. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
       return false;
     }
     return true;
@@ -143,7 +181,7 @@ export default function SendPhotos() {
             </div>
             <div className="send-photos-intro__text">
               <h1>Share Classroom Media</h1>
-              <p>Upload to a class album for TV playback, send directly to parents, or both.</p>
+              <p>Upload to a class album for TV playback, send directly to parents, or both. Photos and videos are supported.</p>
             </div>
           </header>
 
@@ -257,12 +295,29 @@ export default function SendPhotos() {
             <span className="send-photos-card__label">Media &amp; caption</span>
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept={ACCEPTED_MEDIA}
               multiple
               onChange={onFilesChange}
             />
             {form.files.length > 0 && (
-              <p className="send-photos-classes-empty">{form.files.length} file(s) selected</p>
+              <div className="send-photos-file-preview">
+                {form.files.map((file) => (
+                  <div key={`${file.name}-${file.lastModified}`} className="send-photos-file-preview__item">
+                    {isVideoFile(file) ? (
+                      <div className="send-photos-file-preview__video">
+                        <Play size={20} />
+                      </div>
+                    ) : (
+                      <img
+                        src={filePreviewUrls.get(file)}
+                        alt=""
+                        className="send-photos-file-preview__thumb"
+                      />
+                    )}
+                    <span className="send-photos-file-preview__name">{file.name}</span>
+                  </div>
+                ))}
+              </div>
             )}
             <div className="form-field full">
               <label className="form-label" htmlFor="photo-caption">Caption</label>

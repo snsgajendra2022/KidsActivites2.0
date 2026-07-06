@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   UploadCloud, X, FileText, Eye, RefreshCw, WifiOff, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Button from '../ui/Button.jsx';
+import DocumentPreviewModal from '../documents/DocumentPreviewModal.jsx';
 import { useNetworkStore } from '../../store/networkStore.js';
 import { useUploadStore } from '../../store/uploadStore.js';
 import { uploadFile } from '../../services/uploadService.js';
 import {
   validateFile, formatFileSize, FILE_RULES, UPLOAD_STATUS, UPLOAD_STATUS_LABELS,
 } from '../../utils/uploadValidation.js';
+import { canPreviewDocument } from '../../utils/documentPreview.js';
 import { cn } from '../../lib/cn.js';
+import '../../styles/document-preview.css';
 
 const STATUS_ICON = {
   [UPLOAD_STATUS.UPLOADED]: CheckCircle2,
@@ -35,6 +38,7 @@ export default function SmartFileUpload({
 }) {
   const inputRef = useRef(null);
   const abortRef = useRef(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const isOnline = useNetworkStore((s) => s.isOnline);
   const item = useUploadStore((s) => s.getByField(fieldKey));
   const { addItem, updateItem, removeItem } = useUploadStore();
@@ -54,27 +58,37 @@ export default function SmartFileUpload({
     abortRef.current = new AbortController();
     updateItem(uploadItem.id, { status: UPLOAD_STATUS.UPLOADING, progress: 0, error: null });
 
-    const result = await uploadFile({
-      file: uploadItem.file,
-      fieldKey,
-      isOnline: () => useNetworkStore.getState().isOnline,
-      signal: abortRef.current.signal,
-      onProgress: (progress) => updateItem(uploadItem.id, { progress }),
-      applicationId,
-      schoolId,
-    });
+    try {
+      const result = await uploadFile({
+        file: uploadItem.file,
+        fieldKey,
+        isOnline: () => useNetworkStore.getState().isOnline,
+        signal: abortRef.current.signal,
+        onProgress: (progress) => updateItem(uploadItem.id, { progress }),
+        applicationId,
+        schoolId,
+      });
 
-    if (result.success) {
-      updateItem(uploadItem.id, { status: UPLOAD_STATUS.UPLOADED, progress: 100 });
-      onChange?.(result.data);
-      toast.success('File uploaded successfully.');
-    } else {
-      updateItem(uploadItem.id, { status: result.status, error: result.error });
-      if (result.status === UPLOAD_STATUS.PAUSED) {
-        toast.warning('Upload paused due to network issue.');
+      if (result.success) {
+        const patch = { status: UPLOAD_STATUS.UPLOADED, progress: 100 };
+        if (!uploadItem.previewUrl && result.data?.previewUrl) {
+          patch.previewUrl = result.data.previewUrl;
+        }
+        updateItem(uploadItem.id, patch);
+        onChange?.(result.data);
+        toast.success('File uploaded successfully.');
       } else {
-        toast.error('Upload failed. Please retry.');
+        updateItem(uploadItem.id, { status: result.status, error: result.error, progress: 0 });
+        if (result.status === UPLOAD_STATUS.PAUSED) {
+          toast.warning('Upload paused due to network issue.');
+        } else {
+          toast.error(result.error || 'Upload failed. Please retry.');
+        }
       }
+    } catch (err) {
+      const message = err?.message || 'Upload failed. Please retry.';
+      updateItem(uploadItem.id, { status: UPLOAD_STATUS.FAILED, error: message, progress: 0 });
+      toast.error(message);
     }
   }, [fieldKey, isOnline, onChange, updateItem, applicationId, schoolId]);
 
@@ -102,10 +116,21 @@ export default function SmartFileUpload({
     onChange?.(null);
   };
 
-  const handlePreview = () => {
-    if (item?.previewUrl) window.open(item.previewUrl, '_blank');
-    else if (value?.previewUrl) window.open(value.previewUrl, '_blank');
-  };
+  const previewDoc = useMemo(() => {
+    if (!item && !value) return null;
+    return {
+      name: value?.name || item?.file?.name,
+      size: value?.size ?? item?.file?.size,
+      type: value?.type || item?.file?.type,
+      previewUrl: item?.previewUrl || value?.previewUrl || null,
+      dataUrl: value?.dataUrl,
+      fileKey: value?.fileKey,
+      downloadUrl: value?.downloadUrl,
+      status: value?.status || 'uploaded',
+    };
+  }, [item, value]);
+
+  const canPreview = Boolean(previewDoc?.name && (canPreviewDocument(previewDoc) || item?.previewUrl || item?.file));
 
   // Resume paused uploads when back online
   useEffect(() => {
@@ -161,8 +186,10 @@ export default function SmartFileUpload({
               </span>
             </div>
             <div className="upload-item-actions">
-              {(displayValue.previewUrl || value?.previewUrl) && (
-                <Button variant="ghost" size="sm" onClick={handlePreview} aria-label="Preview"><Eye size={16} /></Button>
+              {canPreview && (
+                <Button variant="ghost" size="sm" onClick={() => setPreviewOpen(true)} aria-label="Preview">
+                  <Eye size={16} />
+                </Button>
               )}
               {[UPLOAD_STATUS.FAILED, UPLOAD_STATUS.PAUSED, UPLOAD_STATUS.WAITING_FOR_INTERNET].includes(displayValue.status) && (
                 <Button variant="ghost" size="sm" onClick={handleRetry} aria-label="Retry"><RefreshCw size={16} /></Button>
@@ -189,6 +216,13 @@ export default function SmartFileUpload({
       )}
 
       {(externalError) && <span className="form-error">{externalError}</span>}
+
+      <DocumentPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        docKey={fieldKey}
+        doc={previewDoc}
+      />
     </div>
   );
 }

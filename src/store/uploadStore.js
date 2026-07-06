@@ -20,7 +20,9 @@ export const useUploadStore = create((set, get) => ({
 
   addItem: (fieldKey, file) => {
     const id = `${fieldKey}-${Date.now()}`;
-    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+    const previewUrl = (file.type.startsWith('image/') || file.type === 'application/pdf')
+      ? URL.createObjectURL(file)
+      : null;
     const item = {
       id,
       fieldKey,

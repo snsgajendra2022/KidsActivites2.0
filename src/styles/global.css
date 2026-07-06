@@ -493,6 +493,7 @@ img { max-width: 100%; }
   box-shadow: var(--shadow-lg);
 }
 .modal-lg { width: min(720px, 100%); }
+.modal-xl { width: min(920px, 100%); }
 .modal-header {
   display: flex;
   justify-content: space-between;

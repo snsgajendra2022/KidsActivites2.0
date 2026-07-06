@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProgressiveImageSrc } from '../../hooks/useProgressiveImageSrc.js';
+import { isVideoPlaybackReady } from '../../utils/photoStudioProgressive.js';
+import VideoHlsPlayer from './VideoHlsPlayer.jsx';
 import '../../styles/photo-lightbox.css';
 import '../../styles/progressive-image.css';
 
@@ -13,13 +15,15 @@ export default function PhotoLightbox({
   hasNext,
 }) {
   const studioImage = photo?.studioImage || (photo?.variants ? photo : null);
+  const isVideo = photo?.mediaType === 'VIDEO' && photo?.streamUrl;
+  const videoReady = isVideo && isVideoPlaybackReady(photo);
   const { src: progressiveSrc, loading, qualityLabel } = useProgressiveImageSrc(
     studioImage,
-    { enabled: !!studioImage },
+    { enabled: !!studioImage && !isVideo },
   );
   const imgSrc = studioImage
     ? progressiveSrc
-    : (photo?.previewUrl || photo?.imageUrl);
+    : (photo?.previewUrl || photo?.thumbnailUrl || photo?.imageUrl);
 
   useEffect(() => {
     if (!photo) return undefined;
@@ -72,11 +76,33 @@ export default function PhotoLightbox({
 
       <div className="photo-lightbox__content" onClick={(e) => e.stopPropagation()}>
         <div className="photo-lightbox__image-wrap">
-          <img
-            src={imgSrc}
-            alt={photo.caption || 'Classroom photo'}
-            className={`photo-lightbox__image progressive-image ${loading ? 'is-upgrading' : 'is-ready'}`}
-          />
+          {isVideo ? (
+            videoReady ? (
+              <VideoHlsPlayer
+                className="photo-lightbox__image photo-lightbox__video"
+                src={photo.streamUrl}
+                poster={photo.thumbnailUrl || photo.previewUrl || undefined}
+                renditions={photo.renditions}
+              />
+            ) : (
+              <div className="photo-lightbox__video-processing">
+                <p>Video is still processing…</p>
+                {photo.thumbnailUrl ? (
+                  <img
+                    src={photo.thumbnailUrl}
+                    alt=""
+                    className="photo-lightbox__image"
+                  />
+                ) : null}
+              </div>
+            )
+          ) : (
+            <img
+              src={imgSrc}
+              alt={photo.caption || 'Classroom photo'}
+              className={`photo-lightbox__image progressive-image ${loading ? 'is-upgrading' : 'is-ready'}`}
+            />
+          )}
           {studioImage && loading && qualityLabel ? (
             <span className="photo-lightbox__quality">{qualityLabel}</span>
           ) : null}
