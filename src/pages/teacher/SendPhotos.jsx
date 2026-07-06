@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, Play,
+  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, Play, ArrowRight,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { ApiError } from '../../services/api/client.js';
 import {
   UPLOAD_TARGETS,
   getTeacherAlbumClasses,
-  getTeacherAlbumByClass,
   uploadTeacherAlbumMedia,
 } from '../../services/classAlbumService.js';
 import { getTeacherStudents } from '../../services/teacherService.js';
@@ -50,18 +51,11 @@ const SUCCESS_MESSAGES = {
   [UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT]: 'Uploaded to class album and shared with parents successfully.',
 };
 
-function mediaStatusLabel(item) {
-  if (item.isReadyForTv && item.approvalStatus === 'APPROVED' && item.showOnTv) return 'Ready for TV';
-  if (item.isReadyForTv && item.approvalStatus === 'APPROVED') return 'Ready for TV';
-  if (item.mediaType === 'VIDEO') return 'Processing';
-  if (item.approvalStatus === 'PENDING') return 'Pending approval';
-  if (!item.isReadyForTv) return 'Waiting for variants';
-  return 'Processing';
-}
-
 export default function SendPhotos() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
+  const [searchParams] = useSearchParams();
   const [albumClasses, setAlbumClasses] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
   const [uploadTarget, setUploadTarget] = useState(UPLOAD_TARGETS.CLASS_ALBUM);
@@ -74,34 +68,20 @@ export default function SendPhotos() {
   });
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [albumMedia, setAlbumMedia] = useState([]);
-  const [albumMediaLoading, setAlbumMediaLoading] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
-    getTeacherAlbumClasses().then(setAlbumClasses).catch(() => setAlbumClasses([]));
+    getTeacherAlbumClasses()
+      .then((classes) => {
+        setAlbumClasses(classes);
+        const fromUrl = searchParams.get('class');
+        if (fromUrl && classes.some((c) => c.classId === fromUrl)) {
+          setForm((prev) => ({ ...prev, classId: fromUrl }));
+        }
+      })
+      .catch(() => setAlbumClasses([]));
     getTeacherStudents(user.id).then(setAllStudents);
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!form.classId) {
-      setAlbumMedia((prev) => (prev.length === 0 ? prev : []));
-      return undefined;
-    }
-    let cancelled = false;
-    setAlbumMediaLoading(true);
-    getTeacherAlbumByClass(form.classId)
-      .then((data) => {
-        if (!cancelled) setAlbumMedia(data?.media || []);
-      })
-      .catch(() => {
-        if (!cancelled) setAlbumMedia([]);
-      })
-      .finally(() => {
-        if (!cancelled) setAlbumMediaLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [form.classId]);
+  }, [user?.id, searchParams]);
 
   const [filePreviewUrls, setFilePreviewUrls] = useState(() => new Map());
 
@@ -128,6 +108,9 @@ export default function SendPhotos() {
   const students = allStudents.filter((s) => s.classId === form.classId);
   const selectedClass = activeAlbumClasses.find((c) => c.classId === form.classId);
   const selectedAlbum = selectedClass?.album;
+  const classAlbumHref = form.classId
+    ? `${tenantPath('/teacher/class-album')}?class=${encodeURIComponent(form.classId)}`
+    : tenantPath('/teacher/class-album');
 
   const needsClass = true;
   const needsStudent = uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
@@ -200,11 +183,6 @@ export default function SendPhotos() {
         caption: '',
         files: [],
       });
-      if (uploadedClassId) {
-        getTeacherAlbumByClass(uploadedClassId)
-          .then((data) => setAlbumMedia(data?.media || []))
-          .catch(() => setAlbumMedia([]));
-      }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'CLASS_INACTIVE') {
         toast('This class is inactive. Please contact admin.', 'error');
@@ -227,6 +205,10 @@ export default function SendPhotos() {
             <div className="send-photos-intro__text">
               <h1>Share Classroom Media</h1>
               <p>Upload to a class album for TV playback, send directly to parents, or both. Photos and videos are supported.</p>
+              <Link to={classAlbumHref} className="send-photos-album-link">
+                View &amp; manage your class album uploads
+                <ArrowRight size={15} />
+              </Link>
             </div>
           </header>
 
@@ -376,35 +358,6 @@ export default function SendPhotos() {
               />
             </div>
           </div>
-
-          {form.classId && (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM
-            || uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT) && (
-            <div className="send-photos-card">
-              <span className="send-photos-card__label">Class album media</span>
-              {albumMediaLoading ? (
-                <p className="send-photos-album-status">Loading album…</p>
-              ) : albumMedia.length === 0 ? (
-                <p className="send-photos-album-status">No album media yet.</p>
-              ) : (
-                <div className="send-photos-album-grid">
-                  {albumMedia.slice(0, 12).map((item) => (
-                    <article key={item.id} className="send-photos-album-item">
-                      {item.thumbnailUrl ? (
-                        <img src={item.thumbnailUrl} alt="" className="send-photos-album-item__thumb" />
-                      ) : (
-                        <div className="send-photos-album-item__placeholder">
-                          {item.mediaType === 'VIDEO' ? <Play size={18} /> : <ImageIcon size={18} />}
-                        </div>
-                      )}
-                      <span className={`send-photos-album-item__badge send-photos-album-item__badge--${item.isReadyForTv ? 'ready' : 'pending'}`}>
-                        {mediaStatusLabel(item)}
-                      </span>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           <footer className="send-photos-footer">
             <p className="send-photos-footer__hint">

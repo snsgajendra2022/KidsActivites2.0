@@ -487,6 +487,21 @@
   color: #fff;
 }
 
-.send-photos-album-item__badge--ready {
-  background: rgba(22, 101, 52, 0.85);
+.send-photos-intro__text p {
+  margin: 0;
+}
+
+.send-photos-album-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sb-primary);
+  text-decoration: none;
+}
+
+.send-photos-album-link:hover {
+  text-decoration: underline;
 }
