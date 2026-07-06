@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { ApiError } from '../../services/api/client.js';
 import {
   backfillAlbums,
   getAdminAlbum,
@@ -28,6 +29,25 @@ function toLightboxPhoto(item, albumDetail) {
     processingStatus: item.processingStatus,
     status: item.status,
   };
+}
+
+function tvBlockLabel(item, albumDetail) {
+  if (!albumDetail?.playbackEnabled) return 'Album playback disabled';
+  if (item.approvalStatus !== 'APPROVED') return 'Approval required';
+  if (item.tvBlockReason) {
+    if (item.tvBlockReason.includes('variant')) return 'Waiting for image variants';
+    if (item.tvBlockReason.includes('Video')) return 'Video processing';
+    return item.tvBlockReason;
+  }
+  return 'Not ready for TV';
+}
+
+function tvStatusBadge(item) {
+  if (item.isReadyForTv && item.approvalStatus === 'APPROVED') return 'Ready for TV';
+  if (item.mediaType === 'VIDEO') return 'Processing';
+  if (!item.isReadyForTv) return 'Waiting for variants';
+  if (item.approvalStatus === 'PENDING') return 'Pending approval';
+  return 'Processing';
 }
 
 export default function AdminAlbums() {
@@ -124,11 +144,21 @@ export default function AdminAlbums() {
 
   const toggleShowOnTv = async (mediaItem) => {
     if (!detail?.id) return;
+    const enabling = !mediaItem.showOnTv;
+    if (enabling && !mediaItem.canShowOnTv) {
+      toast(tvBlockLabel(mediaItem, detail), 'warning');
+      return;
+    }
     try {
-      await updateAlbumMedia(detail.id, mediaItem.id, { showOnTv: !mediaItem.showOnTv });
+      await updateAlbumMedia(detail.id, mediaItem.id, { showOnTv: enabling });
+      toast(enabling ? 'Media enabled for TV.' : 'Media removed from TV.', 'success');
       openDetail(detail.id);
     } catch (err) {
-      toast(err?.message || 'Update failed.', 'error');
+      if (err instanceof ApiError && err.code === 'MEDIA_NOT_READY_FOR_TV') {
+        toast(err.message, 'error');
+      } else {
+        toast(err?.message || 'Update failed.', 'error');
+      }
     }
   };
 
@@ -268,9 +298,21 @@ export default function AdminAlbums() {
                         )}
                       </button>
                       <p>{item.caption || item.fileName || 'Media'}</p>
-                      <button type="button" onClick={() => toggleShowOnTv(item)}>
+                      <span className="admin-albums-media-card__status">{tvStatusBadge(item)}</span>
+                      {item.approvalStatus === 'PENDING' && (
+                        <span className="admin-albums-media-card__status">Approval required</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleShowOnTv(item)}
+                        disabled={!item.showOnTv && !item.canShowOnTv}
+                        title={!item.canShowOnTv && !item.showOnTv ? tvBlockLabel(item, detail) : undefined}
+                      >
                         TV: {item.showOnTv ? 'On' : 'Off'}
                       </button>
+                      {!item.canShowOnTv && !item.showOnTv && (
+                        <p className="admin-albums-media-card__hint">{tvBlockLabel(item, detail)}</p>
+                      )}
                     </article>
                   ))}
                 </div>

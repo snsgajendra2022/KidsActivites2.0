@@ -164,3 +164,25 @@
   min-height: 2.75rem;
   padding: 0.375rem 0.625rem;
 }
+
+.admin-albums-media-card button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-albums-media-card__status {
+  display: inline-block;
+  margin: 0.25rem 0.5rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--sb-on-surface-variant);
+}
+
+.admin-albums-media-card__hint {
+  margin: 0.25rem 0.5rem 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--sb-on-surface-variant);
+}

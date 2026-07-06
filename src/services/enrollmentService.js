@@ -2,6 +2,7 @@ import { ENROLLMENT_STATUSES } from '../constants/enrollmentStatuses.js';
 import { INITIAL_APPLICATIONS } from '../data/mockApplications.js';
 import { buildEmptyFormFromConfig } from '../utils/enrollmentFormUtils.js';
 import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js';
+import { sanitizeEnrollmentPayload } from '../utils/enrollmentPayload.js';
 import { delay, getStore, setStore, generateApplicationNo } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
@@ -111,9 +112,12 @@ export async function saveDraft(formData, existingId, meta = {}) {
       saveAll(apps);
       return draft;
     },
-    apiFn: () => (existingId
-      ? api.put(`/enrollment/draft/${existingId}`, { ...formData, ...meta })
-      : api.post('/enrollment/draft', { ...formData, ...meta })),
+    apiFn: () => {
+      const payload = sanitizeEnrollmentPayload({ ...formData, ...meta });
+      return existingId
+        ? api.put(`/enrollment/draft/${existingId}`, payload)
+        : api.post('/enrollment/draft', payload);
+    },
   });
 }
 
@@ -146,7 +150,12 @@ export async function submitApplication(formData, existingId, parentId, schoolId
       saveAll(apps);
       return entry;
     },
-    apiFn: () => api.post('/enrollment/submit', { applicationId: existingId, parentId, schoolId, ...formData }),
+    apiFn: () => api.post('/enrollment/submit', sanitizeEnrollmentPayload({
+      applicationId: existingId,
+      parentId,
+      schoolId,
+      ...formData,
+    })),
   });
 }
 

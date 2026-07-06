@@ -10,7 +10,14 @@ import {
 export function useProgressiveImageSrc(image, { enabled = true } = {}) {
   const chain = useMemo(
     () => (enabled && image ? buildProgressiveSrcChain(image) : []),
-    [image, enabled],
+    [
+      enabled,
+      image?.id,
+      image?.previewUrl,
+      image?.downloadUrl,
+      image?.mediaType,
+      JSON.stringify(image?.variants ?? null),
+    ],
   );
 
   const [src, setSrc] = useState('');

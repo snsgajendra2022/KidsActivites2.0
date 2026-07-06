@@ -39,7 +39,6 @@ async function mockUploadFile({ file, fieldKey, onProgress, isOnline, signal }) 
       uploadedAt: new Date().toISOString(),
       fileKey,
       status: 'uploaded',
-      ...previewFields,
     },
   };
 }

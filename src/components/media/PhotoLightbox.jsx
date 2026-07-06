@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProgressiveImageSrc } from '../../hooks/useProgressiveImageSrc.js';
 import { isVideoPlaybackReady } from '../../utils/photoStudioProgressive.js';
@@ -24,6 +24,11 @@ export default function PhotoLightbox({
   const imgSrc = studioImage
     ? progressiveSrc
     : (photo?.previewUrl || photo?.thumbnailUrl || photo?.imageUrl);
+
+  const videoRenditions = useMemo(
+    () => (Array.isArray(photo?.renditions) ? photo.renditions : []),
+    [photo?.renditions],
+  );
 
   useEffect(() => {
     if (!photo) return undefined;
@@ -82,7 +87,7 @@ export default function PhotoLightbox({
                 className="photo-lightbox__image photo-lightbox__video"
                 src={photo.streamUrl}
                 poster={photo.thumbnailUrl || photo.previewUrl || undefined}
-                renditions={photo.renditions}
+                renditions={videoRenditions}
               />
             ) : (
               <div className="photo-lightbox__video-processing">
