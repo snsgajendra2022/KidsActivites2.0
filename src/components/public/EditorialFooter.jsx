@@ -3,7 +3,7 @@ import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
-import PortalLogo from '../brand/PortalLogo.jsx';
+import { FooterPortalLogo } from '../brand/PortalLogo.jsx';
 
 export default function EditorialFooter({ compact = false }) {
   const { portalName, school, platform } = usePortalConfig();
@@ -24,7 +24,7 @@ export default function EditorialFooter({ compact = false }) {
       <div className="sb-container">
         <div className="sb-editorial-footer__grid">
           <div className="flex flex-col items-start gap-4">
-            <PortalLogo size="lg" />
+            <FooterPortalLogo size="lg" />
             <p className="sb-editorial-footer__tagline">{tagline}</p>
             {!compact && contactLine && (
               <p className="sb-editorial-footer__tagline mt-4">{contactLine}</p>
