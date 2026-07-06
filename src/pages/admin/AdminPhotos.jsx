@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Upload, Trash2, RefreshCw, Download, AlertCircle, Play } from 'lucide-react';
+import { Image, Upload, Trash2, RefreshCw, Download, AlertCircle, Play, FolderPlus } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -10,8 +10,9 @@ import {
   deletePhotoStudioImage,
   getPhotoStudioConfig,
   listPhotoStudioImages,
-  uploadPhotoStudioImage,
 } from '../../services/photoStudioService.js';
+import { listAdminAlbums, uploadAdminAlbumMedia, linkExistingToAlbum } from '../../services/classAlbumService.js';
+import { rewritePhotoStudioUrl } from '../../utils/photoStudioUrls.js';
 import {
   getGalleryThumbSrc,
   imageNeedsVariantPolling,
@@ -104,17 +105,30 @@ function toLightboxPhoto(img) {
   };
 }
 
-function GalleryCard({ image, onOpen, onDelete }) {
+function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, adding }) {
   const isVideo = isVideoItem(image);
   const lowestSrc = isVideo
-    ? (image.thumbnailUrl || image.previewUrl || '')
+    ? rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '')
     : getGalleryThumbSrc(image);
-  const fallbackSrc = image.thumbnailUrl || image.previewUrl || image.downloadUrl || '';
+  const fallbackSrc = rewritePhotoStudioUrl(
+    image.thumbnailUrl || image.previewUrl || image.downloadUrl || '',
+  );
   const [src, setSrc] = useState(lowestSrc);
 
   useEffect(() => {
-    setSrc(getGalleryThumbSrc(image));
-  }, [image]);
+    const next = isVideo
+      ? (image.thumbnailUrl || image.previewUrl || '')
+      : getGalleryThumbSrc(image);
+    setSrc((prev) => (prev === next ? prev : next));
+  }, [
+    image.id,
+    image.previewUrl,
+    image.thumbnailUrl,
+    image.downloadUrl,
+    image.mediaType,
+    isVideo,
+    JSON.stringify(image?.variants ?? null),
+  ]);
 
   return (
     <article className="admin-photos-card">
@@ -151,6 +165,18 @@ function GalleryCard({ image, onOpen, onDelete }) {
       <div className="admin-photos-card__body">
         <p className="admin-photos-card__name" title={image.filename}>{image.filename}</p>
         <div className="admin-photos-card__actions">
+          {canAddToAlbum && (
+            <button
+              type="button"
+              className="admin-photos-card__btn admin-photos-card__btn--primary"
+              disabled={adding}
+              onClick={(e) => { e.stopPropagation(); onAddToAlbum?.(image); }}
+              aria-label="Add to album"
+              title="Add to selected album"
+            >
+              <FolderPlus size={14} />
+            </button>
+          )}
           {image.downloadUrl && (
             <a
               href={image.downloadUrl}
@@ -193,6 +219,10 @@ export default function AdminPhotos() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [albums, setAlbums] = useState([]);
+  const [selectedAlbumId, setSelectedAlbumId] = useState('');
+  const [uploadCaption, setUploadCaption] = useState('');
+  const [linkingId, setLinkingId] = useState(null);
 
   const loadPage = useCallback(async (pageNum, { append = false } = {}) => {
     const data = await listPhotoStudioImages({ page: pageNum, size: PAGE_SIZE });
@@ -227,6 +257,13 @@ export default function AdminPhotos() {
     refreshGallery();
   }, [refreshGallery]);
 
+  useEffect(() => {
+    if (!photosReady) return;
+    listAdminAlbums()
+      .then((data) => setAlbums(Array.isArray(data) ? data : []))
+      .catch(() => setAlbums([]));
+  }, [photosReady]);
+
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => new Date(b.uploadTime) - new Date(a.uploadTime)),
     [images],
@@ -256,7 +293,7 @@ export default function AdminPhotos() {
 
     const timer = setInterval(poll, 4000);
     return () => clearInterval(timer);
-  }, [needsVariantPolling, photosReady, lightboxIndex, sortedImages]);
+  }, [needsVariantPolling, photosReady, lightboxIndex, sortedImages.length, sortedImages[lightboxIndex]?.id]);
 
   const imageGroups = useMemo(() => groupImagesByDay(sortedImages), [sortedImages]);
   const lightboxPhotos = useMemo(() => sortedImages.map(toLightboxPhoto), [sortedImages]);
@@ -280,6 +317,11 @@ export default function AdminPhotos() {
     }
   };
 
+  const selectedAlbum = useMemo(
+    () => albums.find((album) => album.id === selectedAlbumId) || null,
+    [albums, selectedAlbumId],
+  );
+
   const handleUploadFiles = async (fileList) => {
     if (!photosReady) {
       toast('Photo storage is not connected for this workspace yet.', 'warning');
@@ -290,17 +332,23 @@ export default function AdminPhotos() {
       toast('Please choose image or video files (MP4, MOV, WebM).', 'warning');
       return;
     }
+    if (!selectedAlbumId) {
+      toast('Choose a class album before uploading.', 'warning');
+      return;
+    }
 
     setUploading(true);
     try {
-      for (const file of files) {
-        await uploadPhotoStudioImage(file);
-      }
-      const hasVideo = files.some((f) => f.type.startsWith('video/'));
+      await uploadAdminAlbumMedia({
+        albumId: selectedAlbumId,
+        caption: uploadCaption.trim() || undefined,
+        files,
+      });
+      const albumLabel = selectedAlbum?.className || selectedAlbum?.albumName || 'album';
       toast(
         files.length === 1
-          ? (hasVideo ? 'Video uploaded.' : 'Photo uploaded.')
-          : `${files.length} files uploaded.`,
+          ? `Added to ${albumLabel}.`
+          : `${files.length} files added to ${albumLabel}.`,
         'success',
       );
       await loadPage(0);
@@ -309,6 +357,27 @@ export default function AdminPhotos() {
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAddExistingToAlbum = async (image) => {
+    if (!selectedAlbumId || !image?.id) {
+      toast('Select a class album first.', 'warning');
+      return;
+    }
+    setLinkingId(image.id);
+    try {
+      await linkExistingToAlbum({
+        albumId: selectedAlbumId,
+        externalAssetIds: [String(image.id)],
+        caption: uploadCaption.trim() || image.filename,
+      });
+      const albumLabel = selectedAlbum?.className || selectedAlbum?.albumName || 'album';
+      toast(`Added to ${albumLabel}.`, 'success');
+    } catch (err) {
+      toast(err?.message || 'Could not add to album.', 'error');
+    } finally {
+      setLinkingId(null);
     }
   };
 
@@ -338,7 +407,7 @@ export default function AdminPhotos() {
       <div className="admin-photos-page">
         <PageHeader
           title="Photo Sharing"
-          subtitle="Upload and manage your school's photos and videos. Each workspace uses its own secure cloud account."
+          subtitle="Browse your media library, pick a class album, then upload new files or add existing photos/videos with the + button on each item."
           icon={Image}
         />
 
@@ -377,6 +446,37 @@ export default function AdminPhotos() {
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
           >
+            <div className="admin-photos-upload__options">
+              <label className="admin-photos-upload__field">
+                <span>Class album</span>
+                <select
+                  value={selectedAlbumId}
+                  onChange={(e) => setSelectedAlbumId(e.target.value)}
+                  disabled={uploading || albums.length === 0}
+                >
+                  <option value="">
+                    {albums.length === 0 ? 'No albums available' : 'Select a class album…'}
+                  </option>
+                  {albums.map((album) => (
+                    <option key={album.id} value={album.id}>
+                      {album.className || album.albumName}
+                      {album.albumName && album.className ? ` — ${album.albumName}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-photos-upload__field">
+                <span>Caption (optional)</span>
+                <input
+                  type="text"
+                  value={uploadCaption}
+                  onChange={(e) => setUploadCaption(e.target.value)}
+                  placeholder="e.g. Sports day"
+                  maxLength={200}
+                  disabled={uploading}
+                />
+              </label>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -386,11 +486,15 @@ export default function AdminPhotos() {
               onChange={(e) => handleUploadFiles(e.target.files)}
             />
             <Upload size={22} />
-            <p>Drag &amp; drop photos or videos here, or</p>
+            <p>
+              {selectedAlbum
+                ? `Target: ${selectedAlbum.className || selectedAlbum.albumName}. Upload new files or use + on items below to add existing media.`
+                : 'Select a class album above, then upload or add existing items from the library.'}
+            </p>
             <Button
               type="button"
               variant="secondary"
-              disabled={uploading}
+              disabled={uploading || !selectedAlbumId}
               onClick={() => fileInputRef.current?.click()}
             >
               {uploading ? 'Uploading…' : 'Choose files'}
@@ -418,7 +522,7 @@ export default function AdminPhotos() {
           <div className="admin-photos-empty">
             <Image size={28} strokeWidth={1.75} />
             <h2>No media yet</h2>
-            <p>Upload your first classroom photos or videos above.</p>
+            <p>Select a class album above and upload your first photos or videos.</p>
           </div>
         ) : (
           photosReady && !error && (
@@ -433,6 +537,9 @@ export default function AdminPhotos() {
                         image={image}
                         onOpen={openLightbox}
                         onDelete={setDeleteTarget}
+                        onAddToAlbum={handleAddExistingToAlbum}
+                        canAddToAlbum={Boolean(selectedAlbumId)}
+                        adding={linkingId === image.id}
                       />
                     ))}
                   </div>

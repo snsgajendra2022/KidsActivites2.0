@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, GraduationCap, ArrowRight, Users, Send } from 'lucide-react';
+import { Building2, GraduationCap, ArrowRight, Users, Send, Tv } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import { EmptyState } from '../../components/ui/index.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getTeacherClasses } from '../../services/teacherService.js';
 import '../../styles/teacher-classes.css';
 
 export default function TeacherClasses() {
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,13 +69,19 @@ export default function TeacherClasses() {
 
                 <div className="teacher-class-card__actions">
                   <Link
-                    to={`/teacher/students?class=${cls.id}`}
+                    to={`${tenantPath('/teacher/students')}?class=${encodeURIComponent(cls.id)}`}
                     className="premium-btn premium-btn-secondary premium-btn-sm"
                   >
                     View Students
                   </Link>
                   <Link
-                    to="/teacher/photos"
+                    to={`${tenantPath('/teacher/class-album')}?class=${encodeURIComponent(cls.id)}`}
+                    className="premium-btn premium-btn-secondary premium-btn-sm"
+                  >
+                    Class Album <Tv size={14} />
+                  </Link>
+                  <Link
+                    to={`${tenantPath('/teacher/photos')}?class=${encodeURIComponent(cls.id)}`}
                     className="premium-btn premium-btn-primary premium-btn-sm"
                   >
                     Send Photos <ArrowRight size={14} />
@@ -85,7 +93,11 @@ export default function TeacherClasses() {
         )}
 
         <div className="teacher-classes-quick">
-          <Link to="/teacher/photos" className="teacher-classes-quick__link">
+          <Link to={tenantPath('/teacher/class-album')} className="teacher-classes-quick__link">
+            <Tv size={18} />
+            Browse your class album uploads
+          </Link>
+          <Link to={tenantPath('/teacher/photos')} className="teacher-classes-quick__link">
             <Send size={18} />
             Share classroom photos with parents
           </Link>

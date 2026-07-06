@@ -8,6 +8,8 @@ import {
   formatHlsLevelLabel,
 } from '../../utils/videoHlsConfig.js';
 
+const EMPTY_RENDITIONS = [];
+
 /**
  * Production HLS player: adaptive bitrate via master.m3u8, manual quality override, error recovery.
  */
@@ -15,16 +17,21 @@ export default function VideoHlsPlayer({
   src,
   poster,
   className,
-  renditions = [],
+  renditions = EMPTY_RENDITIONS,
   onQualityChange,
 }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const renditionsRef = useRef(renditions);
+  const onQualityChangeRef = useRef(onQualityChange);
   const [qualityMode, setQualityMode] = useState('auto');
   const [currentLabel, setCurrentLabel] = useState('');
   const [options, setOptions] = useState([]);
   const [fatalError, setFatalError] = useState(false);
   const [nativeHls, setNativeHls] = useState(false);
+
+  renditionsRef.current = renditions;
+  onQualityChangeRef.current = onQualityChange;
 
   const updateCurrentLabel = useCallback((hls) => {
     if (!hls) return;
@@ -32,9 +39,9 @@ export default function VideoHlsPlayer({
     const label = hls.autoLevelEnabled
       ? `Auto · ${formatHlsLevelLabel(level) || '…'}`
       : formatHlsLevelLabel(level);
-    setCurrentLabel(label);
-    onQualityChange?.(label);
-  }, [onQualityChange]);
+    setCurrentLabel((prev) => (prev === label ? prev : label));
+    onQualityChangeRef.current?.(label);
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -67,12 +74,13 @@ export default function VideoHlsPlayer({
     hls.loadSource(src);
     hls.attachMedia(video);
 
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      const opts = buildQualityOptions(hls.levels, renditions);
+    const onManifestParsed = () => {
+      const opts = buildQualityOptions(hls.levels, renditionsRef.current);
       setOptions(opts);
       updateCurrentLabel(hls);
-    });
+    };
 
+    hls.on(Hls.Events.MANIFEST_PARSED, onManifestParsed);
     hls.on(Hls.Events.LEVEL_SWITCHED, () => {
       updateCurrentLabel(hls);
     });
@@ -82,10 +90,25 @@ export default function VideoHlsPlayer({
     });
 
     return () => {
+      hls.off(Hls.Events.MANIFEST_PARSED, onManifestParsed);
       hls.destroy();
       hlsRef.current = null;
     };
-  }, [src, renditions, updateCurrentLabel]);
+  }, [src, updateCurrentLabel]);
+
+  const renditionsSignature = JSON.stringify(renditions);
+
+  useEffect(() => {
+    const hls = hlsRef.current;
+    if (!hls || nativeHls || !hls.levels?.length) return;
+    const opts = buildQualityOptions(hls.levels, renditionsRef.current);
+    setOptions((prev) => {
+      const prevSig = JSON.stringify(prev);
+      const nextSig = JSON.stringify(opts);
+      return prevSig === nextSig ? prev : opts;
+    });
+    updateCurrentLabel(hls);
+  }, [renditionsSignature, nativeHls, updateCurrentLabel]);
 
   const applyQuality = useCallback((mode) => {
     const hls = hlsRef.current;

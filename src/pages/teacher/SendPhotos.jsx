@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, Play,
+  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, Play, ArrowRight,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { ApiError } from '../../services/api/client.js';
 import {
   UPLOAD_TARGETS,
@@ -52,6 +54,8 @@ const SUCCESS_MESSAGES = {
 export default function SendPhotos() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
+  const [searchParams] = useSearchParams();
   const [albumClasses, setAlbumClasses] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
   const [uploadTarget, setUploadTarget] = useState(UPLOAD_TARGETS.CLASS_ALBUM);
@@ -67,23 +71,32 @@ export default function SendPhotos() {
 
   useEffect(() => {
     if (!user?.id) return;
-    getTeacherAlbumClasses().then(setAlbumClasses).catch(() => setAlbumClasses([]));
+    getTeacherAlbumClasses()
+      .then((classes) => {
+        setAlbumClasses(classes);
+        const fromUrl = searchParams.get('class');
+        if (fromUrl && classes.some((c) => c.classId === fromUrl)) {
+          setForm((prev) => ({ ...prev, classId: fromUrl }));
+        }
+      })
+      .catch(() => setAlbumClasses([]));
     getTeacherStudents(user.id).then(setAllStudents);
-  }, [user?.id]);
+  }, [user?.id, searchParams]);
 
-  const filePreviewUrls = useMemo(() => {
+  const [filePreviewUrls, setFilePreviewUrls] = useState(() => new Map());
+
+  useEffect(() => {
     const urls = new Map();
     form.files.forEach((file) => {
       if (!isVideoFile(file)) {
         urls.set(file, URL.createObjectURL(file));
       }
     });
-    return urls;
+    setFilePreviewUrls(urls);
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
   }, [form.files]);
-
-  useEffect(() => () => {
-    filePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
-  }, [filePreviewUrls]);
 
   const activeAlbumClasses = useMemo(
     () => albumClasses.filter(
@@ -95,6 +108,9 @@ export default function SendPhotos() {
   const students = allStudents.filter((s) => s.classId === form.classId);
   const selectedClass = activeAlbumClasses.find((c) => c.classId === form.classId);
   const selectedAlbum = selectedClass?.album;
+  const classAlbumHref = form.classId
+    ? `${tenantPath('/teacher/class-album')}?class=${encodeURIComponent(form.classId)}`
+    : tenantPath('/teacher/class-album');
 
   const needsClass = true;
   const needsStudent = uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
@@ -148,6 +164,7 @@ export default function SendPhotos() {
 
   const handleSend = async () => {
     setLoading(true);
+    const uploadedClassId = form.classId;
     try {
       const studentId = form.studentIds[0] || null;
       await uploadTeacherAlbumMedia({
@@ -159,7 +176,13 @@ export default function SendPhotos() {
       });
       toast(SUCCESS_MESSAGES[uploadTarget], 'success');
       setShowConfirm(false);
-      setForm({ classId: '', recipients: 'class', studentIds: [], caption: '', files: [] });
+      setForm({
+        classId: uploadedClassId,
+        recipients: 'class',
+        studentIds: [],
+        caption: '',
+        files: [],
+      });
     } catch (err) {
       if (err instanceof ApiError && err.code === 'CLASS_INACTIVE') {
         toast('This class is inactive. Please contact admin.', 'error');
@@ -182,6 +205,10 @@ export default function SendPhotos() {
             <div className="send-photos-intro__text">
               <h1>Share Classroom Media</h1>
               <p>Upload to a class album for TV playback, send directly to parents, or both. Photos and videos are supported.</p>
+              <Link to={classAlbumHref} className="send-photos-album-link">
+                View &amp; manage your class album uploads
+                <ArrowRight size={15} />
+              </Link>
             </div>
           </header>
 

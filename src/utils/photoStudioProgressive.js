@@ -1,3 +1,5 @@
+import { rewritePhotoStudioUrl } from './photoStudioUrls.js';
+
 /** Progressive quality tiers — s01 (lowest) → s10 (highest). */
 export const PHOTO_STUDIO_TIERS = [
   's01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 's09', 's10',
@@ -22,10 +24,15 @@ export function buildPhotoStudioVariantUrl(image, tier, templateUrl) {
 
 function pickTemplateUrl(image) {
   const v = image?.variants || {};
+  const tierS01 = v.tiers?.s01?.url;
   return (
-    v.autoUrl
+    (typeof v.s01 === 'string' ? v.s01 : null)
+    || (typeof tierS01 === 'string' ? tierS01 : null)
+    || (typeof v.thumbnailUrl === 'string' ? v.thumbnailUrl : null)
+    || v.autoUrl
     || v.recommendedUrl
     || v.previewFallbackUrl
+    || image?.thumbnailUrl
     || image?.previewUrl
     || image?.downloadUrl
     || null
@@ -45,15 +52,22 @@ export function getGalleryThumbSrc(image) {
   const variants = image.variants || {};
   const template = pickTemplateUrl(image);
 
-  if (typeof variants.s01 === 'string') return variants.s01;
+  if (typeof variants.s01 === 'string') {
+    return rewritePhotoStudioUrl(variants.s01);
+  }
+  const tierS01 = variants.tiers?.s01?.url;
+  if (typeof tierS01 === 'string') {
+    return rewritePhotoStudioUrl(tierS01);
+  }
 
   if (template) {
     const s01 = buildPhotoStudioVariantUrl(image, 's01', template);
-    if (s01) return s01;
+    if (s01) return rewritePhotoStudioUrl(s01);
   }
 
-  // Fallback while s01 is still processing
-  return image.previewUrl || image.downloadUrl || '';
+  return rewritePhotoStudioUrl(
+    image.thumbnailUrl || image.previewUrl || image.downloadUrl || '',
+  );
 }
 
 /**
