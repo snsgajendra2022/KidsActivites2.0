@@ -779,3 +779,78 @@
     display: none;
   }
 }
+
+/* Portal-themed public pages (workspace setup, etc.) */
+.portal-public-page .portal-public-main {
+  background: var(--admin-page-bg);
+}
+
+.portal-public-page .portal-public-header .text-brand {
+  color: #fff !important;
+}
+
+.portal-public-page .portal-public-title {
+  color: var(--admin-purple-deep) !important;
+}
+
+.portal-public-page .portal-public-back {
+  color: var(--admin-purple-mid);
+}
+
+.portal-public-page .portal-public-back:hover {
+  color: var(--admin-purple-deep);
+}
+
+.portal-public-page .portal-public-card {
+  background: #fff;
+  border: 1px solid var(--admin-purple-border);
+  border-radius: 1rem;
+  box-shadow: 0 2px 16px color-mix(in srgb, var(--admin-purple-mid) 8%, transparent);
+}
+
+.portal-public-page .portal-public-success-icon {
+  background: color-mix(in srgb, #059669 12%, white);
+  color: #059669;
+  box-shadow: 0 4px 16px color-mix(in srgb, #059669 15%, transparent);
+}
+
+.portal-public-page .portal-public-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.portal-public-page .portal-public-btn--secondary {
+  border: 1px solid var(--admin-purple-border);
+  background: #fff;
+  color: var(--admin-purple-deep);
+}
+
+.portal-public-page .portal-public-btn--secondary:hover {
+  background: var(--admin-purple-surface);
+  border-color: color-mix(in srgb, var(--admin-purple-mid) 25%, transparent);
+}
+
+.portal-public-page .btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--admin-purple-deep) 0%,
+    var(--admin-purple-mid) 100%
+  ) !important;
+  border-color: transparent !important;
+}
+
+.portal-public-page .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    var(--admin-purple-mid) 0%,
+    var(--admin-purple-light) 100%
+  ) !important;
+}
