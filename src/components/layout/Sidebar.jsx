@@ -45,7 +45,9 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             onClick={onClose}
             className={`flex min-w-0 items-center gap-3 ${collapsed ? 'w-full justify-center pr-7' : 'min-w-0 flex-1 pr-10'}`}
           >
-            <PortalLogo size="md" />
+            <span className="sidebar-logo-wrap shrink-0">
+              <PortalLogo size="md" />
+            </span>
             {!collapsed && (
               <div className="min-w-0">
                 <div className="sidebar-brand-title font-display truncate text-sm font-bold">{portalName}</div>

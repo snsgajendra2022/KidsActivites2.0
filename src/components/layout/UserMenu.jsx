@@ -29,11 +29,11 @@ export default function UserMenu({ user, onLogout }) {
   }, []);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="user-menu relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex min-h-[2.75rem] items-center gap-2 rounded-xl border py-1.5 pl-1.5 pr-2.5 transition-all duration-200 sm:pr-3 ${
+        className={`user-menu-trigger flex min-h-[2.75rem] items-center gap-2 rounded-xl border py-1.5 pl-1.5 pr-2.5 transition-all duration-200 sm:pr-3 ${
           open
             ? 'border-[color-mix(in_srgb,var(--sb-secondary)_30%,transparent)] bg-brand-muted ring-2 ring-[color-mix(in_srgb,var(--sb-secondary)_15%,transparent)]'
             : 'border-black/5 bg-[var(--sb-surface)]/80 hover:border-black/10 hover:bg-brand-muted'
@@ -56,7 +56,7 @@ export default function UserMenu({ user, onLogout }) {
 
       {open && (
         <div
-          className="absolute right-0 top-[calc(100%+8px)] z-[60] w-[min(16rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-black/5 bg-white shadow-xl"
+          className="user-menu-dropdown absolute right-0 top-[calc(100%+8px)] z-[60] w-[min(16rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-black/5 bg-white shadow-xl"
           style={{ boxShadow: '0 8px 24px color-mix(in srgb, var(--sb-primary) 12%, transparent)' }}
           role="menu"
         >
