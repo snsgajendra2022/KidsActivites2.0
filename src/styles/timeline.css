@@ -2,7 +2,7 @@
 
 /* Journey nav dots */
 .sb-journey-nav {
-  padding: 1.5rem 0;
+  padding: 1rem 0;
   background: var(--sb-cream);
   border-bottom: 1px solid var(--sb-line);
 }
