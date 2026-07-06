@@ -47,6 +47,7 @@ import TeacherDashboard from './pages/teacher/TeacherDashboard.jsx';
 import TeacherClasses from './pages/teacher/TeacherClasses.jsx';
 import TeacherStudents from './pages/teacher/TeacherStudents.jsx';
 import SendPhotos from './pages/teacher/SendPhotos.jsx';
+import TeacherClassAlbum from './pages/teacher/TeacherClassAlbum.jsx';
 
 import NotificationsPage from './pages/shared/NotificationsPage.jsx';
 import ChatPage from './pages/shared/ChatPage.jsx';
@@ -132,6 +133,7 @@ export default function App() {
         <Route path="teacher/classes" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherClasses /></ProtectedRoute>} />
         <Route path="teacher/students" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherStudents /></ProtectedRoute>} />
         <Route path="teacher/photos" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><SendPhotos /></ProtectedRoute>} />
+        <Route path="teacher/class-album" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherClassAlbum /></ProtectedRoute>} />
         <Route path="teacher/messages" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ChatPage /></ProtectedRoute>} />
 
         {/* Shared authenticated routes */}

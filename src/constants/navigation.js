@@ -65,6 +65,7 @@ export const TEACHER_NAV = [
   { id: 'teacher_classes', to: '/teacher/classes', label: 'My Classes', icon: GraduationCap, iconName: 'GraduationCap', section: 'My Classes & Students' },
   { id: 'teacher_students', to: '/teacher/students', label: 'Students', icon: Users, iconName: 'Users', section: 'My Classes & Students' },
   { id: 'teacher_photos', to: '/teacher/photos', label: 'Send Photos', icon: Image, iconName: 'Image', section: 'Photos & Media' },
+  { id: 'teacher_class_album', to: '/teacher/class-album', label: 'Class Album', icon: Tv, iconName: 'Tv', section: 'Photos & Media' },
   { id: 'teacher_messages', to: '/teacher/messages', label: 'Messages', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
   { id: 'teacher_profile', to: '/profile', label: 'Profile', icon: UserCheck, iconName: 'UserCheck', section: 'Account' },
 ];

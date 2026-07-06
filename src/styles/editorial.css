@@ -22,13 +22,13 @@
 /* Cinematic hero */
 .sb-cinematic-hero {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 60vh;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background: var(--sb-purple-dark);
+  padding: 2rem 0;
 }
 
 .sb-cinematic-hero__bg {
@@ -58,13 +58,12 @@
   position: relative;
   z-index: 2;
   width: min(calc(100% - 2.5rem), 70rem);
-  min-height: min(calc(100vh - 4rem), calc(100dvh - 4rem));
-  margin: 2rem auto;
+  margin: 0 auto;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 1.25rem;
   display: flex;
   flex-direction: column;
-  padding: 2rem 2.5rem;
+  padding: 2.5rem;
 }
 
 .sb-cinematic-hero--compact .sb-hero-frame {
@@ -92,8 +91,11 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-width: 42rem;
-  padding: 2rem 0;
+  align-items: center;
+  text-align: center;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1rem 0;
 }
 
 .sb-hero-title {
@@ -104,7 +106,7 @@
   line-height: 1.04;
   letter-spacing: -0.02em;
   color: #fff;
-  margin: 0 0 1.25rem;
+  margin: 0 0 1rem;
 }
 
 .sb-hero-title em,
@@ -117,7 +119,7 @@
   font-size: clamp(1rem, 2vw, 1.125rem);
   line-height: 1.65;
   color: rgba(255, 255, 255, 0.78);
-  margin: 0 0 2rem;
+  margin: 0 auto 1.5rem;
   max-width: 32rem;
 }
 
@@ -141,6 +143,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+  justify-content: center;
 }
 
 /* Editorial headings */
@@ -484,7 +487,7 @@
 
   .sb-cinematic-hero {
     min-height: auto;
-    padding-bottom: 1rem;
+    padding: 1.5rem 0;
   }
 
   .sb-cinematic-hero--compact .sb-hero-frame {

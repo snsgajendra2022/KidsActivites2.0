@@ -8,16 +8,20 @@ const SIZES = {
     img: 'h-7 w-7 max-h-7 max-w-7 object-contain',
   },
   sm: {
-    box: 'h-8 w-8 text-[10px] rounded-lg',
-    img: 'h-8 w-auto max-h-8 max-w-[6.5rem] object-contain object-left',
+    box: 'h-10 w-10 text-[10px] rounded-lg',
+    img: 'h-14 w-auto max-h-14 max-w-[14rem] object-contain',
   },
   md: {
-    box: 'h-10 w-10 text-[11px] rounded-xl',
-    img: 'h-9 w-auto max-h-9 max-w-[8.5rem] object-contain object-left',
+    box: 'h-12 w-12 text-[11px] rounded-xl',
+    img: 'h-24 w-auto max-h-24 max-w-[500px] object-contain',
+  },
+  header: {
+    box: 'h-10 md:h-12 w-10 md:w-12 text-[10px] md:text-[11px] rounded-xl',
+    img: 'h-10 max-h-10 max-w-[140px] sm:h-12 sm:max-h-12 sm:max-w-[180px] md:h-16 md:max-h-16 md:max-w-[250px] lg:h-24 lg:max-h-24 lg:max-w-[400px] w-auto object-contain',
   },
   lg: {
-    box: 'h-12 w-12 text-sm rounded-xl',
-    img: 'h-12 w-auto max-h-12 max-w-[10rem] object-contain object-left',
+    box: 'h-16 w-16 text-sm rounded-xl',
+    img: 'h-32 w-auto max-h-32 max-w-[600px] object-contain',
   },
 };
 

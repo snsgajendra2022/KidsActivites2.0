@@ -54,6 +54,14 @@ export async function uploadTeacherAlbumMedia({
   return api.post('/teacher/albums/upload', formData);
 }
 
+export async function updateTeacherAlbumMedia(classId, mediaLinkId, body) {
+  return api.patch(`/teacher/albums/${classId}/media/${mediaLinkId}`, body);
+}
+
+export async function deleteTeacherAlbumMedia(classId, mediaLinkId) {
+  return api.delete(`/teacher/albums/${classId}/media/${mediaLinkId}`);
+}
+
 export async function listAdminAlbums() {
   return api.get('/admin/albums');
 }
