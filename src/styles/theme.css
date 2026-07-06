@@ -21,12 +21,12 @@
   --sb-line: #C9A6D8;
   --sb-footer: #21184B;
 
-  /* Admin portal purple theme (menu & windows) */
-  --admin-purple-deep: #483265;
-  --admin-purple-mid: #523a71;
-  --admin-purple-light: #5e4480;
-  --admin-purple-surface: #f6f3fa;
-  --admin-purple-border: color-mix(in srgb, var(--admin-purple-mid) 18%, #e8e4f0);
+  /* Portal purple theme — sidebar, header & content (all authenticated users) */
+  --admin-purple-deep: #574174;
+  --admin-purple-mid: #624f80;
+  --admin-purple-light: #6e5a8e;
+  --admin-purple-surface: #f9f7fc;
+  --admin-purple-border: color-mix(in srgb, var(--admin-purple-mid) 14%, #ebe6f2);
 
   /* Semantic aliases */
   --sb-primary: var(--sb-navy);

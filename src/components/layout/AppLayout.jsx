@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
@@ -13,9 +13,6 @@ export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const { loginPath } = useTenantPath();
-  const location = useLocation();
-  const isParentPortal = /\/parent(\/|$)/.test(location.pathname);
-  const isAdminPortal = /\/admin(\/|$)/.test(location.pathname);
   useNetworkStatus();
 
   const onLogout = () => {
@@ -24,7 +21,7 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden sb-surface text-[var(--sb-on-surface,#243447)] ${isAdminPortal ? 'admin-portal-light' : ''} ${isParentPortal ? 'parent-portal-warm' : ''}`}>
+    <div className="portal-shell flex h-screen overflow-hidden sb-surface text-[var(--sb-on-surface,#243447)]">
       <Sidebar
         user={user}
         open={sidebarOpen}
