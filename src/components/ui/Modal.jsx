@@ -3,10 +3,11 @@ import Button from './Button.jsx';
 
 export default function Modal({ open, onClose, title, children, footer, size }) {
   if (!open) return null;
+  const sizeClass = size === 'xl' ? 'modal-xl' : size === 'lg' ? 'modal-lg' : '';
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
-        className={`modal ${size === 'lg' ? 'modal-lg' : ''}`}
+        className={`modal ${sizeClass}`.trim()}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

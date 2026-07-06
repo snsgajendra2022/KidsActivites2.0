@@ -9,8 +9,30 @@ const KEY = 'sb_fees';
 
 function normalizeFee(fee) {
   if (!fee) return fee;
+  const applicationId = fee.applicationId
+    ?? fee.application_id
+    ?? fee.application?.id
+    ?? null;
+  const applicationNo = fee.applicationNo
+    ?? fee.application_no
+    ?? fee.application?.applicationNo
+    ?? null;
+  const studentName = fee.studentName
+    ?? fee.student_name
+    ?? fee.application?.student?.fullName
+    ?? fee.student?.fullName
+    ?? null;
+  const classApplying = fee.classApplying
+    ?? fee.class_applying
+    ?? fee.application?.student?.classApplying
+    ?? fee.student?.classApplying
+    ?? null;
   return {
     ...fee,
+    applicationId: applicationId != null ? String(applicationId) : null,
+    applicationNo,
+    studentName,
+    classApplying,
     total: fee.total != null ? Number(fee.total) : 0,
     breakdown: fee.breakdown || null,
     payment: fee.payment || null,
@@ -43,6 +65,18 @@ export async function getFees(filters = {}) {
   return routeRequest({
     mockFn: () => mockGetFees(filters).then(normalizeFeeList),
     apiFn: async () => normalizeFeeList(await api.get('/admin/fees', filters)),
+  });
+}
+
+export async function getFeeById(feeId) {
+  if (!feeId) return null;
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const fee = getAll().find((f) => f.id === feeId) || null;
+      return normalizeFee(fee);
+    },
+    apiFn: async () => normalizeFee(await api.get(`/admin/fees/${feeId}`)),
   });
 }
 
@@ -107,6 +141,28 @@ export async function submitPayment(feeId, payment) {
     },
     apiFn: async () => normalizeFee(await api.post(`/fees/${feeId}/submit-payment`, payment)),
   });
+}
+
+/** Admin records payment on behalf of parent (e.g. cash at office). */
+export async function submitAdminPayment(feeId, payment) {
+  return routeRequest({
+    mockFn: () => submitPayment(feeId, payment),
+    apiFn: async () => normalizeFee(await api.post(`/admin/fees/${feeId}/submit-payment`, payment)),
+  });
+}
+
+/** Record payment and mark fee as verified in one admin action. */
+export async function recordAdminFeePayment(feeId, payment, verifiedBy) {
+  const current = await getFeeById(feeId);
+  if (!current) throw new Error('Fee record not found');
+  if (current.status === 'verified') {
+    throw new Error('This fee is already marked as paid.');
+  }
+  if (current.status === 'payment_submitted') {
+    return verifyPayment(feeId, verifiedBy);
+  }
+  await submitAdminPayment(feeId, payment);
+  return verifyPayment(feeId, verifiedBy);
 }
 
 export async function verifyPayment(feeId, verifiedBy) {

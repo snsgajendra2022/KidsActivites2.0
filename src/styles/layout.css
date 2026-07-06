@@ -73,6 +73,35 @@
   color: #fff !important;
 }
 
+.app-sidebar .sidebar-brand-title {
+  color: #fff;
+}
+
+.app-sidebar .sidebar-brand-subtitle {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.app-sidebar .sidebar-user-card {
+  background: color-mix(in srgb, var(--sb-purple) 15%, var(--sb-footer));
+  --tw-ring-color: color-mix(in srgb, var(--sb-purple-soft) 20%, transparent);
+}
+
+.app-sidebar .sidebar-user-name {
+  color: #fff;
+}
+
+.app-sidebar .sidebar-user-role {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.app-sidebar .sidebar-user-meta {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.sidebar-mobile-backdrop {
+  background: color-mix(in srgb, var(--sb-footer) 30%, transparent);
+}
+
 .app-header {
   position: sticky;
   top: 0;
@@ -282,6 +311,225 @@
   .register-split__form {
     padding: 3rem 2.5rem;
   }
+}
+
+/* Admin portal — deep purple theme */
+.admin-portal-light {
+  --admin-sidebar-bg: linear-gradient(
+    180deg,
+    var(--admin-purple-deep) 0%,
+    var(--admin-purple-mid) 48%,
+    var(--admin-purple-light) 100%
+  );
+  --admin-page-bg: linear-gradient(
+    165deg,
+    #faf8fc 0%,
+    var(--admin-purple-surface) 42%,
+    #f0ebf6 100%
+  );
+  --sb-primary: var(--admin-purple-deep);
+  --sb-surface: var(--admin-purple-surface);
+  --sb-surface-container-high: color-mix(in srgb, var(--admin-purple-mid) 8%, white);
+}
+
+.admin-portal-light main {
+  background: var(--admin-page-bg);
+}
+
+.admin-portal-light .app-header {
+  background: linear-gradient(
+    90deg,
+    var(--admin-purple-deep) 0%,
+    var(--admin-purple-mid) 55%,
+    var(--admin-purple-light) 100%
+  );
+  border-bottom: 1px solid color-mix(in srgb, white 12%, var(--admin-purple-deep));
+  color: #fff;
+}
+
+.admin-portal-light .app-header .font-display,
+.admin-portal-light .app-header .text-brand {
+  color: #fff !important;
+}
+
+.admin-portal-light .app-header .text-muted,
+.admin-portal-light .app-header input::placeholder {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.admin-portal-light .app-header input[type='search'] {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+}
+
+.admin-portal-light .app-header input[type='search']:focus {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.admin-portal-light .app-header .rounded-full.border {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.admin-portal-light .app-header button {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.admin-portal-light .app-header button:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.admin-portal-light .app-header .text-brand {
+  color: #fff !important;
+}
+
+.admin-portal-light .app-header .bg-brand {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+.admin-portal-light .app-header .notif-bell-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.admin-portal-light .app-header .notif-bell-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.admin-portal-light .app-sidebar {
+  background: var(--admin-sidebar-bg) !important;
+  border-right: 1px solid color-mix(in srgb, white 10%, var(--admin-purple-deep)) !important;
+  color: rgba(255, 255, 255, 0.88);
+  box-shadow: 4px 0 28px color-mix(in srgb, var(--admin-purple-deep) 35%, transparent);
+}
+
+.admin-portal-light .app-sidebar .sidebar-top {
+  border-bottom-color: color-mix(in srgb, white 12%, var(--admin-purple-deep)) !important;
+}
+
+.admin-portal-light .app-sidebar .font-display,
+.admin-portal-light .app-sidebar .text-brand,
+.admin-portal-light .app-sidebar .sidebar-brand-title {
+  color: #fff !important;
+}
+
+.admin-portal-light .app-sidebar .sidebar-brand-subtitle {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.admin-portal-light .app-sidebar .sidebar-user-card {
+  background: rgba(255, 255, 255, 0.1) !important;
+  --tw-ring-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.admin-portal-light .app-sidebar .sidebar-user-name {
+  color: #fff;
+}
+
+.admin-portal-light .app-sidebar .sidebar-user-role {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.admin-portal-light .app-sidebar .sidebar-user-meta {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.admin-portal-light .sidebar-mobile-backdrop {
+  background: color-mix(in srgb, var(--admin-purple-deep) 55%, transparent);
+}
+
+.admin-portal-light .app-sidebar .sidebar-nav-section {
+  color: color-mix(in srgb, var(--sb-gold) 50%, rgba(255, 255, 255, 0.5)) !important;
+}
+
+.admin-portal-light .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.admin-portal-light .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) span {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.admin-portal-light .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) svg {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-portal-light .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.admin-portal-light .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover span,
+.admin-portal-light .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover svg {
+  color: var(--sb-gold);
+}
+
+.admin-portal-light .app-sidebar .sidebar-nav-link-active {
+  background: linear-gradient(
+    135deg,
+    var(--sb-gold) 0%,
+    color-mix(in srgb, var(--sb-gold) 85%, white) 100%
+  ) !important;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--sb-gold) 35%, transparent);
+}
+
+.admin-portal-light .app-sidebar .sidebar-nav-link-active,
+.admin-portal-light .app-sidebar .sidebar-nav-link-active span,
+.admin-portal-light .app-sidebar .sidebar-nav-link-active svg {
+  color: var(--admin-purple-deep) !important;
+}
+
+.admin-portal-light .app-sidebar .sidebar-collapse-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.admin-portal-light .app-sidebar .sidebar-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--sb-gold);
+}
+
+.admin-portal-light .premium-page-title,
+.admin-portal-light .sb-page-title {
+  color: var(--admin-purple-deep) !important;
+}
+
+.admin-portal-light .premium-card,
+.admin-portal-light .sb-card,
+.admin-portal-light .dashboard-card,
+.admin-portal-light .bento-stat,
+.admin-portal-light .premium-table-wrap,
+.admin-portal-light .card {
+  background: #fff;
+  border-color: var(--admin-purple-border) !important;
+  box-shadow: 0 2px 16px color-mix(in srgb, var(--admin-purple-mid) 8%, transparent) !important;
+}
+
+.admin-portal-light .welcome-banner {
+  background: linear-gradient(
+    135deg,
+    var(--admin-purple-deep) 0%,
+    var(--admin-purple-mid) 50%,
+    var(--admin-purple-light) 100%
+  ) !important;
+}
+
+.admin-portal-light .premium-table th {
+  background: color-mix(in srgb, var(--admin-purple-mid) 6%, white) !important;
+  color: var(--admin-purple-deep) !important;
+}
+
+.admin-portal-light .premium-table-toolbar,
+.admin-portal-light .premium-table-wrap {
+  border-color: var(--admin-purple-border);
 }
 
 /* Parent portal warm theme */

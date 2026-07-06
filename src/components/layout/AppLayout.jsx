@@ -15,6 +15,7 @@ export default function AppLayout({ children }) {
   const { loginPath } = useTenantPath();
   const location = useLocation();
   const isParentPortal = /\/parent(\/|$)/.test(location.pathname);
+  const isAdminPortal = /\/admin(\/|$)/.test(location.pathname);
   useNetworkStatus();
 
   const onLogout = () => {
@@ -23,7 +24,7 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden sb-surface text-[var(--sb-on-surface,#243447)] ${isParentPortal ? 'parent-portal-warm' : ''}`}>
+    <div className={`flex h-screen overflow-hidden sb-surface text-[var(--sb-on-surface,#243447)] ${isAdminPortal ? 'admin-portal-light' : ''} ${isParentPortal ? 'parent-portal-warm' : ''}`}>
       <Sidebar
         user={user}
         open={sidebarOpen}

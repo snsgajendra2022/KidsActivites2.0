@@ -10,8 +10,8 @@ import Modal, { ConfirmModal } from '../../components/ui/Modal.jsx';
 import {
   ResponsiveDataTable,
   TableActionButton,
-  TableActionLink,
 } from '../../components/ui/DataTable.jsx';
+import ApplicationViewModal from '../../components/applications/ApplicationViewModal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getFees, verifyPayment, rejectPayment } from '../../services/feeService.js';
@@ -60,6 +60,7 @@ export default function AdminFees() {
   const [fees, setFees] = useState([]);
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [applicationView, setApplicationView] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -102,6 +103,10 @@ export default function AdminFees() {
     setModal(null);
     setSelected(null);
     setRejectReason('');
+  };
+
+  const closeApplicationView = () => {
+    setApplicationView(null);
   };
 
   const reload = () => {
@@ -157,11 +162,22 @@ export default function AdminFees() {
     }
   };
 
-  const renderActions = (fee) => (
+  const renderActions = (fee) => {
+    const applicationId = fee.applicationId;
+    return (
     <>
-      <TableActionLink to={`/admin/applications/${fee.applicationId}`}>
-        View Application
-      </TableActionLink>
+      {applicationId ? (
+        <TableActionButton
+          variant="outline"
+          onClick={() => setApplicationView({ applicationId, feeId: fee.id, fee })}
+        >
+          View Application
+        </TableActionButton>
+      ) : (
+        <TableActionButton variant="outline" disabled title="Application not linked">
+          View Application
+        </TableActionButton>
+      )}
       {fee.status === 'payment_submitted' && (
         <>
           <TableActionButton
@@ -184,7 +200,8 @@ export default function AdminFees() {
         </TableActionButton>
       )}
     </>
-  );
+    );
+  };
 
   return (
     <DashboardLayout>
@@ -254,6 +271,15 @@ export default function AdminFees() {
           placeholder="Explain what needs to be corrected so the parent can resubmit payment proof."
         />
       </Modal>
+
+      <ApplicationViewModal
+        open={Boolean(applicationView?.applicationId)}
+        onClose={closeApplicationView}
+        applicationId={applicationView?.applicationId}
+        feeId={applicationView?.feeId}
+        feeRecord={applicationView?.fee}
+        onFeeUpdated={() => reload()}
+      />
     </DashboardLayout>
   );
 }

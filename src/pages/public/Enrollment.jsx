@@ -341,11 +341,14 @@ export default function Enrollment() {
                 Back to Home
               </Link>
               <div className="flex flex-wrap items-center gap-2">
+                {/* Draft saved badge — temporarily disabled
                 {(draftId || draftSavedAt) && (
                   <span className="enrollment-draft-badge" title="Your application draft is stored securely">
                     {loading ? 'Saving draft…' : 'Draft saved'}
                   </span>
                 )}
+                */}
+                {/* Save Draft — temporarily disabled
                 <button
                   type="button"
                   onClick={handleSaveDraft}
@@ -354,6 +357,7 @@ export default function Enrollment() {
                 >
                   Save Draft
                 </button>
+                */}
               </div>
             </div>
 
@@ -379,9 +383,11 @@ export default function Enrollment() {
                     Back
                   </button>
                 )}
+                {/* Save Draft — temporarily disabled
                 <button type="button" onClick={handleSaveDraft} disabled={loading} className="sb-button-secondary">
                   Save Draft
                 </button>
+                */}
               </div>
 
               {step < totalSteps ? (

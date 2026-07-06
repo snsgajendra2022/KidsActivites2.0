@@ -1,11 +1,11 @@
 import { delay } from './mockApi.js';
 import { UPLOAD_STATUS } from '../utils/uploadValidation.js';
 import { api } from './api/client.js';
-import { routeRequest } from './api/routeRequest.js';
+import { isApiEnabled, isApiFallbackMock, isForceMock } from './api/config.js';
 import { buildDocumentPreviewFields, saveDocumentPreview } from '../utils/documentPreview.js';
 
 async function mockUploadFile({ file, fieldKey, onProgress, isOnline, signal }) {
-  if (!isOnline) {
+  if (typeof isOnline === 'function' && !isOnline()) {
     return { success: false, status: UPLOAD_STATUS.WAITING_FOR_INTERNET, error: 'Waiting for internet connection.' };
   }
 
@@ -57,11 +57,14 @@ async function apiUploadFile({ file, fieldKey, onProgress, applicationId, school
   });
 
   onProgress?.(30);
-  await fetch(signed.uploadUrl, {
+  const putRes = await fetch(signed.uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': file.type },
     body: file,
   });
+  if (!putRes.ok) {
+    throw new Error(`File storage upload failed (${putRes.status}).`);
+  }
 
   onProgress?.(80);
   const confirmed = await api.post('/documents/confirm', {
@@ -82,8 +85,21 @@ async function apiUploadFile({ file, fieldKey, onProgress, applicationId, school
 }
 
 export async function uploadFile(options) {
-  return routeRequest({
-    mockFn: () => mockUploadFile(options),
-    apiFn: () => apiUploadFile(options),
-  });
+  if (isForceMock() || !isApiEnabled()) {
+    return mockUploadFile(options);
+  }
+
+  try {
+    return await apiUploadFile(options);
+  } catch (err) {
+    if (isApiFallbackMock() || import.meta.env.DEV) {
+      console.warn('[SchoolBridge] Document upload API failed, using local mock:', err.message);
+      return mockUploadFile(options);
+    }
+    return {
+      success: false,
+      status: UPLOAD_STATUS.FAILED,
+      error: err?.message || 'Upload failed.',
+    };
+  }
 }

@@ -56,6 +56,7 @@ const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFIC
 const SUPER_ADMIN_ONLY = [ROLES.SUPER_ADMIN];
 const PORTAL_SETTINGS_ROLES = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN];
 const FEES_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
+const APPLICATION_REVIEW_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT, ROLES.SUPPORT_STAFF];
 const REPORTS_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
 const CHAT_ADMIN_ROLES = [...CORE_ADMIN, ROLES.SUPPORT_STAFF];
 const SUPPORT_APP_ROLES = [...CORE_ADMIN, ROLES.SUPPORT_STAFF];
@@ -100,7 +101,7 @@ export default function App() {
         {/* Admin routes */}
         <Route path="admin/dashboard" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminDashboard /></ProtectedRoute>} />
         <Route path="admin/applications" element={<ProtectedRoute allowedRoles={SUPPORT_APP_ROLES}><ApplicationsList /></ProtectedRoute>} />
-        <Route path="admin/applications/:id" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ApplicationReview /></ProtectedRoute>} />
+        <Route path="admin/applications/:id" element={<ProtectedRoute allowedRoles={APPLICATION_REVIEW_ROLES}><ApplicationReview /></ProtectedRoute>} />
         <Route path="admin/students" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminStudents /></ProtectedRoute>} />
         <Route path="admin/fees" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdminFees /></ProtectedRoute>} />
         <Route path="admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPhotos /></ProtectedRoute>} />
