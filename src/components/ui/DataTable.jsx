@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 
 function getCellValue(row, column) {
   if (column.render) return column.render(row);
@@ -16,7 +17,7 @@ function DesktopTable({ columns, data, keyExtractor, minWidth, emptyMessage, ren
   const isEmpty = !data?.length;
 
   return (
-    <div className="hidden overflow-x-auto md:block">
+    <div className="hidden overflow-x-auto sb-table-scroll md:block">
       <table className="premium-table w-full" style={{ minWidth }}>
         <thead>
           <tr>
@@ -234,7 +235,7 @@ export function DataTablePanel({ toolbar, children, minWidth = 900 }) {
   return (
     <div className="premium-table-wrap overflow-hidden">
       {toolbar}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden overflow-x-auto sb-table-scroll md:block">
         <table className="premium-table w-full" style={{ minWidth }}>
           {children}
         </table>
@@ -287,8 +288,9 @@ export function TableActionButton({ variant = 'outline', children, className = '
 }
 
 export function TableActionLink({ to, variant = 'outline', children, className = '' }) {
+  const { tenantPath } = useTenantPath();
   return (
-    <Link to={to} className={`table-action-btn table-action-btn-${variant} ${className}`}>
+    <Link to={tenantPath(to)} className={`table-action-btn table-action-btn-${variant} ${className}`}>
       {children}
     </Link>
   );

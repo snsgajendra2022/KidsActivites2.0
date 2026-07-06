@@ -22,6 +22,7 @@ import { getFeeStructures, resolveFeeBreakdownForClass } from '../../services/se
 import { listClassFees, listClasses, resolveFeeBreakdownFromClassFees } from '../../services/classManagementService.js';
 import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import DocumentPreviewModal from '../../components/documents/DocumentPreviewModal.jsx';
 import '../../styles/application-review.css';
 import '../../styles/document-preview.css';
@@ -131,6 +132,7 @@ export default function ApplicationReview() {
   const { id } = useParams();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
   const [app, setApp] = useState(null);
   const [fee, setFee] = useState(null);
   const [feeStructures, setFeeStructures] = useState([]);
@@ -159,7 +161,7 @@ export default function ApplicationReview() {
       }
       setApp(data);
       setFeeStructures(structures);
-      setManagedClasses(daycareClasses);
+      setManagedClasses(Array.isArray(daycareClasses) ? daycareClasses : []);
       setFee(await getFeeByApplication(data.id));
     } catch {
       setApp(null);
@@ -241,7 +243,7 @@ export default function ApplicationReview() {
             {fee.breakdown && Object.entries(fee.breakdown).map(([k, v]) => (
               <div key={k} className={`app-review-fee-row ${k === 'discount' ? 'discount' : ''}`}>
                 <span>{formatFieldLabel(k)}</span>
-                <span>₹{v.toLocaleString()}</span>
+                <span>₹{Number(v ?? 0).toLocaleString()}</span>
               </div>
             ))}
             <div className="app-review-fee-row total">
@@ -264,7 +266,7 @@ export default function ApplicationReview() {
   return (
     <DashboardLayout>
       <PageTransition>
-        <Link to="/admin/applications" className="app-review-back">
+        <Link to={tenantPath('/admin/applications')} className="app-review-back">
           <ArrowLeft size={16} />
           Back to Applications
         </Link>
@@ -274,7 +276,7 @@ export default function ApplicationReview() {
         ) : loadError ? (
           <section className="sb-card app-review-card">
             <p className="text-sm text-[#45474c]">{loadError}</p>
-            <Link to="/admin/applications" className="mt-3 inline-block text-sm font-medium text-[#0058be]">
+            <Link to={tenantPath('/admin/applications')} className="mt-3 inline-block text-sm font-medium text-[#0058be]">
               Back to Applications
             </Link>
           </section>
@@ -376,6 +378,7 @@ export default function ApplicationReview() {
         <ConfirmModal open={modal === 'approve'} onClose={() => setModal(null)} onConfirm={() => act(() => approveApplication(id), 'Application approved successfully.')} title="Approve Application?" message="This will approve the application and assign fee to the parent." confirmText="Approve Application" loading={loading} />
 
         <ConfirmModal open={modal === 'assignFee'} onClose={() => setModal(null)} onConfirm={async () => {
+          if (!app) return;
           const classCode = app.student?.classApplying;
           const matchedClass = managedClasses.find(
             (c) => c.code?.toLowerCase() === String(classCode || '').toLowerCase(),
@@ -396,12 +399,12 @@ export default function ApplicationReview() {
             () => assignFee(app.id, app.applicationNo, app.student?.fullName, classCode, breakdown),
             'Fee assigned successfully.',
           );
-        }} title="Assign Fee?" message={`Fee structure for ${app.student?.classApplying?.toUpperCase() || 'this class'} will be applied from Class Management or Settings.`} confirmText="Assign Fee" loading={loading} />
+        }} title="Assign Fee?" message={`Fee structure for ${app?.student?.classApplying?.toUpperCase() || 'this class'} will be applied from Class Management or Settings.`} confirmText="Assign Fee" loading={loading} />
 
-        <ConfirmModal open={modal === 'verifyPayment'} onClose={() => setModal(null)} onConfirm={() => act(() => verifyPayment(fee.id, user?.name || 'Admin'), 'Fee payment verified successfully.')} title="Verify Fee Payment?" message="This will mark the fee as received and allow the admission process to continue." confirmText="Verify Payment" confirmVariant="success" loading={loading} />
+        <ConfirmModal open={modal === 'verifyPayment'} onClose={() => setModal(null)} onConfirm={() => fee && act(() => verifyPayment(fee.id, user?.name || 'Admin'), 'Fee payment verified successfully.')} title="Verify Fee Payment?" message="This will mark the fee as received and allow the admission process to continue." confirmText="Verify Payment" confirmVariant="success" loading={loading} />
 
         <Modal open={modal === 'rejectPayment'} onClose={() => { setModal(null); setReason(''); }} title="Reject Payment?"
-          footer={<><Button variant="secondary" onClick={() => { setModal(null); setReason(''); }}>Cancel</Button><Button variant="danger" loading={loading} onClick={() => act(() => rejectPayment(fee.id, reason), 'Payment rejected. Parent can resubmit proof.')}>Reject Payment</Button></>}>
+          footer={<><Button variant="secondary" onClick={() => { setModal(null); setReason(''); }}>Cancel</Button><Button variant="danger" loading={loading} disabled={!fee} onClick={() => fee && act(() => rejectPayment(fee.id, reason), 'Payment rejected. Parent can resubmit proof.')}>Reject Payment</Button></>}>
           <Textarea label="Reason for rejection" required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explain what needs to be corrected." />
         </Modal>
 

@@ -7,6 +7,9 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
+  optimizeDeps: {
+    include: ['react-photo-sphere-viewer', '@photo-sphere-viewer/core'],
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,

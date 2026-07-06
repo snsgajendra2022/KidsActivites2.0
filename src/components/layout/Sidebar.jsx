@@ -10,14 +10,11 @@ function sidebarLinkClass({ isActive }) {
     return [
       'sidebar-nav-link sidebar-nav-link-active',
       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
-      'bg-[var(--sb-gold)] text-[var(--sb-purple-dark)] shadow-sm',
     ].join(' ');
   }
   return [
     'sidebar-nav-link',
     'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
-    'text-white/70 hover:bg-white/10 hover:text-[var(--sb-gold)]',
-    '[&_svg]:text-white/50 hover:[&_svg]:text-[var(--sb-gold)]',
   ].join(' ');
 }
 
@@ -30,10 +27,9 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
+        className={`sidebar-mobile-backdrop fixed inset-0 z-40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
-        style={{ background: 'color-mix(in srgb, var(--sb-footer) 30%, transparent)' }}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -52,8 +48,8 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             <PortalLogo size="md" />
             {!collapsed && (
               <div className="min-w-0">
-                <div className="font-display truncate text-sm font-bold text-white">{portalName}</div>
-                <div className="truncate text-[11px] text-white/50">{school?.name}</div>
+                <div className="sidebar-brand-title font-display truncate text-sm font-bold">{portalName}</div>
+                <div className="sidebar-brand-subtitle truncate text-[11px]">{school?.name}</div>
               </div>
             )}
           </Link>
@@ -71,7 +67,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-[#6b7a8c] hover:bg-brand-muted hover:text-brand lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-[#6b7a8c] hover:bg-brand-muted hover:text-brand lg:hidden"
               aria-label="Close menu"
             >
               <X size={18} />
@@ -109,10 +105,10 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
 
         {!collapsed && user && (
           <div className="shrink-0 border-t border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] p-4">
-            <div className="rounded-xl bg-[color-mix(in_srgb,var(--sb-purple)_15%,var(--sb-footer))] p-3 ring-1 ring-[color-mix(in_srgb,var(--sb-purple-soft)_20%,transparent)]">
-              <div className="truncate text-sm font-semibold text-white">{user.name}</div>
-              <div className="mt-0.5 text-xs text-white/50">{ROLE_LABELS[user.role]}</div>
-              <div className="mt-2 text-[10px] font-medium text-white/40">{school?.academicYear}</div>
+            <div className="sidebar-user-card rounded-xl p-3 ring-1">
+              <div className="sidebar-user-name truncate text-sm font-semibold">{user.name}</div>
+              <div className="sidebar-user-role mt-0.5 text-xs">{ROLE_LABELS[user.role]}</div>
+              <div className="sidebar-user-meta mt-2 text-[10px] font-medium">{school?.academicYear}</div>
             </div>
           </div>
         )}

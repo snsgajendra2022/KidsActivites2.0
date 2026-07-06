@@ -152,6 +152,41 @@ export default function AdminAlbums() {
         ) : (
           <div className="admin-albums-layout">
             <div className="admin-albums-list">
+              <div className="sb-mobile-only sb-mobile-card-list">
+                {albums.map((album) => (
+                  <article key={album.id} className="sb-mobile-data-card admin-albums-mobile-card">
+                    <h3 className="sb-mobile-data-card__title">{album.albumName}</h3>
+                    <div className="sb-mobile-data-card__row">
+                      <span className="sb-mobile-data-card__label">Class</span>
+                      <span className="sb-mobile-data-card__value">{album.className}</span>
+                    </div>
+                    <div className="sb-mobile-data-card__row">
+                      <span className="sb-mobile-data-card__label">Code</span>
+                      <span className="sb-mobile-data-card__value"><code>{album.albumCode}</code></span>
+                    </div>
+                    <div className="sb-mobile-data-card__row">
+                      <span className="sb-mobile-data-card__label">TV / Media</span>
+                      <span className="sb-mobile-data-card__value">
+                        {album.playbackEnabled ? 'On' : 'Off'} · {album.mediaCount}
+                      </span>
+                    </div>
+                    <div className="sb-mobile-data-card__row">
+                      <span className="sb-mobile-data-card__label">Status</span>
+                      <span className="sb-mobile-data-card__value">{album.status}</span>
+                    </div>
+                    <div className="sb-mobile-data-card__actions">
+                      <button type="button" className="admin-albums-icon-btn" onClick={() => copyCode(album.albumCode)}>
+                        <Copy size={14} /> Copy
+                      </button>
+                      <button type="button" className="admin-albums-link" onClick={() => openDetail(album.id)}>
+                        <Eye size={14} /> View
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="sb-desktop-only admin-albums-table-wrap">
               <table className="admin-albums-table">
                 <thead>
                   <tr>
@@ -187,6 +222,7 @@ export default function AdminAlbums() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {detail && (

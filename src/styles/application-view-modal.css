@@ -1,0 +1,155 @@
+.application-view-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.application-view-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.application-view-modal__student {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--admin-purple-deep, var(--sb-primary));
+}
+
+.application-view-modal__subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--sb-muted);
+}
+
+.application-view-modal__meta {
+  margin: 0;
+}
+
+.application-view-modal__section {
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--admin-purple-mid, #523a71) 12%, #e8e4f0);
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--admin-purple-surface, #f6f3fa) 50%, white);
+}
+
+.application-view-modal__section-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--admin-purple-deep, var(--sb-primary));
+}
+
+.application-view-modal__fee {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.application-view-modal__docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.application-view-modal__docs li {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.8125rem;
+}
+
+.application-view-modal__error {
+  margin: 0;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--sb-muted);
+}
+
+.application-view-modal__fee-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.application-view-modal__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--sb-muted);
+  line-height: 1.5;
+}
+
+.application-view-modal__action-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.application-view-modal__paid-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, #059669 10%, white);
+  border: 1px solid color-mix(in srgb, #059669 25%, transparent);
+  font-size: 0.8125rem;
+  color: var(--sb-slate);
+}
+
+.application-view-modal__payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.application-view-modal__payment-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .application-view-modal__payment-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.application-view-modal__payment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.application-view-modal__payment-actions .form-field {
+  flex: 1 1 12rem;
+  min-width: 12rem;
+}
+
+@media (max-width: 640px) {
+  .application-view-modal__docs li {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}

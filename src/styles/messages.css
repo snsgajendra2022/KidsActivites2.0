@@ -591,6 +591,27 @@
   color: #64748b;
 }
 
+@media (max-width: 639px) {
+  .messages-compose-modal {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .messages-compose-modal__panel {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    border-radius: 1rem 1rem 0 0;
+  }
+
+  .messages-compose-modal__head button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 .messages-compose-modal__panel .messages-search {
   margin: 0.75rem 1rem 0;
 }
