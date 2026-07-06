@@ -45,6 +45,21 @@ button, input, select, textarea { font: inherit; }
 button { cursor: pointer; border: 0; }
 img { max-width: 100%; }
 
+/* Custom Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--navy);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
 /* Typography */
 .page-title { font-size: 28px; font-weight: 700; color: var(--navy); margin: 0 0 4px; }
 .section-title { font-size: 20px; font-weight: 600; color: var(--navy); margin: 0 0 12px; }

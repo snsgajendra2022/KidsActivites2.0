@@ -60,7 +60,7 @@
   width: min(calc(100% - 2.5rem), 72rem);
   min-height: min(calc(100vh - 4rem), calc(100dvh - 4rem));
   margin: 2rem auto;
-  border: 2px solid rgba(255, 255, 255, 0.65);
+  border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -101,7 +101,7 @@
   font-style: italic;
   font-weight: 400;
   font-size: clamp(2.25rem, 5.5vw, 4rem);
-  line-height: 1.08;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   color: #fff;
   margin: 0 0 1.25rem;
@@ -372,7 +372,7 @@
 
 @media (min-width: 768px) {
   .sb-editorial-footer__grid {
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
   }
 }
 

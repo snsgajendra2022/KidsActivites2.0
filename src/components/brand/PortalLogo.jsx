@@ -1,23 +1,24 @@
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import defaultLogo from '../../assets/schoolbridge_logo.png';
 
 const SIZES = {
-  sm: { box: 'h-8 w-8 text-[10px] rounded-lg', img: 'h-8 w-8 rounded-lg' },
-  md: { box: 'h-9 w-9 text-[11px] rounded-xl', img: 'h-9 w-9 rounded-xl' },
-  lg: { box: 'h-12 w-12 text-sm rounded-xl', img: 'h-12 w-12 rounded-xl' },
+  sm: { box: 'h-8 w-8 text-[10px] rounded-lg', img: 'h-8 w-auto object-contain' },
+  md: { box: 'h-9 w-9 text-[11px] rounded-xl', img: 'h-11 w-auto object-contain' },
+  lg: { box: 'h-12 w-12 text-sm rounded-xl', img: 'h-14 w-auto object-contain' },
 };
 
 export default function PortalLogo({ size = 'md', className = '' }) {
   const { portalName, branding } = usePortalConfig();
   const initials = portalName.slice(0, 2).toUpperCase();
   const sizeClass = SIZES[size] || SIZES.md;
-  const imageUrl = branding?.logoIconUrl || branding?.logoUrl;
+  const imageUrl = branding?.logoIconUrl || branding?.logoUrl || defaultLogo;
 
   if (imageUrl) {
     return (
       <img
         src={imageUrl}
         alt={`${portalName} logo`}
-        className={`${sizeClass.img} shrink-0 object-cover ${className}`}
+        className={`${sizeClass.img} shrink-0 ${className}`}
       />
     );
   }

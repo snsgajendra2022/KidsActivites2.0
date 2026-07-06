@@ -36,6 +36,7 @@
     "react": "latest",
     "react-dom": "latest",
     "react-hook-form": "^7.57.0",
+    "react-photo-sphere-viewer": "^6.2.3",
     "react-router-dom": "latest",
     "recharts": "^2.15.4",
     "signature_pad": "^5.0.7",

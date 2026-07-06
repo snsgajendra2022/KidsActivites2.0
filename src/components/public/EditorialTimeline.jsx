@@ -1,4 +1,6 @@
+import { CenteredScrollTimeline } from './CenteredScrollTimeline.jsx';
 import { Play } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const DEFAULT_MEDIA = '/assets/schoolbridge-timeline-placeholder.svg';
 
@@ -8,39 +10,55 @@ export default function EditorialTimeline({
   subtitle,
   className = '',
 }) {
+  const renderStepContent = (step, index) => {
+    // On mobile, everything is standard row.
+    // On desktop, we alternate image/text sides.
+    const isEven = index % 2 === 0;
+
+    return (
+      <div className={`flex w-full flex-col gap-6 md:gap-8 overflow-hidden md:flex-row md:items-center ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
+        
+        {/* TEXT COLUMN */}
+        <div className={`flex-1 flex flex-col justify-center ${isEven ? 'md:pr-16 lg:pr-24' : 'md:pl-16 lg:pl-24'}`}>
+          <h3 className="font-display text-2xl font-bold text-navy md:text-3xl">{step.title}</h3>
+          <p className="mt-4 text-base text-gray-600 md:text-lg">{step.description || step.desc}</p>
+        </div>
+
+        {/* IMAGE COLUMN */}
+        <div className={`w-full flex-1 md:w-1/2 ${isEven ? 'md:pl-16 lg:pl-24' : 'md:pr-16 lg:pr-24'}`}>
+          <div className="relative overflow-hidden rounded-2xl shadow-xl group">
+            <img 
+              src={step.imageUrl || DEFAULT_MEDIA} 
+              alt={step.title} 
+              loading="lazy" 
+              className="h-64 w-full object-cover transition-transform duration-700 group-hover:scale-105 md:h-80" 
+            />
+            {step.showPlay && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/10">
+                <button type="button" className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-navy shadow-lg backdrop-blur-sm transition-transform hover:scale-110" aria-label={`Play video about ${step.title}`}>
+                  <Play size={28} className="ml-1" fill="currentColor" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    );
+  };
+
   return (
     <section className={`sb-editorial-section sb-editorial-section--cream ${className}`.trim()}>
       <div className="sb-container">
         {(title || subtitle) && (
-          <div className="sb-editorial-section__header">
-            {title && <h2 className="sb-editorial-heading">{title}</h2>}
-            {subtitle && <p className="sb-editorial-subheading">{subtitle}</p>}
+          <div className="sb-editorial-section__header text-center mb-12">
+            {title && <h2 className="font-display text-3xl font-bold text-navy md:text-4xl">{title}</h2>}
+            {subtitle && <p className="mt-4 text-lg text-gray-600">{subtitle}</p>}
           </div>
         )}
 
-        <div className="sb-vertical-timeline">
-          {steps.map((step, index) => (
-            <article key={step.title || index} className="sb-vertical-timeline__item">
-              <span className="sb-vertical-timeline__marker" aria-hidden="true" />
-              <div className="sb-vertical-timeline__content">
-                <span className="sb-vertical-timeline__number">{String(index + 1).padStart(2, '0')}</span>
-                <h3 className="sb-vertical-timeline__title">{step.title}</h3>
-                <p className="sb-vertical-timeline__desc">{step.description || step.desc}</p>
-              </div>
-              <div className="sb-vertical-timeline__media">
-                <div className="sb-media-card">
-                  <img src={step.imageUrl || DEFAULT_MEDIA} alt="" loading="lazy" />
-                  {step.showPlay && (
-                    <button type="button" className="sb-play-button" aria-label={`Learn more about ${step.title}`}>
-                      <span className="sb-play-button__circle">
-                        <Play size={22} fill="currentColor" />
-                      </span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </article>
-          ))}
+        <div className="px-4 md:px-0 max-w-6xl mx-auto">
+          <CenteredScrollTimeline steps={steps} renderContent={renderStepContent} />
         </div>
       </div>
     </section>
