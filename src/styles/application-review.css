@@ -283,6 +283,17 @@
   margin: 0 -0.25rem;
 }
 
+@media (max-width: 359px) {
+  .app-review-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .app-review-meta-item dd {
+    white-space: normal;
+    word-break: break-word;
+  }
+}
+
 .app-review-card .premium-table-wrap {
   margin: 0 -0.5rem;
 }

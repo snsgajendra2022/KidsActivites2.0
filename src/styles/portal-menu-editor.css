@@ -170,6 +170,43 @@
   background: #f5f3ff;
 }
 
+@media (max-width: 767px) {
+  .portal-menu-row {
+    grid-template-columns: 1fr;
+    gap: 0.625rem;
+    align-items: stretch;
+    padding: 1rem;
+  }
+
+  .portal-menu-row__reorder {
+    flex-direction: row;
+    order: 3;
+  }
+
+  .portal-menu-row__icon-picker {
+    order: 1;
+  }
+
+  .portal-menu-row__fields {
+    order: 2;
+  }
+
+  .portal-menu-row__actions {
+    order: 4;
+    justify-content: flex-end;
+  }
+
+  .portal-menu-row__move {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .portal-menu-row__delete {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
 .portal-menu-hint {
   margin: 0 0 1rem;
   font-size: 0.875rem;
