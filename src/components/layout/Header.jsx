@@ -15,7 +15,7 @@ export default function Header({ user, onMenuClick, onLogout }) {
         <button
           type="button"
           onClick={onMenuClick}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/5 bg-white text-muted transition-all duration-200 hover:border-black/10 hover:bg-brand-muted hover:text-brand lg:hidden"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-black/5 bg-white text-muted transition-all duration-200 hover:border-black/10 hover:bg-brand-muted hover:text-brand lg:hidden"
           aria-label="Open menu"
         >
           <Menu size={20} />

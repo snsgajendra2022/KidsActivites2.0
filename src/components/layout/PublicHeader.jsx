@@ -17,9 +17,6 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
 
   const navLinks = [
     { to: enrollPath, label: 'Admissions' },
-    { to: `${basePath}#programs`, label: 'Programs', hash: true },
-    { to: `${basePath}#about`, label: 'About', hash: true },
-    { to: `${basePath}#contact`, label: 'Contact', hash: true },
   ];
 
   const onLoginPage = isTenantRoute
@@ -49,11 +46,6 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
           <div className="flex min-w-0 shrink-0 items-center gap-4 md:gap-8">
             <Link to={basePath} className="flex min-w-0 items-center gap-2 md:gap-3">
               <PortalLogo size={loginMobile ? 'sm' : 'md'} />
-              <span className={`login-header-brand-text font-display truncate font-bold tracking-tighter text-brand ${
-                loginMobile ? 'text-sm sm:text-base' : 'text-xl md:text-2xl'
-              }`}>
-                {portalName}
-              </span>
             </Link>
             {!loginMobile && (
               <div className="hidden items-center gap-6 md:flex">
@@ -82,14 +74,6 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
 
           {!loginMobile && (
             <div className="flex shrink-0 items-center gap-2 md:gap-4">
-              {!onLoginPage && (
-                <Link
-                  to={loginPath}
-                  className="hidden text-sm font-semibold text-brand/60 transition-premium hover:text-brand md:block px-3 py-2"
-                >
-                  Staff Portal
-                </Link>
-              )}
               {!onLoginPage && (
                 <Link
                   to={loginPath}

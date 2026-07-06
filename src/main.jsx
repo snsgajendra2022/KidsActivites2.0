@@ -10,6 +10,7 @@ import './styles/theme.css';
 import './styles/globals.css';
 import './styles/components.css';
 import './styles/layout.css';
+import './styles/responsive.css';
 import './styles/premium.css';
 import './styles/schoolbridge-theme.css';
 import './styles/login-portal.css';

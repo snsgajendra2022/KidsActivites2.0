@@ -17,7 +17,7 @@ function DesktopTable({ columns, data, keyExtractor, minWidth, emptyMessage, ren
   const isEmpty = !data?.length;
 
   return (
-    <div className="hidden overflow-x-auto md:block">
+    <div className="hidden overflow-x-auto sb-table-scroll md:block">
       <table className="premium-table w-full" style={{ minWidth }}>
         <thead>
           <tr>
@@ -235,7 +235,7 @@ export function DataTablePanel({ toolbar, children, minWidth = 900 }) {
   return (
     <div className="premium-table-wrap overflow-hidden">
       {toolbar}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden overflow-x-auto sb-table-scroll md:block">
         <table className="premium-table w-full" style={{ minWidth }}>
           {children}
         </table>

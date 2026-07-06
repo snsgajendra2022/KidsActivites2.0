@@ -102,10 +102,21 @@
 }
 
 @media (max-width: 640px) {
+  .photo-lightbox {
+    padding: 0.75rem;
+  }
+
+  .photo-lightbox__close {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
   .photo-lightbox__nav {
-    width: 2.25rem;
-    height: 2.25rem;
-    margin-top: -1.125rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-top: -1.375rem;
   }
 
   .photo-lightbox__nav--prev {
@@ -114,5 +125,14 @@
 
   .photo-lightbox__nav--next {
     right: 0.5rem;
+  }
+
+  .photo-lightbox__content {
+    max-width: 100%;
+  }
+
+  .photo-lightbox__caption {
+    font-size: 0.875rem;
+    word-break: break-word;
   }
 }

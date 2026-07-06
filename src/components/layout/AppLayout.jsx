@@ -36,7 +36,7 @@ export default function AppLayout({ children }) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <NetworkBanner />
         <Header user={user} onMenuClick={() => setSidebarOpen(true)} onLogout={onLogout} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 min-w-0 overflow-x-clip overflow-y-auto p-3 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

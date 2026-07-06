@@ -6,11 +6,18 @@ import EditorialTimeline from '../../components/public/EditorialTimeline.jsx';
 import MapFeatureSection from '../../components/public/MapFeatureSection.jsx';
 import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
 import EditorialFooter from '../../components/public/EditorialFooter.jsx';
+import Banner360 from '../../components/public/Banner360.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+
+import imgSecure from '../../assets/indian_secure.png';
+import imgDocs from '../../assets/indian_docs.png';
+import imgFees from '../../assets/indian_fees.png';
+import imgConnected from '../../assets/indian_connected.png';
+import imgPanorama from '../../assets/panorama_360.png';
 
 const DEFAULT_HERO_HEADLINE = ['Modern School Enrollment', 'Built for Premium Education'];
 const DEFAULT_HERO_SUBTEXT =
@@ -20,29 +27,31 @@ const LANDING_JOURNEY = [
   { label: 'Discover' },
   { label: 'Apply' },
   { label: 'Documents' },
-  { label: 'Connect' },
+  { label: 'Admission Confirm' },
 ];
 
 const TIMELINE_STEPS = [
   {
     title: 'Secure & Trusted',
     description: 'Role-based access, encrypted data, and audit-ready workflows designed for schools you can trust.',
+    imageUrl: imgSecure,
     showPlay: true,
   },
   {
     title: 'Easy Documentation',
     description: 'Upload documents online with real-time status tracking — no more lost paperwork or repeated visits.',
+    imageUrl: imgDocs,
     showPlay: true,
   },
   {
     title: 'Transparent Fees',
     description: 'Clear fee breakdown with digital receipt generation so families always know where they stand.',
-    showPlay: false,
+    imageUrl: imgFees,
   },
   {
     title: 'Stay Connected',
-    description: 'Chat with teachers and receive classroom photos after admission — your school community, online.',
-    showPlay: true,
+    description: 'Automated email updates and a parent dashboard keep everyone on the same page.',
+    imageUrl: imgConnected,
   },
 ];
 
@@ -87,7 +96,7 @@ export default function Landing() {
             <Sparkles size={14} />
             {isPlatformHome
               ? (platform?.tagline || 'Multi-school enrollment platform')
-              : `Admissions Open — ${school?.academicYear}`}
+              : `Admissions Open — Playgroup to 8th Class`}
           </>
         )}
         title={heroTitle}
@@ -103,6 +112,12 @@ export default function Landing() {
       />
 
       <JourneyNav steps={LANDING_JOURNEY} activeIndex={0} />
+
+      <Banner360 
+        imageUrl={imgPanorama}
+        title="Experience Our Campus"
+        subtitle="Explore our world-class facilities in 360°"
+      />
 
       <EditorialTimeline
         title={`Why Schools Choose ${portalName}`}
@@ -125,7 +140,7 @@ export default function Landing() {
           : school?.address}
         action={{
           to: enrollPath,
-          label: <>Begin Enrollment Application <ArrowRight size={18} /></>,
+          label: <>Start Enrollment <ArrowRight size={18} /></>,
         }}
       />
 

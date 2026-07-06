@@ -67,7 +67,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-[#6b7a8c] hover:bg-brand-muted hover:text-brand lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-[#6b7a8c] hover:bg-brand-muted hover:text-brand lg:hidden"
               aria-label="Close menu"
             >
               <X size={18} />
