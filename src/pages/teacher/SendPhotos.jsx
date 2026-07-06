@@ -10,6 +10,7 @@ import { ApiError } from '../../services/api/client.js';
 import {
   UPLOAD_TARGETS,
   getTeacherAlbumClasses,
+  getTeacherAlbumByClass,
   uploadTeacherAlbumMedia,
 } from '../../services/classAlbumService.js';
 import { getTeacherStudents } from '../../services/teacherService.js';
@@ -49,6 +50,15 @@ const SUCCESS_MESSAGES = {
   [UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT]: 'Uploaded to class album and shared with parents successfully.',
 };
 
+function mediaStatusLabel(item) {
+  if (item.isReadyForTv && item.approvalStatus === 'APPROVED' && item.showOnTv) return 'Ready for TV';
+  if (item.isReadyForTv && item.approvalStatus === 'APPROVED') return 'Ready for TV';
+  if (item.mediaType === 'VIDEO') return 'Processing';
+  if (item.approvalStatus === 'PENDING') return 'Pending approval';
+  if (!item.isReadyForTv) return 'Waiting for variants';
+  return 'Processing';
+}
+
 export default function SendPhotos() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -64,6 +74,8 @@ export default function SendPhotos() {
   });
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [albumMedia, setAlbumMedia] = useState([]);
+  const [albumMediaLoading, setAlbumMediaLoading] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -71,19 +83,40 @@ export default function SendPhotos() {
     getTeacherStudents(user.id).then(setAllStudents);
   }, [user?.id]);
 
-  const filePreviewUrls = useMemo(() => {
+  useEffect(() => {
+    if (!form.classId) {
+      setAlbumMedia((prev) => (prev.length === 0 ? prev : []));
+      return undefined;
+    }
+    let cancelled = false;
+    setAlbumMediaLoading(true);
+    getTeacherAlbumByClass(form.classId)
+      .then((data) => {
+        if (!cancelled) setAlbumMedia(data?.media || []);
+      })
+      .catch(() => {
+        if (!cancelled) setAlbumMedia([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAlbumMediaLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [form.classId]);
+
+  const [filePreviewUrls, setFilePreviewUrls] = useState(() => new Map());
+
+  useEffect(() => {
     const urls = new Map();
     form.files.forEach((file) => {
       if (!isVideoFile(file)) {
         urls.set(file, URL.createObjectURL(file));
       }
     });
-    return urls;
+    setFilePreviewUrls(urls);
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
   }, [form.files]);
-
-  useEffect(() => () => {
-    filePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
-  }, [filePreviewUrls]);
 
   const activeAlbumClasses = useMemo(
     () => albumClasses.filter(
@@ -148,6 +181,7 @@ export default function SendPhotos() {
 
   const handleSend = async () => {
     setLoading(true);
+    const uploadedClassId = form.classId;
     try {
       const studentId = form.studentIds[0] || null;
       await uploadTeacherAlbumMedia({
@@ -159,7 +193,18 @@ export default function SendPhotos() {
       });
       toast(SUCCESS_MESSAGES[uploadTarget], 'success');
       setShowConfirm(false);
-      setForm({ classId: '', recipients: 'class', studentIds: [], caption: '', files: [] });
+      setForm({
+        classId: uploadedClassId,
+        recipients: 'class',
+        studentIds: [],
+        caption: '',
+        files: [],
+      });
+      if (uploadedClassId) {
+        getTeacherAlbumByClass(uploadedClassId)
+          .then((data) => setAlbumMedia(data?.media || []))
+          .catch(() => setAlbumMedia([]));
+      }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'CLASS_INACTIVE') {
         toast('This class is inactive. Please contact admin.', 'error');
@@ -331,6 +376,35 @@ export default function SendPhotos() {
               />
             </div>
           </div>
+
+          {form.classId && (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM
+            || uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT) && (
+            <div className="send-photos-card">
+              <span className="send-photos-card__label">Class album media</span>
+              {albumMediaLoading ? (
+                <p className="send-photos-album-status">Loading album…</p>
+              ) : albumMedia.length === 0 ? (
+                <p className="send-photos-album-status">No album media yet.</p>
+              ) : (
+                <div className="send-photos-album-grid">
+                  {albumMedia.slice(0, 12).map((item) => (
+                    <article key={item.id} className="send-photos-album-item">
+                      {item.thumbnailUrl ? (
+                        <img src={item.thumbnailUrl} alt="" className="send-photos-album-item__thumb" />
+                      ) : (
+                        <div className="send-photos-album-item__placeholder">
+                          {item.mediaType === 'VIDEO' ? <Play size={18} /> : <ImageIcon size={18} />}
+                        </div>
+                      )}
+                      <span className={`send-photos-album-item__badge send-photos-album-item__badge--${item.isReadyForTv ? 'ready' : 'pending'}`}>
+                        {mediaStatusLabel(item)}
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <footer className="send-photos-footer">
             <p className="send-photos-footer__hint">
