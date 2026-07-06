@@ -135,11 +135,19 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
     reqHeaders['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(buildUrl(path, params), {
-    method,
-    headers: reqHeaders,
-    body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(buildUrl(path, params), {
+      method,
+      headers: reqHeaders,
+      body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkErr) {
+    const hint = networkErr?.message === 'Failed to fetch'
+      ? `Cannot reach the API at ${API_BASE_URL}. Ensure the backend is running and reachable from this device.`
+      : (networkErr?.message || 'Network request failed');
+    throw new ApiError(hint, 0, 'NETWORK_ERROR');
+  }
 
   if (res.status === 401 && auth && retry) {
     const newToken = await refreshAccessToken();

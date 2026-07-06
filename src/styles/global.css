@@ -368,6 +368,86 @@ img { max-width: 100%; }
   font-size: 12px;
 }
 
+/* Sonner toasts — inline close button, all users */
+[data-sonner-toast][data-styled='true'] {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.625rem !important;
+}
+
+[data-sonner-toast] [data-close-button] {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+  margin-left: auto !important;
+  align-self: center !important;
+  flex-shrink: 0 !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  min-width: 1.25rem !important;
+  min-height: 1.25rem !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0.35rem !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+[data-sonner-toast] [data-content] {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+}
+
+/* Compact media card toolbars — one horizontal row for icon actions */
+.media-card-toolbar {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  gap: 0.2rem;
+}
+
+.media-card-toolbar__btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  min-width: 1.75rem !important;
+  min-height: 1.75rem !important;
+  padding: 0 !important;
+  border: none;
+  border-radius: 0.45rem;
+  line-height: 1;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.media-card-toolbar .admin-albums-icon-btn,
+.media-card-toolbar .admin-albums-link {
+  width: auto;
+  min-width: auto !important;
+  height: auto;
+  min-height: 2.5rem !important;
+  padding: 0.375rem 0.625rem;
+}
+
 /* Sonner mobile placement */
 @media (max-width: 768px) {
   [data-sonner-toaster] { left: 16px !important; right: 16px !important; }

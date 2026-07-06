@@ -74,8 +74,8 @@ svg {
 }
 
 /* Touch-friendly minimum targets */
-button,
-[role='button'],
+button:not(.media-card-toolbar__btn):not(.admin-photos-card__btn),
+[role='button']:not(.media-card-toolbar__btn),
 a.sb-btn-primary,
 a.sb-btn-secondary,
 a.sb-link-btn,
@@ -85,11 +85,20 @@ a.sb-link-btn,
   min-height: 2.75rem;
 }
 
-button.icon-only,
+button.icon-only:not(.media-card-toolbar__btn),
 .portal-menu-row__move,
 .parent-photos-icon-btn {
   min-height: 2.75rem;
   min-width: 2.75rem;
+}
+
+/* Compact icon toolbars stay one row (photos, albums, toasts) */
+.media-card-toolbar__btn,
+.admin-photos-card__btn,
+[data-sonner-toast] [data-close-button],
+[data-sonner-toaster] [data-close-button] {
+  min-height: unset;
+  min-width: unset;
 }
 
 /* Modal — mobile safe viewport */
@@ -241,16 +250,20 @@ button.icon-only,
 
 .sb-mobile-data-card__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 0.5rem;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
 }
 
 .sb-mobile-data-card__actions button,
 .sb-mobile-data-card__actions a {
-  min-height: 2.75rem;
+  flex-shrink: 0;
+  min-height: 2.5rem;
+  white-space: nowrap;
 }
 
 /* Premium page title scaling */

@@ -1,0 +1,146 @@
+/* Shared admin media pages — photos, albums (portal purple theme) */
+
+.admin-photos-page,
+.admin-albums-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-media-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .admin-media-stats {
+    grid-template-columns: repeat(3, minmax(0, 12rem));
+  }
+}
+
+.admin-media-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.875rem;
+  background: #fff;
+  border: 1px solid var(--admin-purple-border, color-mix(in srgb, var(--admin-purple-mid) 14%, #ebe6f2));
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--admin-purple-mid) 6%, transparent);
+}
+
+.admin-media-stat__value {
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--admin-purple-deep);
+}
+
+.admin-media-stat__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sb-muted, #756a7d);
+}
+
+.admin-media-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.admin-media-pill--success {
+  background: color-mix(in srgb, #059669 12%, white);
+  color: #047857;
+}
+
+.admin-media-pill--warning {
+  background: color-mix(in srgb, #d97706 12%, white);
+  color: #b45309;
+}
+
+.admin-media-pill--info {
+  background: color-mix(in srgb, var(--admin-purple-mid) 12%, white);
+  color: var(--admin-purple-deep);
+}
+
+.admin-media-pill--default {
+  background: color-mix(in srgb, var(--admin-purple-mid) 8%, white);
+  color: var(--admin-purple-mid);
+}
+
+.admin-media-pill--muted {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.admin-media-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+  border-radius: 1rem;
+  background: #fff;
+  border: 1px solid var(--admin-purple-border);
+  box-shadow: 0 2px 16px color-mix(in srgb, var(--admin-purple-mid) 8%, transparent);
+  color: var(--sb-muted);
+}
+
+.admin-media-empty svg {
+  color: var(--admin-purple-mid);
+  opacity: 0.85;
+}
+
+.admin-media-empty h2 {
+  margin: 0.25rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--admin-purple-deep);
+}
+
+.admin-media-empty p {
+  margin: 0 0 0.75rem;
+  max-width: 26rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.admin-media-skeleton {
+  border-radius: 0.875rem;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--admin-purple-surface) 80%, white) 25%,
+    color-mix(in srgb, var(--admin-purple-mid) 8%, white) 50%,
+    color-mix(in srgb, var(--admin-purple-surface) 80%, white) 75%
+  );
+  background-size: 200% 100%;
+  animation: admin-media-shimmer 1.2s infinite;
+}
+
+.admin-media-skeleton--card {
+  min-height: 5rem;
+}
+
+@keyframes admin-media-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.admin-albums-skeleton-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .admin-albums-skeleton-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Tv, Copy, RefreshCw, Archive, Eye, Play } from 'lucide-react';
+import { Tv, Copy, RefreshCw, Archive, Eye, Play, X, FolderOpen } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -50,6 +50,29 @@ function tvStatusBadge(item) {
   return 'Processing';
 }
 
+function AlbumStatusPill({ playbackEnabled, status }) {
+  if (status === 'ARCHIVED') {
+    return <span className="admin-media-pill admin-media-pill--muted">Archived</span>;
+  }
+  if (playbackEnabled) {
+    return <span className="admin-media-pill admin-media-pill--success">TV On</span>;
+  }
+  return <span className="admin-media-pill admin-media-pill--default">TV Off</span>;
+}
+
+function TvMediaPill({ item }) {
+  if (item.isReadyForTv && item.approvalStatus === 'APPROVED') {
+    return <span className="admin-media-pill admin-media-pill--success">Ready for TV</span>;
+  }
+  if (item.approvalStatus === 'PENDING') {
+    return <span className="admin-media-pill admin-media-pill--warning">Pending approval</span>;
+  }
+  if (item.mediaType === 'VIDEO') {
+    return <span className="admin-media-pill admin-media-pill--info">Processing video</span>;
+  }
+  return <span className="admin-media-pill admin-media-pill--default">{tvStatusBadge(item)}</span>;
+}
+
 export default function AdminAlbums() {
   const { toast } = useToast();
   const [albums, setAlbums] = useState([]);
@@ -88,6 +111,12 @@ export default function AdminAlbums() {
     [detail],
   );
   const lightboxPhoto = lightboxIndex >= 0 ? lightboxPhotos[lightboxIndex] : null;
+
+  const stats = useMemo(() => ({
+    total: albums.length,
+    tvOn: albums.filter((a) => a.playbackEnabled).length,
+    media: albums.reduce((sum, a) => sum + (a.mediaCount || 0), 0),
+  }), [albums]);
 
   const copyCode = async (code) => {
     try {
@@ -177,11 +206,42 @@ export default function AdminAlbums() {
           )}
         />
 
+        {!loading && (
+          <div className="admin-media-stats">
+            <div className="admin-media-stat">
+              <span className="admin-media-stat__value">{stats.total}</span>
+              <span className="admin-media-stat__label">Albums</span>
+            </div>
+            <div className="admin-media-stat">
+              <span className="admin-media-stat__value">{stats.tvOn}</span>
+              <span className="admin-media-stat__label">TV enabled</span>
+            </div>
+            <div className="admin-media-stat">
+              <span className="admin-media-stat__value">{stats.media}</span>
+              <span className="admin-media-stat__label">Total media</span>
+            </div>
+          </div>
+        )}
+
         {loading ? (
-          <p>Loading albums…</p>
+          <div className="admin-albums-skeleton-grid" aria-hidden>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="admin-media-skeleton admin-media-skeleton--card" />
+            ))}
+          </div>
+        ) : albums.length === 0 ? (
+          <div className="admin-media-empty">
+            <FolderOpen size={32} strokeWidth={1.5} />
+            <h2>No class albums yet</h2>
+            <p>Create albums for your classes using Backfill Albums, then manage TV codes and playback here.</p>
+            <Button type="button" variant="primary" onClick={handleBackfill}>
+              <RefreshCw size={16} />
+              Backfill Albums
+            </Button>
+          </div>
         ) : (
           <div className="admin-albums-layout">
-            <div className="admin-albums-list">
+            <div className="admin-albums-list premium-card">
               <div className="sb-mobile-only sb-mobile-card-list">
                 {albums.map((album) => (
                   <article key={album.id} className="sb-mobile-data-card admin-albums-mobile-card">
@@ -202,9 +262,11 @@ export default function AdminAlbums() {
                     </div>
                     <div className="sb-mobile-data-card__row">
                       <span className="sb-mobile-data-card__label">Status</span>
-                      <span className="sb-mobile-data-card__value">{album.status}</span>
+                      <span className="sb-mobile-data-card__value">
+                        <AlbumStatusPill playbackEnabled={album.playbackEnabled} status={album.status} />
+                      </span>
                     </div>
-                    <div className="sb-mobile-data-card__actions">
+                    <div className="sb-mobile-data-card__actions media-card-toolbar">
                       <button type="button" className="admin-albums-icon-btn" onClick={() => copyCode(album.albumCode)}>
                         <Copy size={14} /> Copy
                       </button>
@@ -216,8 +278,8 @@ export default function AdminAlbums() {
                 ))}
               </div>
 
-              <div className="sb-desktop-only admin-albums-table-wrap">
-              <table className="admin-albums-table">
+              <div className="sb-desktop-only admin-albums-table-wrap premium-table-wrap">
+              <table className="admin-albums-table premium-table">
                 <thead>
                   <tr>
                     <th>Class</th>
@@ -231,7 +293,7 @@ export default function AdminAlbums() {
                 </thead>
                 <tbody>
                   {albums.map((album) => (
-                    <tr key={album.id}>
+                    <tr key={album.id} className={selectedId === album.id ? 'admin-albums-row--active' : ''}>
                       <td>{album.className}</td>
                       <td>{album.albumName}</td>
                       <td>
@@ -240,9 +302,11 @@ export default function AdminAlbums() {
                           <Copy size={14} />
                         </button>
                       </td>
-                      <td>{album.playbackEnabled ? 'On' : 'Off'}</td>
-                      <td>{album.mediaCount}</td>
-                      <td>{album.status}</td>
+                      <td>
+                        <AlbumStatusPill playbackEnabled={album.playbackEnabled} status={album.status} />
+                      </td>
+                      <td><span className="admin-albums-count">{album.mediaCount}</span></td>
+                      <td><span className="admin-media-pill admin-media-pill--muted">{album.status}</span></td>
                       <td>
                         <button type="button" className="admin-albums-link" onClick={() => openDetail(album.id)}>
                           <Eye size={14} /> View
@@ -256,11 +320,23 @@ export default function AdminAlbums() {
             </div>
 
             {detail && (
-              <aside className="admin-albums-detail">
-                <h2>{detail.albumName}</h2>
-                <p className="admin-albums-detail__meta">
-                  {detail.className} · <code>{detail.albumCode}</code>
-                </p>
+              <aside className="admin-albums-detail premium-card">
+                <div className="admin-albums-detail__head">
+                  <div>
+                    <h2>{detail.albumName}</h2>
+                    <p className="admin-albums-detail__meta">
+                      {detail.className} · <code>{detail.albumCode}</code>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="admin-albums-detail__close"
+                    onClick={() => { setDetail(null); setSelectedId(null); setLightboxIndex(-1); }}
+                    aria-label="Close album details"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
                 <div className="admin-albums-detail__actions">
                   <Button type="button" variant="secondary" onClick={() => copyCode(detail.albumCode)}>
                     <Copy size={16} /> Copy Code
@@ -297,17 +373,16 @@ export default function AdminAlbums() {
                           </span>
                         )}
                       </button>
-                      <p>{item.caption || item.fileName || 'Media'}</p>
-                      <span className="admin-albums-media-card__status">{tvStatusBadge(item)}</span>
-                      {item.approvalStatus === 'PENDING' && (
-                        <span className="admin-albums-media-card__status">Approval required</span>
-                      )}
+                      <p className="admin-albums-media-card__title">{item.caption || item.fileName || 'Media'}</p>
+                      <TvMediaPill item={item} />
                       <button
                         type="button"
+                        className={`admin-albums-tv-toggle${item.showOnTv ? ' is-on' : ''}`}
                         onClick={() => toggleShowOnTv(item)}
                         disabled={!item.showOnTv && !item.canShowOnTv}
                         title={!item.canShowOnTv && !item.showOnTv ? tvBlockLabel(item, detail) : undefined}
                       >
+                        <Tv size={14} />
                         TV: {item.showOnTv ? 'On' : 'Off'}
                       </button>
                       {!item.canShowOnTv && !item.showOnTv && (
