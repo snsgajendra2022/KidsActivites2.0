@@ -485,8 +485,129 @@
 .portal-shell .app-sidebar .sidebar-logo-wrap img {
   display: block;
   max-height: 2rem;
+  max-width: 8.5rem;
   width: auto;
   object-fit: contain;
+}
+
+/* ── Collapsed sidebar rail ── */
+.portal-shell .app-sidebar.app-sidebar--collapsed {
+  width: 4.25rem;
+}
+
+.portal-shell .app-sidebar .sidebar-top--collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 0.5rem 0.625rem;
+}
+
+.portal-shell .app-sidebar .sidebar-logo-link--collapsed {
+  justify-content: center;
+}
+
+.portal-shell .app-sidebar .portal-logo-initials--compact,
+.portal-shell .app-sidebar .portal-logo-name--compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  min-height: 2.5rem;
+  max-width: 2.5rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(145deg, #ffffff 0%, #f0ebf6 100%);
+  color: var(--admin-purple-deep);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+  text-align: center;
+  word-break: break-word;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.portal-shell .app-sidebar .portal-logo-name--compact {
+  font-size: 0.5625rem;
+}
+
+.portal-shell .app-sidebar .portal-logo-compact-img {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.3rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  object-fit: contain;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+}
+
+.portal-shell .app-sidebar .sidebar-collapse-wrap--collapsed {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.portal-shell .app-sidebar.app-sidebar--collapsed .sidebar-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.portal-shell .app-sidebar.app-sidebar--collapsed .sidebar-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--sb-gold);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.portal-shell .app-sidebar .sidebar-nav--collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.75rem 0.5rem 1rem;
+}
+
+.portal-shell .app-sidebar .sidebar-nav--collapsed > div {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.portal-shell .app-sidebar .sidebar-nav-link--rail {
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: 0.75rem;
+  gap: 0;
+}
+
+.portal-shell .app-sidebar .sidebar-nav-link--rail.sidebar-nav-link-active {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  padding: 0 !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--sb-gold) 38%, transparent) !important;
+}
+
+.portal-shell .app-sidebar .sidebar-nav-link--rail:not(.sidebar-nav-link-active):hover {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-radius: 0.75rem;
+}
+
+.portal-shell .app-sidebar .sidebar-nav-link--rail svg {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .portal-shell .app-sidebar .font-display,

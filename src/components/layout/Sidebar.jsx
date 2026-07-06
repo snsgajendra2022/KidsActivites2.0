@@ -5,16 +5,26 @@ import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
 
-function sidebarLinkClass({ isActive }) {
+function sidebarLinkClass({ isActive, collapsed }) {
+  const base = 'sidebar-nav-link flex items-center gap-3 text-sm font-semibold';
+  if (collapsed) {
+    return [
+      base,
+      'sidebar-nav-link--rail',
+      isActive ? 'sidebar-nav-link-active' : '',
+    ].filter(Boolean).join(' ');
+  }
   if (isActive) {
     return [
       'sidebar-nav-link sidebar-nav-link-active',
-      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
+      base,
+      'rounded-xl px-3 py-2.5',
     ].join(' ');
   }
   return [
     'sidebar-nav-link',
-    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
+    base,
+    'rounded-xl px-3 py-2.5',
   ].join(' ');
 }
 
@@ -37,17 +47,28 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
       <aside
         className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-[color-mix(in_srgb,var(--sb-gold)_15%,transparent)] transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 ${
           open ? 'translate-x-0 shadow-xl shadow-black/20' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
-        } ${collapsed ? 'w-[4.5rem]' : 'w-72'}`}
+        } ${collapsed ? 'app-sidebar--collapsed' : 'w-72'}`}
       >
-        <div className="sidebar-top relative flex h-16 shrink-0 items-center border-b border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] px-3">
+        <div
+          className={`sidebar-top relative flex shrink-0 border-b border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] ${
+            collapsed ? 'sidebar-top--collapsed' : 'h-16 items-center px-3'
+          }`}
+        >
           <Link
             to={homePath}
             onClick={onClose}
-            className={`flex min-w-0 items-center gap-3 ${collapsed ? 'w-full justify-center pr-7' : 'min-w-0 flex-1 pr-10'}`}
+            title={collapsed ? portalName : undefined}
+            className={`flex min-w-0 items-center ${
+              collapsed ? 'sidebar-logo-link--collapsed' : 'min-w-0 flex-1 gap-3 pr-10'
+            }`}
           >
-            <span className="sidebar-logo-wrap shrink-0">
-              <PortalLogo size="md" />
-            </span>
+            {collapsed ? (
+              <PortalLogo compact />
+            ) : (
+              <span className="sidebar-logo-wrap shrink-0">
+                <PortalLogo size="md" />
+              </span>
+            )}
             {!collapsed && (
               <div className="min-w-0">
                 <div className="sidebar-brand-title font-display truncate text-sm font-bold">{portalName}</div>
@@ -56,7 +77,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             )}
           </Link>
 
-          <div className="absolute right-[2px] top-1/2 flex -translate-y-1/2 items-center gap-1">
+          <div className={collapsed ? 'sidebar-collapse-wrap--collapsed' : 'absolute right-[2px] top-1/2 flex -translate-y-1/2 items-center gap-1'}>
             <button
               type="button"
               onClick={onToggleCollapse}
@@ -77,7 +98,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
+        <nav className={`sidebar-nav flex-1 overflow-y-auto ${collapsed ? 'sidebar-nav--collapsed' : 'space-y-1 px-3 py-2'}`}>
           {navItems.map(({ id, to, label, icon: Icon, section }, index) => {
             const prevSection = navItems[index - 1]?.section;
             const showSection = !collapsed && section && section !== prevSection;
@@ -92,7 +113,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
                 <NavLink
                   to={to}
                   onClick={onClose}
-                  className={sidebarLinkClass}
+                  className={(props) => sidebarLinkClass({ ...props, collapsed })}
                   title={collapsed ? label : undefined}
                 >
                   <Icon size={18} className="shrink-0 transition-colors duration-200" />
