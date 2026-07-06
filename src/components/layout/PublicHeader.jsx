@@ -37,15 +37,15 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
             loginMobile ? 'login-header-nav--login justify-start' : 'justify-between'
           } ${
             loginMobile
-              ? 'h-14 px-3 md:h-16'
+              ? 'h-16 px-3 md:h-20'
               : compact
-                ? 'h-16 px-4'
-                : 'h-20 px-4 md:h-24 md:px-10'
+                ? 'h-20 px-4'
+                : 'h-24 px-4 md:h-32 md:px-10'
           }`}
         >
           <div className="flex min-w-0 shrink-0 items-center gap-4 md:gap-8">
             <Link to={basePath} className="flex min-w-0 items-center gap-2 md:gap-3">
-              <PortalLogo size={loginMobile ? 'sm' : 'md'} />
+              <PortalLogo size={loginMobile ? 'sm' : 'header'} />
             </Link>
           </div>
 
@@ -56,7 +56,7 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
           )}
 
           {!loginMobile && (
-            <div className="hidden shrink-0 items-center gap-6 md:flex">
+            <div className="flex shrink-0 items-center gap-3 md:gap-6">
               {navLinks.map(({ to, label, hash }) => (
                 <Link
                   key={label}

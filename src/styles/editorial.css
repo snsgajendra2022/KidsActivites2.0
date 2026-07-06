@@ -22,13 +22,13 @@
 /* Cinematic hero */
 .sb-cinematic-hero {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 70vh;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background: var(--sb-purple-dark);
+  padding: 4rem 0;
 }
 
 .sb-cinematic-hero__bg {
@@ -58,13 +58,12 @@
   position: relative;
   z-index: 2;
   width: min(calc(100% - 2.5rem), 70rem);
-  min-height: min(calc(100vh - 4rem), calc(100dvh - 4rem));
-  margin: 2rem auto;
+  margin: 0 auto;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 1.25rem;
   display: flex;
   flex-direction: column;
-  padding: 2rem 2.5rem;
+  padding: 4rem 2.5rem;
 }
 
 .sb-cinematic-hero--compact .sb-hero-frame {
@@ -484,7 +483,7 @@
 
   .sb-cinematic-hero {
     min-height: auto;
-    padding-bottom: 1rem;
+    padding: 1.5rem 0;
   }
 
   .sb-cinematic-hero--compact .sb-hero-frame {
