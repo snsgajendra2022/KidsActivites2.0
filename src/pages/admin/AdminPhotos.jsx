@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Upload, Trash2, RefreshCw, Download, AlertCircle } from 'lucide-react';
+import { Image, Upload, Trash2, RefreshCw, Download, AlertCircle, Play } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -17,6 +17,19 @@ import {
   imageNeedsVariantPolling,
 } from '../../utils/photoStudioProgressive.js';
 import '../../styles/admin-photos.css';
+
+const ACCEPTED_MEDIA = 'image/*,video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm';
+
+function isVideoItem(item) {
+  return item?.mediaType === 'VIDEO';
+}
+
+function isAcceptedMediaFile(file) {
+  if (!file) return false;
+  if (file.type.startsWith('image/') || file.type.startsWith('video/')) return true;
+  const name = (file.name || '').toLowerCase();
+  return ['.mp4', '.mov', '.webm', '.m4v'].some((ext) => name.endsWith(ext));
+}
 
 const PAGE_SIZE = 20;
 
@@ -70,23 +83,33 @@ function dedupeImages(images) {
 }
 
 function toLightboxPhoto(img) {
+  const isVideo = isVideoItem(img);
   return {
     id: img.id,
-    imageUrl: img.previewUrl || img.downloadUrl,
+    mediaType: img.mediaType || (isVideo ? 'VIDEO' : 'IMAGE'),
+    imageUrl: img.previewUrl || img.thumbnailUrl || img.downloadUrl,
     previewUrl: img.previewUrl,
+    streamUrl: img.streamUrl,
+    thumbnailUrl: img.thumbnailUrl,
+    processingStatus: img.processingStatus || img.status,
+    videoId: img.videoId,
+    renditions: img.renditions,
     caption: img.filename,
-    teacherName: img.fileType?.toUpperCase(),
+    teacherName: isVideo ? 'VIDEO' : img.fileType?.toUpperCase(),
     className: img.uploadTime
       ? new Date(img.uploadTime).toLocaleString('en-IN')
       : '',
     variants: img.variants,
-    studioImage: img,
+    studioImage: isVideo ? null : img,
   };
 }
 
 function GalleryCard({ image, onOpen, onDelete }) {
-  const lowestSrc = getGalleryThumbSrc(image);
-  const fallbackSrc = image.previewUrl || image.downloadUrl || '';
+  const isVideo = isVideoItem(image);
+  const lowestSrc = isVideo
+    ? (image.thumbnailUrl || image.previewUrl || '')
+    : getGalleryThumbSrc(image);
+  const fallbackSrc = image.thumbnailUrl || image.previewUrl || image.downloadUrl || '';
   const [src, setSrc] = useState(lowestSrc);
 
   useEffect(() => {
@@ -102,15 +125,25 @@ function GalleryCard({ image, onOpen, onDelete }) {
         aria-label={`View ${image.filename}`}
       >
         {src ? (
-          <img
-            src={src}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            onError={() => {
-              if (fallbackSrc && src !== fallbackSrc) setSrc(fallbackSrc);
-            }}
-          />
+          <>
+            <img
+              src={src}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              onError={() => {
+                if (fallbackSrc && src !== fallbackSrc) setSrc(fallbackSrc);
+              }}
+            />
+            {isVideo && (
+              <span className="admin-photos-card__play" aria-hidden>
+                <Play size={28} fill="currentColor" />
+              </span>
+            )}
+            {isVideo && image.processingStatus === 'PROCESSING' && (
+              <span className="admin-photos-card__processing">Processing…</span>
+            )}
+          </>
         ) : (
           <div className="admin-photos-card__placeholder" aria-hidden />
         )}
@@ -170,6 +203,8 @@ export default function AdminPhotos() {
     return data;
   }, []);
 
+  const photosReady = Boolean(config?.configured);
+
   const refreshGallery = useCallback(async () => {
     setError('');
     setLoading(true);
@@ -204,7 +239,7 @@ export default function AdminPhotos() {
   }, [lightboxIndex, sortedImages]);
 
   useEffect(() => {
-    if (!needsVariantPolling || !config?.configured || lightboxIndex < 0) return undefined;
+    if (!needsVariantPolling || !photosReady || lightboxIndex < 0) return undefined;
 
     const activeId = sortedImages[lightboxIndex]?.id;
 
@@ -221,7 +256,7 @@ export default function AdminPhotos() {
 
     const timer = setInterval(poll, 4000);
     return () => clearInterval(timer);
-  }, [needsVariantPolling, config?.configured, lightboxIndex, sortedImages]);
+  }, [needsVariantPolling, photosReady, lightboxIndex, sortedImages]);
 
   const imageGroups = useMemo(() => groupImagesByDay(sortedImages), [sortedImages]);
   const lightboxPhotos = useMemo(() => sortedImages.map(toLightboxPhoto), [sortedImages]);
@@ -246,13 +281,13 @@ export default function AdminPhotos() {
   };
 
   const handleUploadFiles = async (fileList) => {
-    if (!config?.configured) {
-      toast('Photo Studio is not configured on the server.', 'warning');
+    if (!photosReady) {
+      toast('Photo storage is not connected for this workspace yet.', 'warning');
       return;
     }
-    const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'));
+    const files = Array.from(fileList || []).filter(isAcceptedMediaFile);
     if (files.length === 0) {
-      toast('Please choose image files.', 'warning');
+      toast('Please choose image or video files (MP4, MOV, WebM).', 'warning');
       return;
     }
 
@@ -261,7 +296,13 @@ export default function AdminPhotos() {
       for (const file of files) {
         await uploadPhotoStudioImage(file);
       }
-      toast(files.length === 1 ? 'Photo uploaded.' : `${files.length} photos uploaded.`, 'success');
+      const hasVideo = files.some((f) => f.type.startsWith('video/'));
+      toast(
+        files.length === 1
+          ? (hasVideo ? 'Video uploaded.' : 'Photo uploaded.')
+          : `${files.length} files uploaded.`,
+        'success',
+      );
       await loadPage(0);
     } catch (err) {
       toast(err?.message || 'Upload failed.', 'error');
@@ -297,24 +338,39 @@ export default function AdminPhotos() {
       <div className="admin-photos-page">
         <PageHeader
           title="Photo Sharing"
-          subtitle="Upload and manage your school photo library via Photo Studio."
+          subtitle="Upload and manage your school's photos and videos. Each workspace uses its own secure cloud account."
           icon={Image}
         />
 
-        {!loading && config && !config.configured && (
+        {!loading && config?.tenantConnected && (
+          <p className="admin-photos-status">
+            Cloud storage connected
+            {config.filevaultUsername ? ` (${config.filevaultUsername})` : ''}
+          </p>
+        )}
+
+        {!loading && config && !photosReady && (
           <div className="admin-photos-alert">
             <AlertCircle size={20} />
             <div>
-              <strong>Photo Studio not configured</strong>
-              <p>
-                Set <code>PHOTO_STUDIO_API_TOKEN</code> on the backend, then restart the server.
-                API base: {config.baseUrl}
-              </p>
+              <strong>Photo storage not available</strong>
+              {config.connectionStatus === 'FAILED' ? (
+                <p>
+                  Cloud setup failed for this workspace
+                  {config.statusMessage ? `: ${config.statusMessage}` : '.'}
+                  {' '}Contact your administrator to retry provisioning.
+                </p>
+              ) : (
+                <p>
+                  This school workspace does not have cloud photo storage connected yet.
+                  It is created automatically when the workspace is provisioned.
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        {config?.configured && (
+        {photosReady && (
           <section
             className={`admin-photos-upload ${dragOver ? 'is-dragover' : ''}`}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -324,13 +380,13 @@ export default function AdminPhotos() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_MEDIA}
               multiple
               className="admin-photos-upload__input"
               onChange={(e) => handleUploadFiles(e.target.files)}
             />
             <Upload size={22} />
-            <p>Drag &amp; drop photos here, or</p>
+            <p>Drag &amp; drop photos or videos here, or</p>
             <Button
               type="button"
               variant="secondary"
@@ -358,14 +414,14 @@ export default function AdminPhotos() {
               <div key={i} className="admin-photos-skeleton" />
             ))}
           </div>
-        ) : config?.configured && sortedImages.length === 0 && !error ? (
+        ) : photosReady && sortedImages.length === 0 && !error ? (
           <div className="admin-photos-empty">
             <Image size={28} strokeWidth={1.75} />
-            <h2>No photos yet</h2>
-            <p>Upload your first classroom or event photos above.</p>
+            <h2>No media yet</h2>
+            <p>Upload your first classroom photos or videos above.</p>
           </div>
         ) : (
-          config?.configured && !error && (
+          photosReady && !error && (
             <>
               {imageGroups.map((group) => (
                 <section key={group.dateKey} className="admin-photos-group">
@@ -413,8 +469,8 @@ export default function AdminPhotos() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete photo?"
-        message={deleteTarget ? `Remove "${deleteTarget.filename}" from Photo Studio? This cannot be undone.` : ''}
+        title={deleteTarget?.mediaType === 'VIDEO' ? 'Delete video?' : 'Delete photo?'}
+        message={deleteTarget ? `Remove "${deleteTarget.filename}"? This cannot be undone.` : ''}
         confirmText="Delete"
         loading={deleting}
       />

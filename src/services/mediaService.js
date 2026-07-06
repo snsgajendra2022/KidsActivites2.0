@@ -5,6 +5,27 @@ import { routeRequest } from './api/routeRequest.js';
 
 const KEY = 'sb_photos';
 
+function normalizePhoto(photo) {
+  if (!photo || typeof photo !== 'object') return photo;
+  const mediaType = photo.mediaType || (photo.fileType === 'mp4' ? 'VIDEO' : 'IMAGE');
+  const isVideo = mediaType === 'VIDEO';
+  const imageUrl = photo.imageUrl
+    || (isVideo ? photo.thumbnailUrl : null)
+    || photo.previewUrl
+    || photo.thumbnailUrl
+    || photo.downloadUrl
+    || '';
+  return {
+    ...photo,
+    imageUrl,
+    sentAt: photo.sentAt || photo.createdAt || photo.uploadTime,
+    mediaType,
+    type: photo.type || (isVideo ? 'video' : undefined),
+    streamUrl: photo.streamUrl || (isVideo ? photo.previewUrl : undefined),
+    videoStatusUrl: photo.videoStatusUrl || photo.statusPollUrl,
+  };
+}
+
 function getAll() {
   return getStore(KEY, INITIAL_PHOTOS);
 }
@@ -24,7 +45,10 @@ export async function getPhotos(filters = {}) {
       }
       return photos;
     },
-    apiFn: () => api.get('/media/photos', filters),
+    apiFn: async () => {
+      const data = await api.get('/media/photos', filters);
+      return Array.isArray(data) ? data.map(normalizePhoto) : data;
+    },
   });
 }
 

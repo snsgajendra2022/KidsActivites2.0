@@ -97,7 +97,20 @@ export function buildProgressiveSrcChain(image) {
   return urls.filter(Boolean);
 }
 
+/** True when an HLS stream is ready to play (at least one rendition or master playlist). */
+export function isVideoPlaybackReady(image) {
+  if (image?.mediaType !== 'VIDEO') return false;
+  const status = image.processingStatus || image.status;
+  if (status === 'READY' || status === 'ACTIVE') return true;
+  if (status === 'PROCESSING') return false;
+  return Boolean(image.streamUrl);
+}
+
 export function imageNeedsVariantPolling(image) {
+  if (image?.mediaType === 'VIDEO') {
+    const status = image.processingStatus || image.status;
+    return status != null && status !== 'READY' && status !== 'ACTIVE';
+  }
   const v = image?.variants;
   if (!v) return false;
   if (v.status === 'processing') return true;
