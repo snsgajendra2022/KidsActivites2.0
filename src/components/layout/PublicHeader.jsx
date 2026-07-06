@@ -47,23 +47,6 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
             <Link to={basePath} className="flex min-w-0 items-center gap-2 md:gap-3">
               <PortalLogo size={loginMobile ? 'sm' : 'md'} />
             </Link>
-            {!loginMobile && (
-              <div className="hidden items-center gap-6 md:flex">
-                {navLinks.map(({ to, label, hash }) => (
-                  <Link
-                    key={label}
-                    to={to}
-                    className={`text-sm font-semibold transition-premium ${
-                      !hash && location.pathname === to
-                        ? 'text-brand'
-                        : 'text-muted hover:text-brand'
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                ))}
-              </div>
-            )}
           </div>
 
           {loginMobile && loginScrollLines?.length > 0 && (
@@ -73,15 +56,28 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
           )}
 
           {!loginMobile && (
-            <div className="flex shrink-0 items-center gap-2 md:gap-4">
-              {!onLoginPage && (
+            <div className="hidden shrink-0 items-center gap-6 md:flex">
+              {navLinks.map(({ to, label, hash }) => (
                 <Link
-                  to={loginPath}
-                  className="sb-link-btn sb-link-btn--dark btn-hover-lift sb-btn-pill bg-brand text-sm font-semibold transition-premium hover:opacity-90 border border-[color-mix(in_srgb,var(--sb-gold)_30%,transparent)]"
+                  key={label}
+                  to={to}
+                  className={`text-sm font-semibold transition-premium ${
+                    !hash && location.pathname === to
+                      ? 'text-brand'
+                      : 'text-muted hover:text-brand'
+                  }`}
                 >
-                  Login
+                  {label}
                 </Link>
-              )}
+              ))}
+              
+              <Link
+                to={loginPath}
+                className="sb-purple-cta"
+                style={{ padding: '0.5rem 1.25rem', fontSize: '0.875rem' }}
+              >
+                Login
+              </Link>
             </div>
           )}
         </nav>

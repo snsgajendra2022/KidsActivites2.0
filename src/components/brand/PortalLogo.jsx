@@ -5,19 +5,19 @@ import footerDefaultLogo from '../../assets/FooterdefaultLogo.png';
 const SIZES = {
   sm: {
     box: 'h-8 w-8 text-[10px] rounded-lg',
-    img: 'h-8 w-auto max-h-8 max-w-[6.5rem] object-contain',
+    img: 'h-10 w-auto max-h-10 max-w-[6.5rem] object-contain',
     width: 32,
     height: 32,
   },
   md: {
     box: 'h-9 w-9 text-[11px] rounded-xl',
-    img: 'h-9 w-auto max-h-9 max-w-[8rem] object-contain',
+    img: 'h-16 w-auto max-h-16 max-w-[320px] object-contain',
     width: 36,
     height: 36,
   },
   lg: {
     box: 'h-12 w-12 text-sm rounded-xl',
-    img: 'h-12 w-auto max-h-12 max-w-[10rem] object-contain',
+    img: 'h-20 w-auto max-h-20 max-w-[320px] object-contain',
     width: 48,
     height: 48,
   },
