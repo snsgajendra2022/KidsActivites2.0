@@ -21,12 +21,7 @@ const DEFAULT_HERO_HEADLINE = ['Modern School Operations', 'Built for Growing In
 const DEFAULT_HERO_SUBTEXT =
   'Launch your school workspace in minutes. Manage enrollment, fees, and parent communication on one trusted platform.';
 
-const ACCESS_JOURNEY = [
-  { label: 'Discover' },
-  { label: 'Create' },
-  { label: 'Configure' },
-  { label: 'Launch' },
-];
+
 
 const TIMELINE_STEPS = [
   {
@@ -96,7 +91,7 @@ export default function AccessLanding() {
         }}
       />
 
-      <JourneyNav steps={ACCESS_JOURNEY} activeIndex={0} />
+
 
       <section className="sb-editorial-section sb-editorial-section--lavender">
         <div className="sb-container sb-access-cards">
@@ -110,7 +105,7 @@ export default function AccessLanding() {
               tenant after you verify.
             </p>
             <Link to="/workspace/new" className="sb-purple-cta">
-              Start workspace setup <ArrowRight size={16} />
+              Start Workspace Setup <ArrowRight size={16} />
             </Link>
           </div>
 
@@ -148,7 +143,7 @@ export default function AccessLanding() {
         subtitle={platform?.tagline || 'Professional grade enrollment and school operations.'}
         action={{
           to: '/workspace/new',
-          label: <>Create your workspace <ArrowRight size={18} /></>,
+          label: <>Create Your Workspace <ArrowRight size={18} /></>,
         }}
       />
 

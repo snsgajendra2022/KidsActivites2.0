@@ -23,12 +23,7 @@ const DEFAULT_HERO_HEADLINE = ['Modern School Enrollment', 'Built for Premium Ed
 const DEFAULT_HERO_SUBTEXT =
   "Complete your child's admission online. Submit documents, pay fees, and stay connected — all in one trusted platform.";
 
-const LANDING_JOURNEY = [
-  { label: 'Discover' },
-  { label: 'Apply' },
-  { label: 'Documents' },
-  { label: 'Admission Confirm' },
-];
+
 
 const TIMELINE_STEPS = [
   {
@@ -103,7 +98,7 @@ export default function Landing() {
         subtitle={heroSubtitle}
         primaryAction={{
           to: enrollPath,
-          label: <>Start Enrollment <ArrowRight size={18} /></>,
+          label: <>{isPlatformHome ? 'Start Workspace Setup' : 'Start Enrollment'} <ArrowRight size={18} /></>,
         }}
         secondaryAction={{
           to: loginPath,
@@ -111,7 +106,7 @@ export default function Landing() {
         }}
       />
 
-      <JourneyNav steps={LANDING_JOURNEY} activeIndex={0} />
+
 
       <Banner360 
         imageUrl={imgPanorama}
@@ -136,11 +131,11 @@ export default function Landing() {
       <FinalImageCTA
         title={isPlatformHome ? portalName : school?.name}
         subtitle={isPlatformHome
-          ? (platform?.tagline || 'Professional Grade Enrollment.')
+          ? 'Launch admissions, fees, and parent communication in one secure platform.'
           : school?.address}
         action={{
           to: enrollPath,
-          label: <>Start Enrollment <ArrowRight size={18} /></>,
+          label: <>{isPlatformHome ? 'Create Your Workspace' : 'Start Enrollment'} <ArrowRight size={18} /></>,
         }}
       />
 

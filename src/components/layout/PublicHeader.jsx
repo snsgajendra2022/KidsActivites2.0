@@ -37,10 +37,10 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
             loginMobile ? 'login-header-nav--login justify-start' : 'justify-between'
           } ${
             loginMobile
-              ? 'h-11 px-3 md:h-12'
+              ? 'h-14 px-3 md:h-16'
               : compact
-                ? 'h-14 px-4'
-                : 'h-16 px-4 md:h-[4.5rem] md:px-10'
+                ? 'h-16 px-4'
+                : 'h-20 px-4 md:h-24 md:px-10'
           }`}
         >
           <div className="flex min-w-0 shrink-0 items-center gap-4 md:gap-8">
