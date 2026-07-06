@@ -57,7 +57,7 @@
 .sb-hero-frame {
   position: relative;
   z-index: 2;
-  width: min(calc(100% - 2.5rem), 72rem);
+  width: min(calc(100% - 2.5rem), 70rem);
   min-height: min(calc(100vh - 4rem), calc(100dvh - 4rem));
   margin: 2rem auto;
   border: 2px solid rgba(255, 255, 255, 0.35);
@@ -101,7 +101,7 @@
   font-style: italic;
   font-weight: 400;
   font-size: clamp(2.25rem, 5.5vw, 4rem);
-  line-height: 1.15;
+  line-height: 1.04;
   letter-spacing: -0.02em;
   color: #fff;
   margin: 0 0 1.25rem;

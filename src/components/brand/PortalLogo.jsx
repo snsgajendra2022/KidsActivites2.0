@@ -5,21 +5,15 @@ import footerDefaultLogo from '../../assets/FooterdefaultLogo.png';
 const SIZES = {
   sm: {
     box: 'h-8 w-8 text-[10px] rounded-lg',
-    img: 'h-10 w-auto max-h-10 max-w-[6.5rem] object-contain',
-    width: 32,
-    height: 32,
+    img: 'h-12 w-auto max-h-12 max-w-[12rem] object-contain scale-110 origin-left',
   },
   md: {
-    box: 'h-9 w-9 text-[11px] rounded-xl',
-    img: 'h-16 w-auto max-h-16 max-w-[320px] object-contain',
-    width: 36,
-    height: 36,
+    box: 'h-10 w-10 text-[11px] rounded-xl',
+    img: 'h-20 w-auto max-h-20 max-w-[400px] object-contain scale-110 origin-left',
   },
   lg: {
     box: 'h-12 w-12 text-sm rounded-xl',
-    img: 'h-20 w-auto max-h-20 max-w-[320px] object-contain',
-    width: 48,
-    height: 48,
+    img: 'h-28 w-auto max-h-28 max-w-[480px] object-contain scale-110 origin-left',
   },
 };
 
@@ -30,8 +24,6 @@ function LogoMark({ portalName, sizeClass, imageUrl, className }) {
         src={imageUrl}
         alt={`${portalName} logo`}
         className={`block shrink-0 ${sizeClass.img} ${className}`}
-        width={sizeClass.width}
-        height={sizeClass.height}
         loading="lazy"
         decoding="async"
       />
