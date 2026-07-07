@@ -2,9 +2,9 @@ const HERO_IMAGE =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuA1Jp3AHHVfUbFSqzf3O-N5gFgr6s8ML-K8DwGD2GEXOTz15s-4fyzZM4Y1dwZ6vZaWqtLWEKGdZc1bwrXQMzn5bsiPQqN0FxnQdD3b2YNt-S05QXmCsAO0IBilprdNSAsdI39s5hIV7B5YPuyk0f-9esE0RwWHTQT0N5w6Qv9bcBb0Q1upVt_zm2uL6H9KaHy8QbCqOoaRNzNUIsoa0zzl2ZYB9sGHKd1fetYmj5dyKWuq4kD1hxjHmQ';
 
 export const DEFAULT_PORTAL_CONFIG = {
-  portalName: 'SchoolBridge',
+  portalName: 'Kids Activities',
   tagline: 'School Enrollment Platform',
-  footerText: '© 2026 SchoolBridge Systems. All rights reserved.',
+  footerText: '© 2026 Kids Activities Systems. All rights reserved.',
   school: {
     id: 'school-1',
     name: 'Green Valley International School',

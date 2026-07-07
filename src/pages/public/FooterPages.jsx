@@ -80,7 +80,7 @@ export function SystemStatusPage({ services: staticServices }) {
           <header className="legal-page__header">
             <h1>System Status</h1>
             <p className="legal-page__subtitle">
-              Live status of SchoolBridge platform services.
+              Live status of Kids Activities platform services.
             </p>
             <p className="legal-page__updated">
               {operational} of {services.length} services operational

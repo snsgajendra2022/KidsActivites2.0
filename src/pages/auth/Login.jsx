@@ -399,7 +399,7 @@ export default function Login() {
           </div>
           <div>
             <p className="auth-split__feature-label">QR Login</p>
-            <p className="auth-split__feature-text">Scan with the SchoolBridge mobile app</p>
+            <p className="auth-split__feature-text">Scan with the Kids Activities mobile app</p>
           </div>
         </div>
       )}

@@ -100,19 +100,26 @@
 
 .sb-hero-title {
   font-family: var(--sb-font-heading);
-  font-style: italic;
-  font-weight: 400;
-  font-size: clamp(2.25rem, 5.5vw, 4rem);
-  line-height: 1.04;
-  letter-spacing: -0.02em;
-  color: #fff;
+  font-weight: 800;
+  font-size: clamp(2.25rem, 5.5vw, 4.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ffffff 20%, #d4c4f9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.3));
   margin: 0 0 1rem;
 }
 
 .sb-hero-title em,
 .sb-hero-title .sb-hero-title__accent {
-  color: var(--sb-purple-soft);
-  font-style: italic;
+  background: linear-gradient(135deg, var(--sb-gold) 0%, #fff2b2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-style: normal;
 }
 
 .sb-hero-frame__subtitle {

@@ -63,10 +63,10 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             }`}
           >
             {collapsed ? (
-              <PortalLogo compact />
+              <PortalLogo compact inverse />
             ) : (
               <span className="sidebar-logo-wrap shrink-0">
-                <PortalLogo size="md" />
+                <PortalLogo size="md" inverse />
               </span>
             )}
             {!collapsed && (

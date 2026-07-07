@@ -1,6 +1,6 @@
 export const SECURITY_POLICY_CONTENT = {
   title: 'Security Policy',
-  subtitle: 'How SchoolBridge protects your school, staff, and family data.',
+  subtitle: 'How Kids Activities protects your school, staff, and family data.',
   lastUpdated: 'July 1, 2026',
   sections: [
     {

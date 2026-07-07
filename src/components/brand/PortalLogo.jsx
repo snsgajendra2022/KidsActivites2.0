@@ -1,6 +1,6 @@
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
-import defaultLogo from '../../assets/schoolbridge_logo.png';
-import footerDefaultLogo from '../../assets/FooterdefaultLogo.png';
+import defaultLogo from '../../assets/kids_activities_logo.png';
+import footerDefaultLogo from '../../assets/kids_activities_logo_white.png';
 
 const SIZES = {
   icon: {
@@ -16,8 +16,8 @@ const SIZES = {
     img: 'h-24 w-auto max-h-24 max-w-[500px] object-contain',
   },
   header: {
-    box: 'h-10 md:h-12 w-10 md:w-12 text-[10px] md:text-[11px] rounded-xl',
-    img: 'h-10 max-h-10 max-w-[140px] sm:h-12 sm:max-h-12 sm:max-w-[180px] md:h-16 md:max-h-16 md:max-w-[250px] lg:h-24 lg:max-h-24 lg:max-w-[400px] w-auto object-contain',
+    box: 'h-8 md:h-10 w-8 md:w-10 text-[10px] md:text-[11px] rounded-xl',
+    img: 'h-8 max-h-8 max-w-[120px] sm:h-10 sm:max-h-10 sm:max-w-[160px] md:h-12 md:max-h-12 md:max-w-[200px] lg:h-14 lg:max-h-14 lg:max-w-[250px] w-auto object-contain',
   },
   lg: {
     box: 'h-16 w-16 text-sm rounded-xl',
@@ -71,12 +71,13 @@ function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
   );
 }
 
-export default function PortalLogo({ size = 'md', className = '', compact = false }) {
+export default function PortalLogo({ size = 'md', className = '', compact = false, inverse = false }) {
   const { portalName, branding } = usePortalConfig();
   const sizeClass = compact ? SIZES.icon : (SIZES[size] || SIZES.md);
+  const baseLogo = inverse ? footerDefaultLogo : defaultLogo;
   const imageUrl = compact
     ? (branding?.logoIconUrl || branding?.logoUrl || null)
-    : (branding?.logoIconUrl || branding?.logoUrl || defaultLogo);
+    : (branding?.logoIconUrl || branding?.logoUrl || baseLogo);
 
   return (
     <LogoMark

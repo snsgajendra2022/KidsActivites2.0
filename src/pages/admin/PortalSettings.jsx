@@ -139,7 +139,7 @@ export default function PortalSettings() {
   useEffect(() => {
     if (platform) {
       setPlatformForm({
-        platformName: platform.platformName || 'SchoolBridge',
+        platformName: platform.platformName || 'Kids Activities',
         tagline: platform.tagline || '',
         footerText: platform.footerText || DEFAULT_PORTAL_CONFIG.footerText,
         heroHeadline: platform.heroHeadline || '',
@@ -259,7 +259,7 @@ export default function PortalSettings() {
     setSaving(true);
     try {
       await updatePlatformConfig({
-        platformName: platformForm.platformName.trim() || 'SchoolBridge',
+        platformName: platformForm.platformName.trim() || 'Kids Activities',
         tagline: platformForm.tagline.trim(),
         footerText: platformForm.footerText.trim(),
         heroHeadline: platformForm.heroHeadline.trim(),
@@ -633,7 +633,7 @@ export default function PortalSettings() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-brand">QR Login</p>
-                    <p className="text-xs text-muted">Sign in on web by scanning with the SchoolBridge mobile app</p>
+                    <p className="text-xs text-muted">Sign in on web by scanning with the Kids Activities mobile app</p>
                   </div>
                 </div>
                 <button

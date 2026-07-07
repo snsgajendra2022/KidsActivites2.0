@@ -24,7 +24,7 @@ export default function EditorialFooter({ compact = false }) {
       <div className="sb-container">
         <div className="sb-editorial-footer__grid">
           <div className="flex flex-col items-start gap-4">
-            <FooterPortalLogo size="lg" />
+            <FooterPortalLogo size="sm" />
             <p className="sb-editorial-footer__tagline">{tagline}</p>
             {!compact && contactLine && (
               <p className="sb-editorial-footer__tagline mt-4">{contactLine}</p>

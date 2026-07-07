@@ -115,15 +115,15 @@ export default function Landing() {
       />
 
       <EditorialTimeline
-        title={`Why Schools Choose ${portalName}`}
-        subtitle="A complete platform for admissions, fees, and parent communication."
+        title={`Why Programs Choose ${portalName}`}
+        subtitle="A complete platform for enrollments, payments, documents, and parent communication."
         steps={TIMELINE_STEPS}
       />
 
       <MapFeatureSection
         title={isPlatformHome ? 'Schools Across the Region' : 'Visit Our Campus'}
         subtitle={isPlatformHome
-          ? 'SchoolBridge connects families with schools in their community.'
+          ? 'Kids Activities connects families with schools in their community.'
           : `Experience ${school?.name || 'our school'} in person or explore online.`}
         address={isPlatformHome ? undefined : school?.address}
       />

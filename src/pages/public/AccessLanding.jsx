@@ -99,7 +99,7 @@ export default function AccessLanding() {
             <div className="sb-access-card__icon">
               <Building2 size={22} />
             </div>
-            <h2>New to SchoolBridge?</h2>
+            <h2>New to Kids Activities?</h2>
             <p>
               Request a dedicated workspace for your school. We&apos;ll send a confirmation email and provision your
               tenant after you verify.
@@ -133,8 +133,8 @@ export default function AccessLanding() {
       </section>
 
       <EditorialTimeline
-        title={`Why Schools Choose ${portalName}`}
-        subtitle="A complete platform for admissions, fees, and parent communication."
+        title={`Why Programs Choose ${portalName}`}
+        subtitle="A complete platform for enrollments, payments, documents, and parent communication."
         steps={TIMELINE_STEPS}
       />
 
