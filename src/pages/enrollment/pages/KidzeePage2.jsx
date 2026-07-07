@@ -70,7 +70,7 @@ export default function KidzeePage2({
         <div className="kz-p2-row kz-p2-row--address">
           <MultiRowBoxes
             label="Address:"
-            rows={[35, 30]}
+            rows={[34 , 29]}
             values={[doctor.addressLine1, doctor.addressLine2]}
             onChange={(i, v) => set(`doctor.addressLine${i + 1}`, v)}
             readOnly={readOnly}

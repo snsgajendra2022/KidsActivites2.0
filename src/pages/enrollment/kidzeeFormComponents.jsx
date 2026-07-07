@@ -396,21 +396,21 @@ export function PhotoBox({ label, value, onChange, readOnly, className = '' }) {
   );
 }
 
-export function SignatureLine({ label, value, onChange, readOnly, className = '' }) {
+export function SignatureLine({ label, value, onChange, readOnly, className = '', hidePreview = false }) {
   const hasSignature = Boolean(value && (typeof value === 'string' ? value.trim() : value));
 
   return (
     <div className={`kz-signature ${className}`.trim()}>
       {label && <span className="kz-signature__label">{label}</span>}
       {readOnly ? (
-        hasSignature ? (
+        hasSignature && !hidePreview ? (
           <img src={value} alt={label || 'Signature'} className="kz-signature__img" />
         ) : (
           <div className="kz-signature__line" aria-hidden />
         )
       ) : (
         <>
-          {hasSignature && (
+          {hasSignature && !hidePreview && (
             <img
               src={value}
               alt={label || 'Signature'}
@@ -444,8 +444,8 @@ export function PaperTable({ children, className = '', caption }) {
 }
 
 const P3_ROW_BOXES = 12;
-const P3_ADDR_LINE3_BOXES = 6;
-const P3_PIN_BOXES = 5;
+const P3_ADDR_LINE3_BOXES = 4;
+const P3_PIN_BOXES = 6;
 
 function P3LabelSpacer() {
   return <div className="kz-p3-label-fixed kz-field-label" aria-hidden />;
@@ -506,24 +506,26 @@ function P3AddressBlock({
       </div>
       <div className="kz-p3-form-row kz-p3-form-row--center">
         <P3LabelSpacer />
-        <div className="kz-p3-grid-input-wrapper">
-          <CharBoxInput
-            bare
-            boxes={P3_ADDR_LINE3_BOXES}
-            value={line3}
-            onChange={(v) => onLineChange(2, v)}
-            readOnly={readOnly}
-          />
-        </div>
-        <span className="kz-p3-inline-label kz-field-label">Pin:</span>
-        <div className="kz-p3-grid-input-wrapper">
-          <CharBoxInput
-            bare
-            boxes={P3_PIN_BOXES}
-            value={pin}
-            onChange={onPinChange}
-            readOnly={readOnly}
-          />
+        <div className="kz-p3-address-line3-inputs">
+          <div className="kz-p3-grid-input-wrapper kz-p3-addr-line3-wrapper">
+            <CharBoxInput
+              bare
+              boxes={P3_ADDR_LINE3_BOXES}
+              value={line3}
+              onChange={(v) => onLineChange(2, v)}
+              readOnly={readOnly}
+            />
+          </div>
+          <span className="kz-p3-inline-label kz-field-label">Pin:</span>
+          <div className="kz-p3-grid-input-wrapper kz-p3-pin-wrapper">
+            <CharBoxInput
+              bare
+              boxes={P3_PIN_BOXES}
+              value={pin}
+              onChange={onPinChange}
+              readOnly={readOnly}
+            />
+          </div>
         </div>
       </div>
     </>
@@ -565,6 +567,50 @@ function P3MedicalBlock({ line1, line2, line3, onLineChange, readOnly }) {
             boxes={P3_ROW_BOXES}
             value={line3}
             onChange={(v) => onLineChange(2, v)}
+            readOnly={readOnly}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function P3EmailBlock({ value, onChange, readOnly }) {
+  const emailLine1 = (value || '').slice(0, P3_ROW_BOXES);
+  const emailLine2 = (value || '').slice(P3_ROW_BOXES, P3_ROW_BOXES * 2);
+
+  const handleEmailChange = (rowIndex, val) => {
+    let combined = '';
+    if (rowIndex === 0) {
+      combined = val.padEnd(P3_ROW_BOXES, ' ').slice(0, P3_ROW_BOXES) + emailLine2;
+    } else {
+      combined = emailLine1.padEnd(P3_ROW_BOXES, ' ') + val;
+    }
+    onChange(combined.trimEnd());
+  };
+
+  return (
+    <>
+      <div className="kz-p3-form-row">
+        <span className="kz-p3-label-fixed kz-field-label">E-mail:</span>
+        <div className="kz-p3-grid-input-wrapper">
+          <CharBoxInput
+            bare
+            boxes={P3_ROW_BOXES}
+            value={emailLine1}
+            onChange={(v) => handleEmailChange(0, v)}
+            readOnly={readOnly}
+          />
+        </div>
+      </div>
+      <div className="kz-p3-form-row">
+        <P3LabelSpacer />
+        <div className="kz-p3-grid-input-wrapper">
+          <CharBoxInput
+            bare
+            boxes={P3_ROW_BOXES}
+            value={emailLine2}
+            onChange={(v) => handleEmailChange(1, v)}
             readOnly={readOnly}
           />
         </div>
@@ -659,9 +705,7 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         readOnly={readOnly}
       />
 
-      <P3FieldRow
-        label="E-mail:"
-        boxes={P3_ROW_BOXES}
+      <P3EmailBlock
         value={g.email}
         onChange={(v) => set('email', v)}
         readOnly={readOnly}
