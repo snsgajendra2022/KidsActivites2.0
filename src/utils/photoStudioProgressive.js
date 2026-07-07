@@ -52,6 +52,13 @@ export function getGalleryThumbSrc(image) {
   const variants = image.variants || {};
   const template = pickTemplateUrl(image);
 
+  if (imageNeedsVariantPolling(image)) {
+    const direct = rewritePhotoStudioUrl(
+      image.thumbnailUrl || image.previewUrl || image.downloadUrl || variants.previewFallbackUrl || '',
+    );
+    if (direct) return direct;
+  }
+
   if (typeof variants.s01 === 'string') {
     return rewritePhotoStudioUrl(variants.s01);
   }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Upload, Trash2, RefreshCw, Download, AlertCircle, Play, FolderPlus } from 'lucide-react';
+import { Image, Upload, Trash2, RefreshCw, Download, AlertCircle, Play, FolderPlus, Replace } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -10,13 +10,18 @@ import {
   deletePhotoStudioImage,
   getPhotoStudioConfig,
   listPhotoStudioImages,
+  replacePhotoStudioImage,
 } from '../../services/photoStudioService.js';
 import { listAdminAlbums, uploadAdminAlbumMedia, linkExistingToAlbum } from '../../services/classAlbumService.js';
 import { ApiError } from '../../services/api/client.js';
 import { rewritePhotoStudioUrl } from '../../utils/photoStudioUrls.js';
+import { downloadPhotoStudioAsset, resolvePhotoDownloadUrl } from '../../utils/photoStudioDownload.js';
 import {
+  buildProgressiveSrcChain,
+  galleryNeedsVariantPolling,
   getGalleryThumbSrc,
   imageNeedsVariantPolling,
+  preloadImageSrc,
 } from '../../utils/photoStudioProgressive.js';
 import '../../styles/admin-photos.css';
 
@@ -140,23 +145,148 @@ function toLightboxPhoto(img) {
   };
 }
 
-function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, adding, isHighlighted }) {
-  const isVideo = isVideoItem(image);
-  const lowestSrc = isVideo
-    ? rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '')
-    : getGalleryThumbSrc(image);
-  const fallbackSrc = rewritePhotoStudioUrl(
-    image.thumbnailUrl || image.previewUrl || image.downloadUrl || '',
+function isImageFile(file) {
+  if (!file) return false;
+  if (file.type.startsWith('image/')) return true;
+  const name = (file.name || '').toLowerCase();
+  return ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic', '.heif'].some((ext) => name.endsWith(ext));
+}
+
+function createFilePreviewUrls(files) {
+  return files.map((file) => (isImageFile(file) ? URL.createObjectURL(file) : null));
+}
+
+function assignPreviewsByIndex(filePreviews, ids) {
+  const previews = {};
+  ids.forEach((id, index) => {
+    const preview = filePreviews[index];
+    if (id && preview) previews[String(id)] = preview;
+  });
+  return previews;
+}
+
+function assignPreviewsByFilename(files, filePreviews, batch) {
+  const previews = {};
+  const idsByFilename = new Map(
+    batch.map((img) => [(img.filename || '').toLowerCase(), String(img.id)]),
   );
-  const [src, setSrc] = useState(lowestSrc);
+  files.forEach((file, index) => {
+    const preview = filePreviews[index];
+    if (!preview) return;
+    const id = idsByFilename.get(file.name.toLowerCase());
+    if (id) previews[id] = preview;
+  });
+  return previews;
+}
+
+function resolveLocalPreview(image, previewsById, previewsByFilename) {
+  const byId = previewsById[String(image?.id)];
+  if (byId) return byId;
+  const name = (image?.filename || '').toLowerCase();
+  return name ? previewsByFilename[name] : undefined;
+}
+
+function extractImagesFromUploadResult(uploadResult) {
+  if (!uploadResult) return [];
+  const lists = [
+    uploadResult.images,
+    uploadResult.media,
+    uploadResult.uploaded,
+    uploadResult.items,
+    uploadResult.data,
+  ].filter((entry) => Array.isArray(entry));
+  const images = lists.flat().filter((item) => item?.id != null || item?.imageId != null);
+  if (images.length > 0) {
+    return images.map((item) => ({
+      ...item,
+      id: item.id ?? item.imageId ?? item.externalAssetId,
+    }));
+  }
+  if (uploadResult.id != null || uploadResult.imageId != null) {
+    return [{
+      ...uploadResult,
+      id: uploadResult.id ?? uploadResult.imageId,
+    }];
+  }
+  return [];
+}
+
+async function waitForGalleryRefresh(loadPage, beforeIds, uploadResult, files, { attempts = 6 } = {}) {
+  let lastData = null;
+  let lastBatch = [];
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (attempt > 0) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, attempt < 3 ? 800 : 1500));
+    }
+    // eslint-disable-next-line no-await-in-loop
+    lastData = await loadPage(0);
+    lastBatch = lastData?.images || [];
+    const responseIds = collectUploadResultIds(uploadResult);
+    const hasResponseIds = responseIds.length > 0
+      && responseIds.every((id) => lastBatch.some((img) => String(img.id) === String(id)));
+    const hasNewIds = lastBatch.some((img) => !beforeIds.has(String(img.id)));
+    const hasFilenameMatch = files.some((file) => lastBatch.some(
+      (img) => (img.filename || '').toLowerCase() === file.name.toLowerCase(),
+    ));
+    if (hasResponseIds || hasNewIds || hasFilenameMatch) {
+      return { data: lastData, batch: lastBatch };
+    }
+  }
+
+  return { data: lastData, batch: lastBatch };
+}
+
+function GalleryCard({
+  image,
+  localPreviewUrl,
+  onOpen,
+  onDelete,
+  onDownload,
+  onReplace,
+  onAddToAlbum,
+  canAddToAlbum,
+  adding,
+  downloading,
+  replacing,
+  isHighlighted,
+}) {
+  const isVideo = isVideoItem(image);
+  const processing = imageNeedsVariantPolling(image);
+  const serverChain = useMemo(() => {
+    if (isVideo) {
+      const url = rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '');
+      return url ? [url] : [];
+    }
+    const chain = buildProgressiveSrcChain(image).map(rewritePhotoStudioUrl).filter(Boolean);
+    if (imageNeedsVariantPolling(image)) {
+      const direct = rewritePhotoStudioUrl(
+        image.thumbnailUrl || image.previewUrl || image.downloadUrl || image?.variants?.previewFallbackUrl || '',
+      );
+      if (direct && !chain.includes(direct)) return [direct, ...chain];
+    }
+    return chain;
+  }, [image, isVideo]);
+  const serverSrc = serverChain[0] || (isVideo
+    ? rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '')
+    : getGalleryThumbSrc(image));
+  const [src, setSrc] = useState(() => localPreviewUrl || serverSrc || '');
+  const [chainIndex, setChainIndex] = useState(0);
+  const [serverReady, setServerReady] = useState(false);
 
   useEffect(() => {
-    const next = isVideo
-      ? (image.thumbnailUrl || image.previewUrl || '')
-      : getGalleryThumbSrc(image);
-    setSrc((prev) => (prev === next ? prev : next));
+    setChainIndex(0);
+    setServerReady(false);
+    if (localPreviewUrl) {
+      setSrc(localPreviewUrl);
+      return;
+    }
+    setSrc(serverSrc || '');
   }, [
     image.id,
+    localPreviewUrl,
+    serverSrc,
     image.previewUrl,
     image.thumbnailUrl,
     image.downloadUrl,
@@ -164,6 +294,66 @@ function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, add
     isVideo,
     JSON.stringify(image?.variants ?? null),
   ]);
+
+  useEffect(() => {
+    if (!localPreviewUrl || serverChain.length === 0) return undefined;
+    let cancelled = false;
+    const tryServer = async () => {
+      for (let i = 0; i < serverChain.length; i += 1) {
+        if (cancelled) break;
+        // eslint-disable-next-line no-await-in-loop
+        const ok = await preloadImageSrc(serverChain[i]);
+        if (ok && !cancelled) {
+          setSrc(serverChain[i]);
+          setChainIndex(i);
+          setServerReady(true);
+          break;
+        }
+      }
+    };
+    tryServer();
+    return () => { cancelled = true; };
+  }, [localPreviewUrl, serverChain]);
+
+  useEffect(() => {
+    if (localPreviewUrl || !serverSrc) return undefined;
+    let cancelled = false;
+    const tryServer = async () => {
+      for (let i = 0; i < serverChain.length; i += 1) {
+        if (cancelled) break;
+        // eslint-disable-next-line no-await-in-loop
+        const ok = await preloadImageSrc(serverChain[i]);
+        if (ok && !cancelled) {
+          setSrc(serverChain[i]);
+          setChainIndex(i);
+          setServerReady(true);
+          break;
+        }
+      }
+    };
+    tryServer();
+    return () => { cancelled = true; };
+  }, [localPreviewUrl, serverSrc, serverChain]);
+
+  const handleImageError = () => {
+    if (localPreviewUrl && !serverReady) {
+      setSrc(localPreviewUrl);
+      return;
+    }
+    const nextIndex = chainIndex + 1;
+    if (nextIndex < serverChain.length) {
+      setChainIndex(nextIndex);
+      setSrc(serverChain[nextIndex]);
+      return;
+    }
+    if (localPreviewUrl) {
+      setSrc(localPreviewUrl);
+    }
+  };
+
+  const showProcessing = processing && !localPreviewUrl && !serverReady;
+  const canDownload = Boolean(resolvePhotoDownloadUrl(image) || localPreviewUrl || image?.id);
+  const canReplace = !isVideo && Boolean(onReplace);
 
   return (
     <article
@@ -184,18 +374,16 @@ function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, add
             <img
               src={src}
               alt=""
-              loading="lazy"
+              loading={isHighlighted ? 'eager' : 'lazy'}
               decoding="async"
-              onError={() => {
-                if (fallbackSrc && src !== fallbackSrc) setSrc(fallbackSrc);
-              }}
+              onError={handleImageError}
             />
             {isVideo && (
               <span className="admin-photos-card__play" aria-hidden>
                 <Play size={28} fill="currentColor" />
               </span>
             )}
-            {isVideo && image.processingStatus === 'PROCESSING' && (
+            {showProcessing && (
               <span className="admin-photos-card__processing">Processing…</span>
             )}
           </>
@@ -218,22 +406,34 @@ function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, add
               <FolderPlus size={14} />
             </button>
           )}
-          {image.downloadUrl && (
-            <a
-              href={image.downloadUrl}
+          {canDownload && (
+            <button
+              type="button"
               className="media-card-toolbar__btn admin-photos-card__btn"
-              download
-              target="_blank"
-              rel="noreferrer"
+              disabled={downloading || replacing}
+              onClick={(e) => { e.stopPropagation(); onDownload?.(image); }}
               aria-label="Download"
-              onClick={(e) => e.stopPropagation()}
+              title="Download"
             >
               <Download size={14} />
-            </a>
+            </button>
+          )}
+          {canReplace && (
+            <button
+              type="button"
+              className="media-card-toolbar__btn admin-photos-card__btn"
+              disabled={downloading || replacing}
+              onClick={(e) => { e.stopPropagation(); onReplace?.(image); }}
+              aria-label="Replace image"
+              title="Replace image"
+            >
+              <Replace size={14} />
+            </button>
           )}
           <button
             type="button"
             className="media-card-toolbar__btn admin-photos-card__btn admin-photos-card__btn--danger"
+            disabled={downloading || replacing}
             onClick={(e) => { e.stopPropagation(); onDelete(image); }}
             aria-label="Delete"
           >
@@ -248,6 +448,7 @@ function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, add
 export default function AdminPhotos() {
   const { toast } = useToast();
   const fileInputRef = useRef(null);
+  const replaceInputRef = useRef(null);
   const [config, setConfig] = useState(null);
   const [images, setImages] = useState([]);
   const [page, setPage] = useState(0);
@@ -264,7 +465,48 @@ export default function AdminPhotos() {
   const [selectedAlbumId, setSelectedAlbumId] = useState('');
   const [uploadCaption, setUploadCaption] = useState('');
   const [linkingId, setLinkingId] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [replacingId, setReplacingId] = useState(null);
+  const [replaceTarget, setReplaceTarget] = useState(null);
   const [highlightedIds, setHighlightedIds] = useState(() => new Set());
+  const [localPreviews, setLocalPreviews] = useState({});
+  const [localPreviewsByFilename, setLocalPreviewsByFilename] = useState({});
+  const localPreviewsRef = useRef(localPreviews);
+  const localPreviewsByFilenameRef = useRef(localPreviewsByFilename);
+
+  useEffect(() => {
+    localPreviewsRef.current = localPreviews;
+  }, [localPreviews]);
+
+  useEffect(() => {
+    localPreviewsByFilenameRef.current = localPreviewsByFilename;
+  }, [localPreviewsByFilename]);
+
+  useEffect(() => () => {
+    Object.values(localPreviewsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    Object.values(localPreviewsByFilenameRef.current).forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
+  const revokeLocalPreview = useCallback((id, filename) => {
+    setLocalPreviews((prev) => {
+      const key = String(id);
+      if (!prev[key]) return prev;
+      URL.revokeObjectURL(prev[key]);
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    if (filename) {
+      const fileKey = filename.toLowerCase();
+      setLocalPreviewsByFilename((prev) => {
+        if (!prev[fileKey]) return prev;
+        URL.revokeObjectURL(prev[fileKey]);
+        const next = { ...prev };
+        delete next[fileKey];
+        return next;
+      });
+    }
+  }, []);
 
   const markHighlighted = useCallback((ids) => {
     const next = new Set((ids || []).map(String).filter(Boolean));
@@ -339,6 +581,48 @@ export default function AdminPhotos() {
     return !!active && imageNeedsVariantPolling(active);
   }, [lightboxIndex, sortedImages]);
 
+  const galleryPollingNeeded = useMemo(
+    () => galleryNeedsVariantPolling(sortedImages) || highlightedIds.size > 0,
+    [sortedImages, highlightedIds],
+  );
+
+  useEffect(() => {
+    if (!galleryPollingNeeded || !photosReady) return undefined;
+
+    const poll = async () => {
+      try {
+        const data = await listPhotoStudioImages({ page: 0, size: PAGE_SIZE });
+        const batch = data?.images || [];
+        setImages((prev) => {
+          const byId = new Map(batch.map((img) => [String(img.id), img]));
+          const merged = prev.map((img) => byId.get(String(img.id)) || img);
+          const existingIds = new Set(merged.map((img) => String(img.id)));
+          batch.forEach((img) => {
+            if (!existingIds.has(String(img.id))) merged.unshift(img);
+          });
+          return dedupeImages(merged);
+        });
+
+        await Promise.all(batch.map(async (img) => {
+          const id = String(img.id);
+          const hasPreview = localPreviewsRef.current[id]
+            || localPreviewsByFilenameRef.current[(img.filename || '').toLowerCase()];
+          if (!hasPreview) return;
+          const thumb = rewritePhotoStudioUrl(getGalleryThumbSrc(img));
+          if (!thumb) return;
+          const ok = await preloadImageSrc(thumb);
+          if (ok) revokeLocalPreview(id, img.filename);
+        }));
+      } catch {
+        // ignore polling errors
+      }
+    };
+
+    poll();
+    const timer = setInterval(poll, 3000);
+    return () => clearInterval(timer);
+  }, [galleryPollingNeeded, photosReady, revokeLocalPreview]);
+
   useEffect(() => {
     if (!needsVariantPolling || !photosReady || lightboxIndex < 0) return undefined;
 
@@ -402,6 +686,13 @@ export default function AdminPhotos() {
     }
 
     setUploading(true);
+    const filePreviews = createFilePreviewUrls(files);
+    const previewsByFilename = {};
+    files.forEach((file, index) => {
+      if (filePreviews[index]) previewsByFilename[file.name.toLowerCase()] = filePreviews[index];
+    });
+    setLocalPreviewsByFilename((prev) => ({ ...prev, ...previewsByFilename }));
+
     try {
       const beforeIds = new Set(images.map((img) => String(img.id)));
       const uploadResult = await uploadAdminAlbumMedia({
@@ -409,10 +700,23 @@ export default function AdminPhotos() {
         caption: uploadCaption.trim() || undefined,
         files,
       });
+
+      const uploadedImages = extractImagesFromUploadResult(uploadResult);
+      if (uploadedImages.length > 0) {
+        setImages((prev) => dedupeImages([...uploadedImages, ...prev]));
+      }
+
+      const { batch } = await waitForGalleryRefresh(loadPage, beforeIds, uploadResult, files);
+      const newIds = detectNewlyUploadedIds(beforeIds, batch, files, uploadResult);
+      const previewsById = {
+        ...assignPreviewsByIndex(filePreviews, newIds),
+        ...assignPreviewsByFilename(files, filePreviews, batch),
+      };
+
+      markHighlighted(newIds);
+      setLocalPreviews((prev) => ({ ...prev, ...previewsById }));
+
       const albumLabel = selectedAlbum?.className || selectedAlbum?.albumName || 'album';
-      const data = await loadPage(0);
-      const batch = data?.images || [];
-      markHighlighted(detectNewlyUploadedIds(beforeIds, batch, files, uploadResult));
       toast(
         files.length === 1
           ? `Added to ${albumLabel}.`
@@ -452,11 +756,85 @@ export default function AdminPhotos() {
     }
   };
 
+  const handleDownloadImage = async (image) => {
+    if (!image?.id) return;
+    setDownloadingId(image.id);
+    try {
+      if (localPreviews[String(image.id)] || localPreviewsByFilename[(image.filename || '').toLowerCase()]) {
+        const blobUrl = localPreviews[String(image.id)]
+          || localPreviewsByFilename[(image.filename || '').toLowerCase()];
+        const response = await fetch(blobUrl);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = image.filename || `photo-${image.id}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
+      await downloadPhotoStudioAsset(image);
+      toast('Download started.', 'success');
+    } catch (err) {
+      toast(err?.message || 'Download failed.', 'error');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleReplaceClick = (image) => {
+    setReplaceTarget(image);
+    replaceInputRef.current?.click();
+  };
+
+  const handleReplaceFile = async (fileList) => {
+    const image = replaceTarget;
+    const file = Array.from(fileList || []).find(isAcceptedMediaFile);
+    if (!image?.id || !file) {
+      setReplaceTarget(null);
+      return;
+    }
+    if (isVideoItem(image)) {
+      toast('Replace is only available for photos.', 'warning');
+      setReplaceTarget(null);
+      return;
+    }
+
+    setReplacingId(image.id);
+    const filePreviews = createFilePreviewUrls([file]);
+    if (filePreviews[0]) {
+      setLocalPreviews((prev) => ({ ...prev, [String(image.id)]: filePreviews[0] }));
+    }
+
+    try {
+      const result = await replacePhotoStudioImage(image.id, file);
+      const replacedId = String(result?.id ?? image.id);
+      if (replacedId !== String(image.id)) {
+        revokeLocalPreview(image.id, image.filename);
+        if (filePreviews[0]) {
+          setLocalPreviews((prev) => ({ ...prev, [replacedId]: filePreviews[0] }));
+        }
+      }
+      await loadPage(0);
+      markHighlighted([replacedId]);
+      toast('Image replaced.', 'success');
+    } catch (err) {
+      toast(err?.message || 'Replace failed.', 'error');
+    } finally {
+      setReplacingId(null);
+      setReplaceTarget(null);
+      if (replaceInputRef.current) replaceInputRef.current.value = '';
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget?.id) return;
     setDeleting(true);
     try {
       await deletePhotoStudioImage(deleteTarget.id);
+      revokeLocalPreview(deleteTarget.id, deleteTarget.filename);
       setImages((prev) => prev.filter((img) => img.id !== deleteTarget.id));
       setHighlightedIds((prev) => {
         const next = new Set(prev);
@@ -580,6 +958,13 @@ export default function AdminPhotos() {
               className="admin-photos-upload__input"
               onChange={(e) => handleUploadFiles(e.target.files)}
             />
+            <input
+              ref={replaceInputRef}
+              type="file"
+              accept={ACCEPTED_MEDIA}
+              className="admin-photos-upload__input"
+              onChange={(e) => handleReplaceFile(e.target.files)}
+            />
             <Upload size={22} className="admin-photos-upload__icon" />
             <p>
               {selectedAlbum
@@ -630,11 +1015,20 @@ export default function AdminPhotos() {
                       <GalleryCard
                         key={image.id}
                         image={image}
+                        localPreviewUrl={resolveLocalPreview(
+                          image,
+                          localPreviews,
+                          localPreviewsByFilename,
+                        )}
                         onOpen={openLightbox}
                         onDelete={setDeleteTarget}
+                        onDownload={handleDownloadImage}
+                        onReplace={handleReplaceClick}
                         onAddToAlbum={handleAddExistingToAlbum}
                         canAddToAlbum={Boolean(selectedAlbumId)}
                         adding={linkingId === image.id}
+                        downloading={downloadingId === image.id}
+                        replacing={replacingId === image.id}
                         isHighlighted={highlightedIds.has(String(image.id))}
                       />
                     ))}

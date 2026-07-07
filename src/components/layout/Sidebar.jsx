@@ -2,8 +2,20 @@ import { Link, NavLink } from 'react-router-dom';
 import { ChevronLeft, X } from 'lucide-react';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
+
+function isChatNavItem(item) {
+  const id = item?.id || '';
+  const to = item?.to || '';
+  return id.includes('messages') || id.includes('chat') || /\/messages$|\/chat$/.test(to);
+}
+
+function formatUnreadBadge(count) {
+  if (count > 99) return '99+';
+  return String(count);
+}
 
 function sidebarLinkClass({ isActive, collapsed }) {
   const base = 'sidebar-nav-link flex items-center gap-3 text-sm font-semibold';
@@ -33,6 +45,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
   const { roleDashboard } = useTenantPath();
   const navItems = getNavItems(user?.role);
   const homePath = roleDashboard(user?.role) || '/';
+  const unreadMessageCount = useUnreadMessageCount();
 
   return (
     <>
@@ -102,6 +115,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           {navItems.map(({ id, to, label, icon: Icon, section }, index) => {
             const prevSection = navItems[index - 1]?.section;
             const showSection = !collapsed && section && section !== prevSection;
+            const showUnreadBadge = isChatNavItem({ id, to }) && unreadMessageCount > 0;
 
             return (
               <div key={id || to}>
@@ -116,9 +130,23 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
                   className={(props) => sidebarLinkClass({ ...props, collapsed })}
                   title={collapsed ? label : undefined}
                 >
-                  <Icon size={18} className="shrink-0 transition-colors duration-200" />
+                  <span className="sidebar-nav-icon-wrap relative shrink-0">
+                    <Icon size={18} className="transition-colors duration-200" />
+                    {collapsed && showUnreadBadge && (
+                      <span className="sidebar-nav-badge sidebar-nav-badge--rail" aria-hidden>
+                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                      </span>
+                    )}
+                  </span>
                   {!collapsed && (
-                    <span className="truncate transition-colors duration-200">{label}</span>
+                    <>
+                      <span className="min-w-0 flex-1 truncate transition-colors duration-200">{label}</span>
+                      {showUnreadBadge && (
+                        <span className="sidebar-nav-badge" aria-label={`${unreadMessageCount} unread messages`}>
+                          {formatUnreadBadge(unreadMessageCount)}
+                        </span>
+                      )}
+                    </>
                   )}
                 </NavLink>
               </div>

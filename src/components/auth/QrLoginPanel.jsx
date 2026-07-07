@@ -111,11 +111,11 @@ export default function QrLoginPanel({ onApproved, onError }) {
       </div>
       <div className="flex items-center gap-2 text-sm font-semibold text-brand">
         <Smartphone size={16} />
-        Scan with KidsActivites mobile app
+        Scan with Kids Activities mobile app
       </div>
       <p className="login-muted-text max-w-sm text-center text-sm">
         For web sign-in only. On the TV app, use the QR shown on the television and scan it from
-        the KidsActivites mobile app while signed in.
+        the Kids Activities mobile app while signed in.
       </p>
       <p className="text-xs font-semibold text-muted">
         Expires in {formatCountdown(secondsLeft)}
