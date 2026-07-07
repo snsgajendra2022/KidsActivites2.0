@@ -3,13 +3,8 @@ const HERO_IMAGE =
 
 export const DEFAULT_PORTAL_CONFIG = {
   portalName: 'Kids Activities',
-<<<<<<< HEAD
   tagline: 'Activity enrollment and parent communication platform',
   footerText: '© 2026 Kids Activities. All rights reserved.',
-=======
-  tagline: 'School Enrollment Platform',
-  footerText: '© 2026 Kids Activities Systems. All rights reserved.',
->>>>>>> 184e342ca3086b09ecfa96a1a12c60b50aaaa6ee
   school: {
     id: 'school-1',
     name: 'Green Valley International School',
