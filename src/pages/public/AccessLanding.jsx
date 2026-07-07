@@ -17,32 +17,37 @@ import Button from '../../components/ui/Button.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 
-const DEFAULT_HERO_HEADLINE = ['Modern School Operations', 'Built for Growing Institutions'];
+import imgSecure from '../../assets/timeline_secure.jpg';
+import imgDocs from '../../assets/timeline_docs.jpg';
+import imgFees from '../../assets/timeline_fees.jpg';
+import imgConnected from '../../assets/timeline_connected.jpg';
+
+const DEFAULT_HERO_HEADLINE = ['Manage Kids Activities,', 'Admissions, and Parents', 'in One Platform'];
 const DEFAULT_HERO_SUBTEXT =
-  'Launch your school workspace in minutes. Manage enrollment, fees, and parent communication on one trusted platform.';
+  'Launch your activity workspace in minutes.\nManage enrollments, schedules, payments, documents, and parent communication from one trusted platform.';
 
 
 
 const TIMELINE_STEPS = [
   {
     title: 'Secure & Trusted',
-    description: 'Role-based access, encrypted data, and audit-ready workflows.',
-    showPlay: true,
+    description: 'Role-based access, protected data, and audit-ready workflows for every program.',
+    imageUrl: imgSecure,
   },
   {
     title: 'Easy Documentation',
-    description: 'Upload documents online with real-time status tracking.',
-    showPlay: false,
+    description: 'Collect forms, documents, and approvals online with real-time status tracking.',
+    imageUrl: imgDocs,
   },
   {
-    title: 'Transparent Fees',
-    description: 'Clear fee breakdown with digital receipt generation.',
-    showPlay: false,
+    title: 'Transparent Payments',
+    description: 'Clear payment breakdowns, online fee tracking, and digital receipt generation.',
+    imageUrl: imgFees,
   },
   {
     title: 'Stay Connected',
-    description: 'Chat with teachers and receive classroom photos after admission.',
-    showPlay: true,
+    description: 'Share updates, messages, photos, and activity progress with parents.',
+    imageUrl: imgConnected,
   },
 ];
 
@@ -75,7 +80,7 @@ export default function AccessLanding() {
         badge={(
           <>
             <Sparkles size={14} />
-            {platform?.tagline || 'Multi-school platform'}
+            {platform?.tagline || 'KIDS ACTIVITY ENROLLMENT PLATFORM'}
           </>
         )}
         title={heroLines.map((line, index) => (
@@ -84,14 +89,17 @@ export default function AccessLanding() {
             {index < heroLines.length - 1 && <br />}
           </span>
         ))}
-        subtitle={heroSubtext}
+        subtitle={heroSubtext.split('\n').map((line, index, arr) => (
+          <span key={line}>
+            {line}
+            {index < arr.length - 1 && <br />}
+          </span>
+        ))}
         primaryAction={{
           to: '/workspace/new',
-          label: <>Create Workspace <ArrowRight size={18} /></>,
+          label: <>Create Your Workspace <ArrowRight size={18} /></>,
         }}
       />
-
-
 
       <section className="sb-editorial-section sb-editorial-section--lavender">
         <div className="sb-container sb-access-cards">
@@ -101,8 +109,7 @@ export default function AccessLanding() {
             </div>
             <h2>New to Kids Activities?</h2>
             <p>
-              Request a dedicated workspace for your school. We&apos;ll send a confirmation email and provision your
-              tenant after you verify.
+              Request a dedicated workspace for your activity program. We'll send a confirmation email and set up your portal after verification.
             </p>
             <Link to="/workspace/new" className="sb-purple-cta">
               Start Workspace Setup <ArrowRight size={16} />
@@ -114,14 +121,14 @@ export default function AccessLanding() {
               <LogIn size={22} />
             </div>
             <h2>Sign in to your workspace</h2>
-            <p>Enter your school workspace slug to open your portal login.</p>
+            <p>Enter your workspace slug to open your portal login.</p>
             <form onSubmit={handleSignIn} className="flex flex-col gap-3 sm:flex-row">
               <FormInput
                 name="workspaceSlug"
-                placeholder="your-school"
+                placeholder="your-program"
                 value={workspaceSlug}
                 onChange={(e) => setWorkspaceSlug(e.target.value)}
-                helper="e.g. green-valley → /green-valley/login"
+                helper="e.g. little-stars → /little-stars/login"
                 className="flex-1"
               />
               <Button type="submit" variant="primary" size="lg" className="sb-purple-cta shrink-0 sm:self-end !border-0">
@@ -140,7 +147,7 @@ export default function AccessLanding() {
 
       <FinalImageCTA
         title={portalName}
-        subtitle={platform?.tagline || 'Professional grade enrollment and school operations.'}
+        subtitle="Launch enrollments, payments, schedules, and parent communication in one secure platform."
         action={{
           to: '/workspace/new',
           label: <>Create Your Workspace <ArrowRight size={18} /></>,

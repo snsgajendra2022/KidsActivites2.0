@@ -13,39 +13,37 @@ import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 
-import imgSecure from '../../assets/indian_secure.png';
-import imgDocs from '../../assets/indian_docs.png';
-import imgFees from '../../assets/indian_fees.png';
-import imgConnected from '../../assets/indian_connected.png';
+import imgSecure from '../../assets/timeline_secure.jpg';
+import imgDocs from '../../assets/timeline_docs.jpg';
+import imgFees from '../../assets/timeline_fees.jpg';
+import imgConnected from '../../assets/timeline_connected.jpg';
 import imgPanorama from '../../assets/panorama_360.png';
 
-const DEFAULT_HERO_HEADLINE = ['Modern School Enrollment', 'Built for Premium Education'];
+const DEFAULT_HERO_HEADLINE = ['Manage Kids Activities,', 'Admissions, and Parents', 'in One Platform'];
 const DEFAULT_HERO_SUBTEXT =
-  "Complete your child's admission online. Submit documents, pay fees, and stay connected — all in one trusted platform.";
+  'Launch your activity workspace in minutes.\nManage enrollments, schedules, payments, documents, and parent communication from one trusted platform.';
 
 
 
 const TIMELINE_STEPS = [
   {
     title: 'Secure & Trusted',
-    description: 'Role-based access, encrypted data, and audit-ready workflows designed for schools you can trust.',
+    description: 'Role-based access, protected data, and audit-ready workflows for every program.',
     imageUrl: imgSecure,
-    showPlay: true,
   },
   {
     title: 'Easy Documentation',
-    description: 'Upload documents online with real-time status tracking — no more lost paperwork or repeated visits.',
+    description: 'Collect forms, documents, and approvals online with real-time status tracking.',
     imageUrl: imgDocs,
-    showPlay: true,
   },
   {
-    title: 'Transparent Fees',
-    description: 'Clear fee breakdown with digital receipt generation so families always know where they stand.',
+    title: 'Transparent Payments',
+    description: 'Clear payment breakdowns, online fee tracking, and digital receipt generation.',
     imageUrl: imgFees,
   },
   {
     title: 'Stay Connected',
-    description: 'Automated email updates and a parent dashboard keep everyone on the same page.',
+    description: 'Share updates, messages, photos, and activity progress with parents.',
     imageUrl: imgConnected,
   },
 ];
@@ -79,7 +77,12 @@ export default function Landing() {
   );
 
   const heroSubtitle = isPlatformHome
-    ? heroSubtext
+    ? heroSubtext.split('\n').map((line, index, arr) => (
+        <span key={line}>
+          {line}
+          {index < arr.length - 1 && <br />}
+        </span>
+      ))
     : `Complete your child's admission to ${school?.name || 'our school'} online. Submit documents, pay fees, and stay connected.`;
 
   return (
@@ -90,7 +93,7 @@ export default function Landing() {
           <>
             <Sparkles size={14} />
             {isPlatformHome
-              ? (platform?.tagline || 'Multi-school enrollment platform')
+              ? (platform?.tagline || 'KIDS ACTIVITY ENROLLMENT PLATFORM')
               : `Admissions Open — Playgroup to 8th Class`}
           </>
         )}
@@ -123,7 +126,11 @@ export default function Landing() {
       <MapFeatureSection
         title={isPlatformHome ? 'Schools Across the Region' : 'Visit Our Campus'}
         subtitle={isPlatformHome
+<<<<<<< HEAD
+          ? 'Kids Activities connects families with programs in their community.'
+=======
           ? 'Kids Activities connects families with schools in their community.'
+>>>>>>> 184e342ca3086b09ecfa96a1a12c60b50aaaa6ee
           : `Experience ${school?.name || 'our school'} in person or explore online.`}
         address={isPlatformHome ? undefined : school?.address}
       />
@@ -131,7 +138,7 @@ export default function Landing() {
       <FinalImageCTA
         title={isPlatformHome ? portalName : school?.name}
         subtitle={isPlatformHome
-          ? 'Launch admissions, fees, and parent communication in one secure platform.'
+          ? 'Launch enrollments, payments, schedules, and parent communication in one secure platform.'
           : school?.address}
         action={{
           to: enrollPath,

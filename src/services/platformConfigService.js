@@ -8,11 +8,14 @@ const PLATFORM_KEY = 'sb_platform_config';
 
 const DEFAULT_PLATFORM_CONFIG = {
   platformName: 'Kids Activities',
+<<<<<<< HEAD
+  tagline: 'Activity enrollment and parent communication platform',
+=======
   tagline: 'Multi-school enrollment platform',
+>>>>>>> 184e342ca3086b09ecfa96a1a12c60b50aaaa6ee
   footerText: DEFAULT_PORTAL_CONFIG.footerText,
-  heroHeadline: 'Modern School Enrollment,\nBuilt for Premium Education',
-  heroSubtext:
-    "Complete your child's admission online. Submit documents, pay fees, and stay connected — all in one trusted platform.",
+  heroHeadline: 'Manage Kids Activities,\nAdmissions, and Parents\nin One Platform',
+  heroSubtext: 'Launch your activity workspace in minutes.\nManage enrollments, schedules, payments, documents, and parent communication from one trusted platform.',
   school: { ...DEFAULT_PORTAL_CONFIG.school },
   branding: {
     heroImageUrl: DEFAULT_PORTAL_CONFIG.branding.heroImageUrl,
@@ -29,6 +32,10 @@ export function getDefaultPlatformConfig() {
 }
 
 function mergePlatformConfig(stored) {
+  if (stored) {
+    delete stored.heroHeadline;
+    delete stored.heroSubtext;
+  }
   const base = { ...DEFAULT_PLATFORM_CONFIG, ...(stored || {}) };
   return {
     ...base,
