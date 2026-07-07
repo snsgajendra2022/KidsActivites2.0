@@ -18,6 +18,34 @@ function saveAll(apps) {
   setStore(KEY, apps);
 }
 
+function nextKidzeeFormNo(apps) {
+  const nums = apps
+    .flatMap((a) => {
+      const formNo = a.formData?.formNo ?? a.printableEnrollment?.formNo;
+      return formNo && /^\d+$/.test(formNo) ? [Number(formNo)] : [];
+    });
+  const max = nums.length ? Math.max(...nums) : 1330;
+  return String(max + 1).padStart(6, '0');
+}
+
+function assignKidzeeFormNo(payload, existingApp, allApps) {
+  const formType = payload._formType || payload.formType;
+  if (formType !== 'kidzee_printable') return payload;
+
+  const kidzeeData = { ...(payload.printableEnrollment || {}) };
+  const stored = existingApp?.formData?.formNo ?? existingApp?.printableEnrollment?.formNo;
+  if (!kidzeeData.formNo) {
+    kidzeeData.formNo = stored || nextKidzeeFormNo(allApps);
+  }
+
+  return {
+    ...payload,
+    formType: 'kidzee_printable',
+    printableEnrollment: kidzeeData,
+    formData: kidzeeData,
+  };
+}
+
 async function mockGetApplications(filters = {}) {
   await delay();
   let apps = getAll();
@@ -89,22 +117,24 @@ export async function saveDraft(formData, existingId, meta = {}) {
       if (existingId) {
         const idx = apps.findIndex((a) => a.id === existingId);
         if (idx >= 0) {
+          const withFormNo = assignKidzeeFormNo(formData, apps[idx], apps);
           apps[idx] = {
             ...apps[idx],
-            ...formData,
+            ...withFormNo,
             ...meta,
-            status: ENROLLMENT_STATUSES.DRAFT,
+            status: apps[idx].status || ENROLLMENT_STATUSES.DRAFT,
             updatedAt: new Date().toISOString(),
           };
           saveAll(apps);
           return apps[idx];
         }
       }
+      const withFormNo = assignKidzeeFormNo(formData, null, apps);
       const draft = {
         id: `app-draft-${Date.now()}`,
         applicationNo: null,
         status: ENROLLMENT_STATUSES.DRAFT,
-        ...formData,
+        ...withFormNo,
         ...meta,
         createdAt: new Date().toISOString(),
       };

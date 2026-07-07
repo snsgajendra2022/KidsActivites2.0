@@ -16,11 +16,13 @@ export default function KidzeePage1({
   formData,
   onChange,
   readOnly,
+  isAdmin = false,
   branding,
   showGrid,
 }) {
   const set = (path, value) => onChange(path, value);
   const child = formData.child || {};
+  const formNoReadOnly = readOnly || (!isAdmin && Boolean(formData.formNo));
 
   const classRow1 = CLASS_OPTIONS.slice(0, 6);
   const classRow2 = CLASS_OPTIONS.slice(6);
@@ -42,10 +44,13 @@ export default function KidzeePage1({
           onChange={(v) => set("telNo", v)}
           readOnly={readOnly}
         />
-        <div className="kz-p1-formno">
-          <span className="kz-field-label">Form No.:</span>
-          <span className="kz-p1-formno__value">{formData.formNo}</span>
-        </div>
+        <CharBoxInput
+          label="Form No.:"
+          boxes={6}
+          value={formData.formNo}
+          onChange={(v) => set("formNo", v)}
+          readOnly={formNoReadOnly}
+        />
         <CharBoxInput
           label="Admission No.:"
           boxes={16}

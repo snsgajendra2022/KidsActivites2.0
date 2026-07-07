@@ -81,6 +81,15 @@ export default function KidzeePage5({
           medicine/treatment in both emergency and non-emergency situations,
           though necessary precautions are taken.
         </p>
+        <PermissionSignRow
+          date={permissions.emergency?.date}
+          place={permissions.emergency?.place}
+          signature={permissions.emergency?.signature}
+          onDate={(v) => set("permissions.emergency.date", v)}
+          onPlace={(v) => set("permissions.emergency.place", v)}
+          onSignature={(v) => set("permissions.emergency.signature", v)}
+          readOnly={readOnly}
+        />
       </div>
 
       <div className="kz-p5-perm">

@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { SignaturePad } from '../../components/ui/index.jsx';
 
 /** A4 page shell with optional alignment grid and wave decorations. */
 export function PrintPage({
@@ -396,17 +397,37 @@ export function PhotoBox({ label, value, onChange, readOnly, className = '' }) {
 }
 
 export function SignatureLine({ label, value, onChange, readOnly, className = '' }) {
+  const hasSignature = Boolean(value && (typeof value === 'string' ? value.trim() : value));
+
   return (
     <div className={`kz-signature ${className}`.trim()}>
       {label && <span className="kz-signature__label">{label}</span>}
-      <input
-        type="text"
-        className="kz-signature__input"
-        value={value ?? ''}
-        onChange={(e) => onChange?.(e.target.value)}
-        readOnly={readOnly}
-        placeholder={readOnly ? '' : ''}
-      />
+      {readOnly ? (
+        hasSignature ? (
+          <img src={value} alt={label || 'Signature'} className="kz-signature__img" />
+        ) : (
+          <div className="kz-signature__line" aria-hidden />
+        )
+      ) : (
+        <>
+          {hasSignature && (
+            <img
+              src={value}
+              alt={label || 'Signature'}
+              className="kz-signature__img"
+            />
+          )}
+          <div className="kz-signature__pad no-print">
+            <SignaturePad
+              value={value}
+              onChange={onChange}
+              width={280}
+              height={70}
+              compact
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

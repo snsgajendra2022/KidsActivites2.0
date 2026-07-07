@@ -32,7 +32,7 @@ export function Stepper({ currentStep }) {
   );
 }
 
-export function SignaturePad({ onChange, value }) {
+export function SignaturePad({ onChange, value, width = 600, height = 160, compact = false }) {
   const canvasRef = useRef(null);
   const [drawing, setDrawing] = useState(false);
 
@@ -43,7 +43,20 @@ export function SignaturePad({ onChange, value }) {
     ctx.strokeStyle = '#0B1F3A';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-  }, []);
+
+    if (!value) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    if (typeof value === 'string' && value.startsWith('data:image/')) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.src = value;
+    }
+  }, [value, width, height]);
 
   const getPos = (e, canvas) => {
     const rect = canvas.getBoundingClientRect();
@@ -87,12 +100,12 @@ export function SignaturePad({ onChange, value }) {
   };
 
   return (
-    <div className="signature-pad-wrap">
+    <div className={`signature-pad-wrap${compact ? ' signature-pad-wrap--compact' : ''}`}>
       <canvas
         ref={canvasRef}
         className="signature-canvas"
-        width={600}
-        height={160}
+        width={width}
+        height={height}
         onMouseDown={startDraw}
         onMouseMove={draw}
         onMouseUp={endDraw}
@@ -102,8 +115,10 @@ export function SignaturePad({ onChange, value }) {
         onTouchEnd={endDraw}
       />
       <div className="signature-actions">
-        <Button variant="ghost" size="sm" onClick={clear}>Clear Signature</Button>
-        {value && <span className="text-small" style={{ color: 'var(--success)' }}>Signature captured</span>}
+        <Button variant="ghost" size="sm" onClick={clear}>Clear</Button>
+        {!compact && value && (
+          <span className="text-small" style={{ color: 'var(--success)' }}>Signature captured</span>
+        )}
       </div>
     </div>
   );

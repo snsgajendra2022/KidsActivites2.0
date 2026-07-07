@@ -3,8 +3,36 @@ const DOCUMENT_STRIP_KEYS = new Set([
   'previewUrl', 'dataUrl', 'downloadUrl', 'uploadUrl', 'base64', 'content', 'file', 'blob',
 ]);
 
+/** Form paths where PNG signature data URLs are persisted inline. */
+const SIGNATURE_PATHS = new Set([
+  'permissions.emergency.signature',
+  'permissions.fieldTrip.signature',
+  'permissions.verification.signature',
+  'officeUse.signature',
+  'declaration.signature',
+]);
+
 function isInlineDataUrl(value) {
   return typeof value === 'string' && value.startsWith('data:') && value.length > 256;
+}
+
+function sanitizeFormValue(value, path = '') {
+  if (value == null) return value;
+  if (typeof value === 'string') {
+    return isInlineDataUrl(value) && !SIGNATURE_PATHS.has(path) ? null : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeFormValue(item, path));
+  }
+  if (typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => {
+        const nestedPath = path ? `${path}.${key}` : key;
+        return [key, sanitizeFormValue(nested, nestedPath)];
+      }),
+    );
+  }
+  return value;
 }
 
 /** @param {Record<string, unknown> | null | undefined} doc */
@@ -25,6 +53,28 @@ export function sanitizeDocumentForPersist(doc) {
   return out;
 }
 
+function sanitizePhotosForPersist(photos) {
+  if (!photos || typeof photos !== 'object') return photos;
+  return Object.fromEntries(
+    Object.entries(photos).map(([key, value]) => {
+      if (isInlineDataUrl(value)) return [key, null];
+      if (value && typeof value === 'object') {
+        return [key, sanitizeDocumentForPersist(value)];
+      }
+      return [key, value];
+    }),
+  );
+}
+
+function sanitizePrintableEnrollment(printable) {
+  if (!printable || typeof printable !== 'object') return printable;
+  const next = sanitizeFormValue(printable);
+  if (next.photos) {
+    next.photos = sanitizePhotosForPersist(next.photos);
+  }
+  return next;
+}
+
 /** @param {Record<string, unknown>} formData */
 export function sanitizeEnrollmentPayload(formData) {
   if (!formData || typeof formData !== 'object') return formData;
@@ -33,6 +83,12 @@ export function sanitizeEnrollmentPayload(formData) {
     next.documents = Object.fromEntries(
       Object.entries(next.documents).map(([key, doc]) => [key, sanitizeDocumentForPersist(doc)]),
     );
+  }
+  if (next.printableEnrollment && typeof next.printableEnrollment === 'object') {
+    next.printableEnrollment = sanitizePrintableEnrollment(next.printableEnrollment);
+  }
+  if (next.formData && typeof next.formData === 'object') {
+    next.formData = sanitizePrintableEnrollment(next.formData);
   }
   return next;
 }

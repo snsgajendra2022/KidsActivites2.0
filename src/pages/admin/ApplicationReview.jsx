@@ -24,6 +24,7 @@ import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import DocumentPreviewModal from '../../components/documents/DocumentPreviewModal.jsx';
+import KidzeeApplicationDetails from './KidzeeApplicationDetails.jsx';
 import '../../styles/application-review.css';
 import '../../styles/document-preview.css';
 
@@ -286,17 +287,28 @@ export default function ApplicationReview() {
           <>
             <PageHeader
               title={`Application ${app.applicationNo}`}
-              subtitle={app.student?.fullName}
+              subtitle={app.student?.fullName || app.formData?.child?.fullName}
               actions={(
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    to={tenantPath(`/enrollment/printable-form?applicationId=${app.id}`)}
-                    className="sb-button-secondary text-sm"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Printable Form
-                  </Link>
+                  {app.formType === 'kidzee_printable' ? (
+                    <Link
+                      to={tenantPath(`/enrollment/kidzee-print-form?applicationId=${app.id}`)}
+                      className="sb-button-secondary text-sm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Kidzee Form
+                    </Link>
+                  ) : (
+                    <Link
+                      to={tenantPath(`/enrollment/printable-form?applicationId=${app.id}`)}
+                      className="sb-button-secondary text-sm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Printable Form
+                    </Link>
+                  )}
                   <StatusBadge status={app.status} />
                 </div>
               )}
@@ -325,13 +337,17 @@ export default function ApplicationReview() {
 
             <div className="app-review-layout">
               <div className="app-review-main">
-                {['student', 'parent', 'address', 'academic', 'medical'].map((section) => (
-                  <ReviewSection
-                    key={section}
-                    title={SECTION_TITLES[section]}
-                    data={app[section]}
-                  />
-                ))}
+                {app.formType === 'kidzee_printable' ? (
+                  <KidzeeApplicationDetails app={app} />
+                ) : (
+                  ['student', 'parent', 'address', 'academic', 'medical'].map((section) => (
+                    <ReviewSection
+                      key={section}
+                      title={SECTION_TITLES[section]}
+                      data={app[section]}
+                    />
+                  ))
+                )}
 
                 <DeclarationSection declaration={app.declaration} signature={app.signature} />
 

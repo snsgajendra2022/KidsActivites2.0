@@ -167,7 +167,7 @@ export function getEmptyKidzeeFormData(branding = KIDZEE_BRANDING) {
 
   return {
     telNo: '',
-    formNo: branding.formNoDefault || '',
+    formNo: '',
     admissionNo: '',
     class: Object.fromEntries(CLASS_OPTIONS.map(({ key }) => [key, false])),
     batch: '',
@@ -278,4 +278,128 @@ export function clearKidzeeDraft() {
   } catch {
     return false;
   }
+}
+
+function getNestedValue(obj, path) {
+  return path.split('.').reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
+}
+
+export function wrapKidzeeFormForEnrollment(kidzeeData, existingForm = {}) {
+  return {
+    ...existingForm,
+    printableEnrollment: kidzeeData,
+    _formType: 'kidzee_printable',
+  };
+}
+
+export function mergeKidzeeFormNoFromApplication(formData, application) {
+  const formNo = application?.formData?.formNo ?? application?.printableEnrollment?.formNo;
+  if (!formNo) return formData;
+  return { ...formData, formNo };
+}
+
+export function validateKidzeeFormForSubmit(data) {
+  const errors = {};
+  const req = (path, label) => {
+    if (!getNestedValue(data, path)) errors[path] = `${label} is required`;
+  };
+
+  req('child.fullName', 'Child full name');
+  req('child.dateOfBirth', 'Date of birth');
+
+  const hasGender = data.child?.gender?.male || data.child?.gender?.female;
+  if (!hasGender) errors['child.gender'] = 'Gender is required';
+
+  const hasClass = Object.values(data.class || {}).some(Boolean);
+  if (!hasClass) errors.class = 'Class is required';
+
+  req('child.addressLine1', 'Address');
+  req('child.pin', 'Pin code');
+  req('child.contactNo', 'Contact number');
+  req('motherGuardian.name', 'Mother/Guardian name');
+  req('motherGuardian.mobile', 'Mother/Guardian mobile');
+  req('fatherGuardian.name', 'Father/Guardian name');
+  req('fatherGuardian.mobile', 'Father/Guardian mobile');
+
+  const ec1 = data.emergencyContacts?.[0];
+  if (!ec1?.name) errors['emergencyContacts.0.name'] = 'Emergency contact name is required';
+  if (!ec1?.mobile && !ec1?.contactNo) {
+    errors['emergencyContacts.0.mobile'] = 'Emergency contact phone is required';
+  }
+
+  ['emergency', 'fieldTrip', 'verification'].forEach((key) => {
+    if (!data.permissions?.[key]?.signature) {
+      errors[`permissions.${key}.signature`] = 'Signature is required';
+    }
+  });
+
+  return { success: Object.keys(errors).length === 0, errors };
+}
+
+function deepMerge(target, source) {
+  if (!source || typeof source !== 'object') return target;
+  const out = { ...target };
+  Object.entries(source).forEach(([key, value]) => {
+    if (value && typeof value === 'object' && !Array.isArray(value) && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+      out[key] = deepMerge(target[key], value);
+    } else if (value !== undefined) {
+      out[key] = value;
+    }
+  });
+  return out;
+}
+
+function ensureArray(value, fallback = []) {
+  return Array.isArray(value) ? value : fallback;
+}
+
+function resolveStoredKidzeeForm(app) {
+  const raw = app?.formData || app?.printableEnrollment;
+  if (!raw || typeof raw !== 'object') return null;
+  if (raw.printableEnrollment && typeof raw.printableEnrollment === 'object') {
+    return raw.printableEnrollment;
+  }
+  return raw;
+}
+
+function normalizeKidzeeFormData(data, branding = KIDZEE_BRANDING) {
+  const empty = getEmptyKidzeeFormData(branding);
+  const merged = deepMerge(empty, data);
+  merged.siblings = ensureArray(merged.siblings, empty.siblings);
+  merged.otherFamilyMembers = ensureArray(merged.otherFamilyMembers, empty.otherFamilyMembers);
+  merged.emergencyContacts = ensureArray(merged.emergencyContacts, empty.emergencyContacts);
+  return merged;
+}
+
+export function mapApplicationToKidzeeForm(app, branding = KIDZEE_BRANDING) {
+  const empty = getEmptyKidzeeFormData(branding);
+  if (!app) return empty;
+
+  const stored = resolveStoredKidzeeForm(app);
+  if (stored && typeof stored === 'object' && Object.keys(stored).length > 0) {
+    return normalizeKidzeeFormData(stored, branding);
+  }
+
+  const student = app.student || {};
+  const parent = app.parent || {};
+  return normalizeKidzeeFormData({
+    child: {
+      fullName: student.fullName || '',
+      dateOfBirth: student.dateOfBirth || student.dob || '',
+      gender: {
+        male: student.gender === 'male' || student.gender === 'Male',
+        female: student.gender === 'female' || student.gender === 'Female',
+      },
+    },
+    motherGuardian: {
+      name: parent.motherName || '',
+      mobile: parent.motherMobile || '',
+      email: parent.motherEmail || parent.email || '',
+    },
+    fatherGuardian: {
+      name: parent.fatherName || '',
+      mobile: parent.fatherMobile || '',
+      email: parent.fatherEmail || parent.email || '',
+    },
+  }, branding);
 }

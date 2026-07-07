@@ -15,7 +15,12 @@ const APP_COLUMNS = [
   { key: 'applicationNo', label: 'Application No.', primary: true },
   {
     label: 'Student Name',
-    render: (app) => app.student?.fullName,
+    render: (app) => app.student?.fullName || app.formData?.child?.fullName,
+  },
+  {
+    label: 'Form Type',
+    muted: true,
+    render: (app) => (app.formType === 'kidzee_printable' ? 'Kidzee' : 'Standard'),
   },
   {
     label: 'Class',
@@ -70,7 +75,10 @@ export default function ApplicationsList() {
   }, [statusFilter]);
 
   const filtered = apps.filter((a) => {
-    const matchSearch = !search || a.student?.fullName?.toLowerCase().includes(search.toLowerCase()) || a.applicationNo?.toLowerCase().includes(search.toLowerCase());
+    const studentName = a.student?.fullName || a.formData?.child?.fullName || '';
+    const matchSearch = !search
+      || studentName.toLowerCase().includes(search.toLowerCase())
+      || a.applicationNo?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = !statusFilter || a.status === statusFilter;
     return matchSearch && matchStatus;
   });
