@@ -23,6 +23,10 @@ const SIZES = {
     box: 'h-16 w-16 text-sm rounded-xl',
     img: 'h-32 w-auto max-h-32 max-w-[600px] object-contain',
   },
+  auth: {
+    box: 'h-14 w-14 text-[11px] rounded-xl',
+    img: 'h-14 w-auto max-h-14 object-contain object-left',
+  },
 };
 
 function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
@@ -71,13 +75,21 @@ function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
   );
 }
 
-export default function PortalLogo({ size = 'md', className = '', compact = false, inverse = false }) {
+export default function PortalLogo({
+  size = 'md',
+  className = '',
+  compact = false,
+  inverse = false,
+  markOnly = false,
+}) {
   const { portalName, branding } = usePortalConfig();
   const sizeClass = compact ? SIZES.icon : (SIZES[size] || SIZES.md);
   const baseLogo = inverse ? footerDefaultLogo : defaultLogo;
-  const imageUrl = compact
-    ? (branding?.logoIconUrl || branding?.logoUrl || null)
-    : (branding?.logoIconUrl || branding?.logoUrl || baseLogo);
+  const imageUrl = markOnly
+    ? (branding?.logoIconUrl || baseLogo)
+    : compact
+      ? (branding?.logoIconUrl || branding?.logoUrl || null)
+      : (branding?.logoIconUrl || branding?.logoUrl || baseLogo);
 
   return (
     <LogoMark

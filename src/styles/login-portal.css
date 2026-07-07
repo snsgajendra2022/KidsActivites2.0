@@ -19,16 +19,38 @@
   color: #6b7a8c;
 }
 
+.login-portal .auth-split__card {
+  padding: 1.75rem 1.5rem;
+}
+
+.login-portal .auth-split__card-header {
+  margin-bottom: 1.25rem;
+}
+
+.login-portal .auth-split__card-logo-full {
+  height: 3.25rem;
+  max-width: min(100%, 14rem);
+}
+
+.login-portal .auth-split__card-title {
+  font-size: 1.5rem;
+}
+
+.login-portal .sb-alert {
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
 /* Login method switch */
 .login-method-footer {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--sb-border);
   text-align: center;
 }
 
 .login-method-footer__or {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.625rem;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -42,20 +64,20 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 4px;
+  padding: 0.625rem 0.5rem;
   font-size: 13px;
   font-weight: 600;
   color: var(--sb-gold);
   background: transparent;
   border: none;
+  border-radius: var(--sb-radius);
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .login-method-switch:hover {
   color: var(--sb-navy);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  background: color-mix(in srgb, var(--sb-gold) 8%, transparent);
 }
 
 /* OTP boxes */
@@ -136,30 +158,46 @@
   width: 44px;
   flex-shrink: 0;
   border: none;
+  border-left: 1px solid transparent;
   background: transparent;
   color: var(--sb-muted);
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.login-password-wrap:focus-within .login-password-toggle {
+  border-left-color: var(--sb-line);
 }
 
 .login-password-toggle:hover {
   color: var(--sb-navy);
 }
 
+.login-portal .sb-input {
+  min-height: 2.75rem;
+}
+
 /* New applicant CTA */
 .login-enroll-section {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--sb-border);
 }
 
 .login-enroll-section__label {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.625rem;
   text-align: center;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--sb-muted);
+}
+
+@media (min-width: 640px) {
+  .login-portal .auth-split__card {
+    padding: 2rem;
+  }
 }
 
 @media (max-width: 380px) {
