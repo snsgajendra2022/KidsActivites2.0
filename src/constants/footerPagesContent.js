@@ -1,10 +1,6 @@
 export const SECURITY_POLICY_CONTENT = {
   title: 'Security Policy',
-<<<<<<< HEAD
   subtitle: 'How Kids Activities protects your school, staff, and family data.',
-=======
-  subtitle: 'How KidsActivites protects your school, staff, and family data.',
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
   lastUpdated: 'July 1, 2026',
   sections: [
     {

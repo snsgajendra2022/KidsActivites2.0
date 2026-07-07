@@ -10,6 +10,9 @@ import RegisterSchool from './pages/public/RegisterSchool.jsx';
 import WorkspaceNew from './pages/public/WorkspaceNew.jsx';
 import WorkspaceConfirm from './pages/public/WorkspaceConfirm.jsx';
 import Enrollment from './pages/public/Enrollment.jsx';
+import PrintableEnrollmentFormPage from './pages/public/PrintableEnrollmentFormPage.jsx';
+import PrintableHtmlEnrollmentFormPage from './pages/public/PrintableHtmlEnrollmentFormPage.jsx';
+import KidzeePrintableFormPage from './pages/enrollment/KidzeePrintableFormPage.jsx';
 import Login from './pages/auth/Login.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
@@ -83,6 +86,9 @@ export default function App() {
       <Route path="/workspace/new" element={<WorkspaceNew />} />
       <Route path="/workspace/confirm" element={<WorkspaceConfirm />} />
       <Route path="/enrollment" element={<Enrollment />} />
+      <Route path="/enrollment/printable-form" element={<PrintableEnrollmentFormPage />} />
+      <Route path="/enrollment/html-form" element={<PrintableHtmlEnrollmentFormPage />} />
+      <Route path="/enrollment/kidzee-print-form" element={<KidzeePrintableFormPage />} />
       <Route path="/enroll" element={<Navigate to="/enrollment" replace />} />
       <Route path="/security-policy" element={<SecurityPolicy />} />
       <Route path="/terms-of-use" element={<TermsOfUse />} />
@@ -97,6 +103,12 @@ export default function App() {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route path="verify-email" element={<VerifyEmail />} />
         <Route path="enroll" element={<Enrollment />} />
+        <Route path="enroll/printable-form" element={<PrintableEnrollmentFormPage />} />
+        <Route path="enrollment/printable-form" element={<PrintableEnrollmentFormPage />} />
+        <Route path="enrollment/html-form" element={<PrintableHtmlEnrollmentFormPage />} />
+        <Route path="enroll/html-form" element={<PrintableHtmlEnrollmentFormPage />} />
+        <Route path="enrollment/kidzee-print-form" element={<KidzeePrintableFormPage />} />
+        <Route path="enroll/kidzee-print-form" element={<KidzeePrintableFormPage />} />
         <Route path="enrollment" element={<Navigate to="enroll" replace />} />
 
         {/* Admin routes */}

@@ -287,7 +287,19 @@ export default function ApplicationReview() {
             <PageHeader
               title={`Application ${app.applicationNo}`}
               subtitle={app.student?.fullName}
-              actions={<StatusBadge status={app.status} />}
+              actions={(
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    to={tenantPath(`/enrollment/printable-form?applicationId=${app.id}`)}
+                    className="sb-button-secondary text-sm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Printable Form
+                  </Link>
+                  <StatusBadge status={app.status} />
+                </div>
+              )}
             />
 
             <section className="sb-card app-review-card mb-4">
