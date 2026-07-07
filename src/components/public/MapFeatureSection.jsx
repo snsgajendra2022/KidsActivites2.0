@@ -1,6 +1,6 @@
 import { MapPin } from 'lucide-react';
 
-const DEFAULT_MAP = '/assets/schoolbridge-map-placeholder.svg';
+const DEFAULT_MAP = '/assets/kidsactivites-map-placeholder.svg';
 
 export default function MapFeatureSection({
   title = 'Find Us',

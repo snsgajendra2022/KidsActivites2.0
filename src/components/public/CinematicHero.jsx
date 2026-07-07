@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import PortalLogo from '../brand/PortalLogo.jsx';
 
-const DEFAULT_BG = '/assets/schoolbridge-hero-placeholder.svg';
+const DEFAULT_BG = '/assets/kidsactivites-hero-placeholder.svg';
 
 export default function CinematicHero({
   imageUrl,

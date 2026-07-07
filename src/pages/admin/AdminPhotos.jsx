@@ -12,6 +12,7 @@ import {
   listPhotoStudioImages,
 } from '../../services/photoStudioService.js';
 import { listAdminAlbums, uploadAdminAlbumMedia, linkExistingToAlbum } from '../../services/classAlbumService.js';
+import { ApiError } from '../../services/api/client.js';
 import { rewritePhotoStudioUrl } from '../../utils/photoStudioUrls.js';
 import {
   getGalleryThumbSrc,
@@ -83,6 +84,40 @@ function dedupeImages(images) {
   });
 }
 
+function collectUploadResultIds(response) {
+  if (!response) return [];
+  const ids = [];
+  const lists = [response, response.images, response.media, response.uploaded, response.items, response.data]
+    .filter((entry) => Array.isArray(entry));
+  lists.forEach((list) => {
+    list.forEach((item) => {
+      const id = item?.id ?? item?.imageId ?? item?.externalAssetId ?? item?.assetId;
+      if (id != null) ids.push(String(id));
+    });
+  });
+  if (response.id != null) ids.push(String(response.id));
+  return [...new Set(ids)];
+}
+
+function detectNewlyUploadedIds(beforeIds, batch, uploadedFiles, uploadResult) {
+  const fromResponse = collectUploadResultIds(uploadResult);
+  if (fromResponse.length > 0) return fromResponse;
+
+  const byNewId = batch
+    .filter((img) => !beforeIds.has(String(img.id)))
+    .map((img) => String(img.id));
+  if (byNewId.length > 0) return byNewId;
+
+  const uploadedNames = new Set(uploadedFiles.map((f) => f.name.toLowerCase()));
+  const byFilename = batch
+    .filter((img) => uploadedNames.has((img.filename || '').toLowerCase()))
+    .map((img) => String(img.id));
+  if (byFilename.length > 0) return byFilename;
+
+  const sorted = [...batch].sort((a, b) => new Date(b.uploadTime) - new Date(a.uploadTime));
+  return sorted.slice(0, uploadedFiles.length).map((img) => String(img.id));
+}
+
 function toLightboxPhoto(img) {
   const isVideo = isVideoItem(img);
   return {
@@ -105,7 +140,7 @@ function toLightboxPhoto(img) {
   };
 }
 
-function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, adding }) {
+function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, adding, isHighlighted }) {
   const isVideo = isVideoItem(image);
   const lowestSrc = isVideo
     ? rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '')
@@ -131,7 +166,13 @@ function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, add
   ]);
 
   return (
-    <article className="admin-photos-card">
+    <article
+      className={`admin-photos-card${isHighlighted ? ' admin-photos-card--highlighted' : ''}`}
+      data-photo-id={image.id}
+    >
+      {isHighlighted && (
+        <span className="admin-photos-card__new-badge">Just uploaded</span>
+      )}
       <button
         type="button"
         className="admin-photos-card__media"
@@ -162,13 +203,13 @@ function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, add
           <div className="admin-photos-card__placeholder" aria-hidden />
         )}
       </button>
-      <div className="admin-photos-card__body">
+        <div className="admin-photos-card__body">
         <p className="admin-photos-card__name" title={image.filename}>{image.filename}</p>
-        <div className="admin-photos-card__actions">
+        <div className="media-card-toolbar admin-photos-card__actions">
           {canAddToAlbum && (
             <button
               type="button"
-              className="admin-photos-card__btn admin-photos-card__btn--primary"
+              className="media-card-toolbar__btn admin-photos-card__btn admin-photos-card__btn--primary"
               disabled={adding}
               onClick={(e) => { e.stopPropagation(); onAddToAlbum?.(image); }}
               aria-label="Add to album"
@@ -180,7 +221,7 @@ function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, add
           {image.downloadUrl && (
             <a
               href={image.downloadUrl}
-              className="admin-photos-card__btn"
+              className="media-card-toolbar__btn admin-photos-card__btn"
               download
               target="_blank"
               rel="noreferrer"
@@ -192,7 +233,7 @@ function GalleryCard({ image, onOpen, onDelete, onAddToAlbum, canAddToAlbum, add
           )}
           <button
             type="button"
-            className="admin-photos-card__btn admin-photos-card__btn--danger"
+            className="media-card-toolbar__btn admin-photos-card__btn admin-photos-card__btn--danger"
             onClick={(e) => { e.stopPropagation(); onDelete(image); }}
             aria-label="Delete"
           >
@@ -223,6 +264,29 @@ export default function AdminPhotos() {
   const [selectedAlbumId, setSelectedAlbumId] = useState('');
   const [uploadCaption, setUploadCaption] = useState('');
   const [linkingId, setLinkingId] = useState(null);
+  const [highlightedIds, setHighlightedIds] = useState(() => new Set());
+
+  const markHighlighted = useCallback((ids) => {
+    const next = new Set((ids || []).map(String).filter(Boolean));
+    if (next.size === 0) return;
+    setHighlightedIds(next);
+  }, []);
+
+  useEffect(() => {
+    if (highlightedIds.size === 0) return undefined;
+
+    const frame = requestAnimationFrame(() => {
+      const firstId = [...highlightedIds][0];
+      const el = document.querySelector(`[data-photo-id="${firstId}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    const timer = setTimeout(() => setHighlightedIds(new Set()), 10000);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [highlightedIds]);
 
   const loadPage = useCallback(async (pageNum, { append = false } = {}) => {
     const data = await listPhotoStudioImages({ page: pageNum, size: PAGE_SIZE });
@@ -339,21 +403,27 @@ export default function AdminPhotos() {
 
     setUploading(true);
     try {
-      await uploadAdminAlbumMedia({
+      const beforeIds = new Set(images.map((img) => String(img.id)));
+      const uploadResult = await uploadAdminAlbumMedia({
         albumId: selectedAlbumId,
         caption: uploadCaption.trim() || undefined,
         files,
       });
       const albumLabel = selectedAlbum?.className || selectedAlbum?.albumName || 'album';
+      const data = await loadPage(0);
+      const batch = data?.images || [];
+      markHighlighted(detectNewlyUploadedIds(beforeIds, batch, files, uploadResult));
       toast(
         files.length === 1
           ? `Added to ${albumLabel}.`
           : `${files.length} files added to ${albumLabel}.`,
         'success',
       );
-      await loadPage(0);
     } catch (err) {
-      toast(err?.message || 'Upload failed.', 'error');
+      const message = err instanceof ApiError
+        ? err.message
+        : (err?.message || 'Upload failed.');
+      toast(message, 'error');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -374,6 +444,7 @@ export default function AdminPhotos() {
       });
       const albumLabel = selectedAlbum?.className || selectedAlbum?.albumName || 'album';
       toast(`Added to ${albumLabel}.`, 'success');
+      markHighlighted([String(image.id)]);
     } catch (err) {
       toast(err?.message || 'Could not add to album.', 'error');
     } finally {
@@ -387,6 +458,11 @@ export default function AdminPhotos() {
     try {
       await deletePhotoStudioImage(deleteTarget.id);
       setImages((prev) => prev.filter((img) => img.id !== deleteTarget.id));
+      setHighlightedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(String(deleteTarget.id));
+        return next;
+      });
       toast('Photo deleted.', 'success');
       setDeleteTarget(null);
     } catch (err) {
@@ -410,6 +486,25 @@ export default function AdminPhotos() {
           subtitle="Browse your media library, pick a class album, then upload new files or add existing photos/videos with the + button on each item."
           icon={Image}
         />
+
+        {photosReady && !loading && (
+          <div className="admin-media-stats">
+            <div className="admin-media-stat">
+              <span className="admin-media-stat__value">{sortedImages.length}</span>
+              <span className="admin-media-stat__label">In library</span>
+            </div>
+            <div className="admin-media-stat">
+              <span className="admin-media-stat__value">{albums.length}</span>
+              <span className="admin-media-stat__label">Class albums</span>
+            </div>
+            <div className="admin-media-stat">
+              <span className="admin-media-stat__value">
+                {sortedImages.filter(isVideoItem).length}
+              </span>
+              <span className="admin-media-stat__label">Videos</span>
+            </div>
+          </div>
+        )}
 
         {!loading && config?.tenantConnected && (
           <p className="admin-photos-status">
@@ -441,7 +536,7 @@ export default function AdminPhotos() {
 
         {photosReady && (
           <section
-            className={`admin-photos-upload ${dragOver ? 'is-dragover' : ''}`}
+            className={`admin-photos-upload premium-card ${dragOver ? 'is-dragover' : ''}`}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
@@ -485,7 +580,7 @@ export default function AdminPhotos() {
               className="admin-photos-upload__input"
               onChange={(e) => handleUploadFiles(e.target.files)}
             />
-            <Upload size={22} />
+            <Upload size={22} className="admin-photos-upload__icon" />
             <p>
               {selectedAlbum
                 ? `Target: ${selectedAlbum.className || selectedAlbum.albumName}. Upload new files or use + on items below to add existing media.`
@@ -540,6 +635,7 @@ export default function AdminPhotos() {
                         onAddToAlbum={handleAddExistingToAlbum}
                         canAddToAlbum={Boolean(selectedAlbumId)}
                         adding={linkingId === image.id}
+                        isHighlighted={highlightedIds.has(String(image.id))}
                       />
                     ))}
                   </div>

@@ -11,7 +11,7 @@ export function normalizeApiBaseUrl(raw) {
   if (/\/api$/i.test(trimmed)) {
     if (import.meta.env.DEV) {
       console.warn(
-        '[SchoolBridge] VITE_API_URL should end with /api/v1 — auto-correcting to',
+        '[KidsActivites] VITE_API_URL should end with /api/v1 — auto-correcting to',
         `${trimmed}/v1`,
       );
     }
@@ -36,21 +36,35 @@ function apiUrlPointsToLocalhost(apiUrl) {
   }
 }
 
+function isPrivateLanHost(hostname) {
+  const h = (hostname || '').toLowerCase();
+  return /^192\.168\.\d{1,3}\.\d{1,3}$/.test(h)
+    || /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)
+    || /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(h);
+}
+
 /** In dev, rewrite localhost API URL when the app is opened via LAN IP. */
 function rewriteApiUrlForLanDev(apiUrl) {
   if (!import.meta.env.DEV || typeof window === 'undefined' || !apiUrl) return apiUrl;
-  if (!apiUrlPointsToLocalhost(apiUrl)) return apiUrl;
 
   const browserHost = window.location.hostname;
   if (isLocalhostHost(browserHost)) return apiUrl;
 
   try {
     const parsed = new URL(apiUrl);
+    const apiHost = parsed.hostname;
+    const shouldRewrite =
+      apiUrlPointsToLocalhost(apiUrl)
+      || (isPrivateLanHost(apiHost) && apiHost !== browserHost);
+
+    if (!shouldRewrite) return apiUrl;
+
     const port = parsed.port || '8081';
     const rewritten = `${parsed.protocol}//${browserHost}:${port}${parsed.pathname}${parsed.search}`;
     console.warn(
-      '[SchoolBridge] VITE_API_URL points at localhost but the app is open on',
-      `${browserHost}; rewriting API base to`,
+      '[KidsActivites] Rewriting API base for LAN dev:',
+      apiUrl,
+      '→',
       rewritten,
     );
     return rewritten;
@@ -66,8 +80,8 @@ export function isTenantSubdomainHost() {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname.toLowerCase();
   if (/^[a-z0-9][a-z0-9-]*\.localhost$/.test(host)) return true;
-  if (/^[a-z0-9][a-z0-9-]*\.schoolbridge\.app$/.test(host) && !host.startsWith('www.')) return true;
-  if (/^[a-z0-9][a-z0-9-]*\.schoolbridge\.com$/.test(host) && !host.startsWith('www.')) return true;
+  if (/^[a-z0-9][a-z0-9-]*\.kidsactivites\.app$/.test(host) && !host.startsWith('www.')) return true;
+  if (/^[a-z0-9][a-z0-9-]*\.kidsactivites\.com$/.test(host) && !host.startsWith('www.')) return true;
   return false;
 }
 
@@ -75,7 +89,7 @@ function resolveTenantSlugFromSubdomainHost() {
   if (typeof window === 'undefined') return null;
   const host = window.location.hostname.toLowerCase();
 
-  const prodMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.schoolbridge\.(?:app|com)$/);
+  const prodMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.kidsactivites\.(?:app|com)$/);
   if (prodMatch && prodMatch[1] !== 'www' && isValidTenantSlug(prodMatch[1])) return prodMatch[1];
 
   const localMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.localhost$/);
@@ -113,7 +127,7 @@ export function resolveApiBaseUrl() {
   if (isProductionMode()) {
     const tenant = resolveTenantSlug();
     if (tenant) {
-      return `https://${tenant}.api.schoolbridge.app/api/v1`;
+      return `https://${tenant}.api.kidsactivites.app/api/v1`;
     }
   }
 

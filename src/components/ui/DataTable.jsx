@@ -215,7 +215,7 @@ export function ResponsiveDataTablePanel({
   );
 }
 
-/** Standard SchoolBridge table shell — desktop only (legacy) */
+/** Standard KidsActivites table shell — desktop only (legacy) */
 export function DataTable({ children, minWidth = 900, className = '', nested = false }) {
   const wrapClass = nested
     ? `overflow-x-auto ${className}`

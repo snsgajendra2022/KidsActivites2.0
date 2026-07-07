@@ -14,7 +14,7 @@ export async function initQrLogin() {
   return routeRequest({
     mockFn: async () => ({
       sessionId: 'mock-qr-session',
-      qrPayload: 'schoolbridge://pair?tenant=demo&session=mock&nonce=abc123',
+      qrPayload: 'kidsactivites://pair?tenant=demo&session=mock&nonce=abc123',
       expiresIn: 300,
       status: 'PENDING',
     }),

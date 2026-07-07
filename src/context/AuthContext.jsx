@@ -17,7 +17,7 @@ import { ROLE_DASHBOARD } from '../constants/roles.js';
 import { updateUserProfile, changeUserPassword } from '../services/userService.js';
 
 const AuthContext = createContext(null);
-const STORAGE_KEY = 'schoolbridge_user';
+const STORAGE_KEY = 'kidsactivites_user';
 
 function persistUser(user) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(user));

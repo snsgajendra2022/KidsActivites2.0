@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-const DEFAULT_BG = '/assets/schoolbridge-cta-placeholder.svg';
+const DEFAULT_BG = '/assets/kidsactivites-cta-placeholder.svg';
 
 export default function FinalImageCTA({
   title,

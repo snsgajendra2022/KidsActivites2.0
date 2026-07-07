@@ -399,7 +399,11 @@ export default function Login() {
           </div>
           <div>
             <p className="auth-split__feature-label">QR Login</p>
+<<<<<<< HEAD
             <p className="auth-split__feature-text">Scan with the Kids Activities mobile app</p>
+=======
+            <p className="auth-split__feature-text">Scan with the KidsActivites mobile app</p>
+>>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
           </div>
         </div>
       )}

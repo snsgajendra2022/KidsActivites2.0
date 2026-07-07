@@ -1,4 +1,28 @@
-import { api } from './api/client.js';
+import { api, ApiError } from './api/client.js';
+import { extractPhotoStudioImageId, uploadPhotoStudioImage } from './photoStudioService.js';
+
+function isUploadEndpointUnavailable(err) {
+  if (!err) return false;
+  if (err instanceof TypeError) return true;
+  if (err instanceof ApiError) {
+    if (err.status === 0 || err.code === 'NETWORK_ERROR') return true;
+    if ([404, 405, 413, 501, 502, 503].includes(err.status)) return true;
+  }
+  return err?.message === 'Failed to fetch';
+}
+
+async function uploadViaPhotoStudioAndLink({ albumId, caption, files }) {
+  const externalAssetIds = [];
+  for (const file of files) {
+    const result = await uploadPhotoStudioImage(file);
+    const id = extractPhotoStudioImageId(result);
+    if (!id) {
+      throw new ApiError(`Uploaded "${file.name}" but the server did not return an image id.`, 500);
+    }
+    externalAssetIds.push(String(id));
+  }
+  return linkExistingToAlbum({ albumId, externalAssetIds, caption });
+}
 
 export const UPLOAD_TARGETS = {
   CLASS_ALBUM: 'CLASS_ALBUM',
@@ -70,7 +94,17 @@ export async function uploadAdminAlbumMedia({ albumId, caption, files }) {
   formData.append('albumId', albumId);
   if (caption) formData.append('caption', caption);
   files.forEach((file) => formData.append('files', file));
-  return api.post('/admin/albums/upload', formData);
+
+  try {
+    return await api.post('/admin/albums/upload', formData);
+  } catch (primaryErr) {
+    if (!isUploadEndpointUnavailable(primaryErr)) throw primaryErr;
+    console.warn(
+      '[KidsActivites] Album upload endpoint unavailable; using photo-studio upload + album link.',
+      primaryErr?.message,
+    );
+    return uploadViaPhotoStudioAndLink({ albumId, caption, files });
+  }
 }
 
 export async function updateAlbumMedia(albumId, mediaLinkId, body) {
