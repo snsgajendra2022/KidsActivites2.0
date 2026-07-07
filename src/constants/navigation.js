@@ -38,6 +38,7 @@ export const SCHOOL_ADMIN_NAV = [
   ADMIN_DASHBOARD,
   PORTAL_BRANDING_NAV,
   { id: 'admin_teachers', to: '/admin/teachers', label: 'Teachers', icon: Users, iconName: 'Users', section: 'School Setup' },
+  { id: 'admin_users', to: '/admin/all-users', label: 'All Users', icon: Users, iconName: 'Users', section: 'Platform' },
   ...ADMIN_CORE_NAV,
 ];
 
