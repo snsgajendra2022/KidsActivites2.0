@@ -1,5 +1,6 @@
 import { getPhotos } from './mediaService.js';
 import { getConversationsForUser } from './chatService.js';
+import { getConversationUnread } from '../utils/chatUnread.js';
 import usersData from '../data/users.json';
 import { TEACHER_CLASSES, CLASS_STUDENTS } from '../data/mockPhotos.js';
 import { fetchAssignableClassOptions } from './classManagementService.js';
@@ -152,7 +153,7 @@ async function mockGetTeacherStats(teacherId) {
     getPhotos({ teacherId }),
     getConversationsForUser(teacherId),
   ]);
-  const unread = conversations.reduce((sum, c) => sum + (c.unread?.[teacherId] || 0), 0);
+  const unread = conversations.reduce((sum, c) => sum + getConversationUnread(c, teacherId), 0);
   const totalStudents = TEACHER_CLASSES.reduce((sum, c) => sum + c.studentCount, 0);
 
   return {

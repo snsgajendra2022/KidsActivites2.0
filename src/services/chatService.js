@@ -1,7 +1,15 @@
 import { INITIAL_CONVERSATIONS, INITIAL_MESSAGES } from '../data/mockChat.js';
+import { normalizeConversations } from '../utils/chatUnread.js';
 import { delay, getStore, setStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
+
+function unwrapConversationList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.conversations)) return data.conversations;
+  return [];
+}
 
 const CONV_KEY = 'sb_conversations';
 const MSG_KEY = 'sb_messages';
@@ -61,9 +69,36 @@ export async function getConversationsForUser(userId) {
   return routeRequest({
     mockFn: async () => {
       await delay();
-      return getConversations().filter((c) => c.participants.includes(userId));
+      const list = getConversations().filter((c) => c.participants.includes(userId));
+      return normalizeConversations(list, userId);
     },
-    apiFn: () => api.get('/chat/conversations'),
+    apiFn: async () => {
+      const data = await api.get('/chat/conversations');
+      return normalizeConversations(unwrapConversationList(data), userId);
+    },
+  });
+}
+
+export async function getTotalUnreadChatCount(userId) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const { sumConversationUnread } = await import('../utils/chatUnread.js');
+      const list = getConversations().filter((c) => c.participants.includes(userId));
+      return sumConversationUnread(list, userId);
+    },
+    apiFn: async () => {
+      try {
+        const data = await api.get('/chat/unread-count');
+        if (Number.isFinite(data)) return data;
+        if (Number.isFinite(data?.count)) return data.count;
+        if (Number.isFinite(data?.total)) return data.total;
+        if (Number.isFinite(data?.unreadCount)) return data.unreadCount;
+      } catch {
+        // Optional endpoint — fall back to per-conversation totals.
+      }
+      return null;
+    },
   });
 }
 
@@ -91,8 +126,16 @@ export async function sendMessage(conversationId, senderId, text) {
       const convs = getConversations();
       const idx = convs.findIndex((c) => c.id === conversationId);
       if (idx >= 0) {
-        convs[idx].lastMessage = text;
-        convs[idx].lastMessageAt = msg.sentAt;
+        const conv = convs[idx];
+        conv.lastMessage = text;
+        conv.lastMessageAt = msg.sentAt;
+        conv.lastMessageSenderId = senderId;
+        conv.unread = { ...(conv.unread || {}) };
+        conv.participants.forEach((pid) => {
+          if (pid !== senderId) {
+            conv.unread[pid] = (conv.unread[pid] || 0) + 1;
+          }
+        });
         setStore(CONV_KEY, convs);
       }
       return msg;

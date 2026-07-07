@@ -12,8 +12,16 @@ import {
   getChatContacts,
   createConversation,
 } from '../../services/chatService.js';
-import { requestChatUnreadRefresh } from '../../hooks/useUnreadMessageCount.js';
+import {
+  publishChatUnreadSnapshot,
+  clearChatUnreadSnapshot,
+  requestChatUnreadRefresh,
+} from '../../hooks/useUnreadMessageCount.js';
 import { subscribeToConversation } from '../../services/chatRealtime.js';
+import {
+  getConversationUnread,
+  patchConversationUnread,
+} from '../../utils/chatUnread.js';
 import {
   Send, MessageCircle, Search, ArrowLeft, Shield, Plus, X, Check, CheckCheck,
 } from 'lucide-react';
@@ -94,6 +102,15 @@ export default function ChatPage() {
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!user?.id) return undefined;
+    publishChatUnreadSnapshot(conversations, user.id);
+    return () => {
+      clearChatUnreadSnapshot();
+      requestChatUnreadRefresh();
+    };
+  }, [conversations, user?.id]);
+
+  useEffect(() => {
     loadConversations();
   }, [loadConversations]);
 
@@ -119,9 +136,7 @@ export default function ChatPage() {
     markConversationRead(active, user.id)
       .then(() => {
         setConversations((prev) => prev.map((c) => (
-          c.id === active
-            ? { ...c, unread: { ...c.unread, [user.id]: 0 } }
-            : c
+          c.id === active ? patchConversationUnread(c, user.id, 0) : c
         )));
         requestChatUnreadRefresh();
       })
@@ -158,16 +173,18 @@ export default function ChatPage() {
 
         setConversations((prev) => prev.map((c) => {
           if (c.id !== conversationId) return c;
-          const unreadCount = c.unread?.[user.id] || 0;
-          return {
-            ...c,
-            lastMessage: msg.text,
-            lastMessageAt: msg.sentAt,
-            unread: {
-              ...c.unread,
-              [user.id]: isActive || msg.senderId === user.id ? 0 : unreadCount + 1,
+          const unreadCount = getConversationUnread(c, user.id);
+          const nextUnread = isActive || msg.senderId === user.id ? 0 : unreadCount + 1;
+          return patchConversationUnread(
+            {
+              ...c,
+              lastMessage: msg.text,
+              lastMessageAt: msg.sentAt,
+              lastMessageSenderId: msg.senderId,
             },
-          };
+            user.id,
+            nextUnread,
+          );
         }));
         requestChatUnreadRefresh();
         return;
@@ -180,9 +197,7 @@ export default function ChatPage() {
         }
         if (readerId === user.id) {
           setConversations((prev) => prev.map((c) => (
-            c.id === conversationId
-              ? { ...c, unread: { ...c.unread, [user.id]: 0 } }
-              : c
+            c.id === conversationId ? patchConversationUnread(c, user.id, 0) : c
           )));
           requestChatUnreadRefresh();
         }
@@ -329,7 +344,7 @@ export default function ChatPage() {
                 filteredConversations.map((c) => {
                   const oid = getOtherParticipant(c, user.id);
                   const name = c.participantNames[oid];
-                  const unread = c.unread?.[user.id] || 0;
+                  const unread = getConversationUnread(c, user.id);
                   return (
                     <button
                       key={c.id}
