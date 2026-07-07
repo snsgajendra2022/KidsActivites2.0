@@ -873,7 +873,7 @@
 }
 
 .kz-p1-row--languages .kz-field-label {
-  min-width: 53mm;
+  min-width: 49.6mm;
 }
 
 .kz-p1-row--contact .kz-field-label {
@@ -996,28 +996,44 @@
 }
 
 .kz-p1-address-line2 {
-  width: 100%;
+  width: 168.0mm;
+  margin-left: 18mm;
 }
 
 .kz-p1-address-line3 {
   display: flex;
   align-items: center;
+  width: 168.0mm;
+  margin-left: 18mm;
   justify-content: space-between;
-  gap: 3mm;
-  width: 100%;
+  gap: 0;
 }
 
 .kz-p1-address-line3__boxes {
-  flex: 0 0 70%;
-  max-width: 70%;
+  width: 129.6mm;
 }
 
 .kz-p1-address-line3 .kz-char-field--inline {
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  width: 38.4mm;
+  justify-content: space-between;
+  margin: 0;
+  gap: 0;
 }
 
 .kz-p1-address-line3 .kz-char-field--inline .kz-field-label {
-  min-width: 10mm;
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 7.5pt;
+  margin: 0 1mm;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.kz-p1-address-line3 .kz-char-field--inline .kz-char-boxes {
+  width: 28.8mm;
+  flex: 0 0 28.8mm;
 }
 
 /* LEARN watermark */
@@ -1278,10 +1294,12 @@
 }
 
 .kz-p3-label-fixed {
-  flex: 0 0 26mm;
-  width: 26mm;
-  line-height: 1.2;
+  flex: 0 0 30mm;
+  width: 30mm;
+  line-height: 1.1;
   padding-top: 0.6mm;
+  white-space: normal;
+  word-wrap: break-word;
 }
 
 .kz-p3-form-row--center .kz-p3-label-fixed {
@@ -1297,6 +1315,32 @@
   flex: 0 0 auto;
   white-space: nowrap;
   margin-left: 0.5mm;
+}
+
+.kz-p3-address-line3-inputs {
+  display: flex;
+  align-items: center;
+  width: 57.6mm;
+  flex: 0 0 57.6mm;
+  justify-content: space-between;
+}
+
+.kz-p3-addr-line3-wrapper {
+  width: 19.2mm;
+  flex: 0 0 19.2mm;
+}
+
+.kz-p3-address-line3-inputs .kz-p3-inline-label {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 7.5pt;
+  margin: 0 1mm;
+  white-space: nowrap;
+}
+
+.kz-p3-pin-wrapper {
+  width: 28.8mm;
+  flex: 0 0 28.8mm;
 }
 
 .kz-guardian-col {
@@ -1540,17 +1584,30 @@
 .kz-emergency-col__address .kz-address-line3 {
   display: flex;
   align-items: center;
-  gap: 1mm;
+  width: 62.4mm;
+  flex: 0 0 62.4mm;
+  justify-content: space-between;
+  gap: 0;
   min-width: 0;
   flex-wrap: nowrap;
 }
 
-.kz-emergency-col__address .kz-address-line3 > .kz-char-boxes {
-  flex: 0 0 auto;
+.kz-emergency-col__address .kz-address-line3 > .kz-char-boxes:first-child {
+  width: 24.0mm;
+  flex: 0 0 24.0mm;
 }
 
 .kz-emergency-col__address .kz-address-line3 > .kz-p4-inline-label {
   flex: 0 0 auto;
+  text-align: center;
+  font-size: 7.5pt;
+  margin: 0 1mm;
+  white-space: nowrap;
+}
+
+.kz-p4-pin-wrapper {
+  width: 28.8mm;
+  flex: 0 0 28.8mm;
 }
 
 .kz-p4-learn-mark {
@@ -1675,6 +1732,10 @@
   grid-template-columns: 1fr 1fr;
   gap: 2mm 4mm;
   margin-bottom: 2mm;
+}
+
+.kz-p5-office__grid .kz-field-label {
+  min-width: 32mm;
 }
 
 .kz-p5-office__grid--restricted {

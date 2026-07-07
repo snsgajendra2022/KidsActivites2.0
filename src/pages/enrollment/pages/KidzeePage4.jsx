@@ -11,7 +11,7 @@ import {
 } from "../kidzeePrintFields.js";
 
 const P4_ROW_BOXES = 13;
-const P4_ADDR_LINE3_BOXES = 6;
+const P4_ADDR_LINE3_BOXES = 5;
 const P4_PIN_BOXES = 6;
 
 function EmergencyContactCol({ index, contact, onChange, readOnly }) {
@@ -19,16 +19,31 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
     onChange(`emergencyContacts.${index}.${field}`, value);
   const c = contact || {};
 
+  const emailLine1 = (c.email || '').slice(0, P4_ROW_BOXES);
+  const emailLine2 = (c.email || '').slice(P4_ROW_BOXES, P4_ROW_BOXES * 2);
+
+  const handleEmailChange = (rowIndex, val) => {
+    let combined = '';
+    if (rowIndex === 0) {
+      combined = val.padEnd(P4_ROW_BOXES, ' ').slice(0, P4_ROW_BOXES) + emailLine2;
+    } else {
+      combined = emailLine1.padEnd(P4_ROW_BOXES, ' ') + val;
+    }
+    set('email', combined.trimEnd());
+  };
+
   const pinSuffix = (
     <>
       <span className="kz-p4-inline-label kz-field-label">Pin:</span>
-      <CharBoxInput
-        bare
-        boxes={P4_PIN_BOXES}
-        value={c.pin}
-        onChange={(v) => set("pin", v)}
-        readOnly={readOnly}
-      />
+      <div className="kz-p4-pin-wrapper">
+        <CharBoxInput
+          bare
+          boxes={P4_PIN_BOXES}
+          value={c.pin}
+          onChange={(v) => set("pin", v)}
+          readOnly={readOnly}
+        />
+      </div>
     </>
   );
 
@@ -72,10 +87,20 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
         label="E-mail:"
         labelClass="kz-p4-field-label"
         boxes={P4_ROW_BOXES}
-        value={c.email}
-        onChange={(v) => set("email", v)}
+        value={emailLine1}
+        onChange={(v) => handleEmailChange(0, v)}
         readOnly={readOnly}
       />
+      <div className="kz-char-field">
+        <div className="kz-p4-field-label kz-field-label" aria-hidden />
+        <CharBoxInput
+          bare
+          boxes={P4_ROW_BOXES}
+          value={emailLine2}
+          onChange={(v) => handleEmailChange(1, v)}
+          readOnly={readOnly}
+        />
+      </div>
     </div>
   );
 }
@@ -99,7 +124,6 @@ export default function KidzeePage4({
       </header>
 
       <h3 className="kz-section-title kz-p4-subtitle">Child&apos;s Immunisation History</h3>
-
       <PaperTable className="kz-immun-table">
         <thead>
           <tr>
