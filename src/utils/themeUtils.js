@@ -52,7 +52,7 @@ export function applyPortalTheme(theme = {}, enrollmentTheme = {}) {
 
 export const THEME_PRESETS = [
   { name: 'Institutional Navy', brandColor: '#0B1F3A', accentColor: '#C9A24A' },
-  { name: 'KidsActivites Classic', brandColor: '#091426', accentColor: '#C9A24A' },
+  { name: 'Kids Activities Classic', brandColor: '#091426', accentColor: '#C9A24A' },
   { name: 'Forest Green', brandColor: '#1B4332', accentColor: '#2D6A4F' },
   { name: 'Royal Purple', brandColor: '#3C1874', accentColor: '#7B2CBF' },
   { name: 'Crimson', brandColor: '#7F1D1D', accentColor: '#DC2626' },

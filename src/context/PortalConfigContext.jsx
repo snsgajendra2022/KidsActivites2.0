@@ -327,8 +327,8 @@ export function PortalConfigProvider({ children, user = null }) {
         ? (platform?.enrollmentForm || DEFAULT_ENROLLMENT_FORM)
         : config?.enrollmentForm,
       portalName: isPlatformPublic
-        ? (platform?.platformName || 'KidsActivites')
-        : (config?.portalName || 'KidsActivites'),
+        ? (platform?.platformName || 'Kids Activities')
+        : (config?.portalName || 'Kids Activities'),
       footerText: isPlatformPublic
         ? (platform?.footerText || DEFAULT_PORTAL_CONFIG.footerText)
         : (config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
