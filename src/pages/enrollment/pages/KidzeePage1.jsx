@@ -248,24 +248,22 @@ export default function KidzeePage1({
         ))}
       </div>
 
-      {/* Languages — 26 boxes */}
+      {/* Languages — 28 boxes */}
       <div className="kz-p1-row kz-p1-row--languages">
         <CharBoxInput
           label="Language(s) spoken at home:"
-          boxes={26}
-
+          boxes={28}
           value={child.languagesAtHome}
           onChange={(v) => set("child.languagesAtHome", v)}
           readOnly={readOnly}
         />
       </div>
 
-      {/* Address — 34 + 38 full-width + 25 (70%) + Pin 6 */}
+      {/* Address — 35 + 35 indented + 27 + Pin 6 */}
       <div className="kz-p1-address-block">
         <CharBoxInput
           label="Address:"
-          boxes={34}
-
+          boxes={35}
           value={child.addressLine1}
           onChange={(v) => set("child.addressLine1", v)}
           readOnly={readOnly}
@@ -273,8 +271,7 @@ export default function KidzeePage1({
         <div className="kz-p1-address-line2">
           <CharBoxInput
             bare
-            boxes={38}
-
+            boxes={35}
             value={child.addressLine2}
             onChange={(v) => set("child.addressLine2", v)}
             readOnly={readOnly}
@@ -284,8 +281,7 @@ export default function KidzeePage1({
           <div className="kz-p1-address-line3__boxes">
             <CharBoxInput
               bare
-              boxes={25}
-
+              boxes={24}
               value={child.addressLine3}
               onChange={(v) => set("child.addressLine3", v)}
               readOnly={readOnly}
@@ -294,7 +290,6 @@ export default function KidzeePage1({
           <CharBoxInput
             label="Pin:"
             boxes={6}
-
             value={child.pin}
             onChange={(v) => set("child.pin", v)}
             readOnly={readOnly}

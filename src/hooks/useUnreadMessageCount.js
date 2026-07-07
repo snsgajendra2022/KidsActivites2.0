@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { getAccessToken } from '../services/api/tokenStorage.js';
 import { getConversationsForUser, getTotalUnreadChatCount } from '../services/chatService.js';
 import { subscribeToConversation } from '../services/chatRealtime.js';
 import {
@@ -48,7 +49,7 @@ export function clearChatUnreadSnapshot() {
 
 /** Total unread chat messages for the signed-in user (all roles). */
 export function useUnreadMessageCount() {
-  const { user } = useAuth();
+  const { user, bootstrapping } = useAuth();
   const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [serverTotal, setServerTotal] = useState(null);
@@ -58,7 +59,7 @@ export function useUnreadMessageCount() {
   const onChatRoute = CHAT_ROUTE_RE.test(location.pathname);
 
   const refresh = useCallback(() => {
-    if (!user?.id) {
+    if (bootstrapping || !user?.id || !getAccessToken()) {
       setConversations([]);
       setServerTotal(null);
       return Promise.resolve();
@@ -77,14 +78,14 @@ export function useUnreadMessageCount() {
         setConversations([]);
         setServerTotal(null);
       });
-  }, [user?.id]);
+  }, [user?.id, bootstrapping]);
 
   useEffect(() => {
     refresh();
   }, [refresh, location.pathname]);
 
   useEffect(() => {
-    if (!user?.id) return undefined;
+    if (bootstrapping || !user?.id || !getAccessToken()) return undefined;
 
     const onRefresh = () => { refresh(); };
     const onSnapshot = (event) => {
@@ -113,7 +114,7 @@ export function useUnreadMessageCount() {
       window.removeEventListener('focus', onRefresh);
       clearInterval(interval);
     };
-  }, [user?.id, refresh, onChatRoute]);
+  }, [user?.id, refresh, onChatRoute, bootstrapping]);
 
   const conversationIdsKey = useMemo(
     () => conversations.map((c) => c.id).sort().join(','),
@@ -121,7 +122,7 @@ export function useUnreadMessageCount() {
   );
 
   useEffect(() => {
-    if (!user?.id || !conversationIdsKey) return undefined;
+    if (bootstrapping || !user?.id || !getAccessToken() || !conversationIdsKey) return undefined;
 
     const ids = conversationIdsKey.split(',').filter(Boolean);
     const unsubs = ids.map((conversationId) => subscribeToConversation(conversationId, (payload) => {
@@ -157,7 +158,7 @@ export function useUnreadMessageCount() {
     return () => {
       unsubs.forEach((unsub) => unsub());
     };
-  }, [conversationIdsKey, user?.id]);
+  }, [conversationIdsKey, user?.id, bootstrapping]);
 
   const fetchedTotal = sumConversationUnread(conversations, user?.id);
   const combined = Math.max(fetchedTotal, liveTotal);

@@ -38,6 +38,7 @@ function PermissionSignRow({
         onChange={onSignature}
         readOnly={readOnly}
         className="kz-perm-sign__sig"
+        hidePreview={true}
       />
     </div>
   );
@@ -213,6 +214,7 @@ export default function KidzeePage5({
           onChange={(v) => set("officeUse.signature", v)}
           readOnly={officeReadOnly}
           className="kz-p5-office__sig"
+          hidePreview={true}
         />
       </div>
     </PrintPage>

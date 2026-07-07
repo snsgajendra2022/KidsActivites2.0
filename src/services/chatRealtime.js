@@ -7,7 +7,7 @@ function getChatSocketUrl() {
   const base = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
   const tenantSlug = resolveTenantSlug();
   const query = tenantSlug ? `?${TENANT_HEADER}=${encodeURIComponent(tenantSlug)}` : '';
-  return `${base}/api/v1/chat${query}`;
+  return `${base}/api/v1/ws/chat${query}`;
 }
 
 let client = null;

@@ -21,6 +21,7 @@ import { assignFee, verifyPayment, rejectPayment, getFeeByApplication } from '..
 import { getFeeStructures, resolveFeeBreakdownForClass } from '../../services/settingsService.js';
 import { listClassFees, listClasses, resolveFeeBreakdownFromClassFees } from '../../services/classManagementService.js';
 import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
+import { getAdminActionAvailability } from '../../utils/adminApplicationActions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import DocumentPreviewModal from '../../components/documents/DocumentPreviewModal.jsx';
@@ -216,25 +217,51 @@ export default function ApplicationReview() {
     },
   ];
 
+  const actions = app ? getAdminActionAvailability(app.status, fee) : null;
+
   const sidebar = app ? (
     <>
       <section className="sb-card app-review-card">
         <h3 className="app-review-card-title">Admin Actions</h3>
-        <div className="app-review-actions">
-          <Button variant="outline" onClick={() => setModal('correction')}>Request Correction</Button>
-          <Button variant="secondary" onClick={() => act(() => verifyDocuments(id), 'Documents verified successfully.')}>Verify Documents</Button>
-          <Button variant="primary" onClick={() => setModal('approve')}>Approve Application</Button>
-          <Button variant="danger" onClick={() => setModal('reject')}>Reject Application</Button>
-          <Button variant="secondary" onClick={() => setModal('assignFee')}>Assign Fee</Button>
-          {fee?.status === 'payment_submitted' && (
-            <>
+        {actions?.isTerminal ? (
+          <p className="text-sm text-[#45474c]">
+            No further actions are available for this application.
+          </p>
+        ) : actions?.hasAnyAction ? (
+          <div className="app-review-actions">
+            {actions.requestCorrection && (
+              <Button variant="outline" onClick={() => setModal('correction')}>Request Correction</Button>
+            )}
+            {actions.verifyDocuments && (
+              <Button variant="secondary" onClick={() => act(() => verifyDocuments(id), 'Documents verified successfully.')}>Verify Documents</Button>
+            )}
+            {actions.approve && (
+              <Button variant="primary" onClick={() => setModal('approve')}>Approve Application</Button>
+            )}
+            {actions.reject && (
+              <Button variant="danger" onClick={() => setModal('reject')}>Reject Application</Button>
+            )}
+            {actions.assignFee && (
+              <Button variant="secondary" onClick={() => setModal('assignFee')}>Assign Fee</Button>
+            )}
+            {actions.verifyPayment && (
               <Button variant="success" onClick={() => setModal('verifyPayment')}>Verify Payment</Button>
+            )}
+            {actions.rejectPayment && (
               <Button variant="danger" onClick={() => setModal('rejectPayment')}>Reject Payment</Button>
-            </>
-          )}
-          <Button variant="primary" onClick={() => act(() => createAccount(id), 'Parent account created successfully.')}>Create Account</Button>
-          <Button variant="success" onClick={() => act(() => confirmAdmission(id), 'Admission confirmed successfully.')}>Confirm Admission</Button>
-        </div>
+            )}
+            {actions.createAccount && (
+              <Button variant="primary" onClick={() => act(() => createAccount(id), 'Parent account created successfully.')}>Create Account</Button>
+            )}
+            {actions.confirmAdmission && (
+              <Button variant="success" onClick={() => act(() => confirmAdmission(id), 'Admission confirmed successfully.')}>Confirm Admission</Button>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-[#45474c]">
+            No actions are available at the current stage.
+          </p>
+        )}
       </section>
 
       {fee && (
