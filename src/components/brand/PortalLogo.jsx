@@ -1,11 +1,6 @@
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
-<<<<<<< HEAD
 import defaultLogo from '../../assets/kids_activities_logo.png';
 import footerDefaultLogo from '../../assets/kids_activities_logo_white.png';
-=======
-import defaultLogo from '../../assets/kidsactivites_logo.png';
-import footerDefaultLogo from '../../assets/FooterdefaultLogo.png';
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
 
 const SIZES = {
   icon: {

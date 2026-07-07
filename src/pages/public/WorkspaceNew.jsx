@@ -193,11 +193,7 @@ export default function WorkspaceNew() {
 
         <h1 className="portal-public-title font-display mb-2 text-3xl font-bold">Create your workspace</h1>
         <p className="mb-8 text-muted">
-<<<<<<< HEAD
           Set up a dedicated Kids Activities environment for your school. We&apos;ll email you a confirmation link before
-=======
-          Set up a dedicated KidsActivites environment for your school. We&apos;ll email you a confirmation link before
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
           provisioning.
         </p>
 

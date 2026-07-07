@@ -7,16 +7,11 @@ import { cloneEnrollmentFormConfig, DEFAULT_ENROLLMENT_FORM } from '../data/defa
 const PLATFORM_KEY = 'sb_platform_config';
 
 const DEFAULT_PLATFORM_CONFIG = {
-<<<<<<< HEAD
   platformName: 'Kids Activities',
-=======
-  platformName: 'KidsActivites',
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
-  tagline: 'Multi-school enrollment platform',
+  tagline: 'Activity enrollment and parent communication platform',
   footerText: DEFAULT_PORTAL_CONFIG.footerText,
-  heroHeadline: 'Modern School Enrollment,\nBuilt for Premium Education',
-  heroSubtext:
-    "Complete your child's admission online. Submit documents, pay fees, and stay connected — all in one trusted platform.",
+  heroHeadline: 'Manage Kids Activities,\nAdmissions, and Parents\nin One Platform',
+  heroSubtext: 'Launch your activity workspace in minutes.\nManage enrollments, schedules, payments, documents, and parent communication from one trusted platform.',
   school: { ...DEFAULT_PORTAL_CONFIG.school },
   branding: {
     heroImageUrl: DEFAULT_PORTAL_CONFIG.branding.heroImageUrl,
@@ -33,6 +28,10 @@ export function getDefaultPlatformConfig() {
 }
 
 function mergePlatformConfig(stored) {
+  if (stored) {
+    delete stored.heroHeadline;
+    delete stored.heroSubtext;
+  }
   const base = { ...DEFAULT_PLATFORM_CONFIG, ...(stored || {}) };
   return {
     ...base,

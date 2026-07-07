@@ -10,7 +10,7 @@ export const FOOTER_LINKS = [
 ];
 
 export default function PublicFooter({ compact = false, minimal = false }) {
-  const { portalName, footerText } = usePortalConfig();
+  const { portalName, footerText, tagline } = usePortalConfig();
 
   if (minimal) {
     return (
@@ -40,7 +40,7 @@ export default function PublicFooter({ compact = false, minimal = false }) {
             </span>
           </div>
           <p className="mt-2 text-center text-sm font-medium text-on-primary/80 md:mt-1 md:text-left">
-            Multi-school enrollment platform
+            {tagline || 'Activity enrollment and parent communication platform'}
           </p>
           <p className="mt-1 text-center text-[11px] text-on-primary-subtle md:text-left">
             {footerText}

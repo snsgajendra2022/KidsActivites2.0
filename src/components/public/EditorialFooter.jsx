@@ -43,7 +43,7 @@ export default function EditorialFooter({ compact = false }) {
             <p className="sb-editorial-footer__heading">Contact</p>
             <ul className="sb-editorial-footer__links">
               <li><a href="tel:+12144940908">+1 214-494-0908</a></li>
-              <li><a href="mailto:sandeep.gupta@snssystem.com">sandeep.gupta@snssystem.com</a></li>
+              <li><a href="mailto:support@kidsactivities.com">support@kidsactivities.com</a></li>
             </ul>
           </div>
 
