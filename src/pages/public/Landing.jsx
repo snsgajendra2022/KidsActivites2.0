@@ -123,11 +123,7 @@ export default function Landing() {
       <MapFeatureSection
         title={isPlatformHome ? 'Schools Across the Region' : 'Visit Our Campus'}
         subtitle={isPlatformHome
-<<<<<<< HEAD
           ? 'Kids Activities connects families with schools in their community.'
-=======
-          ? 'KidsActivites connects families with schools in their community.'
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
           : `Experience ${school?.name || 'our school'} in person or explore online.`}
         address={isPlatformHome ? undefined : school?.address}
       />

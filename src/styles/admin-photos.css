@@ -339,6 +339,11 @@
   background: color-mix(in srgb, var(--admin-purple-mid) 16%, white);
 }
 
+.admin-photos-card__actions {
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+
 .admin-photos-card__btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

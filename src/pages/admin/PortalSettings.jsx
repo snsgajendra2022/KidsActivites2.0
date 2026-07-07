@@ -139,11 +139,7 @@ export default function PortalSettings() {
   useEffect(() => {
     if (platform) {
       setPlatformForm({
-<<<<<<< HEAD
         platformName: platform.platformName || 'Kids Activities',
-=======
-        platformName: platform.platformName || 'KidsActivites',
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
         tagline: platform.tagline || '',
         footerText: platform.footerText || DEFAULT_PORTAL_CONFIG.footerText,
         heroHeadline: platform.heroHeadline || '',
@@ -263,11 +259,7 @@ export default function PortalSettings() {
     setSaving(true);
     try {
       await updatePlatformConfig({
-<<<<<<< HEAD
         platformName: platformForm.platformName.trim() || 'Kids Activities',
-=======
-        platformName: platformForm.platformName.trim() || 'KidsActivites',
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
         tagline: platformForm.tagline.trim(),
         footerText: platformForm.footerText.trim(),
         heroHeadline: platformForm.heroHeadline.trim(),
@@ -641,11 +633,7 @@ export default function PortalSettings() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-brand">QR Login</p>
-<<<<<<< HEAD
                     <p className="text-xs text-muted">Sign in on web by scanning with the Kids Activities mobile app</p>
-=======
-                    <p className="text-xs text-muted">Sign in on web by scanning with the KidsActivites mobile app</p>
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
                   </div>
                 </div>
                 <button

@@ -74,7 +74,7 @@ svg {
 }
 
 /* Touch-friendly minimum targets */
-button:not(.media-card-toolbar__btn):not(.admin-photos-card__btn),
+button:not(.media-card-toolbar__btn):not(.admin-photos-card__btn):not([data-close-button]),
 [role='button']:not(.media-card-toolbar__btn),
 a.sb-btn-primary,
 a.sb-btn-secondary,
@@ -92,11 +92,9 @@ button.icon-only:not(.media-card-toolbar__btn),
   min-width: 2.75rem;
 }
 
-/* Compact icon toolbars stay one row (photos, albums, toasts) */
+/* Compact icon toolbars stay one row (photos, albums) */
 .media-card-toolbar__btn,
-.admin-photos-card__btn,
-[data-sonner-toast] [data-close-button],
-[data-sonner-toaster] [data-close-button] {
+.admin-photos-card__btn {
   min-height: unset;
   min-width: unset;
 }

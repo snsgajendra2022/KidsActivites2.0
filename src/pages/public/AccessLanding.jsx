@@ -99,11 +99,7 @@ export default function AccessLanding() {
             <div className="sb-access-card__icon">
               <Building2 size={22} />
             </div>
-<<<<<<< HEAD
             <h2>New to Kids Activities?</h2>
-=======
-            <h2>New to KidsActivites?</h2>
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
             <p>
               Request a dedicated workspace for your school. We&apos;ll send a confirmation email and provision your
               tenant after you verify.

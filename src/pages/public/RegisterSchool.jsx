@@ -128,15 +128,9 @@ export default function RegisterSchool() {
     <PublicLayout className="sb-editorial-page">
       <CinematicHero
         compact
-<<<<<<< HEAD
         badge="Kids Activities Platform"
         title="Register your school workspace"
         subtitle="Create your dedicated Kids Activities portal with a unique URL. Manage admissions, fees, and parent communication from one place."
-=======
-        badge="KidsActivites Platform"
-        title="Register your school workspace"
-        subtitle="Create your dedicated KidsActivites portal with a unique URL. Manage admissions, fees, and parent communication from one place."
->>>>>>> 0e6e0343f6eae898026f88eb7524d1d7016e697b
       />
 
       <JourneyNav steps={REGISTER_JOURNEY} activeIndex={1} compact />

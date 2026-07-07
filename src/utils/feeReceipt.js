@@ -108,7 +108,7 @@ export function buildReceiptHtml(fee, { portalName, school } = {}) {
 <body>
   <div class="receipt">
     <div class="head">
-      <h1>${portalName || 'KidsActivites'}</h1>
+      <h1>${portalName || 'Kids Activities'}</h1>
       <p>${school?.name || 'School'} · Fee Payment Receipt</p>
     </div>
     <dl class="meta">
