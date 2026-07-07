@@ -12,6 +12,7 @@ import { isDemoUser } from '../services/api/demoMode.js';
 import { clearMockStorage } from '../services/api/clearMockStorage.js';
 import { getAccessToken } from '../services/api/tokenStorage.js';
 import { isApiEnabled } from '../services/api/config.js';
+import { disconnectChatRealtime } from '../services/chatRealtime.js';
 import { getCurrentUser } from '../services/userService.js';
 import { ROLE_DASHBOARD } from '../constants/roles.js';
 import { updateUserProfile, changeUserPassword } from '../services/userService.js';
@@ -107,6 +108,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    disconnectChatRealtime();
     await logoutSession();
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);

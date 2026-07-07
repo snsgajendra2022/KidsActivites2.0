@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import { EmptyState, LoadingState } from '../../components/ui/index.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { getAccessToken } from '../../services/api/tokenStorage.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
   getConversationsForUser,
@@ -63,7 +64,7 @@ function applyReadReceipt(messages, readerId, readAt, currentUserId) {
 }
 
 export default function ChatPage() {
-  const { user } = useAuth();
+  const { user, bootstrapping } = useAuth();
   const { toast } = useToast();
   const [conversations, setConversations] = useState([]);
   const [active, setActive] = useState(null);
@@ -84,7 +85,7 @@ export default function ChatPage() {
   activeRef.current = active;
 
   const loadConversations = useCallback(() => {
-    if (!user?.id) return Promise.resolve();
+    if (bootstrapping || !user?.id || !getAccessToken()) return Promise.resolve();
     setLoadingConversations(true);
     return getConversationsForUser(user.id)
       .then((list) => {
@@ -99,7 +100,7 @@ export default function ChatPage() {
         setConversations([]);
       })
       .finally(() => setLoadingConversations(false));
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, bootstrapping]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user?.id) return undefined;
@@ -153,7 +154,7 @@ export default function ChatPage() {
   );
 
   useEffect(() => {
-    if (!user?.id || !conversationIdsKey) return undefined;
+    if (bootstrapping || !user?.id || !getAccessToken() || !conversationIdsKey) return undefined;
 
     const conversationIds = conversationIdsKey.split(',');
     const unsubs = conversationIds.map((conversationId) => subscribeToConversation(conversationId, (payload) => {
@@ -207,7 +208,7 @@ export default function ChatPage() {
     return () => {
       unsubs.forEach((unsub) => unsub());
     };
-  }, [conversationIdsKey, user?.id]);
+  }, [conversationIdsKey, user?.id, bootstrapping]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
