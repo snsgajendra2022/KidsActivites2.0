@@ -127,6 +127,7 @@ export default function Landing() {
         title={isPlatformHome ? 'Schools Across the Region' : 'Visit Our Campus'}
         subtitle={isPlatformHome
           ? 'Kids Activities connects families with programs in their community.'
+
           : `Experience ${school?.name || 'our school'} in person or explore online.`}
         address={isPlatformHome ? undefined : school?.address}
       />

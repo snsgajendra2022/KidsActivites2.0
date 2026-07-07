@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import {
   Lock, ArrowLeft,
 } from 'lucide-react';
@@ -82,6 +83,7 @@ export default function Enrollment() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { portalName, school, branding, enrollmentTheme, enrollmentForm, loading: configLoading, activeSchoolId } = usePortalConfig();
+  const { tenantPath } = useTenantPath();
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
   const enrollCssVars = enrollmentThemeToCssVars(enrollmentTheme);
   const formConfig = enrollmentForm?.steps?.length ? enrollmentForm : DEFAULT_ENROLLMENT_FORM;
@@ -339,6 +341,15 @@ export default function Enrollment() {
               <Link to="/" className="enrollment-back-link inline-flex items-center gap-1">
                 <ArrowLeft size={14} />
                 Back to Home
+              </Link>
+              <Link to={tenantPath('/enrollment/printable-form')} className="enrollment-back-link inline-flex items-center gap-1">
+                Printable Enrollment Form
+              </Link>
+              <Link to={tenantPath('/enrollment/html-form')} className="enrollment-back-link inline-flex items-center gap-1">
+                Printable HTML Enrollment Form
+              </Link>
+              <Link to={tenantPath('/enrollment/kidzee-print-form')} className="enrollment-back-link inline-flex items-center gap-1">
+                Kidzee Print Form
               </Link>
               <div className="flex flex-wrap items-center gap-2">
                 {/* Draft saved badge — temporarily disabled
