@@ -468,9 +468,9 @@
   box-shadow: 0 8px 32px color-mix(in srgb, var(--sb-purple) 8%, transparent);
 }
 
-.sb-editorial-auth .auth-split__card h2 {
-  font-style: italic;
-  font-weight: 400;
+.sb-editorial-auth .auth-split__card-title {
+  font-style: normal;
+  font-weight: 700;
   color: var(--sb-purple-dark);
 }
 

@@ -164,6 +164,10 @@ export default function Login() {
     });
   }, [emailLoginEnabled, otpLoginEnabled, qrLoginEnabled]);
 
+  const loginEmailPlaceholder = tenantSlug
+    ? `you@${tenantSlug}.kidsactivites.com`
+    : 'you@school.edu.in';
+
   const welcomeBlurb = (() => {
     if (!anyLoginEnabled) {
       return `Contact your school administrator for login access to ${school?.name}.`;
@@ -414,8 +418,6 @@ export default function Login() {
     <AuthSplitLayout
       className="login-portal"
       title="Sign In"
-      subtitle={school?.name}
-      workspaceSlug={tenantSlug}
       visualTitle={`Welcome to ${portalName}`}
       visualSubtitle={welcomeBlurb}
       visualBadge={school?.academicYear ? `${school.academicYear} · Secure Portal` : 'Secure Portal'}
@@ -443,7 +445,7 @@ export default function Login() {
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="you@school.edu.in"
+              placeholder={loginEmailPlaceholder}
               value={emailForm.email}
               onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
             />

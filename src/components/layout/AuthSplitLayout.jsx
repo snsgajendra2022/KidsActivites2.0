@@ -17,7 +17,6 @@ export default function AuthSplitLayout({
   className = '',
 }) {
   const { portalName, school } = usePortalConfig();
-  const workspaceHost = typeof window !== 'undefined' ? window.location.host : null;
 
   return (
     <div className={`sb-page sb-editorial-page sb-editorial-auth flex min-h-dvh flex-col ${className}`.trim()}>
@@ -35,16 +34,14 @@ export default function AuthSplitLayout({
         </div>
         <div className="auth-split__form-side">
           <div className="auth-split__card">
-            <div className="mb-5 flex items-center gap-3">
-              <PortalLogo size="md" />
-              <div className="min-w-0">
-                <h2>{title}</h2>
-                {subtitle && <p className="auth-split__subtitle !mb-0 truncate">{subtitle}</p>}
-                {(workspaceHost || workspaceSlug) && (
-                  <p className="auth-split__workspace mt-1 truncate font-mono text-[11px] text-muted">
-                    {workspaceHost || `${workspaceSlug}.kidsactivites.com`}
-                  </p>
-                )}
+            <div className="auth-split__card-header">
+              <div className="auth-split__card-brand">
+                <PortalLogo size="sm" className="auth-split__card-logo-full" />
+              </div>
+              <div className="auth-split__card-brand-divider" aria-hidden="true" />
+              <div className="auth-split__card-heading">
+                <h2 className="auth-split__card-title">{title}</h2>
+                {subtitle && <p className="auth-split__subtitle">{subtitle}</p>}
               </div>
             </div>
             {children}
