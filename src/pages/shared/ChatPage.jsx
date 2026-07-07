@@ -12,6 +12,7 @@ import {
   getChatContacts,
   createConversation,
 } from '../../services/chatService.js';
+import { requestChatUnreadRefresh } from '../../hooks/useUnreadMessageCount.js';
 import { subscribeToConversation } from '../../services/chatRealtime.js';
 import {
   Send, MessageCircle, Search, ArrowLeft, Shield, Plus, X, Check, CheckCheck,
@@ -122,6 +123,7 @@ export default function ChatPage() {
             ? { ...c, unread: { ...c.unread, [user.id]: 0 } }
             : c
         )));
+        requestChatUnreadRefresh();
       })
       .catch(() => {});
 
@@ -167,6 +169,7 @@ export default function ChatPage() {
             },
           };
         }));
+        requestChatUnreadRefresh();
         return;
       }
 
@@ -181,6 +184,7 @@ export default function ChatPage() {
               ? { ...c, unread: { ...c.unread, [user.id]: 0 } }
               : c
           )));
+          requestChatUnreadRefresh();
         }
       }
     }));
