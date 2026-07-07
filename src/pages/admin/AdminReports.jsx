@@ -149,7 +149,7 @@ export default function AdminReports() {
       return;
     }
     downloadCsv(
-      `schoolbridge-${tab}-report.csv`,
+      `kidsactivites-${tab}-report.csv`,
       report.rows,
       REPORT_COLUMNS[tab],
     );

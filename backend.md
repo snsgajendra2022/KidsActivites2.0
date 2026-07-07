@@ -1,4 +1,4 @@
-# SchoolBridge — Backend API Specification
+# KidsActivites — Backend API Specification
 
 > **Status:** No production backend yet. The React frontend works today using **mock services** in `src/services/` backed by `localStorage`. This document is the **full API contract** — endpoint names, HTTP methods, request payloads, response shapes, variables, and errors — so a real backend can be implemented and the frontend swapped from mocks to live APIs.
 
@@ -34,7 +34,7 @@
 ### Base URL
 
 ```
-Production:  https://api.schoolbridge.app/api/v1
+Production:  https://api.kidsactivites.app/api/v1
 Development: http://localhost:3000/api/v1
 Frontend env: VITE_API_URL=http://localhost:3000/api/v1
 ```
@@ -125,7 +125,7 @@ API_BASE_PATH=/api/v1
 CORS_ORIGIN=http://localhost:5173
 
 # Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/schoolbridge
+DATABASE_URL=postgresql://user:pass@localhost:5432/kidsactivites
 
 # Auth
 JWT_SECRET=change-me-in-production
@@ -137,7 +137,7 @@ BCRYPT_ROUNDS=12
 REDIS_URL=redis://localhost:6379
 
 # Object storage (S3-compatible)
-S3_BUCKET=schoolbridge-media
+S3_BUCKET=kidsactivites-media
 S3_REGION=ap-south-1
 S3_ACCESS_KEY=
 S3_SECRET_KEY=
@@ -148,7 +148,7 @@ SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
-FROM_EMAIL=noreply@schoolbridge.app
+FROM_EMAIL=noreply@kidsactivites.app
 SMS_PROVIDER_API_KEY=
 
 # OTP (production)
@@ -164,9 +164,9 @@ VITE_API_URL=http://localhost:3000/api/v1
 
 | Role | Email | Password | Mobile |
 |------|-------|----------|--------|
-| Super Admin | `superadmin@schoolbridge.demo` | `123456` | `9000000001` |
-| School Admin | `admin@schoolbridge.demo` | `123456` | `9000000002` |
-| Parent | `parent@schoolbridge.demo` | `123456` | `9876543210` |
+| Super Admin | `superadmin@kidsactivites.demo` | `123456` | `9000000001` |
+| School Admin | `admin@kidsactivites.demo` | `123456` | `9000000002` |
+| Parent | `parent@kidsactivites.demo` | `123456` | `9876543210` |
 
 Demo OTP (mock): **`123456`** (expires in 5 minutes).
 
@@ -473,7 +473,7 @@ Email + password login.
 **Request body:**
 ```json
 {
-  "email": "parent@schoolbridge.demo",
+  "email": "parent@kidsactivites.demo",
   "password": "123456"
 }
 ```
@@ -490,12 +490,12 @@ Email + password login.
     "user": {
       "id": "usr-parent",
       "name": "Rajesh Kumar",
-      "email": "parent@schoolbridge.demo",
+      "email": "parent@kidsactivites.demo",
       "mobile": "9876543210",
       "role": "parent",
       "schoolId": "school-1",
       "avatar": null,
-      "identity": "parent@schoolbridge.demo",
+      "identity": "parent@kidsactivites.demo",
       "loginMethod": "email"
     }
   }
@@ -548,7 +548,7 @@ Send OTP to registered mobile.
 ```json
 {
   "channel": "email",
-  "email": "parent@schoolbridge.demo"
+  "email": "parent@kidsactivites.demo"
 }
 ```
 
@@ -557,7 +557,7 @@ Send OTP to registered mobile.
 {
   "success": true,
   "data": {
-    "email": "parent@schoolbridge.demo",
+    "email": "parent@kidsactivites.demo",
     "expiresIn": 300,
     "message": "OTP sent to your email"
   }
@@ -587,7 +587,7 @@ Verify OTP and issue tokens.
 ```json
 {
   "channel": "email",
-  "email": "parent@schoolbridge.demo",
+  "email": "parent@kidsactivites.demo",
   "otp": "123456"
 }
 ```
@@ -619,7 +619,7 @@ Verify OTP and issue tokens.
 
 **Response `200`:** `{ "success": true, "data": { "message": "Logged out" } }`
 
-**Mock:** `AuthContext.logout()` clears `localStorage` key `schoolbridge_user`
+**Mock:** `AuthContext.logout()` clears `localStorage` key `kidsactivites_user`
 
 ---
 
@@ -637,7 +637,7 @@ Returns public demo account list (no passwords) for login page.
     {
       "id": "usr-super-admin",
       "name": "Rakesh Verma",
-      "email": "superadmin@schoolbridge.demo",
+      "email": "superadmin@kidsactivites.demo",
       "mobile": "9000000001",
       "role": "super_admin",
       "schoolId": "school-1",
@@ -654,7 +654,7 @@ Returns public demo account list (no passwords) for login page.
 ### `POST /auth/forgot-password` *(planned)*
 
 ```json
-{ "email": "parent@schoolbridge.demo" }
+{ "email": "parent@kidsactivites.demo" }
 ```
 
 ---
@@ -688,9 +688,9 @@ Public portal branding for school landing (`/{slug}`), school login, and school 
 {
   "success": true,
   "data": {
-    "portalName": "SchoolBridge",
+    "portalName": "KidsActivites",
     "tagline": "School Enrollment Platform",
-    "footerText": "© 2026 SchoolBridge Systems. All rights reserved.",
+    "footerText": "© 2026 KidsActivites Systems. All rights reserved.",
     "school": {
       "id": "school-1",
       "name": "Green Valley International School",
@@ -1393,7 +1393,7 @@ Request signed upload URL.
 
 ### `PUT <signed-upload-url>`
 
-Client uploads file bytes directly to S3. Not a SchoolBridge route.
+Client uploads file bytes directly to S3. Not a KidsActivites route.
 
 ---
 
@@ -2024,7 +2024,7 @@ Filtered server-side using `menuVisibility` from portal config + role permission
 
 | Key | Data |
 |-----|------|
-| `schoolbridge_user` | Logged-in user session |
+| `kidsactivites_user` | Logged-in user session |
 | `sb_portal_config` | Portal branding + enrollment form |
 | `sb_applications` | Enrollment applications |
 | `sb_fees` | Fee records |
@@ -2253,7 +2253,7 @@ Platform-level branding for the main homepage (`/`).
 {
   "success": true,
   "data": {
-    "platformName": "SchoolBridge",
+    "platformName": "KidsActivites",
     "tagline": "Multi-school enrollment platform"
   }
 }
@@ -2272,9 +2272,9 @@ Update main portal branding shown on `/` (platform homepage).
 **Body:**
 ```json
 {
-  "platformName": "SchoolBridge",
+  "platformName": "KidsActivites",
   "tagline": "Multi-school enrollment platform",
-  "footerText": "© 2026 SchoolBridge Systems. All rights reserved.",
+  "footerText": "© 2026 KidsActivites Systems. All rights reserved.",
   "heroHeadline": "Modern School Enrollment,\nBuilt for Premium Education",
   "heroSubtext": "Complete your child's admission online...",
   "school": {
@@ -2431,7 +2431,7 @@ List users across the platform (super admin) or scoped to a school.
     {
       "id": "usr-teacher",
       "name": "Meera Iyer",
-      "email": "teacher@schoolbridge.demo",
+      "email": "teacher@kidsactivites.demo",
       "mobile": "9000000005",
       "role": "teacher",
       "schoolId": "school-1",
@@ -2507,7 +2507,7 @@ Parent profile, school info, and all children/applications for the logged-in par
     "parent": {
       "id": "usr-parent",
       "name": "Rajesh Kumar",
-      "email": "parent@schoolbridge.demo",
+      "email": "parent@kidsactivites.demo",
       "mobile": "9000000006",
       "schoolId": "school-1"
     },

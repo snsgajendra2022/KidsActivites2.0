@@ -12,7 +12,7 @@ import './styles/components.css';
 import './styles/layout.css';
 import './styles/responsive.css';
 import './styles/premium.css';
-import './styles/schoolbridge-theme.css';
+import './styles/kidsactivites-theme.css';
 import './styles/login-portal.css';
 import './styles/editorial.css';
 import './styles/public-pages.css';

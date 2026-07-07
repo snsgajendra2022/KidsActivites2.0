@@ -128,9 +128,9 @@ export default function RegisterSchool() {
     <PublicLayout className="sb-editorial-page">
       <CinematicHero
         compact
-        badge="SchoolBridge Platform"
+        badge="KidsActivites Platform"
         title="Register your school workspace"
-        subtitle="Create your dedicated SchoolBridge portal with a unique URL. Manage admissions, fees, and parent communication from one place."
+        subtitle="Create your dedicated KidsActivites portal with a unique URL. Manage admissions, fees, and parent communication from one place."
       />
 
       <JourneyNav steps={REGISTER_JOURNEY} activeIndex={1} compact />

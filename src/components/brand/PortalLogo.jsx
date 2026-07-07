@@ -1,5 +1,5 @@
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
-import defaultLogo from '../../assets/schoolbridge_logo.png';
+import defaultLogo from '../../assets/kidsactivites_logo.png';
 import footerDefaultLogo from '../../assets/FooterdefaultLogo.png';
 
 const SIZES = {

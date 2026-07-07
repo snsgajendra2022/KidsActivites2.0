@@ -92,7 +92,7 @@ export async function uploadFile(options) {
     return await apiUploadFile(options);
   } catch (err) {
     if (isApiFallbackMock() || import.meta.env.DEV) {
-      console.warn('[SchoolBridge] Document upload API failed, using local mock:', err.message);
+      console.warn('[KidsActivites] Document upload API failed, using local mock:', err.message);
       return mockUploadFile(options);
     }
     return {

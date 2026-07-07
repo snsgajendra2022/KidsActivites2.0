@@ -11,7 +11,7 @@ export function normalizeApiBaseUrl(raw) {
   if (/\/api$/i.test(trimmed)) {
     if (import.meta.env.DEV) {
       console.warn(
-        '[SchoolBridge] VITE_API_URL should end with /api/v1 — auto-correcting to',
+        '[KidsActivites] VITE_API_URL should end with /api/v1 — auto-correcting to',
         `${trimmed}/v1`,
       );
     }
@@ -62,7 +62,7 @@ function rewriteApiUrlForLanDev(apiUrl) {
     const port = parsed.port || '8081';
     const rewritten = `${parsed.protocol}//${browserHost}:${port}${parsed.pathname}${parsed.search}`;
     console.warn(
-      '[SchoolBridge] Rewriting API base for LAN dev:',
+      '[KidsActivites] Rewriting API base for LAN dev:',
       apiUrl,
       '→',
       rewritten,
@@ -80,8 +80,8 @@ export function isTenantSubdomainHost() {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname.toLowerCase();
   if (/^[a-z0-9][a-z0-9-]*\.localhost$/.test(host)) return true;
-  if (/^[a-z0-9][a-z0-9-]*\.schoolbridge\.app$/.test(host) && !host.startsWith('www.')) return true;
-  if (/^[a-z0-9][a-z0-9-]*\.schoolbridge\.com$/.test(host) && !host.startsWith('www.')) return true;
+  if (/^[a-z0-9][a-z0-9-]*\.kidsactivites\.app$/.test(host) && !host.startsWith('www.')) return true;
+  if (/^[a-z0-9][a-z0-9-]*\.kidsactivites\.com$/.test(host) && !host.startsWith('www.')) return true;
   return false;
 }
 
@@ -89,7 +89,7 @@ function resolveTenantSlugFromSubdomainHost() {
   if (typeof window === 'undefined') return null;
   const host = window.location.hostname.toLowerCase();
 
-  const prodMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.schoolbridge\.(?:app|com)$/);
+  const prodMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.kidsactivites\.(?:app|com)$/);
   if (prodMatch && prodMatch[1] !== 'www' && isValidTenantSlug(prodMatch[1])) return prodMatch[1];
 
   const localMatch = host.match(/^([a-z0-9][a-z0-9-]*)\.localhost$/);
@@ -127,7 +127,7 @@ export function resolveApiBaseUrl() {
   if (isProductionMode()) {
     const tenant = resolveTenantSlug();
     if (tenant) {
-      return `https://${tenant}.api.schoolbridge.app/api/v1`;
+      return `https://${tenant}.api.kidsactivites.app/api/v1`;
     }
   }
 

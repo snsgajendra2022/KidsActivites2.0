@@ -1,4 +1,4 @@
-export default function WorkspaceUrlPreview({ slug, baseDomain = 'schoolbridge.com' }) {
+export default function WorkspaceUrlPreview({ slug, baseDomain = 'kidsactivites.com' }) {
   const normalized = (slug || '').trim().toLowerCase();
   const displaySlug = normalized || 'your-school';
 

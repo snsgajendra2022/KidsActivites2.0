@@ -23,7 +23,7 @@ export const GENDERS = [
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((v) => ({ value: v, label: v }));
 
 export const DEMO_USERS = {
-  admin: { id: 'u-admin', name: 'Priya Sharma', email: 'admin@schoolbridge.demo', role: 'school_admin', mobile: '9876543210' },
-  parent: { id: 'u-parent', name: 'Rajesh Kumar', email: 'parent@schoolbridge.demo', role: 'parent', mobile: '9876543211' },
-  teacher: { id: 'u-teacher', name: 'Anita Verma', email: 'teacher@schoolbridge.demo', role: 'teacher', mobile: '9876543212' },
+  admin: { id: 'u-admin', name: 'Priya Sharma', email: 'admin@kidsactivites.demo', role: 'school_admin', mobile: '9876543210' },
+  parent: { id: 'u-parent', name: 'Rajesh Kumar', email: 'parent@kidsactivites.demo', role: 'parent', mobile: '9876543211' },
+  teacher: { id: 'u-teacher', name: 'Anita Verma', email: 'teacher@kidsactivites.demo', role: 'teacher', mobile: '9876543212' },
 };

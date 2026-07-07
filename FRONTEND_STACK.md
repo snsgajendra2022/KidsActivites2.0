@@ -1,4 +1,4 @@
-# SchoolBridge — Frontend Stack & Requirements
+# KidsActivites — Frontend Stack & Requirements
 
 > Production-ready, premium school enrollment and communication system with complete role-based permissions, professional responsive UI, reusable design components, toast notifications, modal popups, icon system, upload management, offline/slow-internet handling, resumable upload support, secure private file storage, mobile/tablet/laptop/desktop-first layouts, validation, audit logs, and complete admin, teacher, parent, and student workflows.
 

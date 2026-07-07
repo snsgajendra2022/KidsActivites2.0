@@ -42,7 +42,7 @@ export default function AuthSplitLayout({
                 {subtitle && <p className="auth-split__subtitle !mb-0 truncate">{subtitle}</p>}
                 {(workspaceHost || workspaceSlug) && (
                   <p className="auth-split__workspace mt-1 truncate font-mono text-[11px] text-muted">
-                    {workspaceHost || `${workspaceSlug}.schoolbridge.com`}
+                    {workspaceHost || `${workspaceSlug}.kidsactivites.com`}
                   </p>
                 )}
               </div>

@@ -12,7 +12,7 @@ export async function routeRequest({ mockFn, apiFn }) {
     return await apiFn();
   } catch (err) {
     if (isApiFallbackMock()) {
-      console.warn('[SchoolBridge] API unavailable, using mock data:', err.message);
+      console.warn('[KidsActivites] API unavailable, using mock data:', err.message);
       return mockFn();
     }
     throw err;

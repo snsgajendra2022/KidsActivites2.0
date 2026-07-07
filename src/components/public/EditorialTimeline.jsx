@@ -2,7 +2,7 @@ import { CenteredScrollTimeline } from './CenteredScrollTimeline.jsx';
 import { Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const DEFAULT_MEDIA = '/assets/schoolbridge-timeline-placeholder.svg';
+const DEFAULT_MEDIA = '/assets/kidsactivites-timeline-placeholder.svg';
 
 export default function EditorialTimeline({
   steps = [],

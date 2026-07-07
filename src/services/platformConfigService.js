@@ -7,7 +7,7 @@ import { cloneEnrollmentFormConfig, DEFAULT_ENROLLMENT_FORM } from '../data/defa
 const PLATFORM_KEY = 'sb_platform_config';
 
 const DEFAULT_PLATFORM_CONFIG = {
-  platformName: 'SchoolBridge',
+  platformName: 'KidsActivites',
   tagline: 'Multi-school enrollment platform',
   footerText: DEFAULT_PORTAL_CONFIG.footerText,
   heroHeadline: 'Modern School Enrollment,\nBuilt for Premium Education',

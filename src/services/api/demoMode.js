@@ -1,6 +1,6 @@
 import { isApiEnabled, isForceMock } from './config.js';
 
-const USER_STORAGE_KEY = 'schoolbridge_user';
+const USER_STORAGE_KEY = 'kidsactivites_user';
 
 export function getStoredUser() {
   try {

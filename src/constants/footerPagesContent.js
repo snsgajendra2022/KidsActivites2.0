@@ -1,11 +1,11 @@
 export const SECURITY_POLICY_CONTENT = {
   title: 'Security Policy',
-  subtitle: 'How SchoolBridge protects your school, staff, and family data.',
+  subtitle: 'How KidsActivites protects your school, staff, and family data.',
   lastUpdated: 'July 1, 2026',
   sections: [
     {
       heading: '1. Our Commitment',
-      body: 'SchoolBridge is designed for schools that handle sensitive student and parent information. We apply industry-standard security controls across authentication, data storage, transmission, and access management.',
+      body: 'KidsActivites is designed for schools that handle sensitive student and parent information. We apply industry-standard security controls across authentication, data storage, transmission, and access management.',
     },
     {
       heading: '2. Data Encryption',
@@ -29,19 +29,19 @@ export const SECURITY_POLICY_CONTENT = {
     },
     {
       heading: '7. Contact',
-      body: 'For security-related questions, contact your school administrator or write to security@schoolbridge.demo.',
+      body: 'For security-related questions, contact your school administrator or write to security@kidsactivites.demo.',
     },
   ],
 };
 
 export const TERMS_OF_USE_CONTENT = {
   title: 'Terms of Use',
-  subtitle: 'Rules for using the SchoolBridge enrollment and communication platform.',
+  subtitle: 'Rules for using the KidsActivites enrollment and communication platform.',
   lastUpdated: 'July 1, 2026',
   sections: [
     {
       heading: '1. Acceptance',
-      body: 'By accessing SchoolBridge you agree to these Terms of Use and to follow your school\'s published admission policies. If you do not agree, do not use the platform.',
+      body: 'By accessing KidsActivites you agree to these Terms of Use and to follow your school\'s published admission policies. If you do not agree, do not use the platform.',
     },
     {
       heading: '2. Eligibility',
@@ -57,7 +57,7 @@ export const TERMS_OF_USE_CONTENT = {
     },
     {
       heading: '5. Intellectual Property',
-      body: 'SchoolBridge software, branding, and UI are owned by SchoolBridge Systems. Content you upload (documents, photos) remains yours; you grant the school a license to use it for admission and school operations.',
+      body: 'KidsActivites software, branding, and UI are owned by KidsActivites Systems. Content you upload (documents, photos) remains yours; you grant the school a license to use it for admission and school operations.',
     },
     {
       heading: '6. Service Availability',
@@ -65,7 +65,7 @@ export const TERMS_OF_USE_CONTENT = {
     },
     {
       heading: '7. Limitation of Liability',
-      body: 'SchoolBridge is provided as a school-managed service. To the extent permitted by law, SchoolBridge Systems is not liable for indirect damages arising from use of the platform.',
+      body: 'KidsActivites is provided as a school-managed service. To the extent permitted by law, KidsActivites Systems is not liable for indirect damages arising from use of the platform.',
     },
     {
       heading: '8. Changes',

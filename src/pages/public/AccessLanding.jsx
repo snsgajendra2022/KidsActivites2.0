@@ -99,7 +99,7 @@ export default function AccessLanding() {
             <div className="sb-access-card__icon">
               <Building2 size={22} />
             </div>
-            <h2>New to SchoolBridge?</h2>
+            <h2>New to KidsActivites?</h2>
             <p>
               Request a dedicated workspace for your school. We&apos;ll send a confirmation email and provision your
               tenant after you verify.

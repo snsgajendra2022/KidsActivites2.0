@@ -100,7 +100,7 @@ export async function uploadAdminAlbumMedia({ albumId, caption, files }) {
   } catch (primaryErr) {
     if (!isUploadEndpointUnavailable(primaryErr)) throw primaryErr;
     console.warn(
-      '[SchoolBridge] Album upload endpoint unavailable; using photo-studio upload + album link.',
+      '[KidsActivites] Album upload endpoint unavailable; using photo-studio upload + album link.',
       primaryErr?.message,
     );
     return uploadViaPhotoStudioAndLink({ albumId, caption, files });
