@@ -217,6 +217,60 @@ export async function requestCorrection(id, reason) {
   });
 }
 
+/** Public (no auth) load of an application via correction token. */
+export async function getCorrectionApplication(token) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const apps = getAll();
+      const app = apps.find((a) => a.status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED);
+      return app || null;
+    },
+    apiFn: () => api.get(`/enrollment/correction/${token}`, undefined, { auth: false }),
+  });
+}
+
+/** Public (no auth) save draft via correction token. */
+export async function saveCorrectionDraft(token, formData) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const apps = getAll();
+      const idx = apps.findIndex((a) => a.status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED);
+      if (idx >= 0) {
+        apps[idx] = { ...apps[idx], ...formData, updatedAt: new Date().toISOString() };
+        saveAll(apps);
+        return apps[idx];
+      }
+      return { id: 'mock-correction', ...formData };
+    },
+    apiFn: () => api.put(`/enrollment/correction/${token}`, sanitizeEnrollmentPayload(formData), { auth: false }),
+  });
+}
+
+/** Public (no auth) resubmit via correction token. */
+export async function submitCorrectionApplication(token, formData) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(600);
+      const apps = getAll();
+      const idx = apps.findIndex((a) => a.status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED);
+      if (idx >= 0) {
+        apps[idx] = {
+          ...apps[idx],
+          ...formData,
+          status: ENROLLMENT_STATUSES.SUBMITTED,
+          submittedAt: new Date().toISOString(),
+        };
+        saveAll(apps);
+        return apps[idx];
+      }
+      return { id: 'mock-correction', status: ENROLLMENT_STATUSES.SUBMITTED };
+    },
+    apiFn: () => api.post(`/enrollment/correction/${token}/submit`, sanitizeEnrollmentPayload(formData), { auth: false }),
+  });
+}
+
 export async function approveApplication(id) {
   return routeRequest({
     mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.FEE_PENDING, 'Application approved. Fee assigned.'),

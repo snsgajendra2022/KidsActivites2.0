@@ -10,6 +10,7 @@ import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import LoadingState from '../../components/ui/LoadingState.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getParentDashboard } from '../../services/parentService.js';
 import { getFeeByApplication } from '../../services/feeService.js';
 import { ENROLLMENT_STATUSES } from '../../constants/enrollmentStatuses.js';
@@ -23,6 +24,7 @@ function statusBadgeVariant(status) {
 
 export default function ParentDashboard() {
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
   const [data, setData] = useState(null);
   const [fees, setFees] = useState({});
   const [loading, setLoading] = useState(true);
@@ -57,26 +59,26 @@ export default function ParentDashboard() {
     if (child.status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED) {
       pendingActions.push({
         label: `Correction required — ${child.student?.fullName}`,
-        to: `/parent/enrollment?child=${child.applicationId}`,
+        to: tenantPath(`/parent/enrollment?child=${child.applicationId}`),
         urgent: true,
       });
     }
     if (child.status === ENROLLMENT_STATUSES.FEE_PENDING) {
       pendingActions.push({
         label: `Fee payment pending — ${child.student?.fullName}`,
-        to: '/parent/fees',
+        to: tenantPath('/parent/fees'),
         urgent: true,
       });
     }
   });
 
   const quickLinks = [
-    { to: '/parent/enrollment', icon: FileText, label: 'Enrollment Status', desc: `${children?.length || 0} child(ren)`, color: 'bg-[#dce9ff] text-[#0058be]' },
-    { to: '/parent/fees', icon: CreditCard, label: 'Fees', desc: 'Payments & receipts', color: 'bg-[#e8f5ef] text-[#059669]' },
-    { to: '/parent/documents', icon: FolderOpen, label: 'Documents', desc: 'Uploads & verification', color: 'bg-[#fff4e5] text-[#d97706]' },
-    { to: '/parent/photos', icon: Image, label: 'Photos', desc: 'From teachers', color: 'bg-[#f3e8ff] text-[#7c3aed]' },
-    { to: '/parent/messages', icon: MessageCircle, label: 'Messages', desc: 'Chat with school', color: 'bg-[#e0f2fe] text-[#0284c7]' },
-    { to: '/parent/notifications', icon: Bell, label: 'Notifications', desc: 'Updates & alerts', color: 'bg-[#fce7f3] text-[#db2777]' },
+    { to: tenantPath('/parent/enrollment'), icon: FileText, label: 'Enrollment Status', desc: `${children?.length || 0} child(ren)`, color: 'bg-[#dce9ff] text-[#0058be]' },
+    { to: tenantPath('/parent/fees'), icon: CreditCard, label: 'Fees', desc: 'Payments & receipts', color: 'bg-[#e8f5ef] text-[#059669]' },
+    { to: tenantPath('/parent/documents'), icon: FolderOpen, label: 'Documents', desc: 'Uploads & verification', color: 'bg-[#fff4e5] text-[#d97706]' },
+    { to: tenantPath('/parent/photos'), icon: Image, label: 'Photos', desc: 'From teachers', color: 'bg-[#f3e8ff] text-[#7c3aed]' },
+    { to: tenantPath('/parent/messages'), icon: MessageCircle, label: 'Messages', desc: 'Chat with school', color: 'bg-[#e0f2fe] text-[#0284c7]' },
+    { to: tenantPath('/parent/notifications'), icon: Bell, label: 'Notifications', desc: 'Updates & alerts', color: 'bg-[#fce7f3] text-[#db2777]' },
   ];
 
   return (
@@ -174,7 +176,7 @@ export default function ParentDashboard() {
                       <div><dt className="text-xs text-muted">Submitted</dt><dd>{child.submittedAt ? new Date(child.submittedAt).toLocaleDateString() : '—'}</dd></div>
                     </dl>
                     <Link
-                      to={`/parent/enrollment?child=${child.applicationId}`}
+                      to={tenantPath(`/parent/enrollment?child=${child.applicationId}`)}
                       className="premium-btn premium-btn-secondary premium-btn-sm"
                     >
                       View Details <ArrowRight size={14} />

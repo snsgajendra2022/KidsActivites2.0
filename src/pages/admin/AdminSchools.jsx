@@ -6,12 +6,14 @@ import { PageHeader } from '../../components/ui/index.jsx';
 import { listSchoolsAdmin } from '../../services/schoolService.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { Link } from 'react-router-dom';
 import '../../styles/admin-users.css';
 
 export default function AdminSchools() {
   const { activeSchoolId, switchSchool } = usePortalConfig();
   const { toast } = useToast();
+  const { tenantPath } = useTenantPath();
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +69,7 @@ export default function AdminSchools() {
                     {activeSchoolId === school.id ? 'Selected' : 'Select'}
                   </button>
                   <Link
-                    to="/admin/portal-settings"
+                    to={tenantPath('/admin/portal-settings')}
                     className="premium-btn premium-btn-primary premium-btn-sm"
                     onClick={() => handleSelect(school.id)}
                   >

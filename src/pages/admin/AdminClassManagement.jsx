@@ -15,6 +15,7 @@ import {
   TableActionButton,
 } from '../../components/ui/DataTable.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { listTeachers } from '../../services/teacherService.js';
 import {
   listClasses,
@@ -73,6 +74,7 @@ function StatusBadge({ status }) {
 
 export default function AdminClassManagement() {
   const { toast } = useToast();
+  const { tenantPath } = useTenantPath();
   const [tab, setTab] = useState('classes');
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -335,7 +337,7 @@ export default function AdminClassManagement() {
         title="Class Management"
         subtitle="Manage daycare classes, teacher assignments, and class-wise fees."
         actions={(
-          <Link to="/admin/settings" className="admin-link-back">
+          <Link to={tenantPath('/admin/settings')} className="admin-link-back">
             <ArrowLeft size={16} />
             Back to Settings
           </Link>

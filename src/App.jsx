@@ -13,6 +13,7 @@ import Enrollment from './pages/public/Enrollment.jsx';
 import PrintableEnrollmentFormPage from './pages/public/PrintableEnrollmentFormPage.jsx';
 import PrintableHtmlEnrollmentFormPage from './pages/public/PrintableHtmlEnrollmentFormPage.jsx';
 import KidzeePrintableFormPage from './pages/enrollment/KidzeePrintableFormPage.jsx';
+import EnrollmentCorrectionPage from './pages/enrollment/EnrollmentCorrectionPage.jsx';
 import Login from './pages/auth/Login.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
@@ -89,6 +90,7 @@ export default function App() {
       <Route path="/enrollment/printable-form" element={<PrintableEnrollmentFormPage />} />
       <Route path="/enrollment/html-form" element={<PrintableHtmlEnrollmentFormPage />} />
       <Route path="/enrollment/kidzee-print-form" element={<KidzeePrintableFormPage />} />
+      <Route path="/enrollment/correction/:token" element={<EnrollmentCorrectionPage />} />
       <Route path="/enroll" element={<Navigate to="/enrollment" replace />} />
       <Route path="/security-policy" element={<SecurityPolicy />} />
       <Route path="/terms-of-use" element={<TermsOfUse />} />
@@ -109,6 +111,7 @@ export default function App() {
         <Route path="enroll/html-form" element={<PrintableHtmlEnrollmentFormPage />} />
         <Route path="enrollment/kidzee-print-form" element={<KidzeePrintableFormPage />} />
         <Route path="enroll/kidzee-print-form" element={<KidzeePrintableFormPage />} />
+        <Route path="enrollment/correction/:token" element={<EnrollmentCorrectionPage />} />
         <Route path="enrollment" element={<Navigate to="enroll" replace />} />
 
         {/* Admin routes */}

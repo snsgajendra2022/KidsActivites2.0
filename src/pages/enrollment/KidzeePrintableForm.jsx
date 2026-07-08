@@ -32,6 +32,9 @@ export default function KidzeePrintableForm({
   parentId = null,
   schoolId = null,
   onSubmitted,
+  correctionToken = null,
+  onSaveDraft: onSaveDraftOverride = null,
+  onSubmitApplication: onSubmitOverride = null,
 }) {
   const [formData, setFormData] = useState(() => initialData || getEmptyKidzeeFormData(branding));
   const [draftId, setDraftId] = useState(initialApplicationId);
@@ -48,15 +51,19 @@ export default function KidzeePrintableForm({
     setLoading(true);
     try {
       const payload = wrapKidzeeFormForEnrollment(formData);
-      const saved = await saveDraft(payload, draftId, { parentId, schoolId });
+      const saved = onSaveDraftOverride
+        ? await onSaveDraftOverride(payload)
+        : await saveDraft(payload, draftId, { parentId, schoolId });
       setDraftId(saved.id);
       const merged = mergeKidzeeFormNoFromApplication(formData, saved);
       setFormData(merged);
-      saveKidzeeDraft(merged);
+      if (!correctionToken) saveKidzeeDraft(merged);
       toast('Draft saved successfully.', 'success');
     } catch {
-      saveKidzeeDraft(formData);
-      toast('Saved locally. Server draft may be unavailable.', 'warning');
+      if (!correctionToken) saveKidzeeDraft(formData);
+      toast(correctionToken
+        ? 'Could not save draft. Please try again.'
+        : 'Saved locally. Server draft may be unavailable.', 'warning');
     } finally {
       setLoading(false);
     }
@@ -95,20 +102,29 @@ export default function KidzeePrintableForm({
 
     setLoading(true);
     try {
-      const admissions = await getAdmissionsStatus();
-      if (admissions && admissions.admissionsOpen === false) {
-        toast('Admissions are currently closed.', 'warning');
-        return;
+      if (!correctionToken) {
+        const admissions = await getAdmissionsStatus();
+        if (admissions && admissions.admissionsOpen === false) {
+          toast('Admissions are currently closed.', 'warning');
+          return;
+        }
       }
 
       const payload = wrapKidzeeFormForEnrollment(formData);
-      const appId = draftId || (await saveDraft(payload, null, { parentId, schoolId })).id;
-      const result = await submitApplication(payload, appId, parentId, schoolId);
+      let result;
+      if (onSubmitOverride) {
+        result = await onSubmitOverride(payload);
+      } else {
+        const appId = draftId || (await saveDraft(payload, null, { parentId, schoolId })).id;
+        result = await submitApplication(payload, appId, parentId, schoolId);
+      }
       setDraftId(result.id);
       const merged = mergeKidzeeFormNoFromApplication(formData, result);
       setFormData(merged);
-      saveKidzeeDraft(merged);
-      toast('Enrollment form submitted successfully.', 'success');
+      if (!correctionToken) saveKidzeeDraft(merged);
+      toast(correctionToken
+        ? 'Corrected application resubmitted successfully.'
+        : 'Enrollment form submitted successfully.', 'success');
       onSubmitted?.(result);
     } catch {
       toast('Submission failed. Please try again.', 'error');
@@ -136,17 +152,21 @@ export default function KidzeePrintableForm({
         <div className="print-toolbar__actions">
           {!readOnly && (
             <>
-              <button type="button" className="sb-button-secondary" onClick={handleLoadDraft} disabled={loading}>
-                Load Draft
-              </button>
+              {!correctionToken && (
+                <>
+                  <button type="button" className="sb-button-secondary" onClick={handleLoadDraft} disabled={loading}>
+                    Load Draft
+                  </button>
+                  <button type="button" className="sb-button-secondary" onClick={handleClearDraft} disabled={loading}>
+                    Clear
+                  </button>
+                </>
+              )}
               <button type="button" className="sb-button-secondary" onClick={handleSaveDraft} disabled={loading}>
                 {isAdmin && initialApplicationId ? 'Save Changes' : 'Save Draft'}
               </button>
-              <button type="button" className="sb-button-secondary" onClick={handleClearDraft} disabled={loading}>
-                Clear
-              </button>
               <button type="button" className="sb-button-primary" onClick={handleSubmit} disabled={loading}>
-                Submit Application
+                {correctionToken ? 'Resubmit Application' : 'Submit Application'}
               </button>
             </>
           )}

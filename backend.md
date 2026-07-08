@@ -2445,6 +2445,48 @@ List users across the platform (super admin) or scoped to a school.
 
 ---
 
+### `POST /admin/users`
+
+Create a new platform/school user.
+
+**Auth:** Super Admin, School Admin
+
+**Request body:**
+```json
+{
+  "name": "Priya Sharma",
+  "email": "priya@kidsactivites.demo",
+  "mobile": "9000000010",
+  "role": "school_admin",
+  "schoolId": "school-1"
+}
+```
+
+`schoolId` may be omitted for platform-level roles.
+
+**Response `200`:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "usr-1720000000000",
+      "name": "Priya Sharma",
+      "email": "priya@kidsactivites.demo",
+      "mobile": "9000000010",
+      "role": "school_admin",
+      "schoolId": "school-1",
+      "schoolName": "Green Valley International School"
+    },
+    "tempPassword": "TempPass1"
+  }
+}
+```
+
+**Mock function:** `createUser({ name, email, mobile, role, schoolId })`
+
+---
+
 ### `GET /admin/teachers`
 
 **Auth:** School Admin, Super Admin

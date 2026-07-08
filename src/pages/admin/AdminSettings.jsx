@@ -13,6 +13,7 @@ import {
 } from '../../components/ui/DataTable.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import {
   getSchoolSettings,
   updateSchoolSettings,
@@ -32,14 +33,15 @@ const TABS = [
 ];
 
 function ClassManagementHubCard() {
+  const { tenantPath } = useTenantPath();
   return (
     <div className="admin-settings-hub">
-      <Link to="/admin/class-management" className="admin-settings-hub-card">
+      <Link to={tenantPath('/admin/class-management')} className="admin-settings-hub-card">
         <GraduationCap size={22} />
         <h3>Class &amp; Fees Management</h3>
         <p>Add daycare classes, assign teachers, and define class-wise fee structures.</p>
       </Link>
-      <Link to="/admin/albums" className="admin-settings-hub-card">
+      <Link to={tenantPath('/admin/albums')} className="admin-settings-hub-card">
         <Tv size={22} />
         <h3>Class Albums &amp; TV Playback</h3>
         <p>Manage class album codes for TV slideshows and classroom media.</p>
@@ -94,6 +96,7 @@ function ToggleRow({ label, description, checked, onChange }) {
 export default function AdminSettings() {
   const { user, isDemoSession } = useAuth();
   const { toast } = useToast();
+  const { tenantPath } = useTenantPath();
   const navigate = useNavigate();
   const [tab, setTab] = useState('general');
   const [settings, setSettings] = useState(null);
@@ -197,7 +200,7 @@ export default function AdminSettings() {
             className={`admin-modules-tab ${tab === id ? 'active' : ''}`}
             onClick={() => {
               if (href) {
-                navigate(href);
+                navigate(tenantPath(href));
                 return;
               }
               setTab(id);
