@@ -21,29 +21,45 @@ function statusLabel(status) {
   return 'Maintenance';
 }
 
-export function LegalDocumentPage({ title, subtitle, lastUpdated, sections }) {
+export function LegalDocumentPage({ title, subtitle, lastUpdated, intro, sections }) {
   return (
-    <PublicLayout>
-      <div className="legal-page">
+    <PublicLayout hideFooter>
+      <div className="legal-page legal-page--doc">
         <div className="legal-page__inner">
           <Link to="/" className="legal-page__back">
             <ArrowLeft size={16} />
             Back to Home
           </Link>
-          <header className="legal-page__header">
-            <h1>{title}</h1>
-            {subtitle && <p className="legal-page__subtitle">{subtitle}</p>}
-            {lastUpdated && (
-              <p className="legal-page__updated">Last updated: {lastUpdated}</p>
-            )}
-          </header>
-          <div className="legal-page__body">
-            {sections.map((section) => (
-              <section key={section.heading} className="legal-page__section">
-                <h2>{section.heading}</h2>
-                <p>{section.body}</p>
-              </section>
-            ))}
+          <div className="legal-doc">
+            <header className="legal-page__header legal-doc__header">
+              <h1>{title}</h1>
+              {subtitle && <p className="legal-page__subtitle">{subtitle}</p>}
+              {lastUpdated && (
+                <p className="legal-page__updated">Last updated: {lastUpdated}</p>
+              )}
+            </header>
+            <div className="legal-doc__scroll">
+              <div className="legal-page__body">
+                {intro && <p className="legal-page__intro">{intro}</p>}
+                {sections.map((section) => (
+                  <section key={section.heading} className="legal-page__section">
+                    <h2>{section.heading}</h2>
+                    {(Array.isArray(section.body) ? section.body : [section.body])
+                      .filter(Boolean)
+                      .map((para, i) => (
+                        <p key={i}>{para}</p>
+                      ))}
+                    {Array.isArray(section.bullets) && section.bullets.length > 0 && (
+                      <ul className="legal-page__list">
+                        {section.bullets.map((item, i) => (
+                          <li key={i}>{item}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

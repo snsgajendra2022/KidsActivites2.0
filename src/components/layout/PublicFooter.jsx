@@ -3,6 +3,8 @@ import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { FooterPortalLogo } from '../brand/PortalLogo.jsx';
 
 export const FOOTER_LINKS = [
+  { label: 'Terms & Conditions', to: '/terms-and-conditions' },
+  { label: 'Privacy Policy', to: '/privacy-policy' },
   { label: 'Security Policy', to: '/security-policy' },
   { label: 'Terms of Use', to: '/terms-of-use' },
   { label: 'System Status', to: '/system-status' },

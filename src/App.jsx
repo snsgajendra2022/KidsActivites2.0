@@ -22,6 +22,8 @@ import VerifyEmail from './pages/auth/VerifyEmail.jsx';
 import {
   SecurityPolicy,
   TermsOfUse,
+  TermsAndConditions,
+  PrivacyPolicy,
   SystemStatus,
   DirectSupport,
 } from './pages/public/FooterPageRoutes.jsx';
@@ -96,6 +98,10 @@ export default function App() {
       <Route path="/enroll" element={<Navigate to="/enrollment" replace />} />
       <Route path="/security-policy" element={<SecurityPolicy />} />
       <Route path="/terms-of-use" element={<TermsOfUse />} />
+      <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+      <Route path="/term&condition" element={<TermsAndConditions />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/privacy&policy" element={<PrivacyPolicy />} />
       <Route path="/system-status" element={<SystemStatus />} />
       <Route path="/support" element={<DirectSupport />} />
 
