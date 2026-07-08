@@ -921,19 +921,21 @@ export default function AdminPhotos() {
           >
             <div className="admin-photos-upload__options">
               <label className="admin-photos-upload__field">
-                <span>Class album</span>
+                <span>Album</span>
                 <select
                   value={selectedAlbumId}
                   onChange={(e) => setSelectedAlbumId(e.target.value)}
                   disabled={uploading || albums.length === 0}
                 >
                   <option value="">
-                    {albums.length === 0 ? 'No albums available' : 'Select a class album…'}
+                    {albums.length === 0 ? 'No albums available' : 'Select an album…'}
                   </option>
                   {albums.map((album) => (
                     <option key={album.id} value={album.id}>
-                      {album.className || album.albumName}
-                      {album.albumName && album.className ? ` — ${album.albumName}` : ''}
+                      {album.albumType === 'CUSTOM' ? album.albumName : (album.className || album.albumName)}
+                      {album.albumName && album.className && album.albumType !== 'CUSTOM'
+                        ? ` — ${album.albumName}`
+                        : ''}
                     </option>
                   ))}
                 </select>
@@ -968,8 +970,8 @@ export default function AdminPhotos() {
             <Upload size={22} className="admin-photos-upload__icon" />
             <p>
               {selectedAlbum
-                ? `Target: ${selectedAlbum.className || selectedAlbum.albumName}. Upload new files or use + on items below to add existing media.`
-                : 'Select a class album above, then upload or add existing items from the library.'}
+                ? `Target: ${selectedAlbum.albumType === 'CUSTOM' ? selectedAlbum.albumName : (selectedAlbum.className || selectedAlbum.albumName)}. Upload new files or use + on items below to add existing media.`
+                : 'Select an album above, then upload or add existing items from the library.'}
             </p>
             <Button
               type="button"

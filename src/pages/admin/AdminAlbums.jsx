@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Tv, Copy, RefreshCw, Archive, Eye, Play, X, FolderOpen } from 'lucide-react';
+import { Tv, Copy, RefreshCw, Archive, Eye, Play, X, FolderOpen, Plus } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
+import Modal from '../../components/ui/Modal.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { ApiError } from '../../services/api/client.js';
 import {
   backfillAlbums,
+  createAdminAlbum,
   getAdminAlbum,
   listAdminAlbums,
   regenerateAlbumCode,
@@ -50,6 +52,15 @@ function tvStatusBadge(item) {
   return 'Processing';
 }
 
+function albumTypeLabel(album) {
+  return album?.albumType === 'CUSTOM' ? 'School album' : 'Class album';
+}
+
+function albumScopeLabel(album) {
+  if (album?.className) return album.className;
+  return albumTypeLabel(album);
+}
+
 function AlbumStatusPill({ playbackEnabled, status }) {
   if (status === 'ARCHIVED') {
     return <span className="admin-media-pill admin-media-pill--muted">Archived</span>;
@@ -80,6 +91,10 @@ export default function AdminAlbums() {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const loadAlbums = useCallback(async () => {
     setLoading(true);
@@ -114,6 +129,8 @@ export default function AdminAlbums() {
 
   const stats = useMemo(() => ({
     total: albums.length,
+    classAlbums: albums.filter((a) => a.albumType !== 'CUSTOM').length,
+    customAlbums: albums.filter((a) => a.albumType === 'CUSTOM').length,
     tvOn: albums.filter((a) => a.playbackEnabled).length,
     media: albums.reduce((sum, a) => sum + (a.mediaCount || 0), 0),
   }), [albums]);
@@ -171,6 +188,31 @@ export default function AdminAlbums() {
     }
   };
 
+  const handleCreateAlbum = async () => {
+    const name = createName.trim();
+    if (!name) {
+      toast('Album name is required.', 'warning');
+      return;
+    }
+    setCreating(true);
+    try {
+      const created = await createAdminAlbum({
+        albumName: name,
+        description: createDescription.trim() || undefined,
+      });
+      toast('Album created.', 'success');
+      setCreateOpen(false);
+      setCreateName('');
+      setCreateDescription('');
+      await loadAlbums();
+      openDetail(created.id);
+    } catch (err) {
+      toast(err?.message || 'Create failed.', 'error');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const toggleShowOnTv = async (mediaItem) => {
     if (!detail?.id) return;
     const enabling = !mediaItem.showOnTv;
@@ -195,14 +237,20 @@ export default function AdminAlbums() {
     <DashboardLayout>
       <div className="admin-albums-page">
         <PageHeader
-          title="Class Albums"
-          subtitle="Manage class albums and TV playback codes."
+          title="Albums"
+          subtitle="Manage class and school-wide albums, TV codes, and playback."
           icon={Tv}
           actions={(
-            <Button type="button" variant="secondary" onClick={handleBackfill}>
-              <RefreshCw size={16} />
-              Backfill Albums
-            </Button>
+            <>
+              <Button type="button" variant="primary" onClick={() => setCreateOpen(true)}>
+                <Plus size={16} />
+                Create Album
+              </Button>
+              <Button type="button" variant="secondary" onClick={handleBackfill}>
+                <RefreshCw size={16} />
+                Backfill Class Albums
+              </Button>
+            </>
           )}
         />
 
@@ -211,6 +259,14 @@ export default function AdminAlbums() {
             <div className="admin-media-stat">
               <span className="admin-media-stat__value">{stats.total}</span>
               <span className="admin-media-stat__label">Albums</span>
+            </div>
+            <div className="admin-media-stat">
+              <span className="admin-media-stat__value">{stats.classAlbums}</span>
+              <span className="admin-media-stat__label">Class albums</span>
+            </div>
+            <div className="admin-media-stat">
+              <span className="admin-media-stat__value">{stats.customAlbums}</span>
+              <span className="admin-media-stat__label">School albums</span>
             </div>
             <div className="admin-media-stat">
               <span className="admin-media-stat__value">{stats.tvOn}</span>
@@ -232,12 +288,18 @@ export default function AdminAlbums() {
         ) : albums.length === 0 ? (
           <div className="admin-media-empty">
             <FolderOpen size={32} strokeWidth={1.5} />
-            <h2>No class albums yet</h2>
-            <p>Create albums for your classes using Backfill Albums, then manage TV codes and playback here.</p>
-            <Button type="button" variant="primary" onClick={handleBackfill}>
-              <RefreshCw size={16} />
-              Backfill Albums
-            </Button>
+            <h2>No albums yet</h2>
+            <p>Create a school-wide album or backfill class albums, then manage TV codes and playback here.</p>
+            <div className="admin-albums-empty-actions">
+              <Button type="button" variant="primary" onClick={() => setCreateOpen(true)}>
+                <Plus size={16} />
+                Create Album
+              </Button>
+              <Button type="button" variant="secondary" onClick={handleBackfill}>
+                <RefreshCw size={16} />
+                Backfill Class Albums
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="admin-albums-layout">
@@ -247,8 +309,8 @@ export default function AdminAlbums() {
                   <article key={album.id} className="sb-mobile-data-card admin-albums-mobile-card">
                     <h3 className="sb-mobile-data-card__title">{album.albumName}</h3>
                     <div className="sb-mobile-data-card__row">
-                      <span className="sb-mobile-data-card__label">Class</span>
-                      <span className="sb-mobile-data-card__value">{album.className}</span>
+                      <span className="sb-mobile-data-card__label">Type</span>
+                      <span className="sb-mobile-data-card__value">{albumScopeLabel(album)}</span>
                     </div>
                     <div className="sb-mobile-data-card__row">
                       <span className="sb-mobile-data-card__label">Code</span>
@@ -282,7 +344,7 @@ export default function AdminAlbums() {
               <table className="admin-albums-table premium-table">
                 <thead>
                   <tr>
-                    <th>Class</th>
+                    <th>Type</th>
                     <th>Album</th>
                     <th>Code</th>
                     <th>TV</th>
@@ -294,7 +356,7 @@ export default function AdminAlbums() {
                 <tbody>
                   {albums.map((album) => (
                     <tr key={album.id} className={selectedId === album.id ? 'admin-albums-row--active' : ''}>
-                      <td>{album.className}</td>
+                      <td>{albumScopeLabel(album)}</td>
                       <td>{album.albumName}</td>
                       <td>
                         <code>{album.albumCode}</code>
@@ -325,7 +387,7 @@ export default function AdminAlbums() {
                   <div>
                     <h2>{detail.albumName}</h2>
                     <p className="admin-albums-detail__meta">
-                      {detail.className} · <code>{detail.albumCode}</code>
+                      {albumScopeLabel(detail)} · <code>{detail.albumCode}</code>
                     </p>
                   </div>
                   <button
@@ -396,6 +458,46 @@ export default function AdminAlbums() {
           </div>
         )}
       </div>
+
+      <Modal
+        open={createOpen}
+        onClose={() => !creating && setCreateOpen(false)}
+        title="Create school album"
+        footer={(
+          <>
+            <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)} disabled={creating}>
+              Cancel
+            </Button>
+            <Button type="button" variant="primary" onClick={handleCreateAlbum} loading={creating}>
+              Create Album
+            </Button>
+          </>
+        )}
+      >
+        <div className="admin-albums-create-form">
+          <label className="admin-albums-create-form__field">
+            <span>Album name</span>
+            <input
+              type="text"
+              value={createName}
+              onChange={(e) => setCreateName(e.target.value)}
+              placeholder="e.g. Annual Day 2026"
+              maxLength={255}
+              disabled={creating}
+            />
+          </label>
+          <label className="admin-albums-create-form__field">
+            <span>Description (optional)</span>
+            <textarea
+              value={createDescription}
+              onChange={(e) => setCreateDescription(e.target.value)}
+              placeholder="Event or purpose for this album"
+              rows={3}
+              disabled={creating}
+            />
+          </label>
+        </div>
+      </Modal>
 
       <PhotoLightbox
         photo={lightboxPhoto}

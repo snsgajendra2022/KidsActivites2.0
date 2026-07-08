@@ -66,6 +66,14 @@ export async function listAdminAlbums() {
   return api.get('/admin/albums');
 }
 
+export async function createAdminAlbum({ albumName, description, playbackEnabled }) {
+  return api.post('/admin/albums', {
+    albumName,
+    description: description || undefined,
+    playbackEnabled,
+  });
+}
+
 export async function getAdminAlbum(albumId) {
   return api.get(`/admin/albums/${albumId}`);
 }
