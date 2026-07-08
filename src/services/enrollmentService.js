@@ -4,9 +4,11 @@ import { buildEmptyFormFromConfig } from '../utils/enrollmentFormUtils.js';
 import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js';
 import { sanitizeEnrollmentPayload } from '../utils/enrollmentPayload.js';
 import { delay, getStore, setStore, generateApplicationNo } from './mockApi.js';
-import { api } from './api/client.js';
+import { api, ApiError } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
 import { getStoredUser } from './api/demoMode.js';
+import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from './api/config.js';
+import { getAccessToken } from './api/tokenStorage.js';
 
 const KEY = 'sb_applications';
 
@@ -228,6 +230,81 @@ export async function getCorrectionApplication(token) {
     },
     apiFn: () => api.get(`/enrollment/correction/${token}`, undefined, { auth: false }),
   });
+}
+
+/** Public (no auth) load of an application via short-lived print token (Playwright PDF). */
+export async function getPrintApplication(token) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay();
+      const apps = getAll();
+      return apps[0] || null;
+    },
+    apiFn: () => api.get(`/enrollment/print/${token}`, undefined, { auth: false }),
+  });
+}
+
+function parseContentDispositionFilename(header) {
+  if (!header) return null;
+  const match = /filename="([^"]+)"/i.exec(header);
+  return match?.[1] || null;
+}
+
+/** Download Kidzee enrollment PDF via backend Playwright renderer. */
+export async function downloadKidzeeEnrollmentPdf(applicationId) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(300);
+      toastMockPdfDownload(applicationId);
+    },
+    apiFn: async () => {
+      const headers = {};
+      const tenantSlug = resolveTenantSlug();
+      if (tenantSlug) headers[TENANT_HEADER] = tenantSlug;
+      const token = getAccessToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      let res;
+      try {
+        res = await fetch(`${API_BASE_URL}/enrollment/applications/${applicationId}/pdf`, { headers });
+      } catch (networkErr) {
+        const hint = networkErr?.message === 'Failed to fetch'
+          ? `Cannot reach the API at ${API_BASE_URL}.`
+          : (networkErr?.message || 'Network request failed');
+        throw new ApiError(hint, 0, 'NETWORK_ERROR');
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        let message = `PDF download failed (${res.status})`;
+        try {
+          const json = JSON.parse(text);
+          message = json?.error?.message || message;
+        } catch {
+          if (text) message = text;
+        }
+        throw new ApiError(message, res.status);
+      }
+
+      const blob = await res.blob();
+      const filename = parseContentDispositionFilename(res.headers.get('Content-Disposition'))
+        || `kidzee-enrollment-${applicationId}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+}
+
+function toastMockPdfDownload(applicationId) {
+  if (typeof window !== 'undefined') {
+    // Demo mode: no backend PDF — open print dialog as fallback
+    window.print?.();
+  }
+  return { id: applicationId, mock: true };
 }
 
 /** Public (no auth) save draft via correction token. */

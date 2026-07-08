@@ -3,14 +3,24 @@ const DOCUMENT_STRIP_KEYS = new Set([
   'previewUrl', 'dataUrl', 'downloadUrl', 'uploadUrl', 'base64', 'content', 'file', 'blob',
 ]);
 
-/** Form paths where PNG signature data URLs are persisted inline. */
-const SIGNATURE_PATHS = new Set([
+/**
+ * Form paths where inline data URLs are intentionally persisted (signatures + passport photos).
+ * These are small, bounded images that belong to the printable form itself; there is no separate
+ * media/object-storage endpoint for them, so they are kept inline like signatures.
+ */
+const INLINE_ALLOWED_PATHS = new Set([
   'permissions.emergency.signature',
   'permissions.fieldTrip.signature',
   'permissions.verification.signature',
   'officeUse.signature',
   'declaration.signature',
+  'photos.child',
+  'photos.father',
+  'photos.mother',
 ]);
+
+/** Keys under `photos` whose inline data URLs are persisted (passport-style photos). */
+const PHOTO_KEYS = new Set(['child', 'father', 'mother']);
 
 function isInlineDataUrl(value) {
   return typeof value === 'string' && value.startsWith('data:') && value.length > 256;
@@ -19,7 +29,7 @@ function isInlineDataUrl(value) {
 function sanitizeFormValue(value, path = '') {
   if (value == null) return value;
   if (typeof value === 'string') {
-    return isInlineDataUrl(value) && !SIGNATURE_PATHS.has(path) ? null : value;
+    return isInlineDataUrl(value) && !INLINE_ALLOWED_PATHS.has(path) ? null : value;
   }
   if (Array.isArray(value)) {
     return value.map((item) => sanitizeFormValue(item, path));
@@ -57,7 +67,9 @@ function sanitizePhotosForPersist(photos) {
   if (!photos || typeof photos !== 'object') return photos;
   return Object.fromEntries(
     Object.entries(photos).map(([key, value]) => {
-      if (isInlineDataUrl(value)) return [key, null];
+      if (isInlineDataUrl(value)) {
+        return PHOTO_KEYS.has(key) ? [key, value] : [key, null];
+      }
       if (value && typeof value === 'object') {
         return [key, sanitizeDocumentForPersist(value)];
       }
