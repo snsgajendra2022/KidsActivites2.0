@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Tv, Copy, RefreshCw, Archive, Eye, Play, FolderOpen, Plus, GraduationCap, Images, ImageIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Tv, Copy, RefreshCw, Archive, Eye, Play, FolderOpen, Plus, ImageIcon } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -16,6 +16,7 @@ import {
   updateAdminAlbum,
   updateAlbumMedia,
 } from '../../services/classAlbumService.js';
+import defaultAlbumCover from '../../assets/default-album-cover.png';
 import '../../styles/admin-albums.css';
 
 function toLightboxPhoto(item, albumDetail) {
@@ -95,8 +96,6 @@ export default function AdminAlbums() {
   const [createName, setCreateName] = useState('');
   const [createDescription, setCreateDescription] = useState('');
   const [creating, setCreating] = useState(false);
-  const [covers, setCovers] = useState({});
-  const coverRequested = useRef(new Set());
 
   const loadAlbums = useCallback(async () => {
     setLoading(true);
@@ -111,29 +110,6 @@ export default function AdminAlbums() {
   }, [toast]);
 
   useEffect(() => { loadAlbums(); }, [loadAlbums]);
-
-  // Lazily pull each album's first media thumbnail to use as a cover image.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      for (const album of albums) {
-        if (cancelled) return;
-        if ((album.mediaCount || 0) <= 0) continue;
-        if (album.coverImageUrl || album.coverUrl || album.thumbnailUrl) continue;
-        if (coverRequested.current.has(album.id)) continue;
-        coverRequested.current.add(album.id);
-        try {
-          const data = await getAdminAlbum(album.id);
-          if (cancelled) return;
-          const thumb = (data.media || []).find((m) => m.thumbnailUrl)?.thumbnailUrl || null;
-          setCovers((prev) => ({ ...prev, [album.id]: thumb }));
-        } catch {
-          /* cover is optional — ignore fetch failures */
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [albums]);
 
   const openDetail = async (albumId) => {
     setSelectedId(albumId);
@@ -337,8 +313,7 @@ export default function AdminAlbums() {
               <div className="admin-albums-cards">
                 {albums.map((album) => {
                   const cover =
-                    album.coverImageUrl || album.coverUrl || album.thumbnailUrl || covers[album.id];
-                  const isCustom = album.albumType === 'CUSTOM';
+                    album.coverImageUrl || album.coverUrl || album.thumbnailUrl || defaultAlbumCover;
                   return (
                     <article
                       key={album.id}
@@ -350,13 +325,12 @@ export default function AdminAlbums() {
                         onClick={() => openDetail(album.id)}
                         aria-label={`View ${album.albumName}`}
                       >
-                        {cover ? (
-                          <img src={cover} alt="" loading="lazy" />
-                        ) : (
-                          <span className={`admin-album-card__cover-fallback${isCustom ? ' is-school' : ''}`}>
-                            {isCustom ? <Images size={34} /> : <GraduationCap size={34} />}
-                          </span>
-                        )}
+                        <img
+                          src={cover}
+                          alt=""
+                          loading="lazy"
+                          onError={(e) => { e.currentTarget.src = defaultAlbumCover; }}
+                        />
                         <span className="admin-album-card__type-chip">{albumTypeLabel(album)}</span>
                         <span className="admin-album-card__tv">
                           <AlbumStatusPill playbackEnabled={album.playbackEnabled} status={album.status} />
