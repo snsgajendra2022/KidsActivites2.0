@@ -6,10 +6,12 @@ import PageTransition from '../../components/ui/PageTransition.jsx';
 import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
 import { WelcomeBanner } from '../../components/dashboard/ChartCards.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getTeacherClasses, getTeacherStats } from '../../services/teacherService.js';
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
   const [classes, setClasses] = useState([]);
   const [stats, setStats] = useState(null);
 
@@ -33,8 +35,8 @@ export default function TeacherDashboard() {
             subtitle="Share photos, send messages, and keep parents connected with classroom updates."
             actions={
               <>
-                <Link to="/teacher/photos" className="premium-btn premium-btn-white premium-btn-sm"><Send size={16} /> Send Photos</Link>
-                <Link to="/teacher/messages" className="premium-btn premium-btn-white premium-btn-sm">View Messages</Link>
+                <Link to={tenantPath('/teacher/photos')} className="premium-btn premium-btn-white premium-btn-sm"><Send size={16} /> Send Photos</Link>
+                <Link to={tenantPath('/teacher/messages')} className="premium-btn premium-btn-white premium-btn-sm">View Messages</Link>
               </>
             }
           />
@@ -47,7 +49,7 @@ export default function TeacherDashboard() {
           <div className="bento-span-12">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 className="card-title" style={{ margin: 0 }}>My Classes</h3>
-              <Link to="/teacher/classes" className="premium-btn premium-btn-secondary premium-btn-sm">View All Classes</Link>
+              <Link to={tenantPath('/teacher/classes')} className="premium-btn premium-btn-secondary premium-btn-sm">View All Classes</Link>
             </div>
             <div className="bento-grid" style={{ gap: 16 }}>
               {classes.map((cls) => (
@@ -61,8 +63,8 @@ export default function TeacherDashboard() {
                       <div className="premium-feature-icon" style={{ width: 40, height: 40, margin: 0 }}><GraduationCap size={20} /></div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-                      <Link to="/teacher/students" className="premium-btn premium-btn-secondary premium-btn-sm">Students</Link>
-                      <Link to="/teacher/photos" className="premium-btn premium-btn-primary premium-btn-sm">Send Photos <ArrowRight size={14} /></Link>
+                      <Link to={tenantPath('/teacher/students')} className="premium-btn premium-btn-secondary premium-btn-sm">Students</Link>
+                      <Link to={tenantPath('/teacher/photos')} className="premium-btn premium-btn-primary premium-btn-sm">Send Photos <ArrowRight size={14} /></Link>
                     </div>
                   </div>
                 </div>

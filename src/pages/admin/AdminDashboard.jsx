@@ -16,6 +16,7 @@ import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { getApplications, getDashboardStats, getDashboardChartData } from '../../services/enrollmentService.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 
 const RECENT_COLUMNS = [
   { key: 'applicationNo', label: 'Application No.', primary: true },
@@ -37,6 +38,7 @@ const RECENT_COLUMNS = [
 export default function AdminDashboard() {
   const { user, isDemoSession } = useAuth();
   const { school } = usePortalConfig();
+  const { tenantPath } = useTenantPath();
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState([]);
   const [chartData, setChartData] = useState([]);
@@ -69,10 +71,10 @@ export default function AdminDashboard() {
             badge={`${school?.academicYear} · Admissions Open`}
             actions={
               <>
-                <Link to="/admin/applications" className="premium-btn premium-btn-white premium-btn-sm">
+                <Link to={tenantPath('/admin/applications')} className="premium-btn premium-btn-white premium-btn-sm">
                   View Applications <ArrowRight size={16} />
                 </Link>
-                <Link to="/admin/fees" className="premium-btn premium-btn-white premium-btn-sm">Fee Management</Link>
+                <Link to={tenantPath('/admin/fees')} className="premium-btn premium-btn-white premium-btn-sm">Fee Management</Link>
               </>
             }
           />
@@ -99,7 +101,7 @@ export default function AdminDashboard() {
                   title="Recent Applications"
                   subtitle="Latest enrollment submissions"
                   actions={(
-                    <Link to="/admin/applications" className="table-action-btn table-action-btn-outline">
+                    <Link to={tenantPath('/admin/applications')} className="table-action-btn table-action-btn-outline">
                       View All
                     </Link>
                   )}

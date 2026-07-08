@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import { ResponsiveDataTable } from '../../components/ui/DataTable.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getTeacherStudents } from '../../services/teacherService.js';
 
 const STUDENT_COLUMNS = [
@@ -17,6 +18,7 @@ const STUDENT_COLUMNS = [
 
 export default function TeacherStudents() {
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
   const [students, setStudents] = useState([]);
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function TeacherStudents() {
         minWidth={700}
         emptyMessage="No students assigned to your classes yet."
         renderActions={() => (
-          <Link to="/teacher/messages" className="table-action-btn table-action-btn-outline">
+          <Link to={tenantPath('/teacher/messages')} className="table-action-btn table-action-btn-outline">
             Send Message
           </Link>
         )}

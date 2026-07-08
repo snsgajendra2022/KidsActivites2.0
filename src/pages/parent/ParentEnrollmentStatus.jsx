@@ -5,6 +5,7 @@ import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getParentDashboard, getParentChild } from '../../services/parentService.js';
 import { ENROLLMENT_STATUSES, STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
 import '../../styles/parent-enrollment.css';
@@ -85,6 +86,7 @@ function InfoGrid({ items }) {
 
 export default function ParentEnrollmentStatus() {
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
   const [searchParams] = useSearchParams();
   const childId = searchParams.get('child');
   const [dashboard, setDashboard] = useState(null);
@@ -127,7 +129,7 @@ export default function ParentEnrollmentStatus() {
         <div className="parent-enrollment-page">
           <header className="parent-enrollment-header">
             <div>
-              <Link to="/parent/dashboard" className="parent-enrollment-back">
+              <Link to={tenantPath('/parent/dashboard')} className="parent-enrollment-back">
                 <ArrowLeft size={16} /> Back to Dashboard
               </Link>
               <h1>Enrollment Status</h1>
@@ -143,7 +145,7 @@ export default function ParentEnrollmentStatus() {
               {children.map((c) => (
                 <Link
                   key={c.applicationId}
-                  to={`/parent/enrollment?child=${c.applicationId}`}
+                  to={tenantPath(`/parent/enrollment?child=${c.applicationId}`)}
                   className={`parent-enrollment-tab${child?.applicationId === c.applicationId ? ' is-active' : ''}`}
                 >
                   {c.student?.fullName || 'Child'}
