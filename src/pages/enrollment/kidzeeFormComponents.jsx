@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useRef, useState } from 'react';
 import { SignaturePad } from '../../components/ui/index.jsx';
 
 /** A4 page shell with optional alignment grid and wave decorations. */
@@ -180,33 +180,80 @@ export function CharBoxInput({
   style,
 }) {
   const uid = useId();
-  const display = (value || '').slice(0, boxes);
+  const inputRef = useRef(null);
+  const display = (value || '').toUpperCase().slice(0, boxes);
+  
+  const [focused, setFocused] = useState(false);
+  const [activeCaretIndex, setActiveCaretIndex] = useState(null);
+
   const colTemplate = fluid
     ? `repeat(${boxes}, minmax(0, 1fr))`
     : `repeat(${boxes}, ${boxWidth})`;
 
+  const updateCaret = () => {
+    if (inputRef.current) {
+      setActiveCaretIndex(inputRef.current.selectionStart);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const val = e.target.value.toUpperCase().slice(0, boxes);
+    onChange?.(val);
+    setTimeout(updateCaret, 0);
+  };
+
+  const handleBoxClick = (index, e) => {
+    if (readOnly) return;
+    e.preventDefault();
+    const targetIndex = Math.min(index, display.length);
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(targetIndex, targetIndex);
+      setActiveCaretIndex(targetIndex);
+    }
+  };
+
   const boxesEl = (
     <div
       className={`kz-char-boxes${fluid ? ' kz-char-boxes--fluid' : ''}`}
-      style={{ gridTemplateColumns: colTemplate }}
+      style={{ gridTemplateColumns: colTemplate, position: 'relative' }}
     >
-      {Array.from({ length: boxes }, (_, i) => (
-        <span
-          key={i}
-          className="kz-char-box"
-          aria-hidden
-        >
-          {display[i] || ''}
-        </span>
-      ))}
+      {Array.from({ length: boxes }, (_, i) => {
+        const char = display[i] || '';
+        const isActive = focused && activeCaretIndex === i;
+        return (
+          <span
+            key={i}
+            className={`kz-char-box ${isActive ? 'kz-char-box--active' : ''}`}
+            onClick={(e) => handleBoxClick(i, e)}
+            style={{ cursor: readOnly ? 'default' : 'text', zIndex: 1 }}
+          >
+            {char}
+          </span>
+        );
+      })}
       {!readOnly && (
         <input
+          ref={inputRef}
           id={uid}
           type="text"
           className="kz-char-input"
           value={display}
           maxLength={boxes}
-          onChange={(e) => onChange?.(e.target.value.slice(0, boxes))}
+          autoComplete="off"
+          onChange={handleInputChange}
+          onSelect={updateCaret}
+          onKeyDown={updateCaret}
+          onKeyUp={updateCaret}
+          onFocus={() => {
+            setFocused(true);
+            updateCaret();
+          }}
+          onBlur={() => {
+            setFocused(false);
+            setActiveCaretIndex(null);
+          }}
+          style={{ zIndex: 0 }}
           aria-label={label || 'Character input'}
         />
       )}

@@ -426,6 +426,14 @@
   border-right: 0.5pt solid #333;
 }
 
+.kz-char-box--active {
+  outline: none;
+  border: 1.5px solid #1a73e8 !important;
+  background-color: #e8f0fe !important;
+  position: relative;
+  z-index: 5;
+}
+
 .kz-char-input {
   position: absolute;
   inset: 0;
@@ -436,6 +444,7 @@
   border: none;
   background: transparent;
   font-size: 16px;
+  caret-color: transparent;
 }
 
 .kz-multi-row {
