@@ -6,6 +6,7 @@ import {
   PaperCheckbox,
   PhotoBox,
   KidzeeHeaderBrand,
+  useBoxChain,
 } from "../kidzeeFormComponents.jsx";
 import {
   CLASS_OPTIONS,
@@ -24,6 +25,7 @@ export default function KidzeePage1({
   const set = (path, value) => onChange(path, value);
   const child = formData.child || {};
   const formNoReadOnly = readOnly || (!isAdmin && Boolean(formData.formNo));
+  const addrChain = useBoxChain(4);
 
   const classRow1 = CLASS_OPTIONS.slice(0, 6);
   const classRow2 = CLASS_OPTIONS.slice(6);
@@ -264,6 +266,7 @@ export default function KidzeePage1({
       {/* Address — 35 + 35 indented + 27 + Pin 6 */}
       <div className="kz-p1-address-block">
         <CharBoxInput
+          {...addrChain(0)}
           label="Address:"
           boxes={35}
           value={child.addressLine1}
@@ -272,6 +275,7 @@ export default function KidzeePage1({
         />
         <div className="kz-p1-address-line2">
           <CharBoxInput
+            {...addrChain(1)}
             bare
             boxes={35}
             value={child.addressLine2}
@@ -282,6 +286,7 @@ export default function KidzeePage1({
         <div className="kz-p1-address-line3">
           <div className="kz-p1-address-line3__boxes">
             <CharBoxInput
+              {...addrChain(2)}
               bare
               boxes={24}
               value={child.addressLine3}
@@ -290,6 +295,7 @@ export default function KidzeePage1({
             />
           </div>
           <CharBoxInput
+            {...addrChain(3)}
             label="Pin:"
             boxes={6}
             filter="numeric"

@@ -1,6 +1,28 @@
-import { forwardRef, useId, useImperativeHandle, useRef, useState } from 'react';
+import { createRef, forwardRef, useId, useImperativeHandle, useRef, useState } from 'react';
 import { SignaturePad } from '../../components/ui/index.jsx';
 import { sanitizeInput } from './kidzeePrintFields.js';
+
+/**
+ * Builds a stable set of refs for a group of CharBoxInput rows and returns a
+ * helper that spreads the cross-line navigation props onto row `i`:
+ *   - onFilled: jump caret to the first box of the next row
+ *   - onBackspaceAtStart: jump caret back to the previous row
+ */
+export function useBoxChain(count) {
+  const refs = useRef([]);
+  if (refs.current.length !== count) {
+    refs.current = Array.from(
+      { length: count },
+      (_, i) => refs.current[i] || createRef(),
+    );
+  }
+  return (i) => ({
+    ref: refs.current[i],
+    onFilled: () => refs.current[i + 1]?.current?.focus(),
+    onBackspaceAtStart:
+      i > 0 ? () => refs.current[i - 1]?.current?.focus() : undefined,
+  });
+}
 
 /** A4 page shell with optional alignment grid and wave decorations. */
 export function PrintPage({
@@ -542,6 +564,8 @@ export function MultiRowBoxes({
   boxWidth,
   addressGrid = false,
 }) {
+  const chainProps = useBoxChain(rows.length);
+
   if (addressGrid && label) {
     return (
       <div className={`kz-address-grid ${className}`.trim()}>
@@ -558,6 +582,7 @@ export function MultiRowBoxes({
                 style={{ gridRow: rowIndex + 1 }}
               >
                 <CharBoxInput
+                  {...chainProps(rowIndex)}
                   bare
                   boxes={boxes}
                   value={values[rowIndex] ?? ''}
@@ -573,6 +598,7 @@ export function MultiRowBoxes({
           return (
             <CharBoxInput
               key={rowIndex}
+              {...chainProps(rowIndex)}
               boxes={boxes}
               value={values[rowIndex] ?? ''}
               onChange={(v) => onChange?.(rowIndex, v)}
@@ -598,6 +624,7 @@ export function MultiRowBoxes({
           return (
             <div key={rowIndex} className={lineClass}>
               <CharBoxInput
+                {...chainProps(rowIndex)}
                 boxes={boxes}
                 value={values[rowIndex] ?? ''}
                 onChange={(v) => onChange?.(rowIndex, v)}
@@ -613,6 +640,7 @@ export function MultiRowBoxes({
         return (
           <CharBoxInput
             key={rowIndex}
+            {...chainProps(rowIndex)}
             label={isFirst ? label : undefined}
             boxes={boxes}
             value={values[rowIndex] ?? ''}
@@ -781,12 +809,14 @@ function P3AddressBlock({
   onPinChange,
   readOnly,
 }) {
+  const chainProps = useBoxChain(4);
   return (
     <>
       <div className="kz-p3-form-row">
         <span className="kz-p3-label-fixed kz-field-label">{label}</span>
         <div className="kz-p3-grid-input-wrapper">
           <CharBoxInput
+            {...chainProps(0)}
             bare
             boxes={P3_ROW_BOXES}
             value={line1}
@@ -799,6 +829,7 @@ function P3AddressBlock({
         <P3LabelSpacer />
         <div className="kz-p3-grid-input-wrapper">
           <CharBoxInput
+            {...chainProps(1)}
             bare
             boxes={P3_ROW_BOXES}
             value={line2}
@@ -812,6 +843,7 @@ function P3AddressBlock({
         <div className="kz-p3-address-line3-inputs">
           <div className="kz-p3-grid-input-wrapper kz-p3-addr-line3-wrapper">
             <CharBoxInput
+              {...chainProps(2)}
               bare
               boxes={P3_ADDR_LINE3_BOXES}
               value={line3}
@@ -822,6 +854,7 @@ function P3AddressBlock({
           <span className="kz-p3-inline-label kz-field-label">Pin:</span>
           <div className="kz-p3-grid-input-wrapper kz-p3-pin-wrapper">
             <CharBoxInput
+              {...chainProps(3)}
               bare
               boxes={P3_PIN_BOXES}
               value={pin}
@@ -837,12 +870,14 @@ function P3AddressBlock({
 }
 
 function P3MedicalBlock({ line1, line2, line3, onLineChange, readOnly }) {
+  const chainProps = useBoxChain(3);
   return (
     <>
       <div className="kz-p3-form-row">
         <span className="kz-p3-label-fixed kz-field-label">Medical History:</span>
         <div className="kz-p3-grid-input-wrapper">
           <CharBoxInput
+            {...chainProps(0)}
             bare
             boxes={P3_ROW_BOXES}
             value={line1}
@@ -855,6 +890,7 @@ function P3MedicalBlock({ line1, line2, line3, onLineChange, readOnly }) {
         <P3LabelSpacer />
         <div className="kz-p3-grid-input-wrapper">
           <CharBoxInput
+            {...chainProps(1)}
             bare
             boxes={P3_ROW_BOXES}
             value={line2}
@@ -867,6 +903,7 @@ function P3MedicalBlock({ line1, line2, line3, onLineChange, readOnly }) {
         <P3LabelSpacer />
         <div className="kz-p3-grid-input-wrapper">
           <CharBoxInput
+            {...chainProps(2)}
             bare
             boxes={P3_ROW_BOXES}
             value={line3}
