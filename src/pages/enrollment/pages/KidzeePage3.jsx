@@ -3,6 +3,7 @@ import {
   GuardianColumn,
   PaperCheckbox,
   PaperTable,
+  TableInput,
   KidzeeHeaderBrand,
 } from "../kidzeeFormComponents.jsx";
 import { HOUSEHOLD_INCOME_OPTIONS } from "../kidzeePrintFields.js";
@@ -73,70 +74,54 @@ export default function KidzeePage3({
             </tr>
           </thead>
           <tbody>
-            {[0, 1].map((i) => (
+            {[0, 1, 2].map((i) => (
               <tr key={i}>
                 <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={siblings[i]?.name ?? ""}
-                    onChange={(e) => set(`siblings.${i}.name`, e.target.value)}
+                  <TableInput
+                    value={siblings[i]?.name}
+                    onChange={(v) => set(`siblings.${i}.name`, v)}
+                    readOnly={readOnly}
+                    filter="alpha"
+                  />
+                </td>
+                <td>
+                  <TableInput
+                    value={siblings[i]?.gender}
+                    onChange={(v) => set(`siblings.${i}.gender`, v)}
+                    readOnly={readOnly}
+                    filter="alpha"
+                  />
+                </td>
+                <td>
+                  <TableInput
+                    type="date"
+                    value={siblings[i]?.dateOfBirth}
+                    onChange={(v) => set(`siblings.${i}.dateOfBirth`, v)}
                     readOnly={readOnly}
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={siblings[i]?.gender ?? ""}
-                    onChange={(e) =>
-                      set(`siblings.${i}.gender`, e.target.value)
-                    }
+                  <TableInput
+                    value={siblings[i]?.school}
+                    onChange={(v) => set(`siblings.${i}.school`, v)}
                     readOnly={readOnly}
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={siblings[i]?.dateOfBirth ?? ""}
-                    onChange={(e) =>
-                      set(`siblings.${i}.dateOfBirth`, e.target.value)
-                    }
+                  <TableInput
+                    value={siblings[i]?.standard}
+                    onChange={(v) => set(`siblings.${i}.standard`, v)}
                     readOnly={readOnly}
+                    filter="alphanumeric"
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={siblings[i]?.school ?? ""}
-                    onChange={(e) =>
-                      set(`siblings.${i}.school`, e.target.value)
-                    }
+                  <TableInput
+                    className="kz-table-input--center"
+                    value={siblings[i]?.alumni}
+                    onChange={(v) => set(`siblings.${i}.alumni`, v)}
                     readOnly={readOnly}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={siblings[i]?.standard ?? ""}
-                    onChange={(e) =>
-                      set(`siblings.${i}.standard`, e.target.value)
-                    }
-                    readOnly={readOnly}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    className="kz-table-input kz-table-input--center"
-                    value={siblings[i]?.alumni ?? ""}
-                    onChange={(e) =>
-                      set(`siblings.${i}.alumni`, e.target.value)
-                    }
-                    readOnly={readOnly}
+                    filter="alpha"
                     maxLength={1}
                   />
                 </td>
@@ -160,51 +145,40 @@ export default function KidzeePage3({
             </tr>
           </thead>
           <tbody>
-            {[0].map((i) => (
+            {[0, 1, 2].map((i) => (
               <tr key={i}>
                 <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={familyMembers[i]?.name ?? ""}
-                    onChange={(e) =>
-                      set(`otherFamilyMembers.${i}.name`, e.target.value)
-                    }
+                  <TableInput
+                    value={familyMembers[i]?.name}
+                    onChange={(v) => set(`otherFamilyMembers.${i}.name`, v)}
                     readOnly={readOnly}
+                    filter="alpha"
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={familyMembers[i]?.gender ?? ""}
-                    onChange={(e) =>
-                      set(`otherFamilyMembers.${i}.gender`, e.target.value)
-                    }
+                  <TableInput
+                    value={familyMembers[i]?.gender}
+                    onChange={(v) => set(`otherFamilyMembers.${i}.gender`, v)}
                     readOnly={readOnly}
+                    filter="alpha"
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={familyMembers[i]?.relationship ?? ""}
-                    onChange={(e) =>
-                      set(
-                        `otherFamilyMembers.${i}.relationship`,
-                        e.target.value,
-                      )
+                  <TableInput
+                    value={familyMembers[i]?.relationship}
+                    onChange={(v) =>
+                      set(`otherFamilyMembers.${i}.relationship`, v)
                     }
                     readOnly={readOnly}
+                    filter="alpha"
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    className="kz-table-input"
-                    value={familyMembers[i]?.dateOfBirth ?? ""}
-                    onChange={(e) =>
-                      set(`otherFamilyMembers.${i}.dateOfBirth`, e.target.value)
+                  <TableInput
+                    type="date"
+                    value={familyMembers[i]?.dateOfBirth}
+                    onChange={(v) =>
+                      set(`otherFamilyMembers.${i}.dateOfBirth`, v)
                     }
                     readOnly={readOnly}
                   />
@@ -215,10 +189,6 @@ export default function KidzeePage3({
         </PaperTable>
       </div>
 
-      <div className="kz-p3-learn-mark" aria-hidden>
-        <span className="kz-p3-learn-mark__z">Z</span>
-        <span className="kz-p3-learn-mark__text">LEARN</span>
-      </div>
     </PrintPage>
   );
 }

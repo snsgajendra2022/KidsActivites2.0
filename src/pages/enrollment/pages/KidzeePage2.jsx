@@ -3,6 +3,7 @@ import {
   CharBoxInput,
   MultiRowBoxes,
   YesNoGroup,
+  KidzeeHeaderBrand,
 } from "../kidzeeFormComponents.jsx";
 
 const P2_EXPLAIN_ROWS = [39, 39, 39];
@@ -38,6 +39,7 @@ export default function KidzeePage2({
   formData,
   onChange,
   readOnly,
+  branding,
   showGrid,
 }) {
   const set = (path, value) => onChange(path, value);
@@ -45,7 +47,11 @@ export default function KidzeePage2({
   const health = formData.health || {};
 
   return (
-    <PrintPage pageNumber={2} showGrid={showGrid}>
+    <PrintPage pageNumber={2} showGrid={showGrid} branding={branding}>
+      <header className="kz-p2-header">
+        <KidzeeHeaderBrand branding={branding} />
+      </header>
+
       {/* Family Doctor */}
       <div className="kz-p2-section kz-p2-section--doctor">
         <div className="kz-p2-row kz-p2-row--title">
@@ -60,7 +66,7 @@ export default function KidzeePage2({
             label="Name:"
             labelClass="kz-p2-field-label"
             boxes={35}
-
+            filter="alpha"
             value={doctor.name}
             onChange={(v) => set("doctor.name", v)}
             readOnly={readOnly}
@@ -80,7 +86,7 @@ export default function KidzeePage2({
                 label="Pin:"
                 labelClass="kz-p2-field-label"
                 boxes={6}
-
+                filter="numeric"
                 value={doctor.pin}
                 onChange={(v) => set("doctor.pin", v)}
                 readOnly={readOnly}
@@ -95,7 +101,7 @@ export default function KidzeePage2({
             label="Home Phone:"
             labelClass="kz-p2-field-label"
             boxes={12}
-
+            filter="numeric"
             value={doctor.homePhone}
             onChange={(v) => set("doctor.homePhone", v)}
             readOnly={readOnly}
@@ -105,7 +111,7 @@ export default function KidzeePage2({
             label="Mobile No.:"
             labelClass="kz-p2-field-label"
             boxes={15}
-
+            filter="numeric"
             value={doctor.mobile}
             onChange={(v) => set("doctor.mobile", v)}
             readOnly={readOnly}
@@ -118,7 +124,8 @@ export default function KidzeePage2({
             label="E-mail ID:"
             labelClass="kz-p2-field-label"
             boxes={35}
-
+            filter="email"
+            caseSensitive
             value={doctor.email}
             onChange={(v) => set("doctor.email", v)}
             readOnly={readOnly}
@@ -221,10 +228,6 @@ export default function KidzeePage2({
         />
       </div>
 
-      <div className="kz-p2-learn-mark" aria-hidden>
-        <span className="kz-p2-learn-mark__z">Z</span>
-        <span className="kz-p2-learn-mark__text">LEARN</span>
-      </div>
     </PrintPage>
   );
 }

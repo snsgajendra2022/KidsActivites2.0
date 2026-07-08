@@ -2,6 +2,7 @@ import {
   PrintPage,
   SectionBar,
   CharBoxInput,
+  DateInput,
   PaperCheckbox,
   PhotoBox,
   KidzeeHeaderBrand,
@@ -39,7 +40,7 @@ export default function KidzeePage1({
         <CharBoxInput
           label="Tel. No.:"
           boxes={10}
-
+          filter="numeric"
           value={formData.telNo}
           onChange={(v) => set("telNo", v)}
           readOnly={readOnly}
@@ -139,7 +140,7 @@ export default function KidzeePage1({
         <CharBoxInput
           label="Name of the child:"
           boxes={32}
-
+          filter="alpha"
           value={child.fullName}
           onChange={(v) => set("child.fullName", v)}
           readOnly={readOnly}
@@ -170,9 +171,8 @@ export default function KidzeePage1({
 
       {/* DOB 8 | Place 10 */}
       <div className="kz-p1-row kz-p1-row--dob-place">
-        <CharBoxInput
+        <DateInput
           label="Date of birth:"
-          boxes={8}
           value={child.dateOfBirth}
           onChange={(v) => set("child.dateOfBirth", v)}
           readOnly={readOnly}
@@ -181,6 +181,7 @@ export default function KidzeePage1({
         <CharBoxInput
           label="Place of birth:"
           boxes={10}
+          filter="alpha"
           value={child.placeOfBirth}
           onChange={(v) => set("child.placeOfBirth", v)}
           readOnly={readOnly}
@@ -253,6 +254,7 @@ export default function KidzeePage1({
         <CharBoxInput
           label="Language(s) spoken at home:"
           boxes={28}
+          filter="alpha"
           value={child.languagesAtHome}
           onChange={(v) => set("child.languagesAtHome", v)}
           readOnly={readOnly}
@@ -290,6 +292,7 @@ export default function KidzeePage1({
           <CharBoxInput
             label="Pin:"
             boxes={6}
+            filter="numeric"
             value={child.pin}
             onChange={(v) => set("child.pin", v)}
             readOnly={readOnly}
@@ -303,6 +306,7 @@ export default function KidzeePage1({
         <CharBoxInput
           label="Contact No.:"
           boxes={18}
+          filter="numeric"
           value={child.contactNo}
           onChange={(v) => set("child.contactNo", v)}
           readOnly={readOnly}
@@ -340,10 +344,6 @@ export default function KidzeePage1({
         />
       </div>
 
-      <div className="kz-p1-learn-mark" aria-hidden>
-        <span className="kz-p1-learn-mark__z">Z</span>
-        <span className="kz-p1-learn-mark__text">LEARN</span>
-      </div>
     </PrintPage>
   );
 }

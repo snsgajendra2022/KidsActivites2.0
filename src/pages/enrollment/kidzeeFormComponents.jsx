@@ -1,5 +1,6 @@
-import { useId, useRef, useState } from 'react';
+import { forwardRef, useId, useImperativeHandle, useRef, useState } from 'react';
 import { SignaturePad } from '../../components/ui/index.jsx';
+import { sanitizeInput } from './kidzeePrintFields.js';
 
 /** A4 page shell with optional alignment grid and wave decorations. */
 export function PrintPage({
@@ -108,13 +109,62 @@ export function KidzeeHeaderBrand({ branding }) {
   );
 }
 
+function SocialIconFacebook() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden focusable="false">
+      <path
+        fill="#fff"
+        d="M13.5 21v-8h2.6l.4-3h-3V8.1c0-.9.3-1.4 1.5-1.4H16.6V4.1C16.3 4.1 15.3 4 14.2 4 11.9 4 10.3 5.4 10.3 8v2H7.6v3h2.7v8h3.2z"
+      />
+    </svg>
+  );
+}
+
+function SocialIconInstagram() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+      <rect x="4" y="4" width="16" height="16" rx="5" stroke="#fff" strokeWidth="2" />
+      <circle cx="12" cy="12" r="3.6" stroke="#fff" strokeWidth="2" />
+      <circle cx="17" cy="7" r="1.2" fill="#fff" />
+    </svg>
+  );
+}
+
+function SocialIconWeb() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+      <circle cx="12" cy="12" r="9" stroke="#fff" strokeWidth="2" />
+      <path
+        d="M3 12h18M12 3c2.7 2.6 2.7 15.4 0 18M12 3c-2.7 2.6-2.7 15.4 0 18"
+        stroke="#fff"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
 export function KidzeeFooter({ branding }) {
   return (
     <footer className="kz-footer">
       <div className="kz-footer__social">
-        <span>f {branding.social.facebook}</span>
-        <span>◎ {branding.social.instagram}</span>
-        <span>⌂ {branding.social.website}</span>
+        <span className="kz-social">
+          <span className="kz-social__badge kz-social__badge--fb">
+            <SocialIconFacebook />
+          </span>
+          <span className="kz-social__label">{branding.social.facebook}</span>
+        </span>
+        <span className="kz-social">
+          <span className="kz-social__badge kz-social__badge--ig">
+            <SocialIconInstagram />
+          </span>
+          <span className="kz-social__label">{branding.social.instagram}</span>
+        </span>
+        <span className="kz-social">
+          <span className="kz-social__badge kz-social__badge--web">
+            <SocialIconWeb />
+          </span>
+          <span className="kz-social__label">{branding.social.website}</span>
+        </span>
       </div>
       <div className="kz-footer__badges">
         <span className="kz-footer__trusted">{branding.trustedBrandText}</span>
@@ -129,6 +179,41 @@ export function KidzeeFooter({ branding }) {
 
 export function SectionBar({ children }) {
   return <div className="kz-section-bar">{children}</div>;
+}
+
+export function TrustedBrandSeal({ className = '' }) {
+  return (
+    <svg
+      className={`kz-seal ${className}`.trim()}
+      viewBox="0 0 100 100"
+      role="img"
+      aria-label="India's Most Trusted Brand seal"
+    >
+      <defs>
+        <path id="kz-seal-arc-top" d="M 14,50 A 36,36 0 0 1 86,50" />
+        <path id="kz-seal-arc-bottom" d="M 16,50 A 34,34 0 0 0 84,50" />
+      </defs>
+      <circle className="kz-seal__ring kz-seal__ring--outer" cx="50" cy="50" r="47" />
+      <circle className="kz-seal__ring kz-seal__ring--mid" cx="50" cy="50" r="43" />
+      <circle className="kz-seal__ring kz-seal__ring--inner" cx="50" cy="50" r="30" />
+      <text className="kz-seal__arc kz-seal__arc--top">
+        <textPath href="#kz-seal-arc-top" startOffset="50%" textAnchor="middle">
+          {"INDIA'S MOST TRUSTED BRAND"}
+        </textPath>
+      </text>
+      <text className="kz-seal__arc kz-seal__arc--bottom">
+        <textPath href="#kz-seal-arc-bottom" startOffset="50%" textAnchor="middle">
+          {"\u2605 PRE SCHOOL \u2605"}
+        </textPath>
+      </text>
+      <text className="kz-seal__brand" x="50" y="47" textAnchor="middle">
+        KIDZEE
+      </text>
+      <text className="kz-seal__tag" x="50" y="58" textAnchor="middle">
+        {"\u2605 \u2605 \u2605"}
+      </text>
+    </svg>
+  );
 }
 
 export function LineInput({ label, value, onChange, readOnly, suffix, className = '', boxes }) {
@@ -160,14 +245,155 @@ export function LineInput({ label, value, onChange, readOnly, suffix, className 
   );
 }
 
-export function BoxInput(props) {
-  return <CharBoxInput {...props} />;
+function isoToDisplayDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = String(iso).split('-');
+  if (!y || !m || !d) return '';
+  return `${d}/${m}/${y}`;
 }
 
-export function CharBoxInput({
+export function DateInput({
+  label,
+  value,
+  onChange,
+  readOnly,
+  className = '',
+  labelClass = '',
+  inline = false,
+}) {
+  const nativeRef = useRef(null);
+  const display = isoToDisplayDate(value);
+
+  const openPicker = () => {
+    if (readOnly) return;
+    const el = nativeRef.current;
+    if (!el) return;
+    if (typeof el.showPicker === 'function') {
+      try {
+        el.showPicker();
+        return;
+      } catch {
+        /* fall back to focus */
+      }
+    }
+    el.focus();
+  };
+
+  return (
+    <label
+      className={`kz-line-field kz-date-field ${inline ? 'kz-char-field--inline' : ''} ${className}`.trim()}
+    >
+      {label && <span className={`kz-field-label ${labelClass}`.trim()}>{label}</span>}
+      <span
+        className={`kz-date-wrap ${readOnly ? 'kz-date-wrap--ro' : ''}`.trim()}
+        onClick={openPicker}
+      >
+        <span
+          className={`kz-date-facade ${display ? '' : 'kz-date-facade--empty'}`.trim()}
+        >
+          {display || 'dd/mm/yyyy'}
+        </span>
+        <span className="kz-date-ico" aria-hidden>
+          &#128197;
+        </span>
+        <input
+          ref={nativeRef}
+          type="date"
+          className="kz-date-native"
+          value={value ?? ''}
+          onChange={(e) => onChange?.(e.target.value)}
+          readOnly={readOnly}
+          disabled={readOnly}
+          tabIndex={-1}
+          aria-label={typeof label === 'string' ? label : 'date'}
+        />
+      </span>
+    </label>
+  );
+}
+
+function TableDateCell({ value, onChange, readOnly, className = '' }) {
+  const nativeRef = useRef(null);
+  const display = isoToDisplayDate(value);
+
+  const openPicker = () => {
+    if (readOnly) return;
+    const el = nativeRef.current;
+    if (!el) return;
+    if (typeof el.showPicker === 'function') {
+      try {
+        el.showPicker();
+        return;
+      } catch {
+        /* fall back to focus */
+      }
+    }
+    el.focus();
+  };
+
+  return (
+    <span
+      className={`kz-tdate ${readOnly ? 'kz-tdate--ro' : ''} ${className}`.trim()}
+      onClick={openPicker}
+    >
+      <svg className="kz-tdate__ico" viewBox="0 0 24 24" aria-hidden focusable="false">
+        <rect x="3" y="4.5" width="18" height="16.5" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path d="M3 9.5h18M8 2.5v4M16 2.5v4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+      <span
+        className={`kz-tdate__text ${display ? '' : 'kz-tdate__text--empty'}`.trim()}
+      >
+        {display || 'dd/mm/yyyy'}
+      </span>
+      <input
+        ref={nativeRef}
+        type="date"
+        className="kz-tdate__native"
+        value={value ?? ''}
+        onChange={(e) => onChange?.(e.target.value)}
+        readOnly={readOnly}
+        disabled={readOnly}
+        tabIndex={-1}
+        aria-label="date"
+      />
+    </span>
+  );
+}
+
+export function TableInput({ value, onChange, readOnly, filter, className = '', maxLength, type = 'text', placeholder }) {
+  if (type === 'date') {
+    return (
+      <TableDateCell
+        value={value}
+        onChange={onChange}
+        readOnly={readOnly}
+        className={className}
+      />
+    );
+  }
+  return (
+    <input
+      type="text"
+      className={`kz-table-input ${className}`.trim()}
+      value={value ?? ''}
+      onChange={(e) => onChange?.(sanitizeInput(e.target.value, filter))}
+      readOnly={readOnly}
+      maxLength={maxLength}
+      placeholder={placeholder}
+    />
+  );
+}
+
+export const BoxInput = forwardRef(function BoxInput(props, ref) {
+  return <CharBoxInput {...props} ref={ref} />;
+});
+
+export const CharBoxInput = forwardRef(function CharBoxInput({
   label,
   value = '',
   onChange,
+  onFilled,
+  onBackspaceAtStart,
   readOnly = false,
   boxes = 10,
   className = '',
@@ -177,11 +403,24 @@ export function CharBoxInput({
   fluid = false,
   bare = false,
   boxWidth = '4.8mm',
+  filter,
+  caseSensitive = false,
   style,
-}) {
+}, ref) {
   const uid = useId();
   const inputRef = useRef(null);
-  const display = (value || '').toUpperCase().slice(0, boxes);
+  const normalizeCase = (v) => (caseSensitive ? v : (v || '').toUpperCase());
+  const display = normalizeCase(value || '').slice(0, boxes);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      const pos = (el.value || '').length;
+      el.setSelectionRange(pos, pos);
+    },
+  }));
   
   const [focused, setFocused] = useState(false);
   const [activeCaretIndex, setActiveCaretIndex] = useState(null);
@@ -197,9 +436,24 @@ export function CharBoxInput({
   };
 
   const handleInputChange = (e) => {
-    const val = e.target.value.toUpperCase().slice(0, boxes);
+    const caretAtEnd = e.target.selectionStart >= boxes;
+    const val = sanitizeInput(normalizeCase(e.target.value), filter).slice(0, boxes);
     onChange?.(val);
     setTimeout(updateCaret, 0);
+    if (val.length >= boxes && caretAtEnd) {
+      onFilled?.();
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (
+      e.key === 'Backspace' &&
+      e.target.selectionStart === 0 &&
+      e.target.selectionEnd === 0
+    ) {
+      onBackspaceAtStart?.();
+    }
+    updateCaret();
   };
 
   const handleBoxClick = (index, e) => {
@@ -243,7 +497,7 @@ export function CharBoxInput({
           autoComplete="off"
           onChange={handleInputChange}
           onSelect={updateCaret}
-          onKeyDown={updateCaret}
+          onKeyDown={handleKeyDown}
           onKeyUp={updateCaret}
           onFocus={() => {
             setFocused(true);
@@ -274,7 +528,7 @@ export function CharBoxInput({
       {suffix}
     </div>
   );
-}
+});
 
 export function MultiRowBoxes({
   label,
@@ -498,7 +752,7 @@ function P3LabelSpacer() {
   return <div className="kz-p3-label-fixed kz-field-label" aria-hidden />;
 }
 
-function P3FieldRow({ label, boxes, value, onChange, readOnly }) {
+function P3FieldRow({ label, boxes, value, onChange, readOnly, filter, caseSensitive }) {
   return (
     <div className="kz-p3-form-row">
       <span className="kz-p3-label-fixed kz-field-label">{label}</span>
@@ -509,6 +763,8 @@ function P3FieldRow({ label, boxes, value, onChange, readOnly }) {
           value={value}
           onChange={onChange}
           readOnly={readOnly}
+          filter={filter}
+          caseSensitive={caseSensitive}
         />
       </div>
     </div>
@@ -571,6 +827,7 @@ function P3AddressBlock({
               value={pin}
               onChange={onPinChange}
               readOnly={readOnly}
+              filter="numeric"
             />
           </div>
         </div>
@@ -622,18 +879,26 @@ function P3MedicalBlock({ line1, line2, line3, onLineChange, readOnly }) {
   );
 }
 
-function P3EmailBlock({ value, onChange, readOnly }) {
-  const emailLine1 = (value || '').slice(0, P3_ROW_BOXES);
-  const emailLine2 = (value || '').slice(P3_ROW_BOXES, P3_ROW_BOXES * 2);
+const P3_EMAIL_ROWS = [14, 14, 12];
+const P3_EMAIL_OFFSETS = [0, 14, 28];
 
-  const handleEmailChange = (rowIndex, val) => {
-    let combined = '';
-    if (rowIndex === 0) {
-      combined = val.padEnd(P3_ROW_BOXES, ' ').slice(0, P3_ROW_BOXES) + emailLine2;
-    } else {
-      combined = emailLine1.padEnd(P3_ROW_BOXES, ' ') + val;
-    }
-    onChange(combined.trimEnd());
+function P3EmailBlock({ value, onChange, readOnly }) {
+  const emailRef0 = useRef(null);
+  const emailRef1 = useRef(null);
+  const emailRef2 = useRef(null);
+  const emailRefs = [emailRef0, emailRef1, emailRef2];
+
+  const emailLines = P3_EMAIL_ROWS.map((n, i) =>
+    (value || '').slice(P3_EMAIL_OFFSETS[i], P3_EMAIL_OFFSETS[i] + n),
+  );
+
+  const setEmailRow = (rowIndex, val) => {
+    const rows = [...emailLines];
+    rows[rowIndex] = val;
+    const combined = rows
+      .map((r, idx) => r.padEnd(P3_EMAIL_ROWS[idx], ' '))
+      .join('');
+    onChange(combined.replace(/\s+$/, ''));
   };
 
   return (
@@ -642,26 +907,39 @@ function P3EmailBlock({ value, onChange, readOnly }) {
         <span className="kz-p3-label-fixed kz-field-label">E-mail:</span>
         <div className="kz-p3-grid-input-wrapper">
           <CharBoxInput
+            ref={emailRef0}
             bare
-            boxes={P3_ROW_BOXES}
-            value={emailLine1}
-            onChange={(v) => handleEmailChange(0, v)}
+            boxes={P3_EMAIL_ROWS[0]}
+            boxWidth="4.1mm"
+            value={emailLines[0]}
+            onChange={(v) => setEmailRow(0, v)}
+            onFilled={() => emailRefs[1].current?.focus()}
             readOnly={readOnly}
+            filter="email"
+            caseSensitive
           />
         </div>
       </div>
-      <div className="kz-p3-form-row">
-        <P3LabelSpacer />
-        <div className="kz-p3-grid-input-wrapper">
-          <CharBoxInput
-            bare
-            boxes={P3_ROW_BOXES}
-            value={emailLine2}
-            onChange={(v) => handleEmailChange(1, v)}
-            readOnly={readOnly}
-          />
+      {[1, 2].map((r) => (
+        <div className="kz-p3-form-row" key={r}>
+          <P3LabelSpacer />
+          <div className="kz-p3-grid-input-wrapper">
+            <CharBoxInput
+              ref={emailRefs[r]}
+              bare
+              boxes={P3_EMAIL_ROWS[r]}
+              boxWidth="4.1mm"
+              value={emailLines[r]}
+              onChange={(v) => setEmailRow(r, v)}
+              onFilled={() => emailRefs[r + 1]?.current?.focus()}
+              onBackspaceAtStart={() => emailRefs[r - 1].current?.focus()}
+              readOnly={readOnly}
+              filter="email"
+              caseSensitive
+            />
+          </div>
         </div>
-      </div>
+      ))}
     </>
   );
 }
@@ -680,6 +958,7 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         value={g.name}
         onChange={(v) => set('name', v)}
         readOnly={readOnly}
+        filter="alpha"
       />
 
       <P3AddressBlock
@@ -699,6 +978,7 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         value={g.contactNo}
         onChange={(v) => set('contactNo', v)}
         readOnly={readOnly}
+        filter="numeric"
       />
 
       <P3FieldRow
@@ -707,6 +987,7 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         value={g.qualification}
         onChange={(v) => set('qualification', v)}
         readOnly={readOnly}
+        filter="alpha"
       />
 
       <P3FieldRow
@@ -715,6 +996,7 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         value={g.occupation}
         onChange={(v) => set('occupation', v)}
         readOnly={readOnly}
+        filter="alpha"
       />
 
       <P3FieldRow
@@ -723,6 +1005,7 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         value={g.designation}
         onChange={(v) => set('designation', v)}
         readOnly={readOnly}
+        filter="alpha"
       />
 
       <P3AddressBlock
@@ -742,6 +1025,7 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         value={g.officeContactNo}
         onChange={(v) => set('officeContactNo', v)}
         readOnly={readOnly}
+        filter="numeric"
       />
 
       <P3FieldRow
@@ -750,6 +1034,7 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         value={g.mobile}
         onChange={(v) => set('mobile', v)}
         readOnly={readOnly}
+        filter="numeric"
       />
 
       <P3EmailBlock

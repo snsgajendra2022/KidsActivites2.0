@@ -1,9 +1,81 @@
 import {
   PrintPage,
   CharBoxInput,
+  DateInput,
   SignatureLine,
   KidzeeHeaderBrand,
+  TrustedBrandSeal,
 } from "../kidzeeFormComponents.jsx";
+import { sanitizeInput } from "../kidzeePrintFields.js";
+
+function OfficeIcon({ name }) {
+  const common = {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    className: "kz-office-ico",
+    "aria-hidden": true,
+  };
+  switch (name) {
+    case "class":
+      return (
+        <svg {...common}>
+          <path d="M3 7l9-4 9 4-9 4-9-4z" />
+          <path d="M7 9.2V14c0 1.1 2.2 2.4 5 2.4s5-1.3 5-2.4V9.2" />
+        </svg>
+      );
+    case "invoice":
+      return (
+        <svg {...common}>
+          <path d="M6 2h8l5 5v15H6z" />
+          <path d="M14 2v6h5M9 13h6M9 17h5" />
+        </svg>
+      );
+    case "amount":
+      return (
+        <svg {...common}>
+          <rect x="2.5" y="6" width="19" height="12" rx="2" />
+          <circle cx="12" cy="12" r="2.6" />
+          <path d="M5.5 9v6M18.5 9v6" />
+        </svg>
+      );
+    case "timing":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3.2 2" />
+        </svg>
+      );
+    case "calendar":
+      return (
+        <svg {...common}>
+          <rect x="3" y="4.5" width="18" height="16.5" rx="2" />
+          <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+        </svg>
+      );
+    case "building":
+      return (
+        <svg {...common}>
+          <path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
+          <path d="M16 8h2a2 2 0 0 1 2 2v11M4 21h18M8 7h2M8 11h2M8 15h2" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+function OfficeLabel({ icon, text }) {
+  return (
+    <span className="kz-office-label">
+      <OfficeIcon name={icon} />
+      {text}
+    </span>
+  );
+}
 
 function PermissionSignRow({
   date,
@@ -16,10 +88,8 @@ function PermissionSignRow({
 }) {
   return (
     <div className="kz-perm-sign">
-      <CharBoxInput
+      <DateInput
         label="Date:"
-        boxes={8}
-
         value={date}
         onChange={onDate}
         readOnly={readOnly}
@@ -27,7 +97,7 @@ function PermissionSignRow({
       <CharBoxInput
         label="Place:"
         boxes={12}
-
+        filter="alpha"
         value={place}
         onChange={onPlace}
         readOnly={readOnly}
@@ -121,7 +191,10 @@ export default function KidzeePage5({
             className="kz-p5-verify__name"
             value={permissions.verification?.childName ?? ""}
             onChange={(e) =>
-              set("permissions.verification.childName", e.target.value)
+              set(
+                "permissions.verification.childName",
+                sanitizeInput(e.target.value, "alpha"),
+              )
             }
             readOnly={readOnly}
           />{" "}
@@ -149,8 +222,20 @@ export default function KidzeePage5({
         />
       </div>
 
+      <div className="kz-p5-spacer" aria-hidden />
+
+      <div className="kz-p5-cutline" aria-hidden>
+        <span className="kz-p5-cutline__scissor">&#9986;</span>
+        <span className="kz-p5-cutline__hint">Cut here</span>
+      </div>
+
       <div className="kz-p5-office">
-        <h2 className="kz-section-title kz-p5-office__title">For office use only</h2>
+        <div className="kz-p5-office__head">
+          <span className="kz-p5-office__head-ico">
+            <OfficeIcon name="building" />
+          </span>
+          <h2 className="kz-section-title kz-p5-office__title">For office use only</h2>
+        </div>
         {!isAdmin && (
           <p className="kz-p5-office__note no-print">
             Office fields are editable by school administrators.
@@ -160,62 +245,60 @@ export default function KidzeePage5({
           className={`kz-p5-office__grid ${!isAdmin ? "kz-p5-office__grid--restricted" : ""}`}
         >
           <CharBoxInput
-            label="Class details:"
+            label={<OfficeLabel icon="class" text="Class details:" />}
             boxes={10}
-
             value={officeUse.classDetails}
             onChange={(v) => set("officeUse.classDetails", v)}
             readOnly={officeReadOnly}
           />
           <CharBoxInput
-            label="Term:"
+            label={<OfficeLabel icon="calendar" text="Term:" />}
             boxes={10}
-
             value={officeUse.term}
             onChange={(v) => set("officeUse.term", v)}
             readOnly={officeReadOnly}
           />
           <CharBoxInput
-            label="Invoice/Receipt No.:"
+            label={<OfficeLabel icon="invoice" text="Invoice/Receipt No.:" />}
             boxes={10}
-
+            filter="alphanumeric"
             value={officeUse.invoiceReceiptNo}
             onChange={(v) => set("officeUse.invoiceReceiptNo", v)}
             readOnly={officeReadOnly}
           />
           <CharBoxInput
-            label="Timing:"
+            label={<OfficeLabel icon="timing" text="Timing:" />}
             boxes={10}
-
             value={officeUse.timing}
             onChange={(v) => set("officeUse.timing", v)}
             readOnly={officeReadOnly}
           />
           <CharBoxInput
-            label="Amount:"
+            label={<OfficeLabel icon="amount" text="Amount:" />}
             boxes={10}
-
+            filter="numeric"
             value={officeUse.amount}
             onChange={(v) => set("officeUse.amount", v)}
             readOnly={officeReadOnly}
           />
-          <CharBoxInput
-            label="Date:"
-            boxes={10}
-
+          <DateInput
+            label={<OfficeLabel icon="calendar" text="Date:" />}
             value={officeUse.date}
             onChange={(v) => set("officeUse.date", v)}
             readOnly={officeReadOnly}
           />
         </div>
-        <SignatureLine
-          label="Signature with Seal/Stamp"
-          value={officeUse.signature}
-          onChange={(v) => set("officeUse.signature", v)}
-          readOnly={officeReadOnly}
-          className="kz-p5-office__sig"
-          hidePreview={true}
-        />
+        <div className="kz-p5-office__signrow">
+          <SignatureLine
+            label="Signature with Seal/Stamp"
+            value={officeUse.signature}
+            onChange={(v) => set("officeUse.signature", v)}
+            readOnly={officeReadOnly}
+            className="kz-p5-office__sig"
+            hidePreview={true}
+          />
+          <TrustedBrandSeal className="kz-p5-office__seal" />
+        </div>
       </div>
     </PrintPage>
   );

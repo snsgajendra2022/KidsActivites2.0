@@ -74,12 +74,12 @@ export const IMMUNIZATION_ROWS = [
 ];
 
 export const IMMUNIZATION_COLUMNS = [
-  { key: 'dose1', label: 'Dose 1 (d/m/y)' },
-  { key: 'dose2', label: 'Dose 2 (d/m/y)' },
-  { key: 'dose3', label: 'Dose 3 (d/m/y)' },
-  { key: 'dose4', label: 'Dose 4 (d/m/y)' },
-  { key: 'dose5', label: 'Dose 5 (d/m/y)' },
-  { key: 'booster', label: 'Booster (d/m/y)' },
+  { key: 'dose1', label: 'Dose 1 (dd/mm/yyyy)' },
+  { key: 'dose2', label: 'Dose 2 (dd/mm/yyyy)' },
+  { key: 'dose3', label: 'Dose 3 (dd/mm/yyyy)' },
+  { key: 'dose4', label: 'Dose 4 (dd/mm/yyyy)' },
+  { key: 'dose5', label: 'Dose 5 (dd/mm/yyyy)' },
+  { key: 'booster', label: 'Booster (dd/mm/yyyy)' },
 ];
 
 const emptyImmunizationRow = () => ({
@@ -236,15 +236,47 @@ export function getEmptyKidzeeFormData(branding = KIDZEE_BRANDING) {
   };
 }
 
+const cloneContainer = (value, nextKeyIsIndex) => {
+  if (Array.isArray(value)) return [...value];
+  if (value && typeof value === 'object') return { ...value };
+  return nextKeyIsIndex ? [] : {};
+};
+
+/** Character-level input sanitizers by field purpose. */
+export function sanitizeInput(value, filter) {
+  const v = value ?? '';
+  switch (filter) {
+    case 'alpha':
+      return v.replace(/[^A-Za-z .'-]/g, '');
+    case 'numeric':
+    case 'phone':
+      return v.replace(/[^0-9]/g, '');
+    case 'alphanumeric':
+      return v.replace(/[^A-Za-z0-9 ]/g, '');
+    case 'email':
+      return v.replace(/[^A-Za-z0-9@._+-]/g, '');
+    case 'dmy':
+      return v.replace(/[^0-9/]/g, '');
+    default:
+      return v;
+  }
+}
+
+export function isValidEmail(value) {
+  if (!value) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export function setNestedValue(obj, path, value) {
   const keys = path.split('.');
-  const next = { ...obj };
+  const next = Array.isArray(obj) ? [...obj] : { ...obj };
   let cursor = next;
   keys.forEach((key, i) => {
     if (i === keys.length - 1) {
       cursor[key] = value;
     } else {
-      cursor[key] = { ...(cursor[key] || {}) };
+      const nextKeyIsIndex = /^\d+$/.test(keys[i + 1]);
+      cursor[key] = cloneContainer(cursor[key], nextKeyIsIndex);
       cursor = cursor[key];
     }
   });
@@ -326,6 +358,29 @@ export function validateKidzeeFormForSubmit(data) {
   if (!ec1?.mobile && !ec1?.contactNo) {
     errors['emergencyContacts.0.mobile'] = 'Emergency contact phone is required';
   }
+
+  [
+    ['motherGuardian.mobile', 'Mother/Guardian mobile'],
+    ['fatherGuardian.mobile', 'Father/Guardian mobile'],
+  ].forEach(([path, label]) => {
+    const val = getNestedValue(data, path);
+    if (val && val.replace(/\D/g, '').length < 10) {
+      errors[path] = `${label} must be at least 10 digits`;
+    }
+  });
+
+  [
+    ['motherGuardian.email', 'Mother/Guardian email'],
+    ['fatherGuardian.email', 'Father/Guardian email'],
+    ['doctor.email', 'Doctor email'],
+    ['emergencyContacts.0.email', 'Emergency contact email'],
+    ['emergencyContacts.1.email', 'Emergency contact email'],
+  ].forEach(([path, label]) => {
+    const val = getNestedValue(data, path);
+    if (val && !isValidEmail(val)) {
+      errors[path] = `${label} is not a valid email`;
+    }
+  });
 
   ['emergency', 'fieldTrip', 'verification'].forEach((key) => {
     if (!data.permissions?.[key]?.signature) {

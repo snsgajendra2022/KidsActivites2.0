@@ -1,8 +1,10 @@
+import { useRef } from "react";
 import {
   PrintPage,
   CharBoxInput,
   MultiRowBoxes,
   PaperTable,
+  TableInput,
   KidzeeHeaderBrand,
 } from "../kidzeeFormComponents.jsx";
 import {
@@ -13,23 +15,29 @@ import {
 const P4_ROW_BOXES = 13;
 const P4_ADDR_LINE3_BOXES = 5;
 const P4_PIN_BOXES = 6;
+const P4_EMAIL_ROWS = [14, 14, 12];
+const P4_EMAIL_OFFSETS = [0, 14, 28];
 
 function EmergencyContactCol({ index, contact, onChange, readOnly }) {
+  const emailRef0 = useRef(null);
+  const emailRef1 = useRef(null);
+  const emailRef2 = useRef(null);
+  const emailRefs = [emailRef0, emailRef1, emailRef2];
   const set = (field, value) =>
     onChange(`emergencyContacts.${index}.${field}`, value);
   const c = contact || {};
 
-  const emailLine1 = (c.email || '').slice(0, P4_ROW_BOXES);
-  const emailLine2 = (c.email || '').slice(P4_ROW_BOXES, P4_ROW_BOXES * 2);
+  const emailLines = P4_EMAIL_ROWS.map((n, i) =>
+    (c.email || '').slice(P4_EMAIL_OFFSETS[i], P4_EMAIL_OFFSETS[i] + n),
+  );
 
-  const handleEmailChange = (rowIndex, val) => {
-    let combined = '';
-    if (rowIndex === 0) {
-      combined = val.padEnd(P4_ROW_BOXES, ' ').slice(0, P4_ROW_BOXES) + emailLine2;
-    } else {
-      combined = emailLine1.padEnd(P4_ROW_BOXES, ' ') + val;
-    }
-    set('email', combined.trimEnd());
+  const setEmailRow = (rowIndex, val) => {
+    const rows = [...emailLines];
+    rows[rowIndex] = val;
+    const combined = rows
+      .map((r, idx) => r.padEnd(P4_EMAIL_ROWS[idx], ' '))
+      .join('');
+    set('email', combined.replace(/\s+$/, ''));
   };
 
   const pinSuffix = (
@@ -53,6 +61,7 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
         label="Name:"
         labelClass="kz-p4-field-label"
         boxes={P4_ROW_BOXES}
+        filter="alpha"
         value={c.name}
         onChange={(v) => set("name", v)}
         readOnly={readOnly}
@@ -71,6 +80,7 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
         label="Contact No.:"
         labelClass="kz-p4-field-label"
         boxes={P4_ROW_BOXES}
+        filter="numeric"
         value={c.contactNo}
         onChange={(v) => set("contactNo", v)}
         readOnly={readOnly}
@@ -79,28 +89,43 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
         label="Mobile:"
         labelClass="kz-p4-field-label"
         boxes={P4_ROW_BOXES}
+        filter="numeric"
         value={c.mobile}
         onChange={(v) => set("mobile", v)}
         readOnly={readOnly}
       />
       <CharBoxInput
+        ref={emailRef0}
         label="E-mail:"
         labelClass="kz-p4-field-label"
-        boxes={P4_ROW_BOXES}
-        value={emailLine1}
-        onChange={(v) => handleEmailChange(0, v)}
+        className="kz-p4-email-row"
+        boxes={P4_EMAIL_ROWS[0]}
+        boxWidth="4.3mm"
+        filter="email"
+        caseSensitive
+        value={emailLines[0]}
+        onChange={(v) => setEmailRow(0, v)}
+        onFilled={() => emailRefs[1].current?.focus()}
         readOnly={readOnly}
       />
-      <div className="kz-char-field">
-        <div className="kz-p4-field-label kz-field-label" aria-hidden />
-        <CharBoxInput
-          bare
-          boxes={P4_ROW_BOXES}
-          value={emailLine2}
-          onChange={(v) => handleEmailChange(1, v)}
-          readOnly={readOnly}
-        />
-      </div>
+      {[1, 2].map((r) => (
+        <div className="kz-char-field kz-p4-email-row" key={r}>
+          <div className="kz-p4-field-label kz-field-label" aria-hidden />
+          <CharBoxInput
+            ref={emailRefs[r]}
+            bare
+            boxes={P4_EMAIL_ROWS[r]}
+            boxWidth="4.3mm"
+            filter="email"
+            caseSensitive
+            value={emailLines[r]}
+            onChange={(v) => setEmailRow(r, v)}
+            onFilled={() => emailRefs[r + 1]?.current?.focus()}
+            onBackspaceAtStart={() => emailRefs[r - 1].current?.focus()}
+            readOnly={readOnly}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -141,15 +166,14 @@ export default function KidzeePage4({
               <td className="kz-immun-table__rec">{row.recommendation}</td>
               {IMMUNIZATION_COLUMNS.map((col) => (
                 <td key={col.key}>
-                  <input
-                    type="text"
-                    className="kz-table-input kz-table-input--date"
-                    value={immunization[row.key]?.[col.key] ?? ""}
-                    onChange={(e) =>
-                      set(`immunization.${row.key}.${col.key}`, e.target.value)
+                  <TableInput
+                    type="date"
+                    className="kz-table-input--date"
+                    value={immunization[row.key]?.[col.key]}
+                    onChange={(v) =>
+                      set(`immunization.${row.key}.${col.key}`, v)
                     }
                     readOnly={readOnly}
-                    placeholder="d/m/y"
                   />
                 </td>
               ))}
@@ -184,14 +208,6 @@ export default function KidzeePage4({
         />
       </div>
 
-      <div className="kz-p4-learn-mark" aria-hidden>
-        <span className="kz-p4-learn-mark__z">
-          {branding?.learnMark ?? "Z"}
-        </span>
-        <span className="kz-p4-learn-mark__text">
-          {branding?.learnSubtext ?? "LEARN"}
-        </span>
-      </div>
     </PrintPage>
   );
 }
