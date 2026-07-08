@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Tv, Copy, RefreshCw, Archive, Eye, Play, X, FolderOpen, Plus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Tv, Copy, RefreshCw, Archive, Eye, Play, FolderOpen, Plus, GraduationCap, Images, ImageIcon } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -95,6 +95,8 @@ export default function AdminAlbums() {
   const [createName, setCreateName] = useState('');
   const [createDescription, setCreateDescription] = useState('');
   const [creating, setCreating] = useState(false);
+  const [covers, setCovers] = useState({});
+  const coverRequested = useRef(new Set());
 
   const loadAlbums = useCallback(async () => {
     setLoading(true);
@@ -110,6 +112,29 @@ export default function AdminAlbums() {
 
   useEffect(() => { loadAlbums(); }, [loadAlbums]);
 
+  // Lazily pull each album's first media thumbnail to use as a cover image.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      for (const album of albums) {
+        if (cancelled) return;
+        if ((album.mediaCount || 0) <= 0) continue;
+        if (album.coverImageUrl || album.coverUrl || album.thumbnailUrl) continue;
+        if (coverRequested.current.has(album.id)) continue;
+        coverRequested.current.add(album.id);
+        try {
+          const data = await getAdminAlbum(album.id);
+          if (cancelled) return;
+          const thumb = (data.media || []).find((m) => m.thumbnailUrl)?.thumbnailUrl || null;
+          setCovers((prev) => ({ ...prev, [album.id]: thumb }));
+        } catch {
+          /* cover is optional — ignore fetch failures */
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [albums]);
+
   const openDetail = async (albumId) => {
     setSelectedId(albumId);
     setLightboxIndex(-1);
@@ -119,6 +144,12 @@ export default function AdminAlbums() {
     } catch (err) {
       toast(err?.message || 'Failed to load album.', 'error');
     }
+  };
+
+  const closeDetail = () => {
+    setDetail(null);
+    setSelectedId(null);
+    setLightboxIndex(-1);
   };
 
   const lightboxPhotos = useMemo(
@@ -302,162 +333,143 @@ export default function AdminAlbums() {
             </div>
           </div>
         ) : (
-          <div className="admin-albums-layout">
-            <div className="admin-albums-list premium-card">
-              <div className="sb-mobile-only sb-mobile-card-list">
-                {albums.map((album) => (
-                  <article key={album.id} className="sb-mobile-data-card admin-albums-mobile-card">
-                    <h3 className="sb-mobile-data-card__title">{album.albumName}</h3>
-                    <div className="sb-mobile-data-card__row">
-                      <span className="sb-mobile-data-card__label">Type</span>
-                      <span className="sb-mobile-data-card__value">{albumScopeLabel(album)}</span>
-                    </div>
-                    <div className="sb-mobile-data-card__row">
-                      <span className="sb-mobile-data-card__label">Code</span>
-                      <span className="sb-mobile-data-card__value"><code>{album.albumCode}</code></span>
-                    </div>
-                    <div className="sb-mobile-data-card__row">
-                      <span className="sb-mobile-data-card__label">TV / Media</span>
-                      <span className="sb-mobile-data-card__value">
-                        {album.playbackEnabled ? 'On' : 'Off'} · {album.mediaCount}
-                      </span>
-                    </div>
-                    <div className="sb-mobile-data-card__row">
-                      <span className="sb-mobile-data-card__label">Status</span>
-                      <span className="sb-mobile-data-card__value">
-                        <AlbumStatusPill playbackEnabled={album.playbackEnabled} status={album.status} />
-                      </span>
-                    </div>
-                    <div className="sb-mobile-data-card__actions media-card-toolbar">
-                      <button type="button" className="admin-albums-icon-btn" onClick={() => copyCode(album.albumCode)}>
-                        <Copy size={14} /> Copy
-                      </button>
-                      <button type="button" className="admin-albums-link" onClick={() => openDetail(album.id)}>
-                        <Eye size={14} /> View
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-
-              <div className="sb-desktop-only admin-albums-table-wrap premium-table-wrap">
-              <table className="admin-albums-table premium-table">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Album</th>
-                    <th>Code</th>
-                    <th>TV</th>
-                    <th>Media</th>
-                    <th>Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {albums.map((album) => (
-                    <tr key={album.id} className={selectedId === album.id ? 'admin-albums-row--active' : ''}>
-                      <td>{albumScopeLabel(album)}</td>
-                      <td>{album.albumName}</td>
-                      <td>
-                        <code>{album.albumCode}</code>
-                        <button type="button" className="admin-albums-icon-btn" onClick={() => copyCode(album.albumCode)}>
-                          <Copy size={14} />
-                        </button>
-                      </td>
-                      <td>
-                        <AlbumStatusPill playbackEnabled={album.playbackEnabled} status={album.status} />
-                      </td>
-                      <td><span className="admin-albums-count">{album.mediaCount}</span></td>
-                      <td><span className="admin-media-pill admin-media-pill--muted">{album.status}</span></td>
-                      <td>
-                        <button type="button" className="admin-albums-link" onClick={() => openDetail(album.id)}>
-                          <Eye size={14} /> View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            </div>
-
-            {detail && (
-              <aside className="admin-albums-detail premium-card">
-                <div className="admin-albums-detail__head">
-                  <div>
-                    <h2>{detail.albumName}</h2>
-                    <p className="admin-albums-detail__meta">
-                      {albumScopeLabel(detail)} · <code>{detail.albumCode}</code>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="admin-albums-detail__close"
-                    onClick={() => { setDetail(null); setSelectedId(null); setLightboxIndex(-1); }}
-                    aria-label="Close album details"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                <div className="admin-albums-detail__actions">
-                  <Button type="button" variant="secondary" onClick={() => copyCode(detail.albumCode)}>
-                    <Copy size={16} /> Copy Code
-                  </Button>
-                  <Button type="button" variant="secondary" onClick={() => togglePlayback(detail)}>
-                    TV: {detail.playbackEnabled ? 'On' : 'Off'}
-                  </Button>
-                  <Button type="button" variant="secondary" onClick={() => handleRegenerate(detail.id)}>
-                    <RefreshCw size={16} /> Regenerate Code
-                  </Button>
-                  <Button type="button" variant="secondary" onClick={() => handleArchive(detail)}>
-                    <Archive size={16} /> Archive
-                  </Button>
-                </div>
-                <div className="admin-albums-media-grid">
-                  {(detail.media || []).map((item, index) => (
-                    <article key={item.id} className="admin-albums-media-card">
+          <div className="admin-albums-list">
+              <div className="admin-albums-cards">
+                {albums.map((album) => {
+                  const cover =
+                    album.coverImageUrl || album.coverUrl || album.thumbnailUrl || covers[album.id];
+                  const isCustom = album.albumType === 'CUSTOM';
+                  return (
+                    <article
+                      key={album.id}
+                      className={`admin-album-card${selectedId === album.id ? ' admin-album-card--active' : ''}`}
+                    >
                       <button
                         type="button"
-                        className="admin-albums-media-card__preview"
-                        onClick={() => setLightboxIndex(index)}
-                        aria-label={`View ${item.caption || item.fileName || 'media'}`}
+                        className="admin-album-card__cover"
+                        onClick={() => openDetail(album.id)}
+                        aria-label={`View ${album.albumName}`}
                       >
-                        {item.thumbnailUrl ? (
-                          <img src={item.thumbnailUrl} alt="" />
+                        {cover ? (
+                          <img src={cover} alt="" loading="lazy" />
                         ) : (
-                          <div className="admin-albums-media-card__placeholder">
-                            {item.mediaType === 'VIDEO' ? <Play size={24} /> : <Eye size={24} />}
-                          </div>
-                        )}
-                        {item.mediaType === 'VIDEO' && (
-                          <span className="admin-albums-media-card__badge" aria-hidden>
-                            <Play size={12} />
+                          <span className={`admin-album-card__cover-fallback${isCustom ? ' is-school' : ''}`}>
+                            {isCustom ? <Images size={34} /> : <GraduationCap size={34} />}
                           </span>
                         )}
+                        <span className="admin-album-card__type-chip">{albumTypeLabel(album)}</span>
+                        <span className="admin-album-card__tv">
+                          <AlbumStatusPill playbackEnabled={album.playbackEnabled} status={album.status} />
+                        </span>
+                        <span className="admin-album-card__count">
+                          <ImageIcon size={12} /> {album.mediaCount}
+                        </span>
                       </button>
-                      <p className="admin-albums-media-card__title">{item.caption || item.fileName || 'Media'}</p>
-                      <TvMediaPill item={item} />
-                      <button
-                        type="button"
-                        className={`admin-albums-tv-toggle${item.showOnTv ? ' is-on' : ''}`}
-                        onClick={() => toggleShowOnTv(item)}
-                        disabled={!item.showOnTv && !item.canShowOnTv}
-                        title={!item.canShowOnTv && !item.showOnTv ? tvBlockLabel(item, detail) : undefined}
-                      >
-                        <Tv size={14} />
-                        TV: {item.showOnTv ? 'On' : 'Off'}
-                      </button>
-                      {!item.canShowOnTv && !item.showOnTv && (
-                        <p className="admin-albums-media-card__hint">{tvBlockLabel(item, detail)}</p>
-                      )}
+                      <div className="admin-album-card__body">
+                        <h3 className="admin-album-card__name" title={album.albumName}>{album.albumName}</h3>
+                        {album.className && (
+                          <p className="admin-album-card__scope">{album.className}</p>
+                        )}
+                        <div className="admin-album-card__code">
+                          <code>{album.albumCode}</code>
+                          <button
+                            type="button"
+                            className="admin-albums-icon-btn"
+                            onClick={() => copyCode(album.albumCode)}
+                            aria-label="Copy album code"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="admin-album-card__footer">
+                        <button type="button" className="admin-albums-link" onClick={() => openDetail(album.id)}>
+                          <Eye size={14} /> View album
+                        </button>
+                      </div>
                     </article>
-                  ))}
-                </div>
-              </aside>
-            )}
+                  );
+                })}
+              </div>
           </div>
         )}
       </div>
+
+      <Modal
+        open={Boolean(detail)}
+        onClose={closeDetail}
+        size="xl"
+        title={detail ? detail.albumName : 'Album'}
+      >
+        {detail && (
+          <div className="admin-albums-detail">
+            <p className="admin-albums-detail__meta">
+              {albumScopeLabel(detail)} · <code>{detail.albumCode}</code>
+            </p>
+            <div className="admin-albums-detail__actions">
+              <Button type="button" variant="secondary" onClick={() => copyCode(detail.albumCode)}>
+                <Copy size={16} /> Copy Code
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => togglePlayback(detail)}>
+                TV: {detail.playbackEnabled ? 'On' : 'Off'}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => handleRegenerate(detail.id)}>
+                <RefreshCw size={16} /> Regenerate Code
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => handleArchive(detail)}>
+                <Archive size={16} /> Archive
+              </Button>
+            </div>
+            {(detail.media || []).length === 0 ? (
+              <div className="admin-albums-detail__empty">
+                <FolderOpen size={26} strokeWidth={1.5} />
+                <p>No media in this album yet.</p>
+              </div>
+            ) : (
+              <div className="admin-albums-media-grid">
+                {(detail.media || []).map((item, index) => (
+                  <article key={item.id} className="admin-albums-media-card">
+                    <button
+                      type="button"
+                      className="admin-albums-media-card__preview"
+                      onClick={() => setLightboxIndex(index)}
+                      aria-label={`View ${item.caption || item.fileName || 'media'}`}
+                    >
+                      {item.thumbnailUrl ? (
+                        <img src={item.thumbnailUrl} alt="" />
+                      ) : (
+                        <div className="admin-albums-media-card__placeholder">
+                          {item.mediaType === 'VIDEO' ? <Play size={24} /> : <Eye size={24} />}
+                        </div>
+                      )}
+                      {item.mediaType === 'VIDEO' && (
+                        <span className="admin-albums-media-card__badge" aria-hidden>
+                          <Play size={12} />
+                        </span>
+                      )}
+                    </button>
+                    <p className="admin-albums-media-card__title">{item.caption || item.fileName || 'Media'}</p>
+                    <TvMediaPill item={item} />
+                    <button
+                      type="button"
+                      className={`admin-albums-tv-toggle${item.showOnTv ? ' is-on' : ''}`}
+                      onClick={() => toggleShowOnTv(item)}
+                      disabled={!item.showOnTv && !item.canShowOnTv}
+                      title={!item.canShowOnTv && !item.showOnTv ? tvBlockLabel(item, detail) : undefined}
+                    >
+                      <Tv size={14} />
+                      TV: {item.showOnTv ? 'On' : 'Off'}
+                    </button>
+                    {!item.canShowOnTv && !item.showOnTv && (
+                      <p className="admin-albums-media-card__hint">{tvBlockLabel(item, detail)}</p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
 
       <Modal
         open={createOpen}
