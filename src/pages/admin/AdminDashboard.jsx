@@ -44,9 +44,26 @@ export default function AdminDashboard() {
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    getDashboardStats().then(setStats);
-    getApplications().then((apps) => setRecent(apps.slice(0, 5)));
-    getDashboardChartData().then(setChartData);
+    let active = true;
+
+    const loadDashboard = () => {
+      getDashboardStats().then((data) => { if (active) setStats(data); }).catch(() => {});
+      getApplications().then((apps) => { if (active) setRecent(apps.slice(0, 5)); }).catch(() => {});
+      getDashboardChartData().then((data) => { if (active) setChartData(data); }).catch(() => {});
+    };
+
+    loadDashboard();
+
+    // Keep the dashboard live: refresh periodically and whenever the tab regains focus.
+    const interval = setInterval(loadDashboard, 60000);
+    const onFocus = () => loadDashboard();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   return (
@@ -79,13 +96,13 @@ export default function AdminDashboard() {
             }
           />
 
-          <div className="bento-span-3"><BentoStatCard icon={FileText} value={stats?.total ?? '—'} label="Total Applications" change="+12% this month" variant="indigo" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={FileText} value={stats?.total ?? '—'} label="Total Applications" variant="indigo" /></div>
           <div className="bento-span-3"><BentoStatCard icon={Clock} value={stats?.pendingReview ?? '—'} label="Pending Review" variant="amber" /></div>
           <div className="bento-span-3"><BentoStatCard icon={AlertCircle} value={stats?.correctionRequired ?? '—'} label="Correction Required" variant="rose" /></div>
           <div className="bento-span-3"><BentoStatCard icon={FolderOpen} value={stats?.documentsPending ?? '—'} label="Documents Pending" variant="sky" /></div>
           <div className="bento-span-3"><BentoStatCard icon={CreditCard} value={stats?.feePending ?? '—'} label="Fee Pending" variant="amber" /></div>
           <div className="bento-span-3"><BentoStatCard icon={CheckCircle} value={stats?.feeSubmitted ?? '—'} label="Payment Submitted" variant="sky" /></div>
-          <div className="bento-span-3"><BentoStatCard icon={CheckCircle} value={stats?.confirmed ?? '—'} label="Admissions Confirmed" change="+8%" variant="emerald" /></div>
+          <div className="bento-span-3"><BentoStatCard icon={CheckCircle} value={stats?.confirmed ?? '—'} label="Admissions Confirmed" variant="emerald" /></div>
           <div className="bento-span-3"><BentoStatCard icon={UserPlus} value={stats?.accountsCreated ?? '—'} label="Accounts Created" variant="indigo" /></div>
 
           <div className="bento-span-8"><ApplicationsChart data={chartData} /></div>
