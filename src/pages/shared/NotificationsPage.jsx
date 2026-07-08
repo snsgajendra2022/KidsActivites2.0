@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell, CheckCheck, FileText, CreditCard, Image, MessageCircle,
   Inbox, Filter,
@@ -6,7 +7,9 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getNotifications, markAsRead, markAllRead } from '../../services/notificationService.js';
+import { getNotificationTitle, resolveNotificationPath } from '../../utils/notificationLinks.js';
 import '../../styles/notifications.css';
 
 const TYPE_CONFIG = {
@@ -48,6 +51,8 @@ export default function NotificationsPage({
 }) {
   const { user, isDemoSession } = useAuth();
   const { toast } = useToast();
+  const { tenantPath } = useTenantPath();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -99,6 +104,14 @@ export default function NotificationsPage({
     await markAsRead(id);
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
     setUnreadCount((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleOpen = (n) => {
+    if (!n.read) {
+      handleRead(n.id).catch(() => {});
+    }
+    const path = resolveNotificationPath(n, user?.role);
+    if (path) navigate(tenantPath(path));
   };
 
   const handleReadAll = async () => {
@@ -218,14 +231,14 @@ export default function NotificationsPage({
                       key={n.id}
                       type="button"
                       className={`notif-card ${!n.read ? 'notif-card--unread' : ''}`}
-                      onClick={() => !n.read && handleRead(n.id)}
+                      onClick={() => handleOpen(n)}
                     >
                       <div className={`notif-card__icon notif-card__icon--${n.type}`}>
                         <Icon size={20} />
                       </div>
                       <div className="notif-card__body">
                         <div className="notif-card__head">
-                          <h3 className="notif-card__title">{n.title}</h3>
+                          <h3 className="notif-card__title">{getNotificationTitle(n)}</h3>
                           <div className="notif-card__meta">
                             {!n.read && <span className="notif-card__dot" aria-label="Unread" />}
                             <time className="notif-card__time">{formatTime(n.createdAt)}</time>

@@ -596,6 +596,14 @@ a.premium-btn-white:hover {
   color: var(--sb-primary);
 }
 
+.notif-dropdown-item-sender {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sb-secondary);
+}
+
 .notif-dropdown-item-message {
   display: block;
   margin-top: 0.125rem;

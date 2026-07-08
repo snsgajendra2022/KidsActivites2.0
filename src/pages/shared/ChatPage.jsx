@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import { EmptyState, LoadingState } from '../../components/ui/index.jsx';
@@ -80,6 +81,8 @@ export default function ChatPage() {
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const bottomRef = useRef(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedConvId = searchParams.get('c');
 
   const activeRef = useRef(null);
   activeRef.current = active;
@@ -114,6 +117,23 @@ export default function ChatPage() {
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  // Deep-link: open a specific conversation when arriving from a notification.
+  useEffect(() => {
+    if (!requestedConvId || conversations.length === 0) return;
+    if (conversations.some((c) => c.id === requestedConvId)) {
+      setActive(requestedConvId);
+      setMobileChatOpen(true);
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('c');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [requestedConvId, conversations, setSearchParams]);
 
   useEffect(() => {
     if (!active || !user?.id) return undefined;

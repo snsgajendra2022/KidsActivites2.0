@@ -7,6 +7,32 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* Sidebar scrollbar — navy thumb (matches app scrollbar) */
+.app-sidebar .sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: var(--navy) transparent;
+}
+
+.app-sidebar .sidebar-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-sidebar .sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-sidebar .sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--navy);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.app-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+  background-clip: padding-box;
+}
+
 .app-sidebar .sidebar-top {
   border-bottom-color: color-mix(in srgb, var(--sb-gold) 12%, transparent) !important;
 }

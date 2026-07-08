@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { ROLE_DASHBOARD } from '../../constants/roles.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getNotifications, markAsRead, markAllRead } from '../../services/notificationService.js';
+import { getNotificationTitle, resolveNotificationPath } from '../../utils/notificationLinks.js';
 
 const NOTIFICATIONS_PATH = {
   school_admin: '/admin/notifications',
@@ -17,6 +19,8 @@ const NOTIFICATIONS_PATH = {
 
 export default function NotificationBell() {
   const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -79,6 +83,13 @@ export default function NotificationBell() {
     setUnreadCount(0);
   };
 
+  const handleOpen = (n) => {
+    if (!n.read) handleRead(n.id).catch(() => {});
+    const path = resolveNotificationPath(n, user?.role);
+    setOpen(false);
+    if (path) navigate(tenantPath(path));
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -123,10 +134,10 @@ export default function NotificationBell() {
                   <button
                     key={n.id}
                     type="button"
-                    onClick={() => !n.read && handleRead(n.id)}
+                    onClick={() => handleOpen(n)}
                     className={`notif-dropdown-item${!n.read ? ' notif-dropdown-item--unread' : ''}`}
                   >
-                    <strong className="notif-dropdown-item-title">{n.title}</strong>
+                    <strong className="notif-dropdown-item-title">{getNotificationTitle(n)}</strong>
                     <span className="notif-dropdown-item-message">{n.message}</span>
                   </button>
                 ))}
