@@ -1,6 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
 import { ChevronLeft, X } from 'lucide-react';
-import { ROLE_LABELS } from '../../constants/roles.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
@@ -157,9 +156,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
         {!collapsed && user && (
           <div className="shrink-0 border-t border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] p-4">
             <div className="sidebar-user-card rounded-xl p-3 ring-1">
-              <div className="sidebar-user-name truncate text-sm font-semibold">{user.name}</div>
-              <div className="sidebar-user-role mt-0.5 text-xs">{ROLE_LABELS[user.role]}</div>
-              <div className="sidebar-user-meta mt-2 text-[10px] font-medium">{school?.academicYear}</div>
+              <div className="sidebar-user-meta text-[10px] font-medium">{school?.academicYear}</div>
             </div>
           </div>
         )}
