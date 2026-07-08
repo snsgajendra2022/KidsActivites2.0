@@ -4,6 +4,7 @@ import {
   saveDraft,
   submitApplication,
   getAdmissionsStatus,
+  downloadKidzeeEnrollmentPdf,
 } from '../../services/enrollmentService.js';
 import {
   KIDZEE_BRANDING,
@@ -33,6 +34,7 @@ export default function KidzeePrintableForm({
   schoolId = null,
   onSubmitted,
   correctionToken = null,
+  printOnly = false,
   onSaveDraft: onSaveDraftOverride = null,
   onSubmitApplication: onSubmitOverride = null,
 }) {
@@ -87,9 +89,20 @@ export default function KidzeePrintableForm({
 
   const handlePrint = () => window.print();
 
-  const handleDownloadPdf = () => {
-    toast('Use Print → Save as PDF in the print dialog.', 'info');
-    window.print();
+  const handleDownloadPdf = async () => {
+    if (!draftId) {
+      toast('Save the form first to download a PDF.', 'warning');
+      return;
+    }
+    setLoading(true);
+    try {
+      await downloadKidzeeEnrollmentPdf(draftId);
+      toast('PDF downloaded.', 'success');
+    } catch (err) {
+      toast(err?.message || 'PDF download failed.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -144,6 +157,7 @@ export default function KidzeePrintableForm({
 
   return (
     <div className="kidzee-print-root">
+      {!printOnly && (
       <div className="print-toolbar no-print">
         <div className="print-toolbar__left">
           <h1 className="print-toolbar__title">Kidzee Enrollment Form</h1>
@@ -175,9 +189,12 @@ export default function KidzeePrintableForm({
             Show Alignment Grid
           </label>
           <button type="button" className="sb-button-secondary" onClick={handlePrint}>Print</button>
-          <button type="button" className="sb-button-secondary" onClick={handleDownloadPdf}>Download PDF</button>
+          <button type="button" className="sb-button-secondary" onClick={handleDownloadPdf} disabled={loading || !draftId}>
+            Download PDF
+          </button>
         </div>
       </div>
+      )}
 
       <div className="kidzee-print-pages" ref={printRef}>
         <KidzeePage1 {...pageProps} />

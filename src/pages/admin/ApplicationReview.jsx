@@ -15,7 +15,7 @@ import Modal, { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
   getApplication, requestCorrection, approveApplication, rejectApplication,
-  verifyDocuments, confirmAdmission, createAccount,
+  verifyDocuments, confirmAdmission, createAccount, downloadKidzeeEnrollmentPdf,
 } from '../../services/enrollmentService.js';
 import { assignFee, verifyPayment, rejectPayment, getFeeByApplication } from '../../services/feeService.js';
 import { getFeeStructures, resolveFeeBreakdownForClass } from '../../services/settingsService.js';
@@ -145,6 +145,20 @@ export default function ApplicationReview() {
   const [modal, setModal] = useState(null);
   const [reason, setReason] = useState('');
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!app?.id) return;
+    setPdfDownloading(true);
+    try {
+      await downloadKidzeeEnrollmentPdf(app.id);
+      toast('PDF downloaded.', 'success');
+    } catch (err) {
+      toast(err?.message || 'PDF download failed.', 'error');
+    } finally {
+      setPdfDownloading(false);
+    }
+  };
 
   const load = async () => {
     setPageLoading(true);
@@ -318,14 +332,25 @@ export default function ApplicationReview() {
               actions={(
                 <div className="flex flex-wrap items-center gap-2">
                   {app.formType === 'kidzee_printable' ? (
-                    <Link
-                      to={tenantPath(`/enrollment/kidzee-print-form?applicationId=${app.id}`)}
-                      className="sb-button-secondary text-sm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Kidzee Form
-                    </Link>
+                    <>
+                      <Link
+                        to={tenantPath(`/enrollment/kidzee-print-form?applicationId=${app.id}`)}
+                        className="sb-button-secondary text-sm"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Kidzee Form
+                      </Link>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={pdfDownloading}
+                        onClick={handleDownloadPdf}
+                      >
+                        {pdfDownloading ? 'Generating PDF…' : 'Download PDF'}
+                      </Button>
+                    </>
                   ) : (
                     <Link
                       to={tenantPath(`/enrollment/printable-form?applicationId=${app.id}`)}
