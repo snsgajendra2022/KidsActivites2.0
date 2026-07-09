@@ -9,6 +9,7 @@ import ToggleSwitch from '../../components/ui/ToggleSwitch.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { readFileAsDataUrl } from '../../services/portalConfigService.js';
+import { sanitizeBrandingValue } from '../../utils/brandingUrlUtils.js';
 import '../../styles/portal-branding.css';
 import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
 import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
@@ -55,10 +56,18 @@ function LoginOptionRow({ icon: Icon, title, desc, checked, onChange, nested = f
 }
 
 function ImageUploadField({ label, hint, value, onChange, previewVariant = 'default' }) {
+  const [previewBroken, setPreviewBroken] = useState(false);
+  const displayUrl = sanitizeBrandingValue(value);
+
+  useEffect(() => {
+    setPreviewBroken(false);
+  }, [displayUrl]);
+
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const dataUrl = await readFileAsDataUrl(file);
+    setPreviewBroken(false);
     onChange(dataUrl);
   };
 
@@ -75,10 +84,13 @@ function ImageUploadField({ label, hint, value, onChange, previewVariant = 'defa
           <p className="branding-upload-card__title">{label}</p>
           {hint && <p className="branding-upload-card__hint">{hint}</p>}
         </div>
-        {value && (
+        {displayUrl && (
           <button
             type="button"
-            onClick={() => onChange(null)}
+            onClick={() => {
+              setPreviewBroken(false);
+              onChange(null);
+            }}
             className="branding-upload-card__remove"
           >
             Remove
@@ -87,18 +99,23 @@ function ImageUploadField({ label, hint, value, onChange, previewVariant = 'defa
       </div>
       <div className="branding-upload-card__body">
         <div className={previewClass}>
-          {value ? (
-            <img src={value} alt={label} className="branding-upload-preview__img" />
+          {displayUrl && !previewBroken ? (
+            <img
+              src={displayUrl}
+              alt={label}
+              className="branding-upload-preview__img"
+              onError={() => setPreviewBroken(true)}
+            />
           ) : (
             <div className="branding-upload-preview__empty">
               <Upload size={22} />
-              <span>No image</span>
+              <span>{previewBroken ? 'Image failed to load — upload again' : 'No image'}</span>
             </div>
           )}
         </div>
         <label className="premium-btn premium-btn-secondary premium-btn-sm branding-upload-card__btn">
           <Upload size={14} />
-          {value ? 'Replace image' : 'Upload image'}
+          {displayUrl ? 'Replace image' : 'Upload image'}
           <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
         </label>
       </div>
@@ -114,7 +131,7 @@ function getPortalShortLabel(name) {
 }
 
 function BrandingSidebarPreview({ portalName, schoolName, iconUrl, logoUrl }) {
-  const expandedLogo = logoUrl || iconUrl;
+  const expandedLogo = sanitizeBrandingValue(logoUrl) || sanitizeBrandingValue(iconUrl);
 
   return (
     <div className="branding-sidebar-preview">
@@ -375,7 +392,7 @@ export default function PortalSettings() {
         menuOrder: form.menuOrder || {},
         menuVisibility: form.menuVisibility || {},
       });
-      toast('Portal settings saved. Changes are live across the app.', 'success');
+      toast('Portal settings saved. Logo and branding updates are live.', 'success');
     } catch {
       toast('Failed to save portal settings.', 'error');
     } finally {

@@ -8,6 +8,10 @@ import { routeRequest } from './api/routeRequest.js';
 import { isApiEnabled } from './api/config.js';
 import { DEFAULT_SCHOOL_ID, schoolToPortalSchool } from '../data/mockSchools.js';
 import { getSchoolById } from './schoolService.js';
+import {
+  resolveConfigBranding,
+  sanitizeBranding,
+} from '../utils/brandingUrlUtils.js';
 
 const LEGACY_SINGLE_KEY = 'sb_portal_config';
 const LEGACY_BULK_KEY = 'sb_portal_configs';
@@ -18,10 +22,18 @@ const BRANDING_KEYS = ['logoUrl', 'logoIconUrl', 'faviconUrl', 'heroImageUrl', '
 
 const BRANDING_FIELD_TO_ASSET_TYPE = {
   logoUrl: 'logo',
-  logoIconUrl: 'logoIcon',
+  logoIconUrl: 'logo_icon',
   faviconUrl: 'favicon',
   heroImageUrl: 'hero',
-  loginHeroUrl: 'loginHero',
+  loginHeroUrl: 'login_hero',
+};
+
+const ASSET_TYPE_TO_BRANDING_KEY = {
+  logo: 'logoUrl',
+  logo_icon: 'logoIconUrl',
+  favicon: 'faviconUrl',
+  hero: 'heroImageUrl',
+  login_hero: 'loginHeroUrl',
 };
 
 function configKey(schoolId) {
@@ -73,9 +85,9 @@ function splitBranding(branding = {}) {
 
 function hydrateBranding(lean = {}, schoolId) {
   const assets = getStore(brandingKey(schoolId), {});
-  const branding = { ...lean };
+  const branding = sanitizeBranding({ ...lean });
   BRANDING_KEYS.forEach((key) => {
-    if (branding[key] === `__asset__:${key}` && assets[key]) {
+    if (lean[key] === `__asset__:${key}` && assets[key]) {
       branding[key] = assets[key];
     }
   });
@@ -178,10 +190,11 @@ function buildDefaultsForSchool(schoolId, schoolFromApi = null) {
 }
 
 /** Normalize live API portal config to the shape the UI expects. */
-export function normalizeApiPortalConfig(stored) {
+export async function normalizeApiPortalConfig(stored) {
   if (!stored) return null;
   const schoolId = stored.school?.id || stored.schoolId;
-  return mergeConfig(stored, schoolId, stored.school);
+  const merged = mergeConfig(stored, schoolId, stored.school);
+  return resolveConfigBranding(merged);
 }
 
 function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID, schoolFromApi = null) {
@@ -274,13 +287,21 @@ export async function uploadBrandingAsset(file, assetType) {
     fileKey: signed.fileKey,
   });
 
-  return registered?.url || registered?.branding?.[`${assetType}Url`] || signed.fileKey;
+  const brandingKey = ASSET_TYPE_TO_BRANDING_KEY[assetType];
+  const fromBranding = brandingKey ? registered?.branding?.[brandingKey] : null;
+  let url = registered?.url || fromBranding || null;
+
+  if (!url && (registered?.fileKey || signed.fileKey)) {
+    const { getDocumentDownloadUrl } = await import('./documentService.js');
+    url = await getDocumentDownloadUrl(registered?.fileKey || signed.fileKey);
+  }
+
+  return url;
 }
 
 async function prepareBrandingForSave(branding = {}) {
-  if (!isApiEnabled()) return branding;
-
-  const next = { ...branding };
+  const next = sanitizeBranding({ ...branding });
+  if (!isApiEnabled()) return next;
   await Promise.all(BRANDING_KEYS.map(async (key) => {
     const value = next[key];
     if (!isDataUrl(value)) return;

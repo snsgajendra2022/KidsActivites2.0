@@ -7,7 +7,7 @@ export async function getDocumentDownloadUrl(fileKey) {
     mockFn: async () => null,
     apiFn: async () => {
       const encoded = fileKey.split('/').map(encodeURIComponent).join('/');
-      const data = await api.get(`/documents/download/${encoded}`);
+      const data = await api.get(`/documents/${encoded}/download`);
       return data?.downloadUrl || data?.url || null;
     },
   });
