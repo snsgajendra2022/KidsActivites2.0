@@ -83,3 +83,12 @@
     padding: 1.5rem 2rem;
   }
 }
+
+.banner-360--static {
+  height: min(50vh, 24rem);
+  min-height: 14rem;
+}
+
+.banner-360-fallback--static {
+  min-height: 14rem;
+}

@@ -51,7 +51,7 @@ function TimelineStep({ step, index, children }) {
 
   useEffect(() => {
     // Subscribe to the scroll progress to toggle the active state
-    return scrollYProgress.onChange((latest) => {
+    return scrollYProgress.on('change', (latest) => {
       // If we've started scrolling past the start of this element's center point
       if (latest > 0) {
         setIsActive(true);

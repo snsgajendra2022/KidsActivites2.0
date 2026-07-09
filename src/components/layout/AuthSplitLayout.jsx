@@ -16,13 +16,22 @@ export default function AuthSplitLayout({
   footerLink,
   className = '',
 }) {
-  const { portalName, school } = usePortalConfig();
+  const { portalName, school, branding } = usePortalConfig();
+  const loginHeroUrl = branding?.loginHeroUrl;
+  const hasCustomLogo = Boolean(branding?.logoUrl || branding?.logoIconUrl);
 
   return (
     <div className={`sb-page sb-editorial-page sb-editorial-auth flex min-h-dvh flex-col ${className}`.trim()}>
       <PublicHeader compact />
       <div className="auth-split flex-1">
-        <div className="auth-split__visual">
+        <div
+          className={`auth-split__visual${loginHeroUrl ? ' auth-split__visual--has-image' : ''}`}
+          style={loginHeroUrl ? {
+            backgroundImage: `url(${loginHeroUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          } : undefined}
+        >
           <div className="auth-split__visual-content">
             <p className="sb-eyebrow !text-[var(--sb-gold)]">{visualBadge || 'Secure Portal'}</p>
             <h1>{visualTitle || `Welcome to ${portalName}`}</h1>
@@ -36,7 +45,11 @@ export default function AuthSplitLayout({
           <div className="auth-split__card">
             <div className="auth-split__card-header">
               <div className="auth-split__card-brand">
-                <PortalLogo size="sm" className="auth-split__card-logo-full" />
+                {hasCustomLogo ? (
+                  <PortalLogo size="sm" className="auth-split__card-logo-full" />
+                ) : (
+                  <p className="auth-split__card-portal-name">{portalName}</p>
+                )}
               </div>
               <div className="auth-split__card-brand-divider" aria-hidden="true" />
               <div className="auth-split__card-heading">

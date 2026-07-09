@@ -1,4 +1,5 @@
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { useTenant } from '../../context/TenantContext.jsx';
 import defaultLogo from '../../assets/kids_activities_logo.png';
 import footerDefaultLogo from '../../assets/kids_activities_logo_white.png';
 import { sanitizeBrandingValue } from '../../utils/brandingUrlUtils.js';
@@ -104,17 +105,21 @@ export default function PortalLogo({
   sidebar = false,
 }) {
   const { portalName, branding } = usePortalConfig();
+  const { isTenantRoute, isTenantSubdomain } = useTenant();
   const sizeClass = compact ? SIZES.icon : (SIZES[size] || SIZES.md);
-  const baseLogo = inverse ? footerDefaultLogo : defaultLogo;
+  const isTenantBranding = isTenantRoute || isTenantSubdomain;
+  const platformLogo = isTenantBranding
+    ? null
+    : (inverse ? footerDefaultLogo : defaultLogo);
   const logoUrl = sanitizeBrandingValue(branding?.logoUrl);
   const logoIconUrl = sanitizeBrandingValue(branding?.logoIconUrl);
   const imageUrl = markOnly
-    ? (logoIconUrl || baseLogo)
+    ? (logoIconUrl || platformLogo)
     : compact
       ? (logoIconUrl || logoUrl || null)
       : sidebar
-        ? (logoUrl || logoIconUrl || baseLogo)
-        : (logoIconUrl || logoUrl || baseLogo);
+        ? (logoUrl || logoIconUrl || platformLogo)
+        : (logoIconUrl || logoUrl || platformLogo);
 
   return (
     <LogoMark
@@ -130,10 +135,12 @@ export default function PortalLogo({
 
 export function FooterPortalLogo({ size = 'lg', className = '' }) {
   const { portalName, branding } = usePortalConfig();
+  const { isTenantRoute, isTenantSubdomain } = useTenant();
   const sizeClass = SIZES[size] || SIZES.lg;
+  const platformLogo = (isTenantRoute || isTenantSubdomain) ? null : footerDefaultLogo;
   const imageUrl = sanitizeBrandingValue(branding?.logoIconUrl)
     || sanitizeBrandingValue(branding?.logoUrl)
-    || footerDefaultLogo;
+    || platformLogo;
 
   return (
     <LogoMark

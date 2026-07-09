@@ -7,9 +7,12 @@ import { FooterPortalLogo } from '../brand/PortalLogo.jsx';
 
 export default function EditorialFooter({ compact = false }) {
   const { portalName, school, platform } = usePortalConfig();
-  const { isPlatformHome } = useTenant();
-  const { loginPath } = useTenantPath();
-  const enrollPath = useSchoolEnrollPath();
+  const { isPlatformHome, isTenantRoute } = useTenant();
+  const { loginPath, tenantPath } = useTenantPath();
+  const defaultEnrollPath = useSchoolEnrollPath();
+  const enrollPath = isTenantRoute
+    ? tenantPath('/enrollment/kidzee-print-form')
+    : defaultEnrollPath;
 
   const tagline = isPlatformHome
     ? (platform?.tagline || 'Multi-school enrollment platform')
