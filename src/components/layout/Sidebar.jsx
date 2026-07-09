@@ -5,13 +5,6 @@ import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
 
-function getPortalShortLabel(name) {
-  const trimmed = (name || 'KA').trim();
-  if (!trimmed) return 'KA';
-  if (trimmed.length <= 4) return trimmed.toUpperCase();
-  return trimmed.split(/\s+/).map((word) => word[0]).join('').slice(0, 3).toUpperCase();
-}
-
 function isChatNavItem(item) {
   const id = item?.id || '';
   const to = item?.to || '';
@@ -79,11 +72,9 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
                 to={homePath}
                 onClick={onClose}
                 title={portalName}
-                className="sidebar-brand-initials-btn"
+                className="sidebar-brand-initials-btn sidebar-logo-link--collapsed"
               >
-                <span className="sidebar-brand-initials-btn__label">
-                  {getPortalShortLabel(portalName)}
-                </span>
+                <PortalLogo size="icon" compact sidebar />
               </Link>
               <button
                 type="button"

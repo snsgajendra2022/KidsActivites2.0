@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode, Home } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Input from '../../components/ui/Input.jsx';
 import ToggleSwitch from '../../components/ui/ToggleSwitch.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { useTenant } from '../../context/TenantContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { readFileAsDataUrl } from '../../services/portalConfigService.js';
 import '../../styles/portal-branding.css';
@@ -16,14 +17,18 @@ import EnrollmentFormBuilder from './EnrollmentFormBuilder.jsx';
 import { cloneEnrollmentFormConfig, DEFAULT_ENROLLMENT_FORM } from '../../data/defaultEnrollmentFormConfig.js';
 import { FOOTER_LINKS } from '../../components/layout/PublicFooter.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
+import { mergeLandingPage } from '../../data/defaultLandingPage.js';
+import LandingPageSettings from '../../components/admin/LandingPageSettings.jsx';
 
 const TABS = [
   { id: 'identity', label: 'Portal Identity', icon: Layout, desc: 'Name, tagline & footer' },
   { id: 'login', label: 'Login Access', icon: KeyRound, desc: 'Sign-in methods' },
   { id: 'email', label: 'Email Settings', icon: Mail, desc: 'School SMTP mail' },
-  { id: 'theme', label: 'Theme Colors', icon: Palette, desc: 'Brand & accent colors' },
+  // Theme Colors — hidden for now; re-enable when tenant theme customization is ready.
+  // { id: 'theme', label: 'Theme Colors', icon: Palette, desc: 'Brand & accent colors' },
   { id: 'school', label: 'School Details', icon: Menu, desc: 'Contact information' },
   { id: 'images', label: 'Logo & Images', icon: Image, desc: 'Logos & hero images' },
+  { id: 'landing', label: 'Landing Page', icon: Home, desc: 'Homepage sections & content' },
 ];
 
 const TAB_META = Object.fromEntries(TABS.map((t) => [t.id, t]));
@@ -123,11 +128,17 @@ function BrandingSidebarPreview({ portalName, schoolName, iconUrl, logoUrl }) {
         <div className="branding-sidebar-preview__panel branding-sidebar-preview__panel--collapsed">
           <p className="branding-sidebar-preview__label">Collapsed</p>
           <div className="branding-sidebar-preview__rail">
-            <span className="sidebar-brand-initials-btn branding-sidebar-preview__initials">
-              <span className="sidebar-brand-initials-btn__label">
-                {getPortalShortLabel(portalName)}
+            {iconUrl ? (
+              <span className="portal-logo-sidebar-mark branding-sidebar-preview__initials">
+                <img src={iconUrl} alt="" className="portal-logo-compact-img" />
               </span>
-            </span>
+            ) : (
+              <span className="sidebar-brand-initials-btn branding-sidebar-preview__initials">
+                <span className="sidebar-brand-initials-btn__label">
+                  {getPortalShortLabel(portalName)}
+                </span>
+              </span>
+            )}
           </div>
         </div>
         <div className="branding-sidebar-preview__panel">
@@ -204,6 +215,7 @@ export default function PortalSettings() {
     platform,
     schools,
   } = usePortalConfig();
+  const { tenantSlug } = useTenant();
   const { toast } = useToast();
   const [editTarget, setEditTarget] = useState('school');
   const [tab, setTab] = useState('identity');
@@ -211,7 +223,10 @@ export default function PortalSettings() {
   const [form, setForm] = useState(null);
   const [platformForm, setPlatformForm] = useState(null);
 
-  const activeSchoolMeta = schools.find((s) => s.id === activeSchoolId);
+  const activeSchoolMeta = schools.find((s) => s.id === activeSchoolId)
+    || (tenantSlug && form?.school
+      ? { id: activeSchoolId, name: form.school.name, slug: tenantSlug }
+      : null);
 
   useEffect(() => {
     if (platform) {
@@ -255,6 +270,11 @@ export default function PortalSettings() {
           ...(config.emailSettings || {}),
           password: '',
         },
+        landingPage: mergeLandingPage(
+          config.landingPage,
+          config.portalName,
+          config.school?.name,
+        ),
       });
     }
   }, [config, activeSchoolId]);
@@ -924,13 +944,13 @@ export default function PortalSettings() {
             school={form.school}
             onSchoolChange={(school) => setForm((f) => ({ ...f, school }))}
             hint={
-              activeSchoolMeta?.slug ? (
+              activeSchoolMeta?.slug || tenantSlug ? (
                 <>
-                  Used on the public landing page and enrollment header for{' '}
-                  <strong>/{activeSchoolMeta.slug}</strong>.
+                  Used on the public landing page, login page, and enrollment header for{' '}
+                  <strong>/{activeSchoolMeta?.slug || tenantSlug}</strong>.
                 </>
               ) : (
-                <>School contact details shown on the public school portal.</>
+                <>School contact details shown on the public school portal and login page.</>
               )
             }
           />
@@ -997,6 +1017,14 @@ export default function PortalSettings() {
               />
             </div>
           </div>
+        )}
+
+        {tab === 'landing' && (
+          <LandingPageSettings
+            landingPage={form.landingPage}
+            tenantSlug={activeSchoolMeta?.slug || tenantSlug}
+            onChange={(landingPage) => setForm((f) => ({ ...f, landingPage }))}
+          />
         )}
 
                 </div>

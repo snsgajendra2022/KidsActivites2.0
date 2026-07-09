@@ -331,9 +331,13 @@ export function PortalConfigProvider({ children, user = null }) {
       portalName: isPlatformPublic
         ? (platform?.platformName || 'Kids Activities')
         : (config?.portalName || 'Kids Activities'),
+      tagline: isPlatformPublic
+        ? (platform?.tagline || '')
+        : (config?.tagline || ''),
       footerText: isPlatformPublic
         ? (platform?.footerText || DEFAULT_PORTAL_CONFIG.footerText)
         : (config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
+      landingPage: isPlatformPublic ? null : config?.landingPage,
       branding: isPlatformPublic
         ? { ...DEFAULT_PORTAL_CONFIG.branding, ...(platform?.branding || {}) }
         : config?.branding,

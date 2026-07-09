@@ -241,6 +241,14 @@
   box-shadow: 0 8px 32px rgba(27, 46, 75, 0.06);
 }
 
+.portal-settings__panel--nested {
+  margin-top: 0.5rem;
+  padding: 1.25rem;
+  border-radius: 0.875rem;
+  background: #fafbfe;
+  box-shadow: none;
+}
+
 @media (min-width: 640px) {
   .portal-settings__panel {
     padding: 1.75rem;

@@ -224,6 +224,15 @@
   opacity: 0.95;
 }
 
+.auth-split__visual--has-image::before {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--sb-navy) 88%, transparent) 0%,
+    color-mix(in srgb, var(--sb-deep-blue) 82%, transparent) 50%,
+    color-mix(in srgb, var(--sb-gold) 20%, var(--sb-deep-blue) 70%) 100%
+  );
+}
+
 .auth-split__visual-content {
   position: relative;
   z-index: 1;
@@ -695,6 +704,30 @@
 
 .portal-shell .app-sidebar .sidebar-logo-link--collapsed {
   justify-content: center;
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn .portal-logo-sidebar-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn .portal-logo-compact-img {
+  width: 1.75rem;
+  height: 1.75rem;
+  max-width: 1.75rem;
+  max-height: 1.75rem;
+  object-fit: contain;
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn .portal-logo-name--compact {
+  width: 2.5rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  max-width: 2.5rem;
+  font-size: 0.5625rem;
 }
 
 .portal-shell .app-sidebar .portal-logo-initials--compact,

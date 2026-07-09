@@ -1,4 +1,5 @@
 import { DEFAULT_PORTAL_CONFIG } from '../data/defaultPortalConfig.js';
+import { mergeLandingPage } from '../data/defaultLandingPage.js';
 import { DEFAULT_ENROLLMENT_FORM, cloneEnrollmentFormConfig } from '../data/defaultEnrollmentFormConfig.js';
 import { NAV_BY_ROLE } from '../constants/navigation.js';
 import { buildDefaultMenuVisibility } from '../data/defaultPortalConfig.js';
@@ -174,6 +175,7 @@ function buildDefaultsForSchool(schoolId, schoolFromApi = null) {
     menuCustomization: {},
     customMenuItems: [],
     menuOrder: {},
+    landingPage: mergeLandingPage(null, baseSchool.name || DEFAULT_PORTAL_CONFIG.portalName, baseSchool.name || 'our school'),
   };
 }
 
@@ -225,6 +227,11 @@ function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID, schoolFromApi = null)
       ...defaults.emailSettings,
       ...(stored.emailSettings || {}),
     },
+    landingPage: mergeLandingPage(
+      stored.landingPage,
+      stored.portalName || defaults.portalName,
+      stored.school?.name || defaults.school?.name || 'our school',
+    ),
   };
 
   Object.keys(NAV_BY_ROLE).forEach((role) => {
@@ -275,6 +282,61 @@ export async function uploadBrandingAsset(file, assetType) {
   });
 
   return registered?.url || registered?.branding?.[`${assetType}Url`] || signed.fileKey;
+}
+
+async function uploadLandingImage(file, fieldKey) {
+  const signed = await api.post('/documents/upload', {
+    fileName: file.name,
+    mimeType: file.type,
+    sizeBytes: file.size,
+    category: 'branding',
+    fieldKey,
+  });
+
+  await fetch(signed.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+
+  const confirmed = await api.post('/documents/confirm', {
+    fileKey: signed.fileKey,
+    fieldKey,
+  });
+
+  return confirmed?.downloadUrl || confirmed?.url || signed.fileKey;
+}
+
+async function prepareLandingPageForSave(landingPage = {}) {
+  if (!isApiEnabled() || !landingPage) return landingPage;
+
+  const next = JSON.parse(JSON.stringify(landingPage));
+
+  const uploadIfDataUrl = async (value, fieldKey) => {
+    if (!isDataUrl(value)) return value;
+    const file = await dataUrlToFile(value, `${fieldKey}.png`);
+    return uploadLandingImage(file, fieldKey);
+  };
+
+  if (next.campusBanner?.imageUrl) {
+    next.campusBanner.imageUrl = await uploadIfDataUrl(next.campusBanner.imageUrl, 'landing_campus');
+  }
+  if (next.finalCta?.imageUrl) {
+    next.finalCta.imageUrl = await uploadIfDataUrl(next.finalCta.imageUrl, 'landing_cta');
+  }
+  if (Array.isArray(next.timeline?.steps)) {
+    next.timeline.steps = await Promise.all(
+      next.timeline.steps.map(async (step, index) => {
+        if (!step?.imageUrl) return step;
+        return {
+          ...step,
+          imageUrl: await uploadIfDataUrl(step.imageUrl, `landing_timeline_${index}`),
+        };
+      }),
+    );
+  }
+
+  return next;
 }
 
 async function prepareBrandingForSave(branding = {}) {
@@ -337,6 +399,13 @@ function mockSavePortalConfig(updates, schoolId) {
     menuOrder: updates.menuOrder
       ? { ...current.menuOrder, ...updates.menuOrder }
       : current.menuOrder,
+    landingPage: updates.landingPage
+      ? mergeLandingPage(
+        { ...current.landingPage, ...updates.landingPage },
+        updates.portalName || current.portalName,
+        updates.school?.name || current.school?.name,
+      )
+      : current.landingPage,
   };
   persistSchoolConfig(id, next);
   return next;
@@ -380,8 +449,12 @@ export async function savePortalConfig(updates, schoolId) {
       const branding = updates.branding
         ? await prepareBrandingForSave(updates.branding)
         : undefined;
+      const landingPage = updates.landingPage
+        ? await prepareLandingPageForSave(updates.landingPage)
+        : undefined;
       const payload = { ...updates };
       if (branding) payload.branding = branding;
+      if (landingPage) payload.landingPage = landingPage;
       if (payload.emailSettings) {
         const { password, passwordConfigured, ...rest } = payload.emailSettings;
         payload.emailSettings = { ...rest };
