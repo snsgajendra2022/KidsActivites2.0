@@ -74,8 +74,8 @@ svg {
 }
 
 /* Touch-friendly minimum targets */
-button:not(.media-card-toolbar__btn):not(.admin-photos-card__btn):not([data-close-button]),
-[role='button']:not(.media-card-toolbar__btn),
+button:not(.media-card-toolbar__btn):not(.admin-photos-card__btn):not([data-close-button]):not(.sb-switch):not(.portal-settings__nav-btn):not(.portal-settings__target-btn),
+[role='button']:not(.media-card-toolbar__btn):not(.sb-switch),
 a.sb-btn-primary,
 a.sb-btn-secondary,
 a.sb-link-btn,

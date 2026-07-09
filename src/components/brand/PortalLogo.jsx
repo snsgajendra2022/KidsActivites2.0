@@ -29,21 +29,32 @@ const SIZES = {
   },
 };
 
-function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
+function LogoMark({ portalName, sizeClass, imageUrl, className, compact, sidebar }) {
   if (imageUrl) {
-    return (
+    const img = (
       <img
         src={imageUrl}
         alt={`${portalName} logo`}
         className={[
           'block shrink-0',
           compact ? 'portal-logo-compact-img' : sizeClass.img,
+          sidebar && !compact ? 'portal-logo-sidebar-img' : '',
           className,
         ].filter(Boolean).join(' ')}
         loading="lazy"
         decoding="async"
       />
     );
+
+    if (sidebar) {
+      return (
+        <span className={compact ? 'portal-logo-sidebar-mark' : 'portal-logo-sidebar-wrap'}>
+          {img}
+        </span>
+      );
+    }
+
+    return img;
   }
 
   const initials = portalName.slice(0, 2).toUpperCase();
@@ -55,17 +66,19 @@ function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
       : name.split(/\s+/).map((w) => w[0]).join('').slice(0, 3).toUpperCase() || initials;
 
     return (
-      <div
-        className={['portal-logo-name--compact', className].filter(Boolean).join(' ')}
-        title={portalName}
-        aria-label={portalName}
-      >
-        {shortLabel}
-      </div>
+      <span className={sidebar ? 'portal-logo-sidebar-mark' : undefined}>
+        <div
+          className={['portal-logo-name--compact', className].filter(Boolean).join(' ')}
+          title={portalName}
+          aria-label={portalName}
+        >
+          {shortLabel}
+        </div>
+      </span>
     );
   }
 
-  return (
+  const fallback = (
     <div
       className={`${sizeClass.box} flex shrink-0 items-center justify-center font-bold text-white border border-white/10 ${className}`}
       style={{ background: 'var(--sb-primary)' }}
@@ -73,6 +86,12 @@ function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
       {initials}
     </div>
   );
+
+  if (sidebar) {
+    return <span className="portal-logo-sidebar-wrap">{fallback}</span>;
+  }
+
+  return fallback;
 }
 
 export default function PortalLogo({
@@ -81,6 +100,7 @@ export default function PortalLogo({
   compact = false,
   inverse = false,
   markOnly = false,
+  sidebar = false,
 }) {
   const { portalName, branding } = usePortalConfig();
   const sizeClass = compact ? SIZES.icon : (SIZES[size] || SIZES.md);
@@ -89,7 +109,9 @@ export default function PortalLogo({
     ? (branding?.logoIconUrl || baseLogo)
     : compact
       ? (branding?.logoIconUrl || branding?.logoUrl || null)
-      : (branding?.logoIconUrl || branding?.logoUrl || baseLogo);
+      : sidebar
+        ? (branding?.logoUrl || branding?.logoIconUrl || baseLogo)
+        : (branding?.logoIconUrl || branding?.logoUrl || baseLogo);
 
   return (
     <LogoMark
@@ -98,6 +120,7 @@ export default function PortalLogo({
       imageUrl={imageUrl}
       className={className}
       compact={compact}
+      sidebar={sidebar}
     />
   );
 }

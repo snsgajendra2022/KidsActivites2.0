@@ -1,9 +1,16 @@
 import { Link, NavLink } from 'react-router-dom';
-import { ChevronLeft, X } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
+
+function getPortalShortLabel(name) {
+  const trimmed = (name || 'KA').trim();
+  if (!trimmed) return 'KA';
+  if (trimmed.length <= 4) return trimmed.toUpperCase();
+  return trimmed.split(/\s+/).map((word) => word[0]).join('').slice(0, 3).toUpperCase();
+}
 
 function isChatNavItem(item) {
   const id = item?.id || '';
@@ -66,48 +73,71 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             collapsed ? 'sidebar-top--collapsed' : 'h-16 items-center px-3'
           }`}
         >
-          <Link
-            to={homePath}
-            onClick={onClose}
-            title={collapsed ? portalName : undefined}
-            className={`flex min-w-0 items-center ${
-              collapsed ? 'sidebar-logo-link--collapsed' : 'min-w-0 flex-1 gap-3 pr-10'
-            }`}
-          >
-            {collapsed ? (
-              <PortalLogo compact inverse />
-            ) : (
-              <span className="sidebar-logo-wrap shrink-0">
-                <PortalLogo size="md" inverse />
-              </span>
-            )}
-            {!collapsed && (
-              <div className="min-w-0">
-                <div className="sidebar-brand-title font-display truncate text-sm font-bold">{portalName}</div>
-                <div className="sidebar-brand-subtitle truncate text-[11px]">{school?.name}</div>
-              </div>
-            )}
-          </Link>
+          {collapsed ? (
+            <div className="sidebar-top-collapsed-stack">
+              <Link
+                to={homePath}
+                onClick={onClose}
+                title={portalName}
+                className="sidebar-brand-initials-btn"
+              >
+                <span className="sidebar-brand-initials-btn__label">
+                  {getPortalShortLabel(portalName)}
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="sidebar-expand-btn hidden lg:inline-flex"
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+              >
+                <PanelLeftOpen size={17} strokeWidth={2.25} />
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="sidebar-mobile-close-btn inline-flex lg:hidden"
+                aria-label="Close menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link
+                to={homePath}
+                onClick={onClose}
+                className="flex min-w-0 flex-1 items-center gap-3 pr-10"
+              >
+                <PortalLogo size="md" inverse sidebar />
+                <div className="min-w-0">
+                  <div className="sidebar-brand-title font-display truncate text-sm font-bold">{portalName}</div>
+                  <div className="sidebar-brand-subtitle truncate text-[11px]">{school?.name}</div>
+                </div>
+              </Link>
 
-          <div className={collapsed ? 'sidebar-collapse-wrap--collapsed' : 'absolute right-[2px] top-1/2 flex -translate-y-1/2 items-center gap-1'}>
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="sidebar-collapse-btn hidden lg:inline-flex"
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              <ChevronLeft size={18} className={`transition-transform ${collapsed ? 'rotate-180' : ''}`} />
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-[#6b7a8c] hover:bg-brand-muted hover:text-brand lg:hidden"
-              aria-label="Close menu"
-            >
-              <X size={18} />
-            </button>
-          </div>
+              <div className="absolute right-[2px] top-1/2 flex -translate-y-1/2 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  className="sidebar-collapse-btn hidden lg:inline-flex"
+                  aria-label="Collapse sidebar"
+                  title="Collapse sidebar"
+                >
+                  <PanelLeftClose size={17} strokeWidth={2.25} />
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="sidebar-mobile-close-btn inline-flex lg:hidden"
+                  aria-label="Close menu"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <nav className={`sidebar-nav flex-1 overflow-y-auto ${collapsed ? 'sidebar-nav--collapsed' : 'space-y-1 px-3 py-2'}`}>

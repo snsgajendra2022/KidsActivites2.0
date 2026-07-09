@@ -11,6 +11,7 @@ import './styles/globals.css';
 import './styles/components.css';
 import './styles/layout.css';
 import './styles/responsive.css';
+import './styles/toggle-switch.css';
 import './styles/premium.css';
 import './styles/kidsactivites-theme.css';
 import './styles/login-portal.css';
