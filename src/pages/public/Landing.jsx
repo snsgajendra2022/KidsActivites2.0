@@ -64,8 +64,9 @@ function renderMultiline(text) {
 export default function Landing() {
   const { isPlatformHome } = useTenant();
   const { portalName, school, branding, platform, landingPage } = usePortalConfig();
-  const { loginPath } = useTenantPath();
+  const { loginPath, tenantPath } = useTenantPath();
   const enrollPath = useSchoolEnrollPath();
+  const enrollmentFormPath = tenantPath('/enrollment/kidzee-print-form');
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
 
   if (isPlatformHome) {
@@ -149,7 +150,7 @@ export default function Landing() {
           title={heroTitle}
           subtitle={renderMultiline(heroSubtitle)}
           primaryAction={hero.primaryCtaEnabled !== false ? {
-            to: enrollPath,
+            to: enrollmentFormPath,
             label: <>{hero.primaryCtaLabel || 'Start Enrollment'} <ArrowRight size={18} /></>,
           } : null}
           secondaryAction={hero.secondaryCtaEnabled !== false ? {
@@ -191,7 +192,7 @@ export default function Landing() {
           subtitle={finalCta.subtitle?.trim() || school?.address}
           imageUrl={finalCta.imageUrl || undefined}
           action={{
-            to: enrollPath,
+            to: enrollmentFormPath,
             label: <>{finalCta.ctaLabel || 'Start Enrollment'} <ArrowRight size={18} /></>,
           }}
         />
