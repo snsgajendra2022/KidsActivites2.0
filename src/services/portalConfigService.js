@@ -221,6 +221,10 @@ function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID, schoolFromApi = null)
       ...defaults.menuOrder,
       ...(stored.menuOrder || {}),
     },
+    emailSettings: {
+      ...defaults.emailSettings,
+      ...(stored.emailSettings || {}),
+    },
   };
 
   Object.keys(NAV_BY_ROLE).forEach((role) => {
@@ -352,6 +356,19 @@ export async function getPortalConfig(schoolId) {
   });
 }
 
+export async function getAdminPortalConfig() {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(120);
+      return mockGetPortalConfig(getAdminSelectedSchoolId());
+    },
+    apiFn: async () => {
+      const data = await api.get('/admin/portal-settings');
+      return normalizeApiPortalConfig(data);
+    },
+  });
+}
+
 export async function savePortalConfig(updates, schoolId) {
   const id = schoolId || getAdminSelectedSchoolId();
   return routeRequest({
@@ -365,6 +382,13 @@ export async function savePortalConfig(updates, schoolId) {
         : undefined;
       const payload = { ...updates };
       if (branding) payload.branding = branding;
+      if (payload.emailSettings) {
+        const { password, passwordConfigured, ...rest } = payload.emailSettings;
+        payload.emailSettings = { ...rest };
+        if (password && password.trim()) {
+          payload.emailSettings.password = password;
+        }
+      }
       const data = await api.put('/admin/portal-settings', payload);
       return normalizeApiPortalConfig(data);
     },

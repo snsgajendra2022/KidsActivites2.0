@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   getPortalConfig,
+  getAdminPortalConfig,
   savePortalConfig,
   getAdminSelectedSchoolId,
   setAdminSelectedSchoolId,
@@ -145,7 +146,8 @@ export function PortalConfigProvider({ children, user = null }) {
       return null;
     }
     try {
-      const data = await getPortalConfig(schoolId);
+      const loader = isAdminRoute ? getAdminPortalConfig : () => getPortalConfig(schoolId);
+      const data = await loader();
       setConfig(data);
       applyDocumentBranding(data);
       setLoading(false);
@@ -155,7 +157,7 @@ export function PortalConfigProvider({ children, user = null }) {
       setLoading(false);
       throw err;
     }
-  }, []);
+  }, [isAdminRoute]);
 
   const isTenantContext = isTenantRoute || isTenantSubdomain;
 

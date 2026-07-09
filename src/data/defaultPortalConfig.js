@@ -42,6 +42,16 @@ export const DEFAULT_PORTAL_CONFIG = {
     'Track applications, documents & fees in your parent portal',
     'Need help? Contact admissions@greenvalley.edu.in',
   ],
+  emailSettings: {
+    useSchoolSmtp: false,
+    smtpHost: 'smtp.gmail.com',
+    smtpPort: 587,
+    username: '',
+    password: '',
+    fromEmail: '',
+    fromName: '',
+    passwordConfigured: false,
+  },
   /** role → menuId → visible (false = hidden) */
   menuVisibility: {},
   /** menuId → { label?, icon? } — overrides built-in sidebar labels/icons */

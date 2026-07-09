@@ -24,6 +24,7 @@ const TABS = [
   { id: 'identity', label: 'Portal Identity', icon: Layout },
   { id: 'enrollment-form', label: 'Enrollment Form', icon: FileText },
   { id: 'login', label: 'Login Access', icon: KeyRound },
+  { id: 'email', label: 'Email Settings', icon: Mail },
   { id: 'theme', label: 'Theme Colors', icon: Palette },
   { id: 'school', label: 'School Details', icon: Menu },
   { id: 'images', label: 'Logo & Images', icon: Image },
@@ -173,6 +174,11 @@ export default function PortalSettings() {
         menuCustomization: { ...(config.menuCustomization || {}) },
         customMenuItems: [...(config.customMenuItems || [])],
         menuOrder: JSON.parse(JSON.stringify(config.menuOrder || {})),
+        emailSettings: {
+          ...DEFAULT_PORTAL_CONFIG.emailSettings,
+          ...(config.emailSettings || {}),
+          password: '',
+        },
       });
     }
   }, [config, activeSchoolId]);
@@ -739,6 +745,117 @@ export default function PortalSettings() {
                 placeholder={'Admissions open for 2026–2027\nFee deadline: 31 July 2026'}
               />
             </div>
+          </div>
+        )}
+
+        {tab === 'email' && (
+          <div className="sb-card grid max-w-3xl gap-4 p-6">
+            <div>
+              <h3 className="font-display text-base font-bold text-brand">School Email (SMTP)</h3>
+              <p className="mt-1 text-sm text-muted">
+                When enabled, parent emails from admissions actions are sent from your school&apos;s email address instead of the platform default. Emails use your school name — not Kids Activities.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#f8f9ff] px-5 py-4">
+              <div>
+                <p className="text-sm font-semibold text-brand">Use school email for outgoing mail</p>
+                <p className="text-xs text-muted">Requires valid SMTP credentials (e.g. Gmail app password, school mail server)</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.emailSettings?.useSchoolSmtp === true}
+                onClick={() => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, useSchoolSmtp: !f.emailSettings?.useSchoolSmtp },
+                }))}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                  form.emailSettings?.useSchoolSmtp ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    form.emailSettings?.useSchoolSmtp ? 'left-[22px]' : 'left-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="SMTP Host"
+                value={form.emailSettings?.smtpHost || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, smtpHost: e.target.value },
+                }))}
+                variant="enrollment"
+                placeholder="smtp.gmail.com"
+              />
+              <Input
+                label="SMTP Port"
+                type="number"
+                value={form.emailSettings?.smtpPort ?? 587}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, smtpPort: Number(e.target.value) || 587 },
+                }))}
+                variant="enrollment"
+              />
+            </div>
+
+            <Input
+              label="SMTP Username / Email"
+              type="email"
+              value={form.emailSettings?.username || ''}
+              onChange={(e) => setForm((f) => ({
+                ...f,
+                emailSettings: { ...f.emailSettings, username: e.target.value },
+              }))}
+              variant="enrollment"
+              helper="Usually the full email address used to authenticate with your mail server."
+            />
+
+            <Input
+              label="SMTP Password"
+              type="password"
+              value={form.emailSettings?.password || ''}
+              onChange={(e) => setForm((f) => ({
+                ...f,
+                emailSettings: { ...f.emailSettings, password: e.target.value },
+              }))}
+              variant="enrollment"
+              placeholder={form.emailSettings?.passwordConfigured ? 'Leave blank to keep current password' : 'Enter SMTP password or app password'}
+            />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="From Email"
+                type="email"
+                value={form.emailSettings?.fromEmail || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, fromEmail: e.target.value },
+                }))}
+                variant="enrollment"
+                helper="Defaults to SMTP username if empty."
+              />
+              <Input
+                label="From Name"
+                value={form.emailSettings?.fromName || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, fromName: e.target.value },
+                }))}
+                variant="enrollment"
+                helper={`Defaults to ${form.school?.name || 'school name'} if empty.`}
+              />
+            </div>
+
+            <p className="text-xs text-muted">
+              Parent notification emails mention your school name only. Login links are included only when the parent already has a portal account; correction requests use a secure no-login link.
+            </p>
           </div>
         )}
 
