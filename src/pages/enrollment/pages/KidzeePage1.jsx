@@ -213,11 +213,11 @@ export default function KidzeePage1({
         />
       </div>
 
-      {/* Height 15 | Weight 7 */}
+      {/* Height | Weight */}
       <div className="kz-p1-row kz-p1-row--height-weight">
         <CharBoxInput
           label="Height:"
-          boxes={15}
+          boxes={5}
           value={child.height}
           onChange={(v) => set("child.height", v)}
           readOnly={readOnly}
@@ -225,7 +225,7 @@ export default function KidzeePage1({
         />
         <CharBoxInput
           label="Weight:"
-          boxes={7}
+          boxes={4}
           value={child.weight}
           onChange={(v) => set("child.weight", v)}
           readOnly={readOnly}
