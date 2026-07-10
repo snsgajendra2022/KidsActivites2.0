@@ -212,11 +212,17 @@
   break-after: auto;
 }
 
-/* Skip painting off-screen pages so scrolling stays smooth */
+/* Skip painting off-screen pages so scrolling stays smooth (interactive UI only) */
 @media screen {
   .kidzee-print-pages .print-page {
     content-visibility: auto;
     contain-intrinsic-size: 210mm 297mm;
+  }
+
+  /* Headless PDF capture loads the full form at once — never skip painting pages */
+  .kidzee-print-page--pdf .kidzee-print-pages .print-page {
+    content-visibility: visible;
+    contain-intrinsic-size: auto;
   }
 }
 
