@@ -27,6 +27,28 @@ export default function KidzeePage1({
   const formNoReadOnly = readOnly || (!isAdmin && Boolean(formData.formNo));
   const addrChain = useBoxChain(4);
 
+  /** Keep only one key true in a boolean option map (radio-like checkboxes). */
+  const selectOne = (keys, selectedKey, checked) =>
+    Object.fromEntries(keys.map((k) => [k, checked && k === selectedKey]));
+
+  const setClass = (key, checked) =>
+    set("class", selectOne(CLASS_OPTIONS.map((o) => o.key), key, checked));
+
+  const setUniformRegular = (size, checked) =>
+    set("child.uniformRegular", selectOne(UNIFORM_SIZES, size, checked));
+
+  const setUniformWinter = (size, checked) =>
+    set("child.uniformWinter", selectOne(UNIFORM_SIZES, size, checked));
+
+  const setStaysWith = (key, checked) =>
+    set("child.staysWith", {
+      ...selectOne(["mother", "father", "both", "others"], key, checked),
+      othersText: child.staysWith?.othersText || "",
+    });
+
+  const setGender = (key, checked) =>
+    set("child.gender", selectOne(["male", "female"], key, checked));
+
   const classRow1 = CLASS_OPTIONS.slice(0, 6);
   const classRow2 = CLASS_OPTIONS.slice(6);
 
@@ -75,7 +97,7 @@ export default function KidzeePage1({
               key={key}
               label={label}
               checked={formData.class?.[key]}
-              onChange={(v) => set(`class.${key}`, v)}
+              onChange={(v) => setClass(key, v)}
               readOnly={readOnly}
             />
           ))}
@@ -89,7 +111,7 @@ export default function KidzeePage1({
             key={key}
             label={label}
             checked={formData.class?.[key]}
-            onChange={(v) => set(`class.${key}`, v)}
+            onChange={(v) => setClass(key, v)}
             readOnly={readOnly}
           />
         ))}
@@ -160,13 +182,13 @@ export default function KidzeePage1({
         <PaperCheckbox
           label="Male"
           checked={child.gender?.male}
-          onChange={(v) => set("child.gender.male", v)}
+          onChange={(v) => setGender("male", v)}
           readOnly={readOnly}
         />
         <PaperCheckbox
           label="Female"
           checked={child.gender?.female}
-          onChange={(v) => set("child.gender.female", v)}
+          onChange={(v) => setGender("female", v)}
           readOnly={readOnly}
         />
       </div>
@@ -233,7 +255,7 @@ export default function KidzeePage1({
             key={`reg-${size}`}
             label={size}
             checked={child.uniformRegular?.[size]}
-            onChange={(v) => set(`child.uniformRegular.${size}`, v)}
+            onChange={(v) => setUniformRegular(size, v)}
             readOnly={readOnly}
           />
         ))}
@@ -245,7 +267,7 @@ export default function KidzeePage1({
             key={`win-${size}`}
             label={size}
             checked={child.uniformWinter?.[size]}
-            onChange={(v) => set(`child.uniformWinter.${size}`, v)}
+            onChange={(v) => setUniformWinter(size, v)}
             readOnly={readOnly}
           />
         ))}
@@ -327,7 +349,7 @@ export default function KidzeePage1({
             key={key}
             label={label}
             checked={child.staysWith?.[key]}
-            onChange={(v) => set(`child.staysWith.${key}`, v)}
+            onChange={(v) => setStaysWith(key, v)}
             readOnly={readOnly}
           />
         ))}
@@ -337,7 +359,7 @@ export default function KidzeePage1({
         <PaperCheckbox
           label="Others (Please specify):"
           checked={child.staysWith?.others}
-          onChange={(v) => set("child.staysWith.others", v)}
+          onChange={(v) => setStaysWith("others", v)}
           readOnly={readOnly}
         />
         <CharBoxInput

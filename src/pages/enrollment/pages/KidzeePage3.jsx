@@ -19,6 +19,14 @@ export default function KidzeePage3({
   const siblings = formData.siblings || [];
   const familyMembers = formData.otherFamilyMembers || [];
 
+  const setHouseholdIncome = (key, checked) =>
+    set(
+      "householdIncome",
+      Object.fromEntries(
+        HOUSEHOLD_INCOME_OPTIONS.map(({ key: k }) => [k, checked && k === key])
+      )
+    );
+
   return (
     <PrintPage pageNumber={3} showGrid={showGrid} branding={branding}>
       <header className="kz-p3-header">
@@ -53,7 +61,7 @@ export default function KidzeePage3({
                 key={key}
                 label={label}
                 checked={formData.householdIncome?.[key]}
-                onChange={(v) => set(`householdIncome.${key}`, v)}
+                onChange={(v) => setHouseholdIncome(key, v)}
                 readOnly={readOnly}
               />
             ))}
