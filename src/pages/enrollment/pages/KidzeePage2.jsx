@@ -63,9 +63,6 @@ export default function KidzeePage2({
       <div className="kz-p2-section kz-p2-section--doctor">
         <div className="kz-p2-row kz-p2-row--title">
           <h2 className="kz-section-title">Family Doctor</h2>
-          <span className="kz-p2-form-no" aria-hidden>
-            2788100
-          </span>
         </div>
 
         <div className="kz-p2-row kz-p2-row--name">
