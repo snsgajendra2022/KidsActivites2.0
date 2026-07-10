@@ -145,7 +145,7 @@ export default function NotificationBell() {
             )}
             <div className="notif-dropdown-footer">
               <Link
-                to={notificationsPath}
+                to={tenantPath(notificationsPath)}
                 className="notif-dropdown-view-all"
                 onClick={() => setOpen(false)}
               >

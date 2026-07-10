@@ -29,6 +29,31 @@ export default function KidzeePrintableFormPage() {
   const applicationId = searchParams.get('applicationId') || searchParams.get('id');
   const isAdmin = Boolean(user && ADMIN_ROLES.has(user.role));
 
+  const backTarget = useMemo(() => {
+    if (applicationId && isAdmin) {
+      return {
+        href: tenantPath(`/admin/applications/${applicationId}`),
+        label: 'Back to Application',
+      };
+    }
+    if (user?.role === ROLES.PARENT || user?.role === ROLES.STUDENT) {
+      return {
+        href: tenantPath('/parent/enrollment'),
+        label: 'Back to Enrollment',
+      };
+    }
+    if (isAdmin) {
+      return {
+        href: tenantPath('/admin/applications'),
+        label: 'Back to Applications',
+      };
+    }
+    return {
+      href: tenantPath('/'),
+      label: 'Back',
+    };
+  }, [applicationId, isAdmin, user?.role, tenantPath]);
+
   const branding = useMemo(() => ({
     ...KIDZEE_BRANDING,
     logoUrl: portalBranding?.logoUrl || KIDZEE_BRANDING.logoUrl,
@@ -111,7 +136,8 @@ export default function KidzeePrintableFormPage() {
         applicationId={loadState.resolvedAppId}
         parentId={user?.role === ROLES.PARENT ? user.id : null}
         schoolId={activeSchoolId || user?.schoolId || null}
-        backHref={tenantPath('/enroll')}
+        backHref={backTarget.href}
+        backLabel={backTarget.label}
       />
     </div>
   );

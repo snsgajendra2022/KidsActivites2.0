@@ -1,5 +1,6 @@
 import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from './config.js';
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from './tokenStorage.js';
+import { schoolLoginPath } from '../../utils/tenantUtils.js';
 
 class ApiError extends Error {
   constructor(message, status, code, details) {
@@ -156,7 +157,8 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
     }
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
       clearTokens();
-      window.location.assign('/login');
+      const loginPath = schoolLoginPath(resolveTenantSlug());
+      window.location.assign(loginPath);
     }
   }
 

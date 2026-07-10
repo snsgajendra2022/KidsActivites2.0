@@ -5,7 +5,7 @@ import { ROLES } from './constants/roles.js';
 
 import PlatformHomeGate from './components/routing/PlatformHomeGate.jsx';
 import PlatformLoginGate from './components/routing/PlatformLoginGate.jsx';
-import Landing from './pages/public/Landing.jsx';
+import TenantHomeGate from './components/routing/TenantHomeGate.jsx';
 import RegisterSchool from './pages/public/RegisterSchool.jsx';
 import WorkspaceNew from './pages/public/WorkspaceNew.jsx';
 import WorkspaceConfirm from './pages/public/WorkspaceConfirm.jsx';
@@ -107,7 +107,7 @@ export default function App() {
 
       {/* Tenant-scoped routes: /{tenantSlug}/... */}
       <Route path="/:tenantSlug" element={<TenantLayout />}>
-        <Route index element={<Landing />} />
+        <Route index element={<TenantHomeGate />} />
         <Route path="login" element={<Login />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
