@@ -18,7 +18,7 @@ const P4_PIN_BOXES = 6;
 const P4_EMAIL_ROWS = [14, 14, 12];
 const P4_EMAIL_OFFSETS = [0, 14, 28];
 
-function EmergencyContactCol({ index, contact, onChange, readOnly }) {
+function EmergencyContactCol({ index, contact, onChange, readOnly, fieldErrors = {} }) {
   const emailRef0 = useRef(null);
   const emailRef1 = useRef(null);
   const emailRef2 = useRef(null);
@@ -26,6 +26,10 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
   const set = (field, value) =>
     onChange(`emergencyContacts.${index}.${field}`, value);
   const c = contact || {};
+  const namePath = `emergencyContacts.${index}.name`;
+  const mobilePath = `emergencyContacts.${index}.mobile`;
+  const emailPath = `emergencyContacts.${index}.email`;
+  const requirePrimary = index === 0;
 
   const emailLines = P4_EMAIL_ROWS.map((n, i) =>
     (c.email || '').slice(P4_EMAIL_OFFSETS[i], P4_EMAIL_OFFSETS[i] + n),
@@ -65,6 +69,9 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
         value={c.name}
         onChange={(v) => set("name", v)}
         readOnly={readOnly}
+        required={requirePrimary}
+        error={Boolean(fieldErrors[namePath])}
+        fieldPath={namePath}
       />
       <MultiRowBoxes
         label="Address:"
@@ -93,6 +100,9 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
         value={c.mobile}
         onChange={(v) => set("mobile", v)}
         readOnly={readOnly}
+        required={requirePrimary}
+        error={Boolean(fieldErrors[mobilePath])}
+        fieldPath={mobilePath}
       />
       <CharBoxInput
         ref={emailRef0}
@@ -107,6 +117,8 @@ function EmergencyContactCol({ index, contact, onChange, readOnly }) {
         onChange={(v) => setEmailRow(0, v)}
         onFilled={() => emailRefs[1].current?.focus()}
         readOnly={readOnly}
+        error={Boolean(fieldErrors[emailPath])}
+        fieldPath={emailPath}
       />
       {[1, 2].map((r) => (
         <div className="kz-char-field kz-p4-email-row" key={r}>
@@ -136,6 +148,7 @@ export default function KidzeePage4({
   readOnly,
   branding,
   showGrid,
+  fieldErrors = {},
 }) {
   const set = (path, value) => onChange(path, value);
   const immunization = formData.immunization || {};
@@ -199,12 +212,14 @@ export default function KidzeePage4({
           contact={contacts[0]}
           onChange={set}
           readOnly={readOnly}
+          fieldErrors={fieldErrors}
         />
         <EmergencyContactCol
           index={1}
           contact={contacts[1]}
           onChange={set}
           readOnly={readOnly}
+          fieldErrors={fieldErrors}
         />
       </div>
 

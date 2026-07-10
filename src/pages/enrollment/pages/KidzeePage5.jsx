@@ -85,6 +85,9 @@ function PermissionSignRow({
   onPlace,
   onSignature,
   readOnly,
+  signatureRequired = false,
+  signatureError = false,
+  signaturePath,
 }) {
   return (
     <div className="kz-perm-sign">
@@ -109,6 +112,9 @@ function PermissionSignRow({
         readOnly={readOnly}
         className="kz-perm-sign__sig"
         hidePreview={true}
+        required={signatureRequired}
+        error={signatureError}
+        fieldPath={signaturePath}
       />
     </div>
   );
@@ -121,6 +127,7 @@ export default function KidzeePage5({
   isAdmin,
   branding,
   showGrid,
+  fieldErrors = {},
 }) {
   const set = (path, value) => onChange(path, value);
   const permissions = formData.permissions || {};
@@ -160,6 +167,9 @@ export default function KidzeePage5({
           onPlace={(v) => set("permissions.emergency.place", v)}
           onSignature={(v) => set("permissions.emergency.signature", v)}
           readOnly={readOnly}
+          signatureRequired
+          signatureError={Boolean(fieldErrors["permissions.emergency.signature"])}
+          signaturePath="permissions.emergency.signature"
         />
       </div>
 
@@ -178,6 +188,9 @@ export default function KidzeePage5({
           onPlace={(v) => set("permissions.fieldTrip.place", v)}
           onSignature={(v) => set("permissions.fieldTrip.signature", v)}
           readOnly={readOnly}
+          signatureRequired
+          signatureError={Boolean(fieldErrors["permissions.fieldTrip.signature"])}
+          signaturePath="permissions.fieldTrip.signature"
         />
       </div>
 
@@ -219,6 +232,9 @@ export default function KidzeePage5({
           onPlace={(v) => set("permissions.verification.place", v)}
           onSignature={(v) => set("permissions.verification.signature", v)}
           readOnly={readOnly}
+          signatureRequired
+          signatureError={Boolean(fieldErrors["permissions.verification.signature"])}
+          signaturePath="permissions.verification.signature"
         />
       </div>
 

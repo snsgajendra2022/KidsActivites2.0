@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Download, Send } from 'lucide-react';
 import { useToast } from '../../context/ToastContext.jsx';
 import PortalLogo from '../../components/brand/PortalLogo.jsx';
 import {
@@ -39,11 +40,14 @@ export default function KidzeePrintableForm({
   printOnly = false,
   onSaveDraft: onSaveDraftOverride = null,
   onSubmitApplication: onSubmitOverride = null,
+  backHref = null,
+  backLabel = 'Back to Enrollment',
 }) {
   const [formData, setFormData] = useState(() => initialData || getEmptyKidzeeFormData(branding));
   const [draftId, setDraftId] = useState(initialApplicationId);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [fieldErrors, setFieldErrors] = useState({});
   const printRef = useRef(null);
   const { toast } = useToast();
 
@@ -86,7 +90,26 @@ export default function KidzeePrintableForm({
 
   const handleFieldChange = useCallback((path, value) => {
     setFormData((prev) => setNestedValue(prev, path, value));
+    setFieldErrors((prev) => {
+      if (!Object.keys(prev).length) return prev;
+      const next = { ...prev };
+      delete next[path];
+      if (path === 'child.gender' || path.startsWith('child.gender.')) delete next['child.gender'];
+      if (path === 'class' || path.startsWith('class.')) delete next.class;
+      if (path === 'emergencyContacts.0.contactNo') delete next['emergencyContacts.0.mobile'];
+      if (path === 'emergencyContacts.0.mobile') delete next['emergencyContacts.0.mobile'];
+      return next;
+    });
   }, []);
+
+  const scrollToFirstError = (errors) => {
+    const firstPath = Object.keys(errors)[0];
+    if (!firstPath) return;
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-field-path="${firstPath}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
 
   const ensureDraftSaved = async () => {
     const payload = wrapKidzeeFormForEnrollment(formData);
@@ -120,11 +143,14 @@ export default function KidzeePrintableForm({
   const handleSubmit = async () => {
     const { success, errors } = validateKidzeeFormForSubmit(formData);
     if (!success) {
+      setFieldErrors(errors);
       const first = Object.values(errors)[0];
       toast(first || 'Please complete required fields before submitting.', 'warning');
+      scrollToFirstError(errors);
       return;
     }
 
+    setFieldErrors({});
     setLoading(true);
     try {
       if (!correctionToken) {
@@ -165,6 +191,7 @@ export default function KidzeePrintableForm({
     branding,
     showGrid: false,
     isAdmin,
+    fieldErrors,
   };
 
   return (
@@ -172,6 +199,12 @@ export default function KidzeePrintableForm({
       {!printOnly && (
       <div className="print-toolbar no-print">
         <div className="print-toolbar__left">
+          {backHref && (
+            <Link to={backHref} className="print-toolbar__back">
+              <ArrowLeft size={14} aria-hidden />
+              <span>{backLabel}</span>
+            </Link>
+          )}
           <PortalLogo size="sm" inverse className="print-toolbar__logo" />
         </div>
         <div className="print-toolbar__titles">

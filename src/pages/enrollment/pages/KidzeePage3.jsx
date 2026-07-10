@@ -14,6 +14,7 @@ export default function KidzeePage3({
   readOnly,
   branding,
   showGrid,
+  fieldErrors = {},
 }) {
   const set = (path, value) => onChange(path, value);
   const siblings = formData.siblings || [];
@@ -40,6 +41,7 @@ export default function KidzeePage3({
           data={formData.motherGuardian}
           onChange={set}
           readOnly={readOnly}
+          fieldErrors={fieldErrors}
         />
         <GuardianColumn
           title="Father's/Guardian's Details:"
@@ -47,6 +49,7 @@ export default function KidzeePage3({
           data={formData.fatherGuardian}
           onChange={set}
           readOnly={readOnly}
+          fieldErrors={fieldErrors}
         />
       </div>
 

@@ -21,11 +21,13 @@ export default function KidzeePage1({
   isAdmin = false,
   branding,
   showGrid,
+  fieldErrors = {},
 }) {
   const set = (path, value) => onChange(path, value);
   const child = formData.child || {};
   const formNoReadOnly = readOnly || (!isAdmin && Boolean(formData.formNo));
   const addrChain = useBoxChain(4);
+  const hasErr = (path) => Boolean(fieldErrors[path]);
 
   /** Keep only one key true in a boolean option map (radio-like checkboxes). */
   const selectOne = (keys, selectedKey, checked) =>
@@ -89,8 +91,14 @@ export default function KidzeePage1({
       <SectionBar>CHILD REGISTRATION FORM</SectionBar>
 
       {/* Class row 1 — 6 checkboxes */}
-      <div className="kz-p1-row kz-p1-row--class">
-        <span className="kz-field-label kz-p1-class__label">Class enrolled for:</span>
+      <div
+        className={`kz-p1-row kz-p1-row--class ${hasErr("class") ? "kz-field--error" : ""}`.trim()}
+        data-field-path="class"
+      >
+        <span className="kz-field-label kz-p1-class__label">
+          Class enrolled for:
+          <span className="kz-required-mark" aria-hidden>*</span>
+        </span>
         <div className="kz-p1-class__checks">
           {classRow1.map(({ key, label }) => (
             <PaperCheckbox
@@ -143,6 +151,9 @@ export default function KidzeePage1({
             value={formData.photos?.child}
             onChange={(v) => set("photos.child", v)}
             readOnly={readOnly}
+            required
+            error={hasErr("photos.child")}
+            fieldPath="photos.child"
           />
           <PhotoBox
             label="Father's / Guardian's Photo"
@@ -168,6 +179,9 @@ export default function KidzeePage1({
           value={child.fullName}
           onChange={(v) => set("child.fullName", v)}
           readOnly={readOnly}
+          required
+          error={hasErr("child.fullName")}
+          fieldPath="child.fullName"
         />
         <div className="kz-p1-name-hints">
           <span>(Surname)</span>
@@ -177,8 +191,14 @@ export default function KidzeePage1({
       </div>
 
       {/* Gender — own row */}
-      <div className="kz-p1-row kz-p1-row--gender">
-        <span className="kz-field-label kz-p1-field-label--wide">Gender:</span>
+      <div
+        className={`kz-p1-row kz-p1-row--gender ${hasErr("child.gender") ? "kz-field--error" : ""}`.trim()}
+        data-field-path="child.gender"
+      >
+        <span className="kz-field-label kz-p1-field-label--wide">
+          Gender:
+          <span className="kz-required-mark" aria-hidden>*</span>
+        </span>
         <PaperCheckbox
           label="Male"
           checked={child.gender?.male}
@@ -201,6 +221,9 @@ export default function KidzeePage1({
           onChange={(v) => set("child.dateOfBirth", v)}
           readOnly={readOnly}
           inline
+          required
+          error={hasErr("child.dateOfBirth")}
+          fieldPath="child.dateOfBirth"
         />
         <CharBoxInput
           label="Place of birth:"
@@ -294,6 +317,9 @@ export default function KidzeePage1({
           value={child.addressLine1}
           onChange={(v) => set("child.addressLine1", v)}
           readOnly={readOnly}
+          required
+          error={hasErr("child.addressLine1")}
+          fieldPath="child.addressLine1"
         />
         <div className="kz-p1-address-line2">
           <CharBoxInput
@@ -325,6 +351,9 @@ export default function KidzeePage1({
             onChange={(v) => set("child.pin", v)}
             readOnly={readOnly}
             inline
+            required
+            error={hasErr("child.pin")}
+            fieldPath="child.pin"
           />
         </div>
       </div>
@@ -338,6 +367,9 @@ export default function KidzeePage1({
           value={child.contactNo}
           onChange={(v) => set("child.contactNo", v)}
           readOnly={readOnly}
+          required
+          error={hasErr("child.contactNo")}
+          fieldPath="child.contactNo"
         />
       </div>
 
