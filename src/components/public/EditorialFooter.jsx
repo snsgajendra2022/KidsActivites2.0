@@ -13,6 +13,8 @@ export default function EditorialFooter({ compact = false }) {
   const enrollPath = isTenantRoute
     ? tenantPath('/enrollment/kidzee-print-form')
     : defaultEnrollPath;
+  const admissionsCtaPath = isPlatformHome ? '/workspace/new' : loginPath;
+  const admissionsCtaLabel = isPlatformHome ? 'Enrollment' : 'Login';
 
   const tagline = isPlatformHome
     ? (platform?.tagline || 'Multi-school enrollment platform')
@@ -38,7 +40,7 @@ export default function EditorialFooter({ compact = false }) {
             <p className="sb-editorial-footer__heading">Admissions</p>
             <ul className="sb-editorial-footer__links">
               <li><Link to={enrollPath}>Start Enrollment</Link></li>
-              <li><Link to={loginPath}>Login</Link></li>
+              <li><Link to={admissionsCtaPath}>{admissionsCtaLabel}</Link></li>
             </ul>
           </div>
 

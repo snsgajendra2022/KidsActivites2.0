@@ -2,6 +2,7 @@ import usersData from '../data/users.json';
 import { delay } from './mockApi.js';
 import { api } from './api/client.js';
 import { isApiEnabled } from './api/config.js';
+import { clearMockStorage } from './api/clearMockStorage.js';
 import { markDemoSession } from './api/demoMode.js';
 import { clearTokens, getRefreshToken, setTokens } from './api/tokenStorage.js';
 
