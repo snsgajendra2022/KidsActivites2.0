@@ -14,6 +14,8 @@ export default function AuthSplitLayout({
   workspaceSlug,
   children,
   footerLink,
+  showHeader = true,
+  showFooter = true,
   className = '',
 }) {
   const { portalName, school, branding } = usePortalConfig();
@@ -22,7 +24,7 @@ export default function AuthSplitLayout({
 
   return (
     <div className={`sb-page sb-editorial-page sb-editorial-auth flex min-h-dvh flex-col ${className}`.trim()}>
-      <PublicHeader compact />
+      {showHeader ? <PublicHeader compact /> : null}
       <div className="auth-split flex-1">
         <div
           className={`auth-split__visual${loginHeroUrl ? ' auth-split__visual--has-image' : ''}`}
@@ -68,7 +70,7 @@ export default function AuthSplitLayout({
           </div>
         </div>
       </div>
-      <PublicFooter compact />
+      {showFooter ? <PublicFooter compact /> : null}
     </div>
   );
 }

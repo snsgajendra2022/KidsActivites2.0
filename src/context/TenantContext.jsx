@@ -75,6 +75,7 @@ export function TenantProvider({ children }) {
     const isPlatformHome = routePath === '/' && !isTenantRoute && !isTenantSubdomain;
     const isPlatformEnrollment = routePath === '/enrollment' && !isTenantRoute;
     const isPlatformLogin = routePath === '/login' && !isTenantRoute;
+    const isLoginRoute = routePath === '/login';
     const isWorkspaceRoute = routePath.startsWith('/workspace');
     const isRegisterSchoolRoute = routePath === '/register-school';
 
@@ -92,6 +93,7 @@ export function TenantProvider({ children }) {
       isPlatformHome,
       isPlatformEnrollment,
       isPlatformLogin,
+      isLoginRoute,
       isWorkspaceRoute,
       isRegisterSchoolRoute,
       isPlatformPublic: isPlatformHome || isPlatformEnrollment || isPlatformLogin || isWorkspaceRoute || isRegisterSchoolRoute,

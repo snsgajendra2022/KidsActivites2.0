@@ -99,6 +99,10 @@ export default function AccessLanding() {
           to: '/workspace/new',
           label: <>Create Your Workspace <ArrowRight size={18} /></>,
         }}
+        secondaryAction={{
+          to: '/workspace/new',
+          label: 'Enrollment',
+        }}
       />
 
       <section className="sb-editorial-section sb-editorial-section--lavender">

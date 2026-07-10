@@ -416,6 +416,8 @@ export default function Login() {
 
   return (
     <AuthSplitLayout
+      showHeader={false}
+      showFooter={false}
       className="login-portal"
       title="Sign In"
       visualTitle={`Welcome to ${portalName}`}

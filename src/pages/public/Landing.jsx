@@ -95,8 +95,8 @@ export default function Landing() {
             label: <>Start Workspace Setup <ArrowRight size={18} /></>,
           }}
           secondaryAction={{
-            to: loginPath,
-            label: 'Parent Login',
+            to: '/workspace/new',
+            label: 'Enrollment',
           }}
         />
 
