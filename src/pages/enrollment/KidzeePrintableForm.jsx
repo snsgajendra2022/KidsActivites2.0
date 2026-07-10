@@ -1,5 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Download, Send } from 'lucide-react';
 import { useToast } from '../../context/ToastContext.jsx';
+import PortalLogo from '../../components/brand/PortalLogo.jsx';
 import {
   saveDraft,
   submitApplication,
@@ -11,8 +13,6 @@ import {
   getEmptyKidzeeFormData,
   setNestedValue,
   saveKidzeeDraft,
-  loadKidzeeDraft,
-  clearKidzeeDraft,
   wrapKidzeeFormForEnrollment,
   validateKidzeeFormForSubmit,
   mergeKidzeeFormNoFromApplication,
@@ -23,6 +23,8 @@ import KidzeePage3 from './pages/KidzeePage3.jsx';
 import KidzeePage4 from './pages/KidzeePage4.jsx';
 import KidzeePage5 from './pages/KidzeePage5.jsx';
 import './KidzeePrintableForm.css';
+
+const TOTAL_PAGES = 5;
 
 export default function KidzeePrintableForm({
   initialData,
@@ -41,65 +43,75 @@ export default function KidzeePrintableForm({
   const [formData, setFormData] = useState(() => initialData || getEmptyKidzeeFormData(branding));
   const [draftId, setDraftId] = useState(initialApplicationId);
   const [loading, setLoading] = useState(false);
-  const [showGrid, setShowGrid] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const printRef = useRef(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (printOnly) return undefined;
+    const root = printRef.current;
+    if (!root) return undefined;
+
+    const pages = Array.from(root.querySelectorAll('.print-page[data-page]'));
+    if (!pages.length) return undefined;
+
+    const ratios = new Map();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const page = Number(entry.target.getAttribute('data-page'));
+          if (!page) return;
+          ratios.set(page, entry.isIntersecting ? entry.intersectionRatio : 0);
+        });
+        let bestPage = 1;
+        let bestRatio = -1;
+        ratios.forEach((ratio, page) => {
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            bestPage = page;
+          }
+        });
+        setCurrentPage(bestPage);
+      },
+      {
+        root: null,
+        threshold: [0, 0.15, 0.35, 0.5, 0.65, 0.85, 1],
+        rootMargin: '-20% 0px -35% 0px',
+      },
+    );
+
+    pages.forEach((page) => observer.observe(page));
+    return () => observer.disconnect();
+  }, [printOnly]);
 
   const handleFieldChange = useCallback((path, value) => {
     setFormData((prev) => setNestedValue(prev, path, value));
   }, []);
 
-  const handleSaveDraft = async () => {
+  const ensureDraftSaved = async () => {
+    const payload = wrapKidzeeFormForEnrollment(formData);
+    const saved = onSaveDraftOverride
+      ? await onSaveDraftOverride(payload)
+      : await saveDraft(payload, draftId, { parentId, schoolId });
+    setDraftId(saved.id);
+    const merged = mergeKidzeeFormNoFromApplication(formData, saved);
+    setFormData(merged);
+    if (!correctionToken) saveKidzeeDraft(merged);
+    return saved.id;
+  };
+
+  const handleDownloadOrPrint = async () => {
     setLoading(true);
     try {
-      const payload = wrapKidzeeFormForEnrollment(formData);
-      const saved = onSaveDraftOverride
-        ? await onSaveDraftOverride(payload)
-        : await saveDraft(payload, draftId, { parentId, schoolId });
-      setDraftId(saved.id);
-      const merged = mergeKidzeeFormNoFromApplication(formData, saved);
-      setFormData(merged);
-      if (!correctionToken) saveKidzeeDraft(merged);
-      toast('Draft saved successfully.', 'success');
-    } catch {
-      if (!correctionToken) saveKidzeeDraft(formData);
-      toast(correctionToken
-        ? 'Could not save draft. Please try again.'
-        : 'Saved locally. Server draft may be unavailable.', 'warning');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLoadDraft = () => {
-    const local = loadKidzeeDraft();
-    if (local) {
-      setFormData(local);
-      toast('Draft loaded from browser storage.', 'success');
-      return;
-    }
-    toast('No local draft found.', 'info');
-  };
-
-  const handleClearDraft = () => {
-    clearKidzeeDraft();
-    setFormData(getEmptyKidzeeFormData(branding));
-    toast('Draft cleared.', 'info');
-  };
-
-  const handlePrint = () => window.print();
-
-  const handleDownloadPdf = async () => {
-    if (!draftId) {
-      toast('Save the form first to download a PDF.', 'warning');
-      return;
-    }
-    setLoading(true);
-    try {
-      await downloadKidzeeEnrollmentPdf(draftId);
+      let appId = draftId;
+      if (!appId) {
+        appId = await ensureDraftSaved();
+      }
+      await downloadKidzeeEnrollmentPdf(appId);
       toast('PDF downloaded.', 'success');
     } catch (err) {
-      toast(err?.message || 'PDF download failed.', 'error');
+      toast(err?.message || 'PDF download failed. Opening print dialog…', 'warning');
+      window.print();
     } finally {
       setLoading(false);
     }
@@ -151,7 +163,7 @@ export default function KidzeePrintableForm({
     onChange: handleFieldChange,
     readOnly,
     branding,
-    showGrid,
+    showGrid: false,
     isAdmin,
   };
 
@@ -160,38 +172,38 @@ export default function KidzeePrintableForm({
       {!printOnly && (
       <div className="print-toolbar no-print">
         <div className="print-toolbar__left">
+          <PortalLogo size="sm" inverse className="print-toolbar__logo" />
+        </div>
+        <div className="print-toolbar__titles">
           <h1 className="print-toolbar__title">Kidzee Enrollment Form</h1>
-          <p className="print-toolbar__subtitle">CHILD REGISTRATION FORM — 5 pages</p>
+          <p className="print-toolbar__subtitle">
+            CHILD REGISTRATION FORM
+            <span className="print-toolbar__page-badge" aria-live="polite">
+              Page {currentPage} of {TOTAL_PAGES}
+            </span>
+          </p>
         </div>
         <div className="print-toolbar__actions">
-          {!readOnly && (
-            <>
-              {!correctionToken && (
-                <>
-                  <button type="button" className="sb-button-secondary" onClick={handleLoadDraft} disabled={loading}>
-                    Load Draft
-                  </button>
-                  <button type="button" className="sb-button-secondary" onClick={handleClearDraft} disabled={loading}>
-                    Clear
-                  </button>
-                </>
-              )}
-              <button type="button" className="sb-button-secondary" onClick={handleSaveDraft} disabled={loading}>
-                {isAdmin && initialApplicationId ? 'Save Changes' : 'Save Draft'}
-              </button>
-              <button type="button" className="sb-button-primary" onClick={handleSubmit} disabled={loading}>
-                {correctionToken ? 'Resubmit Application' : 'Submit Application'}
-              </button>
-            </>
-          )}
-          <label className="print-toolbar__toggle">
-            <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
-            Show Alignment Grid
-          </label>
-          <button type="button" className="sb-button-secondary" onClick={handlePrint}>Print</button>
-          <button type="button" className="sb-button-secondary" onClick={handleDownloadPdf} disabled={loading || !draftId}>
-            Download PDF
+          <button
+            type="button"
+            className="sb-button-secondary print-toolbar__btn"
+            onClick={handleDownloadOrPrint}
+            disabled={loading}
+          >
+            <Download size={16} aria-hidden />
+            Download / Print
           </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="sb-button-primary print-toolbar__btn"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              <Send size={16} aria-hidden />
+              {correctionToken ? 'Resubmit Application' : 'Submit Application'}
+            </button>
+          )}
         </div>
       </div>
       )}
