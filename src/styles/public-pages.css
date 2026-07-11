@@ -179,3 +179,184 @@
   color: var(--sb-muted);
   margin: 0 0 1.25rem;
 }
+
+/* Platform landing content sections */
+.sb-platform-intro {
+  max-width: 48rem;
+  margin: 0 auto;
+  text-align: center;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--sb-muted);
+}
+
+.sb-platform-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .sb-platform-features-grid {
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+.sb-platform-feature-item {
+  background: #fff;
+  border: 1px solid var(--sb-line);
+  border-radius: var(--sb-radius-xl);
+  padding: 1.25rem;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sb-platform-feature-item:hover {
+  border-color: var(--sb-purple-soft);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--sb-purple) 8%, transparent);
+}
+
+.sb-platform-feature-item h3 {
+  font-family: var(--sb-font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--sb-purple-dark);
+  margin: 0;
+}
+
+.sb-platform-role-grid,
+.sb-platform-enroll-grid,
+.sb-platform-media-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .sb-platform-role-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sb-platform-enroll-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sb-platform-media-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .sb-platform-role-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .sb-platform-enroll-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .sb-platform-media-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.sb-platform-role-card h3,
+.sb-platform-enroll-card h3,
+.sb-platform-media-card h3 {
+  font-family: var(--sb-font-heading);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.125rem;
+  color: var(--sb-purple-dark);
+  margin: 0 0 0.5rem;
+}
+
+.sb-platform-role-card p,
+.sb-platform-enroll-card p,
+.sb-platform-media-card p {
+  margin: 0;
+}
+
+.sb-platform-enroll-grid .sb-platform-enroll-card:last-child {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1024px) {
+  .sb-platform-enroll-grid .sb-platform-enroll-card:last-child {
+    grid-column: auto;
+  }
+}
+
+.sb-platform-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+}
+
+.sb-platform-tag-list li {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--sb-purple-dark);
+  background: #fff;
+  border: 1px solid var(--sb-line);
+  border-radius: 999px;
+  padding: 0.375rem 0.875rem;
+}
+
+.sb-platform-tv-journey {
+  margin-bottom: 1.5rem;
+}
+
+.sb-platform-tv-flow {
+  text-align: center;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--sb-muted);
+  max-width: 40rem;
+  margin: 0 auto 1rem;
+}
+
+.sb-platform-mobile-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 42rem;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .sb-platform-mobile-intro {
+    flex-direction: row;
+    text-align: left;
+  }
+}
+
+.sb-platform-mobile-intro p {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--sb-muted);
+  margin: 0;
+}
+
+.sb-app-store-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.sb-purple-cta--disabled {
+  opacity: 0.85;
+  cursor: default;
+  pointer-events: none;
+}

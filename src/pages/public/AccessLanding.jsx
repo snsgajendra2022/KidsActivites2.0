@@ -12,6 +12,7 @@ import JourneyNav from '../../components/public/JourneyNav.jsx';
 import EditorialTimeline from '../../components/public/EditorialTimeline.jsx';
 import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
 import EditorialFooter from '../../components/public/EditorialFooter.jsx';
+import PlatformLandingSections from '../../components/public/PlatformLandingSections.jsx';
 import FormInput from '../../components/ui/FormInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
@@ -148,6 +149,8 @@ export default function AccessLanding() {
         subtitle="A complete platform for enrollments, payments, documents, and parent communication."
         steps={TIMELINE_STEPS}
       />
+
+      <PlatformLandingSections />
 
       <FinalImageCTA
         title={portalName}
