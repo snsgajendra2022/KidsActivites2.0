@@ -23,7 +23,11 @@ const COLUMNS = [
   { key: 'name', label: 'Name', primary: true },
   { key: 'email', label: 'Email' },
   { key: 'mobile', label: 'Mobile' },
-  { key: 'roleLabel', label: 'Role' },
+  {
+    label: 'Role',
+    muted: true,
+    render: (row) => ROLE_LABELS[row.role] || row.roleLabel || row.role,
+  },
   {
     label: 'Status',
     badge: true,
@@ -33,7 +37,18 @@ const COLUMNS = [
       </span>
     ),
   },
-  { key: 'schoolName', label: 'School' },
+];
+
+// All tenant account roles shown in the directory (creation still limited to admin/staff roles).
+const ALL_ACCOUNT_ROLES = [
+  ROLES.SUPER_ADMIN,
+  ROLES.SCHOOL_ADMIN,
+  ROLES.ADMISSION_OFFICER,
+  ROLES.ACCOUNTANT,
+  ROLES.TEACHER,
+  ROLES.PARENT,
+  ROLES.STUDENT,
+  ROLES.SUPPORT_STAFF,
 ];
 
 // Administrative roles that can be created via this page. Teachers use the Teachers page.
@@ -73,6 +88,10 @@ export default function AdminUsers() {
       search,
     }, user)
       .then(setUsers)
+      .catch((err) => {
+        setUsers([]);
+        toast(err.message || 'Failed to load users.', 'error');
+      })
       .finally(() => setLoading(false));
   };
 
@@ -81,10 +100,7 @@ export default function AdminUsers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, schoolFilter, roleFilter, search]);
 
-  const roleOptions = useMemo(() => {
-    const roles = new Set(users.map((u) => u.role));
-    return [...roles].sort();
-  }, [users]);
+  const roleOptions = useMemo(() => ALL_ACCOUNT_ROLES, []);
 
   const closeModal = () => {
     setModal(null);
@@ -142,7 +158,7 @@ export default function AdminUsers() {
       <PageTransition>
         <PageHeader
           title="All Users"
-          subtitle="Manage admin accounts for your school. Create additional admins and staff here."
+          subtitle="View every portal account in your school — admins, teachers, parents, and staff. Add new admin accounts here; teachers are managed on the Teachers page."
           actions={canManage ? (
             <Button variant="primary" onClick={openCreate}>
               <Plus size={16} className="mr-1.5" />
@@ -175,7 +191,7 @@ export default function AdminUsers() {
           >
             <option value="">All roles</option>
             {roleOptions.map((r) => (
-              <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+              <option key={r} value={r}>{ROLE_LABELS[r] || r.replace(/_/g, ' ')}</option>
             ))}
           </select>
         </div>
@@ -195,7 +211,7 @@ export default function AdminUsers() {
           <ResponsiveDataTable
             columns={COLUMNS}
             data={users}
-            minWidth={820}
+            minWidth={720}
             emptyMessage="No users match your filters."
             renderActions={canManage ? (row) => (
               row.active !== false && row.id !== user?.id ? (

@@ -22,6 +22,17 @@ function parseJsonBody(text) {
 }
 
 function throwApiError(res, json, text) {
+  if (res.status === 413) {
+    const err = json?.error;
+    throw new ApiError(
+      err?.message && !/entity too large|request entity too large|payload too large/i.test(err.message)
+        ? err.message
+        : 'File is too large for the server. Please choose a smaller file.',
+      413,
+      err?.code || 'FILE_TOO_LARGE',
+      err?.details,
+    );
+  }
   const err = json?.error;
   throw new ApiError(
     err?.message || text || `Request failed (${res.status})`,

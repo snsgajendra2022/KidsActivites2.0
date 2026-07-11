@@ -2,6 +2,7 @@ import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from '../services/api/
 import { getAccessToken } from '../services/api/tokenStorage.js';
 import { buildProgressiveSrcChain } from './photoStudioProgressive.js';
 import { rewritePhotoStudioUrl } from './photoStudioUrls.js';
+import { normalizeVideoMediaItem } from './videoMediaNormalize.js';
 
 function triggerBlobDownload(blob, filename) {
   const objectUrl = URL.createObjectURL(blob);
@@ -23,9 +24,22 @@ function buildAuthHeaders() {
   return headers;
 }
 
-/** Best URL for downloading — prefers full quality, applies LAN host rewrite. */
+/** Best URL for downloading — prefers full quality, applies LAN host rewrite. Skips HLS manifests for video. */
 export function resolvePhotoDownloadUrl(image) {
   if (!image) return '';
+
+  if (image.mediaType === 'VIDEO') {
+    const normalized = normalizeVideoMediaItem(image);
+    if (normalized?.downloadUrl) return normalized.downloadUrl;
+
+    const renditions = normalized?.renditions || [];
+    const sourceMp4 = renditions.find(
+      (r) => r.isSource && /\.(mp4|webm|mov)(\?|$)/i.test(r.streamUrl || ''),
+    );
+    if (sourceMp4?.streamUrl) return sourceMp4.streamUrl;
+
+    return '';
+  }
 
   const candidates = [
     image.downloadUrl,
@@ -87,6 +101,14 @@ async function downloadViaApiProxy(imageId, filename) {
 /** Download a photo-studio asset with auth headers (works on LAN / cross-origin). */
 export async function downloadPhotoStudioAsset(image) {
   if (!image?.id) throw new Error('Missing image.');
+
+  if (image.mediaType === 'VIDEO') {
+    const normalized = normalizeVideoMediaItem(image);
+    const directUrl = normalized?.downloadUrl || resolvePhotoDownloadUrl(image);
+    if (!directUrl) {
+      throw new Error('This video is available for streaming only. A downloadable file is not yet available.');
+    }
+  }
 
   const filename = image.filename || `photo-${image.id}`;
   const headers = buildAuthHeaders();

@@ -94,3 +94,7 @@ export async function deletePhoto(photoId) {
     apiFn: () => api.delete(`/media/photos/${photoId}`),
   });
 }
+
+export async function getMediaUploadLimits() {
+  return api.get('/media/upload-limits');
+}
