@@ -95,6 +95,14 @@
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.messages-list > .messages-sidebar-empty {
+  flex: 1;
+  min-height: 12rem;
 }
 
 .messages-conv {
@@ -199,19 +207,28 @@
   text-align: center;
   padding: 2.5rem 1.5rem;
   flex: 1;
+  width: 100%;
 }
 
+.messages-sidebar-empty .sb-empty-state__icon,
+.messages-sidebar-empty .empty-state-icon,
 .messages-sidebar-empty__icon {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 4rem;
   height: 4rem;
-  margin-bottom: 1rem;
+  margin: 0 auto 1rem;
   border-radius: 1rem;
   background: linear-gradient(135deg, color-mix(in srgb, var(--sb-secondary) 15%, white), #fff);
   color: var(--sb-secondary);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--sb-secondary) 12%, transparent);
+}
+
+.messages-sidebar-empty .sb-empty-state__icon svg,
+.messages-sidebar-empty .empty-state-icon svg {
+  display: block;
+  margin: 0 auto;
 }
 
 .messages-sidebar-empty h3 {
@@ -251,20 +268,42 @@
     #fff;
 }
 
+.messages-main__empty .sb-empty-state,
+.messages-main__empty .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 22rem;
+  padding: 0;
+  margin: 0 auto;
+}
+
+.messages-main__empty .sb-empty-state__icon,
+.messages-main__empty .empty-state-icon,
 .messages-main__empty-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 5rem;
   height: 5rem;
-  margin-bottom: 1.25rem;
+  margin: 0 auto 1.25rem;
   border-radius: 1.25rem;
   background: linear-gradient(145deg, var(--sb-primary), color-mix(in srgb, var(--sb-primary) 75%, var(--sb-secondary)));
   color: #fff;
   box-shadow: 0 8px 28px color-mix(in srgb, var(--sb-primary) 22%, transparent);
 }
 
-.messages-main__empty h2 {
+.messages-main__empty .sb-empty-state__icon svg,
+.messages-main__empty .empty-state-icon svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.messages-main__empty .sb-empty-state__title,
+.messages-main__empty h2,
+.messages-main__empty h3 {
   margin: 0 0 0.5rem;
   font-size: 1.25rem;
   font-weight: 700;

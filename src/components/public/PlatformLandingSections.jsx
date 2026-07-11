@@ -1,16 +1,22 @@
-import { useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
-  ArrowRight,
   BadgeCheck,
+  FileEdit,
+  FileSignature,
   FileText,
   GraduationCap,
-  MessageCircle,
-  Palette,
-  School,
+  Headphones,
+  Heart,
+  Phone,
+  RefreshCw,
+  SearchCheck,
+  Send,
+  Shield,
   Smartphone,
   Sparkles,
   Tv,
+  User,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -35,25 +41,11 @@ const OVERVIEW_TABS = [
   { id: 'features', label: 'Features', icon: Sparkles, blurb: 'Core tools schools use every day.' },
   { id: 'how', label: 'How it works', icon: GraduationCap, blurb: 'From workspace setup to parent connection.' },
   { id: 'roles', label: 'Roles', icon: Users, blurb: 'Secure portals for every team member.' },
-  { id: 'enrollment', label: 'Enrollment', icon: FileText, blurb: 'Kidzee admissions from draft to approval.' },
+  { id: 'enrollment', label: 'Enrollment', icon: FileText, blurb: 'Admissions from draft to approval.' },
   { id: 'fees', label: 'Fees & ops', icon: Wallet, blurb: 'Payments, documents, and school operations.' },
   { id: 'media', label: 'Media & TV', icon: Tv, blurb: 'Photos, chat, and classroom TV playback.' },
   { id: 'mobile', label: 'Mobile app', icon: Smartphone, blurb: 'iOS and Android for parents, teachers, and admins.' },
 ];
-
-const HOW_ICONS = [School, Palette, Users, BadgeCheck, MessageCircle];
-
-const panelMotion = {
-  initial: { opacity: 0, y: 18 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -12 },
-  transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
-};
-
-const cardMotion = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-};
 
 function padStep(index) {
   return String(index + 1).padStart(2, '0');
@@ -68,132 +60,382 @@ function toItems(items, titleKey = 'title', descKey = 'description') {
   }));
 }
 
-function DetailCard({ icon: Icon, step, title, description, index, active, onSelect }) {
-  const interactive = typeof onSelect === 'function';
+const tileEase = [0.22, 1, 0.36, 1];
 
-  return (
-    <motion.li
-      {...cardMotion}
-      transition={{ duration: 0.35, delay: index * 0.06 }}
-      className={`sb-showcase-card${active ? ' sb-showcase-card--active' : ''}${interactive ? ' sb-showcase-card--interactive' : ''}`}
-    >
-      {interactive ? (
-        <button type="button" className="sb-showcase-card__hit" onClick={() => onSelect(index)}>
-          <span className="sb-showcase-card__step">{step}</span>
-          <span className="sb-showcase-card__icon" aria-hidden>
-            {Icon ? <Icon size={18} strokeWidth={1.75} /> : null}
-          </span>
-          <span className="sb-showcase-card__copy">
-            <strong>{title}</strong>
-            {description && <span>{description}</span>}
-          </span>
-        </button>
-      ) : (
-        <div className="sb-showcase-card__body">
-          <span className="sb-showcase-card__step">{step}</span>
-          <span className="sb-showcase-card__icon" aria-hidden>
-            {Icon ? <Icon size={18} strokeWidth={1.75} /> : null}
-          </span>
-          <div className="sb-showcase-card__copy">
-            <strong>{title}</strong>
-            {description && <p>{description}</p>}
-          </div>
-        </div>
-      )}
-    </motion.li>
-  );
-}
+const ROLE_ICONS = [Shield, SearchCheck, Wallet, GraduationCap, Heart, Headphones];
+const MOBILE_ICONS = [Heart, GraduationCap, Shield];
 
-function HowItWorksPanel({ items, onStepChange }) {
+function SpotlightPanel({ items, icons, onStepChange, stepPrefix = 'Step', ariaLabel }) {
   const [active, setActive] = useState(0);
-  const activeItem = items[active] || items[0];
+  const current = items[active] || items[0];
+  const CurrentIcon = icons?.[active] || current?.icon;
 
-  const selectStep = (index) => {
+  useEffect(() => {
+    setActive(0);
+    onStepChange?.(0);
+  }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pick = (index) => {
     setActive(index);
     onStepChange?.(index);
   };
 
   return (
-    <div className="sb-showcase-how">
-      <motion.div className="sb-showcase-how__spotlight" key={activeItem?.title} {...panelMotion}>
-        <span className="sb-showcase-how__spotlight-step">{activeItem?.step}</span>
-        <h4>{activeItem?.title}</h4>
-        <p>{activeItem?.description}</p>
-      </motion.div>
-      <ol className="sb-showcase-grid sb-showcase-grid--how" aria-label="How it works steps">
-        {items.map((item, index) => (
-          <DetailCard
-            key={item.title}
-            icon={HOW_ICONS[index]}
-            step={item.step}
-            title={item.title}
-            description={item.description}
-            index={index}
-            active={active === index}
-            onSelect={selectStep}
-          />
-        ))}
-      </ol>
+    <div className="sb-spotlight">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current?.title}
+          className="sb-enroll__spotlight"
+          initial={{ opacity: 0, y: 12, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.99 }}
+          transition={{ duration: 0.35, ease: tileEase }}
+        >
+          {CurrentIcon && (
+            <motion.span
+              className="sb-enroll__spotlight-icon"
+              aria-hidden
+              initial={{ scale: 0.8, rotate: -8 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 20 }}
+            >
+              <CurrentIcon size={22} strokeWidth={1.75} />
+            </motion.span>
+          )}
+          <div>
+            <span className="sb-enroll__spotlight-step">{stepPrefix} {current?.step}</span>
+            <h4>{current?.title}</h4>
+            <p>{current?.description}</p>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="sb-enroll__rail" role="tablist" aria-label={ariaLabel}>
+        {items.map((item, index) => {
+          const Icon = icons?.[index] || item.icon;
+          return (
+            <motion.button
+              key={`${item.title}-${index}`}
+              type="button"
+              role="tab"
+              aria-selected={active === index}
+              className={`sb-enroll__chip${active === index ? ' is-active' : ''}`}
+              onClick={() => pick(index)}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              {Icon && (
+                <span className="sb-enroll__chip-icon" aria-hidden>
+                  <Icon size={14} strokeWidth={1.75} />
+                </span>
+              )}
+              <span className="sb-enroll__chip-num">{item.step}</span>
+              <span className="sb-enroll__chip-label">{item.title}</span>
+            </motion.button>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function FeaturePanel() {
+function GroupedSpotlightPanel({ groups, onStepChange }) {
+  const flatItems = useMemo(
+    () => groups.flatMap((group) => group.items),
+    [groups],
+  );
+  const [active, setActive] = useState(0);
+  const current = flatItems[active] || flatItems[0];
+  const CurrentIcon = current?.icon;
+
+  useEffect(() => {
+    setActive(0);
+    onStepChange?.(0);
+  }, [groups]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pick = (index) => {
+    setActive(index);
+    onStepChange?.(index);
+  };
+
+  let offset = 0;
+
   return (
-    <ol className="sb-showcase-grid sb-showcase-grid--features" aria-label="Platform features">
-      {PLATFORM_FEATURES.map((item, index) => (
-        <DetailCard
-          key={item.title}
-          icon={item.icon}
-          step={padStep(index)}
-          title={item.title}
-          description={item.description}
-          index={index}
-        />
-      ))}
-    </ol>
+    <div className="sb-spotlight sb-spotlight--grouped">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current?.title}
+          className="sb-enroll__spotlight"
+          initial={{ opacity: 0, y: 12, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.99 }}
+          transition={{ duration: 0.35, ease: tileEase }}
+        >
+          {CurrentIcon && (
+            <motion.span
+              className="sb-enroll__spotlight-icon"
+              aria-hidden
+              initial={{ scale: 0.8, rotate: -8 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 20 }}
+            >
+              <CurrentIcon size={22} strokeWidth={1.75} />
+            </motion.span>
+          )}
+          <div>
+            <span className="sb-enroll__spotlight-step">Capability {current?.step}</span>
+            <h4>{current?.title}</h4>
+            <p>{current?.description}</p>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {groups.map((group) => {
+        const groupStart = offset;
+        const section = (
+          <section key={group.label} className="sb-spotlight__group">
+            <p className="sb-spotlight__group-label">{group.label}</p>
+            <div className="sb-enroll__rail" role="tablist" aria-label={group.label}>
+              {group.items.map((item, localIndex) => {
+                const index = groupStart + localIndex;
+                const Icon = item.icon;
+                return (
+                  <motion.button
+                    key={`${group.label}-${item.title}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={active === index}
+                    className={`sb-enroll__chip${active === index ? ' is-active' : ''}`}
+                    onClick={() => pick(index)}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    {Icon && (
+                      <span className="sb-enroll__chip-icon" aria-hidden>
+                        <Icon size={14} strokeWidth={1.75} />
+                      </span>
+                    )}
+                    <span className="sb-enroll__chip-num">{item.step}</span>
+                    <span className="sb-enroll__chip-label">{item.title}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </section>
+        );
+        offset += group.items.length;
+        return section;
+      })}
+    </div>
   );
 }
 
-function GenericPanel({ items }) {
+function HowPanel({ items, onStepChange }) {
+  const [active, setActive] = useState(0);
+  const current = items[active] || items[0];
+
+  const pick = (index) => {
+    setActive(index);
+    onStepChange?.(index);
+  };
+
   return (
-    <ol className="sb-showcase-grid" aria-label="Platform details">
-      {items.map((item, index) => (
-        <DetailCard
-          key={`${item.title}-${index}`}
-          icon={item.icon}
-          step={item.step}
-          title={item.title}
-          description={item.description}
-          index={index}
-        />
-      ))}
-    </ol>
+    <div className="sb-plat-how">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current?.title}
+          className="sb-plat-how__hero"
+          initial={{ opacity: 0, y: 14, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.99 }}
+          transition={{ duration: 0.38, ease: tileEase }}
+        >
+          <motion.span
+            className="sb-plat-how__hero-step"
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.08 }}
+          >
+            Step {current?.step}
+          </motion.span>
+          <motion.h4
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12, duration: 0.35 }}
+          >
+            {current?.title}
+          </motion.h4>
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18, duration: 0.35 }}
+          >
+            {current?.description}
+          </motion.p>
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="sb-plat-how__steps" role="tablist" aria-label="How it works steps">
+        {items.map((item, index) => (
+          <motion.button
+            key={item.title}
+            type="button"
+            role="tab"
+            aria-selected={active === index}
+            className={`sb-plat-how__pill${active === index ? ' is-active' : ''}`}
+            onClick={() => pick(index)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+          >
+            <span>{item.step}</span>
+            {item.title}
+          </motion.button>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function EnrollmentPanel({ formItems, pipelineItems }) {
+const ENROLL_VIEWS = [
+  { id: 'form', label: 'Kidzee form', icon: FileText },
+  { id: 'pipeline', label: 'Pipeline', icon: BadgeCheck },
+  { id: 'workflow', label: 'Workflow', icon: RefreshCw },
+];
+
+const FORM_ICONS = [User, Heart, Users, Phone, FileSignature];
+const PIPELINE_ICONS = [FileEdit, Send, SearchCheck, RefreshCw, Wallet, BadgeCheck];
+
+function EnrollmentPanel({ formItems, pipelineItems, onViewChange, onStepChange }) {
+  const [view, setView] = useState('form');
+  const [active, setActive] = useState(0);
+
+  const items = view === 'form' ? formItems : pipelineItems;
+  const icons = view === 'form' ? FORM_ICONS : PIPELINE_ICONS;
+  const current = items[active] || items[0];
+  const CurrentIcon = icons[active] || FileText;
+
+  const switchView = (id) => {
+    setView(id);
+    setActive(0);
+    onViewChange?.(id);
+    onStepChange?.(0);
+  };
+
+  const pick = (index) => {
+    setActive(index);
+    onStepChange?.(index);
+  };
+
   return (
-    <div className="sb-showcase-stack">
-      <div>
-        <h4 className="sb-showcase-stack__title">Kidzee form pages</h4>
-        <GenericPanel items={formItems} />
+    <div className="sb-enroll">
+      <div className="sb-enroll__nav" role="tablist" aria-label="Enrollment views">
+        {ENROLL_VIEWS.map(({ id, label, icon: Icon }) => (
+          <motion.button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={view === id}
+            className={`sb-enroll__nav-btn${view === id ? ' is-active' : ''}`}
+            onClick={() => switchView(id)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span className="sb-enroll__nav-icon" aria-hidden>
+              <Icon size={15} strokeWidth={1.75} />
+            </span>
+            {label}
+          </motion.button>
+        ))}
       </div>
-      <div>
-        <h4 className="sb-showcase-stack__title">Admission pipeline</h4>
-        <GenericPanel items={pipelineItems} />
-      </div>
-      <div className="sb-showcase-workflow" aria-label="Enrollment workflow">
-        <p className="sb-showcase-workflow__label">Workflow</p>
-        <ol className="sb-showcase-workflow__track">
-          {ENROLLMENT_WORKFLOW.map((tag, index) => (
-            <li key={tag}>
-              <span>{tag}</span>
-              {index < ENROLLMENT_WORKFLOW.length - 1 && <ArrowRight size={14} aria-hidden />}
-            </li>
-          ))}
-        </ol>
-      </div>
+
+      {view === 'workflow' ? (
+        <div className="sb-enroll__workflow" aria-label="Enrollment workflow">
+          <p className="sb-enroll__workflow-lead">
+            Every application moves through validation, documents, and staff review — automatically tracked.
+          </p>
+          <ol className="sb-enroll__workflow-track">
+            {ENROLLMENT_WORKFLOW.map((tag, index) => (
+              <motion.li
+                key={tag}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05, duration: 0.35, ease: tileEase }}
+              >
+                <motion.span
+                  className="sb-enroll__workflow-step"
+                  animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+                  transition={{ duration: 2.4, repeat: Infinity, delay: index * 0.35 }}
+                >
+                  {tag}
+                </motion.span>
+                {index < ENROLLMENT_WORKFLOW.length - 1 && (
+                  <motion.span
+                    className="sb-enroll__workflow-arrow"
+                    aria-hidden
+                    animate={{ opacity: [0.35, 1, 0.35], x: [0, 2, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
+                  >
+                    →
+                  </motion.span>
+                )}
+              </motion.li>
+            ))}
+          </ol>
+        </div>
+      ) : (
+        <>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${view}-${active}`}
+              className="sb-enroll__spotlight"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.99 }}
+              transition={{ duration: 0.35, ease: tileEase }}
+            >
+              <motion.span
+                className="sb-enroll__spotlight-icon"
+                aria-hidden
+                initial={{ scale: 0.8, rotate: -8 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 20 }}
+              >
+                <CurrentIcon size={22} strokeWidth={1.75} />
+              </motion.span>
+              <div>
+                <span className="sb-enroll__spotlight-step">{current?.step}</span>
+                <h4>{current?.title}</h4>
+                <p>{current?.description}</p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="sb-enroll__rail" role="tablist" aria-label={view === 'form' ? 'Form pages' : 'Admission pipeline'}>
+            {items.map((item, index) => {
+              const Icon = icons[index];
+              return (
+                <motion.button
+                  key={`${view}-${item.title}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={active === index}
+                  className={`sb-enroll__chip${active === index ? ' is-active' : ''}`}
+                  onClick={() => pick(index)}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  <span className="sb-enroll__chip-icon" aria-hidden>
+                    <Icon size={14} strokeWidth={1.75} />
+                  </span>
+                  <span className="sb-enroll__chip-num">{item.step}</span>
+                  <span className="sb-enroll__chip-label">{item.title}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -213,27 +455,88 @@ function AppStoreButton({ label, href }) {
   );
 }
 
-function TabPanel({ activeTab, data, iosUrl, androidUrl, onHowStepChange }) {
-  if (activeTab === 'how') return <HowItWorksPanel items={data.how} onStepChange={onHowStepChange} />;
-  if (activeTab === 'features') return <FeaturePanel />;
-  if (activeTab === 'enrollment') {
-    return <EnrollmentPanel formItems={data.enrollmentForm} pipelineItems={data.enrollmentPipeline} />;
+function PanelBody({
+  activeTab,
+  data,
+  iosUrl,
+  androidUrl,
+  onHowStepChange,
+  onEnrollViewChange,
+  onEnrollStepChange,
+  onDetailStepChange,
+}) {
+  if (activeTab === 'how') {
+    return <HowPanel items={data.how} onStepChange={onHowStepChange} />;
   }
-
-  return (
-    <>
-      <GenericPanel items={data[activeTab] || []} />
-      {activeTab === 'mobile' && (
-        <div className="sb-showcase-mobile-cta">
+  if (activeTab === 'features') {
+    return (
+      <SpotlightPanel
+        items={data.features}
+        onStepChange={onDetailStepChange}
+        stepPrefix="Feature"
+        ariaLabel="Platform features"
+      />
+    );
+  }
+  if (activeTab === 'enrollment') {
+    return (
+      <EnrollmentPanel
+        formItems={data.enrollmentForm}
+        pipelineItems={data.enrollmentPipeline}
+        onViewChange={onEnrollViewChange}
+        onStepChange={onEnrollStepChange}
+      />
+    );
+  }
+  if (activeTab === 'fees') {
+    return (
+      <GroupedSpotlightPanel
+        groups={data.feeGroups}
+        onStepChange={onDetailStepChange}
+      />
+    );
+  }
+  if (activeTab === 'roles') {
+    return (
+      <SpotlightPanel
+        items={data.roles}
+        icons={ROLE_ICONS}
+        onStepChange={onDetailStepChange}
+        stepPrefix="Role"
+        ariaLabel="Platform roles"
+      />
+    );
+  }
+  if (activeTab === 'media') {
+    return (
+      <GroupedSpotlightPanel
+        groups={data.mediaGroups}
+        onStepChange={onDetailStepChange}
+      />
+    );
+  }
+  if (activeTab === 'mobile') {
+    return (
+      <>
+        <SpotlightPanel
+          items={data.mobile}
+          icons={MOBILE_ICONS}
+          onStepChange={onDetailStepChange}
+          stepPrefix="App"
+          ariaLabel="Mobile app roles"
+        />
+        <div className="sb-plat-mobile-cta">
           <p>Download the Kids Activities app for parents, teachers, admins, and TV sign-in.</p>
           <div className="sb-app-store-buttons sb-app-store-buttons--after-journey">
             <AppStoreButton label="Download on the App Store" href={iosUrl} />
             <AppStoreButton label="Get it on Google Play" href={androidUrl} />
           </div>
         </div>
-      )}
-    </>
-  );
+      </>
+    );
+  }
+
+  return null;
 }
 
 export default function PlatformLandingSections() {
@@ -241,26 +544,38 @@ export default function PlatformLandingSections() {
   const iosUrl = platform?.mobileApp?.iosUrl || platform?.mobileApp?.appStoreUrl;
   const androidUrl = platform?.mobileApp?.androidUrl || platform?.mobileApp?.playStoreUrl;
   const [activeTab, setActiveTab] = useState('features');
-  const [activeHowStep, setActiveHowStep] = useState(0);
+  const [howStep, setHowStep] = useState(0);
+  const [enrollView, setEnrollView] = useState('form');
+  const [enrollStep, setEnrollStep] = useState(0);
+  const [detailStep, setDetailStep] = useState(0);
 
   const data = useMemo(() => ({
     how: HOW_IT_WORKS,
+    features: toItems(PLATFORM_FEATURES),
     roles: toItems(PLATFORM_ROLES, 'title', 'items'),
     enrollmentForm: toItems(ENROLLMENT_PAGES, 'page', 'details'),
     enrollmentPipeline: toItems(ADMISSION_PIPELINE),
-    fees: toItems([...FEES_AND_DOCS, ...OPERATIONS]),
-    media: [
-      ...toItems(COMMUNICATION_MEDIA),
-      ...toItems(TV_PLAYBACK_STEPS, 'label', 'description'),
+    feeGroups: [
+      { label: 'Payments & documents', items: toItems(FEES_AND_DOCS) },
+      { label: 'School operations', items: toItems(OPERATIONS) },
+    ],
+    mediaGroups: [
+      { label: 'Communication & albums', items: toItems(COMMUNICATION_MEDIA) },
+      { label: 'TV playback flow', items: toItems(TV_PLAYBACK_STEPS, 'label', 'description') },
     ],
     mobile: toItems(MOBILE_APP_ROLES, 'role', 'screens'),
   }), []);
 
   const activeMeta = OVERVIEW_TABS.find((tab) => tab.id === activeTab) || OVERVIEW_TABS[0];
 
-  const handleTabChange = (tabId) => {
+  const showcaseStep = activeTab === 'how' ? howStep : detailStep;
+
+  const switchTab = (tabId) => {
     setActiveTab(tabId);
-    setActiveHowStep(0);
+    setHowStep(0);
+    setEnrollView('form');
+    setEnrollStep(0);
+    setDetailStep(0);
   };
 
   return (
@@ -269,8 +584,8 @@ export default function PlatformLandingSections() {
       className="sb-editorial-section sb-editorial-section--lavender sb-platform-overview"
     >
       <div className="sb-container">
-        <div className="sb-platform-showcase">
-          <header className="sb-platform-showcase__header">
+        <div className="sb-plat">
+          <header className="sb-plat__header">
             <div className="sb-platform-shell__badge">
               <Sparkles size={14} aria-hidden />
               Full platform overview
@@ -279,8 +594,8 @@ export default function PlatformLandingSections() {
             <p className="sb-editorial-subheading mx-auto">{PLATFORM_PURPOSE}</p>
           </header>
 
-          <div className="sb-platform-showcase__layout">
-            <nav className="sb-platform-showcase__nav" role="tablist" aria-label="Platform overview">
+          <LayoutGroup>
+            <nav className="sb-plat__nav" role="tablist" aria-label="Platform overview">
               {OVERVIEW_TABS.map((tab) => {
                 const Icon = tab.icon;
                 const selected = activeTab === tab.id;
@@ -290,44 +605,67 @@ export default function PlatformLandingSections() {
                     type="button"
                     role="tab"
                     aria-selected={selected}
-                    className={`sb-platform-showcase__nav-btn${selected ? ' is-active' : ''}`}
-                    onClick={() => handleTabChange(tab.id)}
+                    className={`sb-plat__nav-btn${selected ? ' is-active' : ''}`}
+                    onClick={() => switchTab(tab.id)}
                   >
+                    {selected && (
+                      <motion.span
+                        layoutId="plat-nav-pill"
+                        className="sb-plat__nav-pill"
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                      />
+                    )}
                     <Icon size={16} strokeWidth={1.75} aria-hidden />
                     <span>{tab.label}</span>
                   </button>
                 );
               })}
             </nav>
+          </LayoutGroup>
 
-            <div className="sb-platform-showcase__stage" role="tabpanel">
-              <div className="sb-platform-showcase__stage-head">
-                <div>
-                  <h3>{activeMeta.label}</h3>
-                  <p>{activeMeta.blurb}</p>
-                </div>
-                <PlatformShowcaseVisual
-                  tabId={activeTab}
-                  activeStep={activeTab === 'how' ? activeHowStep : 0}
+          <div className="sb-plat__stage" role="tabpanel">
+            <PlatformShowcaseVisual
+              tabId={activeTab}
+              activeStep={showcaseStep}
+              enrollmentView={enrollView}
+              enrollmentStep={enrollStep}
+            />
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`intro-${activeTab}`}
+                className="sb-plat__intro"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.32, ease: tileEase }}
+              >
+                <h3>{activeMeta.label}</h3>
+                <p>{activeMeta.blurb}</p>
+              </motion.div>
+            </AnimatePresence>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                className="sb-plat__body"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.38, ease: tileEase }}
+              >
+                <PanelBody
+                  activeTab={activeTab}
+                  data={data}
+                  iosUrl={iosUrl}
+                  androidUrl={androidUrl}
+                  onHowStepChange={setHowStep}
+                  onEnrollViewChange={setEnrollView}
+                  onEnrollStepChange={setEnrollStep}
+                  onDetailStepChange={setDetailStep}
                 />
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  className="sb-platform-showcase__content"
-                  {...panelMotion}
-                >
-                  <TabPanel
-                    activeTab={activeTab}
-                    data={data}
-                    iosUrl={iosUrl}
-                    androidUrl={androidUrl}
-                    onHowStepChange={setActiveHowStep}
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
