@@ -38,17 +38,31 @@ export async function getTeacherAlbumByClass(classId) {
   return api.get(`/teacher/albums/${classId}`);
 }
 
+export async function getParentAlbumByClass(classId) {
+  return api.get(`/parent/albums/${classId}`);
+}
+
 export async function uploadTeacherAlbumMedia({
   uploadTarget,
   classId,
+  className,
+  schoolId,
+  schoolName,
   studentId,
+  studentIds,
+  recipients,
   caption,
   files,
 }) {
   const formData = new FormData();
   formData.append('uploadTarget', uploadTarget);
   if (classId) formData.append('classId', classId);
+  if (className) formData.append('className', className);
+  if (schoolId) formData.append('schoolId', schoolId);
+  if (schoolName) formData.append('schoolName', schoolName);
   if (studentId) formData.append('studentId', studentId);
+  if (recipients) formData.append('recipients', recipients);
+  (studentIds || []).forEach((id) => formData.append('studentIds', id));
   if (caption) formData.append('caption', caption);
   files.forEach((file) => formData.append('files', file));
   return api.post('/teacher/albums/upload', formData);
@@ -97,9 +111,23 @@ export async function linkExistingToAlbum({ albumId, externalAssetIds, caption }
   });
 }
 
-export async function uploadAdminAlbumMedia({ albumId, caption, files }) {
+export async function uploadAdminAlbumMedia({
+  albumId,
+  classId,
+  className,
+  schoolId,
+  schoolName,
+  uploadTarget,
+  caption,
+  files,
+}) {
   const formData = new FormData();
   formData.append('albumId', albumId);
+  if (classId) formData.append('classId', classId);
+  if (className) formData.append('className', className);
+  if (schoolId) formData.append('schoolId', schoolId);
+  if (schoolName) formData.append('schoolName', schoolName);
+  if (uploadTarget) formData.append('uploadTarget', uploadTarget);
   if (caption) formData.append('caption', caption);
   files.forEach((file) => formData.append('files', file));
 

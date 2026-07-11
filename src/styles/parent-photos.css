@@ -325,6 +325,13 @@
   color: var(--sb-on-surface);
 }
 
+.parent-photos-masonry-item__school {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--sb-on-surface-variant, #6b7a8c);
+}
+
 .parent-photos-masonry-item__footer {
   display: flex;
   align-items: center;

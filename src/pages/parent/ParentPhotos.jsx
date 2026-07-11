@@ -5,6 +5,11 @@ import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getPhotos } from '../../services/mediaService.js';
 import { getParentDashboard } from '../../services/parentService.js';
+import { getParentAlbumByClass } from '../../services/classAlbumService.js';
+import {
+  albumDetailToParentPhotos,
+  getChildClassTargets,
+} from '../../utils/parentAlbumPhotos.js';
 import { FEATURED_HIGHLIGHT } from '../../data/mockPhotos.js';
 import '../../styles/parent-photos.css';
 
@@ -73,9 +78,20 @@ function getPhotoGrade(photo) {
   return photo.grade || photo.className || '';
 }
 
-/** Parent's child application ids for photo filtering */
-function getChildApplicationIds(children = []) {
-  return children.map((c) => c.applicationId).filter(Boolean);
+/** Parent's child application ids and class ids for photo filtering */
+function getChildPhotoFilters(children = []) {
+  return children
+    .filter((child) => child.applicationId)
+    .map((child) => ({
+      studentId: child.applicationId,
+      classId: child.classId || null,
+      className: child.className || child.student?.classApplying || null,
+    }));
+}
+
+function getPhotoSchoolLine(photo) {
+  const parts = [photo.schoolName, photo.className || photo.grade].filter(Boolean);
+  return parts.join(' · ');
 }
 
 function GalleryCard({ photo, onOpen }) {
@@ -107,6 +123,9 @@ function GalleryCard({ photo, onOpen }) {
       <div className="parent-photos-masonry-item__body">
         <span className="parent-photos-masonry-item__category">{getPhotoCategory(photo)}</span>
         <h4 className="parent-photos-masonry-item__title">{getPhotoTitle(photo)}</h4>
+        {getPhotoSchoolLine(photo) && (
+          <p className="parent-photos-masonry-item__school">{getPhotoSchoolLine(photo)}</p>
+        )}
         <div className="parent-photos-masonry-item__footer">
           <div className="parent-photos-masonry-item__teacher">
             <div className="parent-photos-masonry-item__avatar" aria-hidden>
@@ -126,6 +145,7 @@ function GalleryCard({ photo, onOpen }) {
 export default function ParentPhotos() {
   const { user } = useAuth();
   const [photos, setPhotos] = useState([]);
+  const [schoolName, setSchoolName] = useState('');
   const [loading, setLoading] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [visibleGroups, setVisibleGroups] = useState(INITIAL_VISIBLE_GROUPS);
@@ -134,15 +154,29 @@ export default function ParentPhotos() {
     if (!user?.id) return;
     getParentDashboard(user.id, user.schoolId, user)
       .then(async (dashboard) => {
-        const childIds = getChildApplicationIds(dashboard?.children);
-        if (childIds.length === 0) {
-          return [];
-        }
-        const photosByChild = await Promise.all(
-          childIds.map((studentId) => getPhotos({ studentId }).catch(() => [])),
-        );
+        const school = dashboard?.school || null;
+        setSchoolName(school?.name || '');
+        const children = dashboard?.children || [];
+        const childFilters = getChildPhotoFilters(children);
+        const classTargets = getChildClassTargets(children, school);
+
+        const [albumPhotoBatches, directPhotoBatches] = await Promise.all([
+          Promise.all(
+            classTargets.map(({ classId }) => (
+              getParentAlbumByClass(classId)
+                .then((album) => albumDetailToParentPhotos(album, school))
+                .catch(() => [])
+            )),
+          ),
+          Promise.all(
+            childFilters.map(({ studentId, classId, className }) => (
+              getPhotos({ studentId, classId, className }).catch(() => [])
+            )),
+          ),
+        ]);
+
         const merged = new Map();
-        photosByChild.flat().forEach((photo) => {
+        [...albumPhotoBatches.flat(), ...directPhotoBatches.flat()].forEach((photo) => {
           if (photo?.id) merged.set(photo.id, photo);
         });
         return Array.from(merged.values());
@@ -204,7 +238,11 @@ export default function ParentPhotos() {
           <div className="parent-photos-highlights__header">
             <div>
               <h1>School Moments</h1>
-              <p>Capturing growth, one discovery at a time.</p>
+              <p>
+                {schoolName
+                  ? `${schoolName} — classroom photos shared with your family.`
+                  : 'Capturing growth, one discovery at a time.'}
+              </p>
             </div>
             <div className="parent-photos-highlights__actions">
               <button type="button" className="parent-photos-icon-btn" aria-label="Filter gallery">

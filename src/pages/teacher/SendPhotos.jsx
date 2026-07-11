@@ -21,7 +21,7 @@ const UPLOAD_TARGET_OPTIONS = [
   {
     value: UPLOAD_TARGETS.CLASS_ALBUM,
     label: 'Class Album',
-    hint: 'Shows on classroom TV playback',
+    hint: 'TV playback and class parents',
     icon: ImageIcon,
   },
   {
@@ -61,7 +61,7 @@ function isVideoFile(file) {
 }
 
 const SUCCESS_MESSAGES = {
-  [UPLOAD_TARGETS.CLASS_ALBUM]: 'Uploaded to class album successfully.',
+  [UPLOAD_TARGETS.CLASS_ALBUM]: 'Uploaded to class album and shared with class parents.',
   [UPLOAD_TARGETS.PARENT_DIRECT]: 'Media sent to parent successfully.',
   [UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT]: 'Uploaded to class album and shared with parents successfully.',
 };
@@ -194,14 +194,24 @@ export default function SendPhotos() {
     setLoading(true);
     const uploadedClassId = form.classId;
     try {
-      const studentId = form.studentIds[0] || null;
+      const shareStudentIds = uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
+        || (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT && form.recipients !== 'class')
+        ? form.studentIds
+        : students.map((s) => s.id);
+
       await uploadTeacherAlbumMedia({
         uploadTarget,
         classId: form.classId || null,
-        studentId,
+        className: selectedClass?.className || null,
+        schoolId: user?.schoolId || null,
+        schoolName: user?.schoolName || selectedClass?.schoolName || null,
+        studentId: form.studentIds[0] || null,
+        studentIds: shareStudentIds,
+        recipients: form.recipients,
         caption: form.caption,
         files: form.files,
       });
+
       toast(SUCCESS_MESSAGES[uploadTarget], 'success');
       setShowConfirm(false);
       setForm({

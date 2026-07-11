@@ -206,11 +206,28 @@
 
 .sb-platform-shell__intro {
   text-align: center;
-  margin: 0 auto 1.15rem;
+  margin: 0 auto 1.35rem;
+  max-width: 42rem;
 }
 
 .sb-platform-shell__intro .sb-editorial-heading {
-  margin-bottom: 0;
+  margin-bottom: 0.65rem;
+}
+
+.sb-platform-shell__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--sb-purple) 18%, var(--sb-line));
+  background: color-mix(in srgb, var(--sb-lavender) 55%, #fff);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sb-purple);
 }
 
 .sb-platform-tabs {
@@ -275,6 +292,63 @@
   min-height: 12rem;
 }
 
+.sb-platform-tab-panel__body {
+  background: color-mix(in srgb, var(--sb-lavender) 28%, #fff);
+  border: 1px solid color-mix(in srgb, var(--sb-purple) 8%, var(--sb-line));
+  border-radius: 1.25rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+.sb-platform-tab-panel__head {
+  text-align: center;
+  margin: 0 auto 1.5rem;
+  max-width: 34rem;
+}
+
+.sb-platform-tab-panel__head h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--sb-font-heading);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+  color: var(--sb-purple-dark);
+}
+
+.sb-platform-tab-panel__head p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--sb-muted);
+}
+
+
+.sb-platform-mobile-cta {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1rem 0.25rem;
+  text-align: center;
+  border-top: 1px solid color-mix(in srgb, var(--sb-purple) 10%, var(--sb-line));
+}
+
+.sb-platform-mobile-cta__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0.85rem;
+  background: var(--sb-lavender);
+  color: var(--sb-purple);
+}
+
+.sb-platform-mobile-cta p {
+  margin: 0 auto 1rem;
+  max-width: 30rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--sb-muted);
+}
+
 .sb-platform-feature-grid {
   display: grid;
   gap: 0.85rem;
@@ -287,7 +361,173 @@
   }
 }
 
-/* How it works journey */
+/* Platform step cards */
+.sb-platform-step-group + .sb-platform-step-group {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--sb-purple) 10%, var(--sb-line));
+}
+
+.sb-platform-step-group__label {
+  margin: 0 0 1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sb-purple);
+  text-align: center;
+}
+
+.sb-platform-step-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .sb-platform-step-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .sb-platform-step-grid--count-4,
+  .sb-platform-step-grid--count-5 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .sb-platform-step-grid--count-6,
+  .sb-platform-step-grid--count-7,
+  .sb-platform-step-grid--count-8 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .sb-platform-step-grid--count-9,
+  .sb-platform-step-grid--count-10,
+  .sb-platform-step-grid--count-11,
+  .sb-platform-step-grid--count-12 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .sb-platform-step-grid--count-8,
+  .sb-platform-step-grid--count-9,
+  .sb-platform-step-grid--count-10,
+  .sb-platform-step-grid--count-11,
+  .sb-platform-step-grid--count-12 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.sb-platform-step-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 7.5rem;
+  padding: 1rem 0.75rem 0.9rem;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--sb-purple) 10%, var(--sb-line));
+  border-radius: 1rem;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--sb-purple) 5%, transparent);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.sb-platform-step-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--sb-purple) 22%, var(--sb-line));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--sb-purple) 10%, transparent);
+}
+
+.sb-platform-step-card__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.15rem;
+  height: 2.15rem;
+  margin-bottom: 0.65rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--sb-purple);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-purple) 14%, transparent);
+}
+
+.sb-platform-step-card__title {
+  margin: 0 0 0.3rem;
+  font-family: var(--sb-font-heading);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.98rem;
+  line-height: 1.25;
+  color: var(--sb-purple-dark);
+}
+
+.sb-platform-step-card__desc {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--sb-muted);
+}
+
+.sb-platform-workflow {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--sb-purple) 10%, var(--sb-line));
+  text-align: center;
+}
+
+.sb-platform-workflow__label {
+  margin: 0 0 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sb-purple);
+}
+
+.sb-platform-workflow__track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sb-platform-workflow__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sb-platform-workflow__item span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--sb-purple) 14%, var(--sb-line));
+  color: var(--sb-purple-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sb-platform-workflow__arrow {
+  color: var(--sb-purple-soft);
+  flex-shrink: 0;
+}
+
+/* How it works journey (legacy) */
 .sb-platform-journey {
   list-style: none;
   margin: 0;
@@ -376,13 +616,22 @@
 }
 
 .sb-platform-journey__item h3 {
-  margin: 0;
+  margin: 0 0 0.35rem;
   font-family: var(--sb-font-heading);
   font-style: italic;
   font-weight: 400;
   font-size: 1.05rem;
   color: var(--sb-purple-dark);
   line-height: 1.3;
+}
+
+.sb-platform-journey__item p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--sb-muted);
+  max-width: 14rem;
+  margin-inline: auto;
 }
 
 .sb-app-store-buttons--after-journey {

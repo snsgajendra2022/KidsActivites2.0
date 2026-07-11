@@ -118,7 +118,7 @@ export default function PhotoLightbox({
             <p className="photo-lightbox__caption">{photo.caption}</p>
           ) : null}
           <p className="photo-lightbox__meta">
-            {[photo.teacherName, photo.className].filter(Boolean).join(' · ')}
+            {[photo.schoolName, photo.className, photo.teacherName].filter(Boolean).join(' · ')}
           </p>
         </div>
       </div>

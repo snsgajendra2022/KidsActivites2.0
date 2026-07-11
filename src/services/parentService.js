@@ -31,6 +31,8 @@ function mapChildApplication(app) {
     submittedAt: app.submittedAt,
     updatedAt: app.updatedAt,
     schoolId: app.schoolId,
+    classId: app.classId || app.student?.classId || null,
+    className: app.className || app.student?.className || app.student?.classApplying || null,
     student: app.student || {},
     parent: app.parent || {},
     address: app.address || {},
@@ -79,7 +81,9 @@ async function mockGetParentDashboard(parentId, schoolId) {
         'documents_pending',
       ].includes(c.status)).length,
     },
-    enrollPath: school?.slug ? `/${school.slug}/enroll` : '/enrollment',
+    enrollPath: school?.slug
+      ? `/${school.slug}/enrollment/kidzee-print-form`
+      : '/enrollment/kidzee-print-form',
   };
 }
 
