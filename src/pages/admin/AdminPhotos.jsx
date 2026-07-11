@@ -22,6 +22,7 @@ import {
   getGalleryThumbSrc,
   imageNeedsVariantPolling,
   preloadImageSrc,
+  resolveVideoStreamUrl,
 } from '../../utils/photoStudioProgressive.js';
 import '../../styles/admin-photos.css';
 
@@ -125,12 +126,13 @@ function detectNewlyUploadedIds(beforeIds, batch, uploadedFiles, uploadResult) {
 
 function toLightboxPhoto(img) {
   const isVideo = isVideoItem(img);
+  const streamUrl = resolveVideoStreamUrl(img);
   return {
     id: img.id,
     mediaType: img.mediaType || (isVideo ? 'VIDEO' : 'IMAGE'),
     imageUrl: img.previewUrl || img.thumbnailUrl || img.downloadUrl,
     previewUrl: img.previewUrl,
-    streamUrl: img.streamUrl,
+    streamUrl,
     thumbnailUrl: img.thumbnailUrl,
     processingStatus: img.processingStatus || img.status,
     videoId: img.videoId,

@@ -392,6 +392,105 @@
   border-radius: 999px;
 }
 
+.notif-card--with-image {
+  align-items: stretch;
+}
+
+.notif-card__thumb {
+  flex-shrink: 0;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--sb-surface, #f1f5f9);
+  align-self: center;
+}
+
+.notif-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.notif-photos-section {
+  margin: 0 1.25rem 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--sb-outline, #d8dee9) 65%, transparent);
+}
+
+.notif-photos-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.notif-photos-section__head h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--sb-primary);
+}
+
+.notif-photos-section__head span {
+  font-size: 0.75rem;
+  color: var(--sb-on-surface-variant);
+}
+
+.notif-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: 0.625rem;
+}
+
+.notif-photos-grid--loading {
+  min-height: 5.5rem;
+}
+
+.notif-photo-card {
+  aspect-ratio: 1;
+  border: none;
+  padding: 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--sb-surface, #f1f5f9);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.notif-photo-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--sb-primary) 12%, transparent);
+}
+
+.notif-photo-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.notif-photos-skeleton {
+  aspect-ratio: 1;
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e8ecf4 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: notif-shimmer 1.4s infinite;
+}
+
+.notif-photos-empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--sb-on-surface-variant);
+}
+
 /* ─── Empty & loading ─── */
 .notif-empty {
   display: flex;

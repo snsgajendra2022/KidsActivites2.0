@@ -70,3 +70,31 @@ export async function resolveConfigBranding(config) {
   const branding = await resolveBranding(config.branding || {});
   return { ...config, branding };
 }
+
+const AUTH_BRANDING_KEYS = ['loginHeroUrl', 'logoUrl', 'logoIconUrl'];
+const preloadedUrls = new Set();
+
+/** Warm the browser cache for above-the-fold auth branding images. */
+export function preloadBrandingImages(branding = {}, { priority = false } = {}) {
+  AUTH_BRANDING_KEYS.forEach((key) => {
+    const url = sanitizeBrandingValue(branding[key]);
+    if (!url || preloadedUrls.has(url)) return;
+    preloadedUrls.add(url);
+
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = url;
+    if (priority && 'fetchPriority' in link) {
+      link.fetchPriority = 'high';
+    }
+    document.head.appendChild(link);
+
+    const img = new Image();
+    if (priority && 'fetchPriority' in img) {
+      img.fetchPriority = 'high';
+    }
+    img.decoding = 'async';
+    img.src = url;
+  });
+}

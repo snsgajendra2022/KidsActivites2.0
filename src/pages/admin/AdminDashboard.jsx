@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   FileText, AlertCircle, FolderOpen, CreditCard, CheckCircle, UserPlus, Clock, ArrowRight,
 } from 'lucide-react';
@@ -13,9 +13,10 @@ import {
   TableActionLink,
 } from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
-import { getApplications, getDashboardStats, getDashboardChartData } from '../../services/enrollmentService.js';
+import { getAdminDashboard } from '../../services/enrollmentService.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenant } from '../../context/TenantContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 
 const RECENT_COLUMNS = [
@@ -38,33 +39,19 @@ const RECENT_COLUMNS = [
 export default function AdminDashboard() {
   const { user, isDemoSession } = useAuth();
   const { school } = usePortalConfig();
+  const { tenantSlug } = useTenant();
   const { tenantPath } = useTenantPath();
-  const [stats, setStats] = useState(null);
-  const [recent, setRecent] = useState([]);
-  const [chartData, setChartData] = useState([]);
 
-  useEffect(() => {
-    let active = true;
+  const { data } = useQuery({
+    queryKey: ['admin-dashboard', tenantSlug],
+    queryFn: () => getAdminDashboard(5),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
 
-    const loadDashboard = () => {
-      getDashboardStats().then((data) => { if (active) setStats(data); }).catch(() => {});
-      getApplications().then((apps) => { if (active) setRecent(apps.slice(0, 5)); }).catch(() => {});
-      getDashboardChartData().then((data) => { if (active) setChartData(data); }).catch(() => {});
-    };
-
-    loadDashboard();
-
-    // Keep the dashboard live: refresh periodically and whenever the tab regains focus.
-    const interval = setInterval(loadDashboard, 60000);
-    const onFocus = () => loadDashboard();
-    window.addEventListener('focus', onFocus);
-
-    return () => {
-      active = false;
-      clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, []);
+  const stats = data?.stats ?? null;
+  const recent = data?.recent ?? [];
+  const chartData = data?.charts ?? [];
 
   return (
     <AppLayout>

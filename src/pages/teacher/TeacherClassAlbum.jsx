@@ -16,6 +16,7 @@ import {
   updateTeacherAlbumMedia,
   deleteTeacherAlbumMedia,
 } from '../../services/classAlbumService.js';
+import { resolveVideoStreamUrl } from '../../utils/photoStudioProgressive.js';
 import '../../styles/admin-albums.css';
 import '../../styles/teacher-class-album.css';
 
@@ -47,7 +48,7 @@ function toLightboxPhoto(item, albumDetail) {
     className: albumDetail?.className,
     thumbnailUrl: item.thumbnailUrl,
     previewUrl: item.previewUrl || item.imageUrl,
-    streamUrl: item.streamUrl || item.playbackUrl,
+    streamUrl: resolveVideoStreamUrl(item),
     renditions: item.renditions,
     processingStatus: item.processingStatus,
     status: item.status,

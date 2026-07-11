@@ -2,6 +2,7 @@ import { INITIAL_PHOTOS } from '../data/mockPhotos.js';
 import { delay, getStore, setStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
+import { resolveVideoStreamUrl } from '../utils/photoStudioProgressive.js';
 
 const KEY = 'sb_photos';
 
@@ -15,13 +16,14 @@ function normalizePhoto(photo) {
     || photo.thumbnailUrl
     || photo.downloadUrl
     || '';
+  const streamUrl = resolveVideoStreamUrl(photo);
   return {
     ...photo,
     imageUrl,
     sentAt: photo.sentAt || photo.createdAt || photo.uploadTime,
     mediaType,
     type: photo.type || (isVideo ? 'video' : undefined),
-    streamUrl: photo.streamUrl || (isVideo ? photo.previewUrl : undefined),
+    streamUrl: streamUrl || photo.streamUrl || photo.playbackUrl || undefined,
     videoStatusUrl: photo.videoStatusUrl || photo.statusPollUrl,
   };
 }

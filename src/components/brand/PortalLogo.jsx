@@ -31,7 +31,7 @@ const SIZES = {
   },
 };
 
-function LogoMark({ portalName, sizeClass, imageUrl, className, compact, sidebar }) {
+function LogoMark({ portalName, sizeClass, imageUrl, className, compact, sidebar, priority = false }) {
   if (imageUrl) {
     const img = (
       <img
@@ -43,8 +43,9 @@ function LogoMark({ portalName, sizeClass, imageUrl, className, compact, sidebar
           sidebar && !compact ? 'portal-logo-sidebar-img' : '',
           className,
         ].filter(Boolean).join(' ')}
-        loading="lazy"
+        loading={priority ? 'eager' : 'lazy'}
         decoding="async"
+        fetchPriority={priority ? 'high' : 'auto'}
       />
     );
 
@@ -103,6 +104,7 @@ export default function PortalLogo({
   inverse = false,
   markOnly = false,
   sidebar = false,
+  priority = false,
 }) {
   const { portalName, branding } = usePortalConfig();
   const { isTenantRoute, isTenantSubdomain } = useTenant();
@@ -129,6 +131,7 @@ export default function PortalLogo({
       className={className}
       compact={compact}
       sidebar={sidebar}
+      priority={priority}
     />
   );
 }

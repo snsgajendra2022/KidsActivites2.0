@@ -1,13 +1,16 @@
 import { z } from 'zod';
+import { normalizeMobile } from '../services/authService.js';
 
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ADMIN_NAME_REGEX = /^[a-zA-Z\s.'-]+$/;
+const MOBILE_REGEX = /^[6-9]\d{9}$/;
 
 export const WORKSPACE_FIELD_LABELS = {
   workspaceName: 'Workspace name',
   slug: 'Workspace slug',
   adminName: 'Admin name',
   adminEmail: 'Admin email',
+  adminPhone: 'Admin phone',
 };
 
 export const workspaceFormSchema = z.object({
@@ -42,6 +45,20 @@ export const workspaceFormSchema = z.object({
     .trim()
     .min(1, `${WORKSPACE_FIELD_LABELS.adminEmail} is required.`)
     .email(`${WORKSPACE_FIELD_LABELS.adminEmail} must be a valid email address.`),
+  adminPhone: z
+    .string()
+    .trim()
+    .min(1, `${WORKSPACE_FIELD_LABELS.adminPhone} is required.`)
+    .superRefine((value, ctx) => {
+      const normalized = normalizeMobile(value);
+      if (!MOBILE_REGEX.test(normalized)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${WORKSPACE_FIELD_LABELS.adminPhone} must be a valid 10-digit Indian mobile number.`,
+        });
+      }
+    })
+    .transform(normalizeMobile),
 });
 
 export function validateWorkspaceForm(values) {

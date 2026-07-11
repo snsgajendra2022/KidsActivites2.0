@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Download, Send } from 'lucide-react';
 import { useToast } from '../../context/ToastContext.jsx';
 import PortalLogo from '../../components/brand/PortalLogo.jsx';
+import Button from '../../components/ui/Button.jsx';
 import {
   saveDraft,
   submitApplication,
@@ -45,7 +46,9 @@ export default function KidzeePrintableForm({
 }) {
   const [formData, setFormData] = useState(() => initialData || getEmptyKidzeeFormData(branding));
   const [draftId, setDraftId] = useState(initialApplicationId);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const busy = submitting || downloading;
   const [currentPage, setCurrentPage] = useState(1);
   const [fieldErrors, setFieldErrors] = useState({});
   const printRef = useRef(null);
@@ -124,7 +127,8 @@ export default function KidzeePrintableForm({
   };
 
   const handleDownloadOrPrint = async () => {
-    setLoading(true);
+    if (busy) return;
+    setDownloading(true);
     try {
       let appId = draftId;
       if (!appId) {
@@ -136,11 +140,12 @@ export default function KidzeePrintableForm({
       toast(err?.message || 'PDF download failed. Opening print dialog…', 'warning');
       window.print();
     } finally {
-      setLoading(false);
+      setDownloading(false);
     }
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
     const { success, errors } = validateKidzeeFormForSubmit(formData);
     if (!success) {
       setFieldErrors(errors);
@@ -151,7 +156,7 @@ export default function KidzeePrintableForm({
     }
 
     setFieldErrors({});
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (!correctionToken) {
         const admissions = await getAdmissionsStatus();
@@ -177,10 +182,10 @@ export default function KidzeePrintableForm({
         ? 'Corrected application resubmitted successfully.'
         : 'Enrollment form submitted successfully.', 'success');
       onSubmitted?.(result);
-    } catch {
-      toast('Submission failed. Please try again.', 'error');
+    } catch (err) {
+      toast(err?.message || 'Submission failed. Please try again.', 'error');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -217,25 +222,31 @@ export default function KidzeePrintableForm({
           </p>
         </div>
         <div className="print-toolbar__actions">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             className="sb-button-secondary print-toolbar__btn"
             onClick={handleDownloadOrPrint}
-            disabled={loading}
+            loading={downloading}
+            disabled={busy}
           >
             <Download size={16} aria-hidden />
-            Download / Print
-          </button>
+            {downloading ? 'Preparing…' : 'Download / Print'}
+          </Button>
           {!readOnly && (
-            <button
+            <Button
               type="button"
+              variant="primary"
               className="sb-button-primary print-toolbar__btn"
               onClick={handleSubmit}
-              disabled={loading}
+              loading={submitting}
+              disabled={busy}
             >
               <Send size={16} aria-hidden />
-              {correctionToken ? 'Resubmit Application' : 'Submit Application'}
-            </button>
+              {submitting
+                ? (correctionToken ? 'Resubmitting…' : 'Submitting…')
+                : (correctionToken ? 'Resubmit Application' : 'Submit Application')}
+            </Button>
           )}
         </div>
       </div>

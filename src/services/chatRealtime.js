@@ -39,7 +39,11 @@ function ensureClient() {
   const token = getAccessToken();
   const tenantSlug = resolveTenantSlug();
   client = new Client({
-    webSocketFactory: () => new SockJS(getChatSocketUrl()),
+    // External proxy (216.98.0.202) strips WebSocket Upgrade headers; use HTTP transports only.
+    webSocketFactory: () =>
+      new SockJS(getChatSocketUrl(), null, {
+        transports: ['xhr-streaming', 'xhr-polling'],
+      }),
     connectHeaders: {
       Authorization: `Bearer ${token}`,
       ...(tenantSlug ? { [TENANT_HEADER]: tenantSlug } : {}),

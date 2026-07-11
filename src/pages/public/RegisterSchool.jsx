@@ -16,6 +16,9 @@ import {
   buildWorkspaceLoginUrl,
 } from '../../services/workspaceService.js';
 import { ApiError } from '../../services/api/client.js';
+import { normalizeMobile } from '../../services/authService.js';
+
+const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 
 const SCHOOL_TYPES = [
   { value: 'School', label: 'School' },
@@ -94,6 +97,11 @@ export default function RegisterSchool() {
       toast.error('Please accept the terms of service');
       return;
     }
+    const ownerPhone = normalizeMobile(form.ownerPhone.trim());
+    if (!MOBILE_PATTERN.test(ownerPhone)) {
+      toast.error('Enter a valid 10-digit mobile number starting with 6–9.');
+      return;
+    }
     setSubmitting(true);
     try {
       const result = await registerSchool({
@@ -101,7 +109,7 @@ export default function RegisterSchool() {
         workspaceSlug: form.workspaceSlug.trim(),
         ownerName: form.ownerName.trim(),
         ownerEmail: form.ownerEmail.trim(),
-        ownerPhone: form.ownerPhone.trim(),
+        ownerPhone,
         password: form.password,
         address: form.address.trim(),
         schoolType: form.schoolType,
@@ -249,9 +257,11 @@ export default function RegisterSchool() {
                 label="Phone"
                 name="ownerPhone"
                 type="tel"
+                required
                 value={form.ownerPhone}
                 onChange={(e) => updateField('ownerPhone', e.target.value)}
-                placeholder="+91 98765 43210"
+                placeholder="9876543210"
+                helper="10-digit mobile number starting with 6–9"
               />
 
               <FormInput

@@ -138,6 +138,7 @@ export function PortalConfigProvider({ children, user = null }) {
   );
 
   const isPlatformAdmin = user?.role === ROLES.SUPER_ADMIN;
+  const isTenantContext = isTenantRoute || isTenantSubdomain;
 
   const load = useCallback(async (schoolId) => {
     if (!schoolId) {
@@ -146,7 +147,9 @@ export function PortalConfigProvider({ children, user = null }) {
       return null;
     }
     try {
-      const loader = isAdminRoute ? getAdminPortalConfig : () => getPortalConfig(schoolId);
+      const loader = (isAdminRoute && !isTenantContext)
+        ? getAdminPortalConfig
+        : () => getPortalConfig(schoolId);
       const data = await loader();
       setConfig(data);
       applyDocumentBranding(data);
@@ -157,9 +160,7 @@ export function PortalConfigProvider({ children, user = null }) {
       setLoading(false);
       throw err;
     }
-  }, [isAdminRoute]);
-
-  const isTenantContext = isTenantRoute || isTenantSubdomain;
+  }, [isAdminRoute, isTenantContext]);
 
   useEffect(() => {
     if (isTenantContext) {

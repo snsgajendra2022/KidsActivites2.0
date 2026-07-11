@@ -81,6 +81,11 @@ export default function ChatPage() {
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+  const sendButtonRef = useRef(null);
+  const sendLockRef = useRef(false);
+  const inputValueRef = useRef('');
+  const lastSendFingerprintRef = useRef({ key: '', at: 0 });
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedConvId = searchParams.get('c');
 
@@ -291,26 +296,57 @@ export default function ChatPage() {
     }
   };
 
-  const handleSend = async () => {
-    if (!text.trim() || !active || !user?.id) return;
+  const setComposeDisabled = useCallback((disabled) => {
+    if (inputRef.current) inputRef.current.disabled = disabled;
+    if (sendButtonRef.current) sendButtonRef.current.disabled = disabled;
+  }, []);
+
+  const handleSend = useCallback(async (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
+    if (sendLockRef.current) return;
+
+    const body = (inputValueRef.current || text).trim();
+    if (!body || !active || !user?.id) return;
+
+    const fingerprint = `${active}:${body}`;
+    const now = Date.now();
+    if (
+      lastSendFingerprintRef.current.key === fingerprint
+      && now - lastSendFingerprintRef.current.at < 2000
+    ) {
+      return;
+    }
+
+    sendLockRef.current = true;
+    lastSendFingerprintRef.current = { key: fingerprint, at: now };
+    inputValueRef.current = '';
+    setText('');
     setSending(true);
+    setComposeDisabled(true);
+
     try {
-      const msg = await sendMessage(active, user.id, text.trim());
+      const msg = await sendMessage(active, user.id, body);
       setMessages((prev) => (
         prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, seen: false }]
       ));
-      setText('');
       setConversations((prev) => prev.map((c) => (
         c.id === active
           ? { ...c, lastMessage: msg.text, lastMessageAt: msg.sentAt }
           : c
       )));
     } catch (err) {
+      inputValueRef.current = body;
+      setText(body);
+      lastSendFingerprintRef.current = { key: '', at: 0 };
       toast(err.message || 'Unable to send message. Please try again.', 'error');
     } finally {
+      sendLockRef.current = false;
       setSending(false);
+      setComposeDisabled(false);
     }
-  };
+  }, [active, text, user?.id, toast, setComposeDisabled]);
 
   return (
     <AppLayout>
@@ -454,31 +490,30 @@ export default function ChatPage() {
                   <div ref={bottomRef} />
                 </div>
 
-                <div className="messages-compose">
+                <form className="messages-compose" onSubmit={handleSend} noValidate>
                   <div className="messages-compose__input-wrap">
                     <input
+                      ref={inputRef}
                       value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      placeholder="Write a message…"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
+                      onChange={(e) => {
+                        inputValueRef.current = e.target.value;
+                        setText(e.target.value);
                       }}
+                      placeholder="Write a message…"
+                      disabled={sending}
                       aria-label="Message"
                     />
                   </div>
                   <button
-                    type="button"
+                    ref={sendButtonRef}
+                    type="submit"
                     className="messages-compose__send sb-button-primary"
-                    onClick={handleSend}
                     disabled={sending || !text.trim()}
                     aria-label="Send message"
                   >
                     <Send size={18} />
                   </button>
-                </div>
+                </form>
               </>
             ) : (
               <div className="messages-main__empty">

@@ -17,6 +17,7 @@ import {
   updateAlbumMedia,
 } from '../../services/classAlbumService.js';
 import defaultAlbumCover from '../../assets/default-album-cover.png';
+import { resolveVideoStreamUrl } from '../../utils/photoStudioProgressive.js';
 import '../../styles/admin-albums.css';
 
 function toLightboxPhoto(item, albumDetail) {
@@ -27,7 +28,7 @@ function toLightboxPhoto(item, albumDetail) {
     className: albumDetail?.className,
     thumbnailUrl: item.thumbnailUrl,
     previewUrl: item.previewUrl || item.imageUrl,
-    streamUrl: item.streamUrl || item.playbackUrl,
+    streamUrl: resolveVideoStreamUrl(item),
     renditions: item.renditions,
     processingStatus: item.processingStatus,
     status: item.status,

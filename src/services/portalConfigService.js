@@ -9,10 +9,16 @@ import { routeRequest } from './api/routeRequest.js';
 import { isApiEnabled } from './api/config.js';
 import { DEFAULT_SCHOOL_ID, schoolToPortalSchool } from '../data/mockSchools.js';
 import { getSchoolById } from './schoolService.js';
+import { resolveTenantSlug } from './api/config.js';
 import {
   resolveConfigBranding,
   sanitizeBranding,
 } from '../utils/brandingUrlUtils.js';
+import {
+  cachePortalConfig,
+  fetchPortalConfigRaw,
+  getCachedPortalConfig,
+} from './portalConfigApi.js';
 
 const LEGACY_SINGLE_KEY = 'sb_portal_config';
 const LEGACY_BULK_KEY = 'sb_portal_configs';
@@ -432,6 +438,17 @@ function mockSavePortalConfig(updates, schoolId) {
   return next;
 }
 
+async function fetchPortalConfigFromApi() {
+  const tenantSlug = resolveTenantSlug();
+  const normalizedCached = getCachedPortalConfig(tenantSlug);
+  if (normalizedCached) return normalizedCached;
+
+  const data = await fetchPortalConfigRaw();
+  const normalized = await normalizeApiPortalConfig(data);
+  cachePortalConfig(normalized, tenantSlug);
+  return normalized;
+}
+
 export async function getPortalConfig(schoolId) {
   const id = schoolId || getPublicSchoolId();
   return routeRequest({
@@ -439,10 +456,7 @@ export async function getPortalConfig(schoolId) {
       await delay(120);
       return mockGetPortalConfig(id);
     },
-    apiFn: async () => {
-      const data = await api.get('/portal/config', undefined, { auth: false });
-      return normalizeApiPortalConfig(data);
-    },
+    apiFn: fetchPortalConfigFromApi,
   });
 }
 

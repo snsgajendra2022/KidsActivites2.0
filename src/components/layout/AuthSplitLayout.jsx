@@ -1,8 +1,33 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PublicHeader from './PublicHeader.jsx';
 import PublicFooter from './PublicFooter.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+
+function AuthHeroImage({ src }) {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setLoaded(false);
+  }, [src]);
+
+  if (!src) return null;
+
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      className={`auth-split__hero-img${loaded ? ' auth-split__hero-img--loaded' : ''}`}
+      loading="eager"
+      decoding="async"
+      fetchPriority="high"
+      onLoad={() => setLoaded(true)}
+      onError={() => setLoaded(true)}
+    />
+  );
+}
 
 export default function AuthSplitLayout({
   title,
@@ -28,12 +53,8 @@ export default function AuthSplitLayout({
       <div className="auth-split flex-1">
         <div
           className={`auth-split__visual${loginHeroUrl ? ' auth-split__visual--has-image' : ''}`}
-          style={loginHeroUrl ? {
-            backgroundImage: `url(${loginHeroUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          } : undefined}
         >
+          {loginHeroUrl ? <AuthHeroImage src={loginHeroUrl} /> : null}
           <div className="auth-split__visual-content">
             <p className="sb-eyebrow !text-[var(--sb-gold)]">{visualBadge || 'Secure Portal'}</p>
             <h1>{visualTitle || `Welcome to ${portalName}`}</h1>
@@ -48,7 +69,7 @@ export default function AuthSplitLayout({
             <div className="auth-split__card-header">
               <div className="auth-split__card-brand">
                 {hasCustomLogo ? (
-                  <PortalLogo size="sm" className="auth-split__card-logo-full" />
+                  <PortalLogo size="sm" className="auth-split__card-logo-full" priority />
                 ) : (
                   <p className="auth-split__card-portal-name">{portalName}</p>
                 )}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProgressiveImageSrc } from '../../hooks/useProgressiveImageSrc.js';
-import { isVideoPlaybackReady } from '../../utils/photoStudioProgressive.js';
+import { isVideoPlaybackReady, resolveVideoStreamUrl } from '../../utils/photoStudioProgressive.js';
 import VideoHlsPlayer from './VideoHlsPlayer.jsx';
 import '../../styles/photo-lightbox.css';
 import '../../styles/progressive-image.css';
@@ -15,7 +15,8 @@ export default function PhotoLightbox({
   hasNext,
 }) {
   const studioImage = photo?.studioImage || (photo?.variants ? photo : null);
-  const isVideo = photo?.mediaType === 'VIDEO' && photo?.streamUrl;
+  const streamUrl = useMemo(() => resolveVideoStreamUrl(photo), [photo]);
+  const isVideo = photo?.mediaType === 'VIDEO' && Boolean(streamUrl);
   const videoReady = isVideo && isVideoPlaybackReady(photo);
   const { src: progressiveSrc, loading, qualityLabel } = useProgressiveImageSrc(
     studioImage,
@@ -85,7 +86,7 @@ export default function PhotoLightbox({
             videoReady ? (
               <VideoHlsPlayer
                 className="photo-lightbox__image photo-lightbox__video"
-                src={photo.streamUrl}
+                src={streamUrl}
                 poster={photo.thumbnailUrl || photo.previewUrl || undefined}
                 renditions={videoRenditions}
               />
