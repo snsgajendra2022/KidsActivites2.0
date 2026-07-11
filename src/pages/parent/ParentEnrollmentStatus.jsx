@@ -121,6 +121,7 @@ export default function ParentEnrollmentStatus() {
   }
 
   const { children = [], enrollPath, school } = dashboard || {};
+  const enrollmentHref = enrollPath || tenantPath('/enrollment/kidzee-print-form');
   const child = selected || (childId ? children.find((c) => c.applicationId === childId) : null);
 
   return (
@@ -135,7 +136,7 @@ export default function ParentEnrollmentStatus() {
               <h1>Enrollment Status</h1>
               <p>{school?.name} — track each child&apos;s application</p>
             </div>
-            <Link to={enrollPath || '/enrollment'} className="parent-enrollment-enroll-btn">
+            <Link to={enrollmentHref} className="parent-enrollment-enroll-btn">
               <Plus size={16} /> Enroll Another Child
             </Link>
           </header>
@@ -157,7 +158,7 @@ export default function ParentEnrollmentStatus() {
           {!child ? (
             <div className="parent-enrollment-empty">
               No enrollment selected.{' '}
-              <Link to={enrollPath || '/enrollment'}>Start a new enrollment</Link>
+              <Link to={enrollmentHref}>Start a new enrollment</Link>
             </div>
           ) : (
             <>

@@ -32,20 +32,38 @@ function getAll() {
   return getStore(KEY, INITIAL_PHOTOS);
 }
 
+function photoVisibleToFilter(photo, filters) {
+  const studentId = filters.studentId ? String(filters.studentId) : null;
+  const classId = filters.classId ? String(filters.classId) : null;
+
+  if (studentId) {
+    const directMatch = photo.studentIds?.some((id) => String(id) === studentId);
+    if (directMatch) return true;
+  }
+
+  if (classId && photo.classId && String(photo.classId) === classId) {
+    if (photo.recipients === 'class' || photo.recipients === 'selected') return true;
+  }
+
+  if (studentId && photo.recipients === 'class' && !photo.classId) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function getPhotos(filters = {}) {
   return routeRequest({
     mockFn: async () => {
       await delay();
       let photos = getAll();
-      if (filters.studentId) {
-        photos = photos.filter(
-          (p) => p.recipients === 'class' || p.studentIds?.includes(filters.studentId),
-        );
+      if (filters.studentId || filters.classId) {
+        photos = photos.filter((photo) => photoVisibleToFilter(photo, filters));
       }
       if (filters.teacherId) {
         photos = photos.filter((p) => p.teacherId === filters.teacherId);
       }
-      return photos;
+      return photos.map(normalizePhoto);
     },
     apiFn: async () => {
       const data = await api.get('/media/photos', filters);

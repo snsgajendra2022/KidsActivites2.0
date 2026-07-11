@@ -54,7 +54,7 @@ export const PARENT_NAV = [
   { id: 'parent_dashboard', to: '/parent/dashboard', label: 'Dashboard', icon: Home, iconName: 'Home' },
   { id: 'parent_enrollment', to: '/parent/enrollment', label: 'Enrollment Status', icon: FileText, iconName: 'FileText', section: 'Enrollment' },
   { id: 'parent_documents', to: '/parent/documents', label: 'Documents', icon: FolderOpen, iconName: 'FolderOpen', section: 'Enrollment' },
-  { id: 'parent_photos', to: '/parent/photos', label: 'Photos', icon: Image, iconName: 'Image', section: 'Photos & Media' },
+  { id: 'parent_student_class', to: '/parent/photos', label: 'Student Class', icon: GraduationCap, iconName: 'GraduationCap', section: 'Photos & Media' },
   { id: 'parent_fees', to: '/parent/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Fees & Payments' },
   { id: 'parent_messages', to: '/parent/messages', label: 'Messages', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
   { id: 'parent_notifications', to: '/parent/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell', section: 'Communication' },

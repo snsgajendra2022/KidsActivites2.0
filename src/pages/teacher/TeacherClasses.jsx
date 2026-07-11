@@ -93,14 +93,29 @@ export default function TeacherClasses() {
         )}
 
         <div className="teacher-classes-quick">
-          <Link to={tenantPath('/teacher/class-album')} className="teacher-classes-quick__link">
-            <Tv size={18} />
-            Browse your class album uploads
-          </Link>
-          <Link to={tenantPath('/teacher/photos')} className="teacher-classes-quick__link">
-            <Send size={18} />
-            Share classroom photos with parents
-          </Link>
+          <h2 className="teacher-classes-quick__title">Quick links</h2>
+          <div className="teacher-classes-quick__grid">
+            <Link to={tenantPath('/teacher/class-album')} className="teacher-classes-quick__card">
+              <span className="teacher-classes-quick__icon" aria-hidden>
+                <Tv size={20} />
+              </span>
+              <span className="teacher-classes-quick__text">
+                <strong>Browse your class album uploads</strong>
+                <span>View and manage TV playback media</span>
+              </span>
+              <ArrowRight size={16} className="teacher-classes-quick__arrow" aria-hidden />
+            </Link>
+            <Link to={tenantPath('/teacher/photos')} className="teacher-classes-quick__card">
+              <span className="teacher-classes-quick__icon" aria-hidden>
+                <Send size={20} />
+              </span>
+              <span className="teacher-classes-quick__text">
+                <strong>Share classroom photos with parents</strong>
+                <span>Upload photos and videos for families</span>
+              </span>
+              <ArrowRight size={16} className="teacher-classes-quick__arrow" aria-hidden />
+            </Link>
+          </div>
         </div>
       </PageTransition>
     </AppLayout>

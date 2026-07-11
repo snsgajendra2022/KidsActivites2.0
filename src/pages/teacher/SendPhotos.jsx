@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, Play, ArrowRight,
+  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, Play, ArrowRight, Upload,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
@@ -26,9 +26,24 @@ import {
 import '../../styles/send-photos.css';
 
 const UPLOAD_TARGET_OPTIONS = [
-  { value: UPLOAD_TARGETS.CLASS_ALBUM, label: 'Class Album', icon: ImageIcon },
-  { value: UPLOAD_TARGETS.PARENT_DIRECT, label: 'Parent Direct', icon: User },
-  { value: UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT, label: 'Album + Parents', icon: Tv },
+  {
+    value: UPLOAD_TARGETS.CLASS_ALBUM,
+    label: 'Class Album',
+    hint: 'TV playback and class parents',
+    icon: ImageIcon,
+  },
+  {
+    value: UPLOAD_TARGETS.PARENT_DIRECT,
+    label: 'Parent Direct',
+    hint: 'Sends privately to one parent',
+    icon: User,
+  },
+  {
+    value: UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT,
+    label: 'Album + Parents',
+    hint: 'Album and parent notification',
+    icon: Tv,
+  },
 ];
 
 const SEND_TYPES = [
@@ -48,7 +63,7 @@ function isVideoFile(file) {
 }
 
 const SUCCESS_MESSAGES = {
-  [UPLOAD_TARGETS.CLASS_ALBUM]: 'Uploaded to class album successfully.',
+  [UPLOAD_TARGETS.CLASS_ALBUM]: 'Uploaded to class album and shared with class parents.',
   [UPLOAD_TARGETS.PARENT_DIRECT]: 'Media sent to parent successfully.',
   [UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT]: 'Uploaded to class album and shared with parents successfully.',
 };
@@ -75,6 +90,8 @@ export default function SendPhotos() {
     () => getMediaUploadLimitHint(uploadLimits || {}),
     [uploadLimits],
   );
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadMediaUploadLimits().then(setUploadLimits).catch(() => setUploadLimits(null));
@@ -140,19 +157,28 @@ export default function SendPhotos() {
     return `${selectedClass?.className || 'Class'} · Album + parents`;
   }, [form, needsClass, selectedAlbum, selectedClass, uploadTarget]);
 
-  const onFilesChange = (e) => {
-    const incoming = Array.from(e.target.files || []);
-    const accepted = filterAcceptedClassroomMediaFiles(incoming);
-    if (accepted.length < incoming.length) {
+  const applyPickedFiles = (fileList) => {
+    const picked = Array.from(fileList || []).filter(isAcceptedMediaFile);
+    if (picked.length < (fileList?.length || 0)) {
       toast('Some files were skipped. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
     }
-    const sizeCheck = validateMediaUploadFiles(accepted, uploadLimits || {});
+    const sizeCheck = validateMediaUploadFiles(picked, uploadLimits || {});
     if (!sizeCheck.valid) {
       toast(sizeCheck.error, 'error');
-      e.target.value = '';
       return;
     }
     setForm((prev) => ({ ...prev, files: sizeCheck.files }));
+  };
+
+  const onFilesChange = (e) => {
+    applyPickedFiles(e.target.files);
+    e.target.value = '';
+  };
+
+  const onFilesDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    applyPickedFiles(e.dataTransfer.files);
   };
 
   const validate = () => {
@@ -189,14 +215,24 @@ export default function SendPhotos() {
     setLoading(true);
     const uploadedClassId = form.classId;
     try {
-      const studentId = form.studentIds[0] || null;
+      const shareStudentIds = uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
+        || (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT && form.recipients !== 'class')
+        ? form.studentIds
+        : students.map((s) => s.id);
+
       await uploadTeacherAlbumMedia({
         uploadTarget,
         classId: form.classId || null,
-        studentId,
+        className: selectedClass?.className || null,
+        schoolId: user?.schoolId || null,
+        schoolName: user?.schoolName || selectedClass?.schoolName || null,
+        studentId: form.studentIds[0] || null,
+        studentIds: shareStudentIds,
+        recipients: form.recipients,
         caption: form.caption,
         files: form.files,
       });
+
       toast(SUCCESS_MESSAGES[uploadTarget], 'success');
       setShowConfirm(false);
       setForm({
@@ -237,22 +273,28 @@ export default function SendPhotos() {
 
           <div className="send-photos-card">
             <span className="send-photos-card__label">Upload target</span>
-            <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Upload target">
-              {UPLOAD_TARGET_OPTIONS.map(({ value, label, icon: Icon }) => (
+            <div className="send-photos-target-list" role="group" aria-label="Upload target">
+              {UPLOAD_TARGET_OPTIONS.map(({ value, label, hint, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
-                  className={`send-photos-target-card text-left ${uploadTarget === value ? 'send-photos-target-card--active' : ''}`}
+                  className={`send-photos-target-option${uploadTarget === value ? ' is-selected' : ''}`}
                   onClick={() => setUploadTarget(value)}
+                  aria-pressed={uploadTarget === value}
                 >
-                  <Icon size={20} className="mb-2 text-accent" />
-                  <span className="block text-sm font-bold text-brand">{label}</span>
+                  <span className="send-photos-target-option__icon" aria-hidden>
+                    <Icon size={20} />
+                  </span>
+                  <span className="send-photos-target-option__text">
+                    <strong>{label}</strong>
+                    <span className="send-photos-target-option__hint">{hint}</span>
+                  </span>
                 </button>
               ))}
             </div>
             {(uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT || uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT) && (
-              <div className="send-photos-privacy-warning mt-4">
-                <ShieldAlert size={18} className="shrink-0 text-accent" aria-hidden />
+              <div className="send-photos-privacy-warning">
+                <ShieldAlert size={18} className="send-photos-privacy-warning__icon" aria-hidden />
                 <p>
                   <strong>Privacy reminder:</strong> Parent-direct photos are visible only to authorized guardians.
                   Confirm you have consent before sharing identifiable student images.
@@ -343,12 +385,40 @@ export default function SendPhotos() {
 
           <div className="send-photos-card send-photos-upload-card send-photos-form">
             <span className="send-photos-card__label">Media &amp; caption</span>
-            <input
-              type="file"
-              accept={ACCEPTED_MEDIA}
-              multiple
-              onChange={onFilesChange}
-            />
+            <div
+              className={`file-upload${dragOver ? ' dragover' : ''}${form.files.length > 0 ? ' file-upload--has-files' : ''}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onFilesDrop}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label="Choose photos or videos to upload"
+            >
+              <div className="file-upload-icon" aria-hidden>
+                <Upload size={28} />
+              </div>
+              <div className="file-upload-text">
+                {form.files.length > 0
+                  ? `${form.files.length} file${form.files.length === 1 ? '' : 's'} selected — tap to change`
+                  : 'Tap to browse or drag photos & videos here'}
+              </div>
+              <div className="file-upload-hint">JPG, PNG, WebP, MP4, MOV, WebM</div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_MEDIA}
+                multiple
+                hidden
+                onChange={onFilesChange}
+              />
+            </div>
             <p className="send-photos-upload-limit-hint">{uploadLimitHint}</p>
             {form.files.length > 0 && (
               <div className="send-photos-file-preview">

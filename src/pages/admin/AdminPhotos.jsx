@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import Button from '../../components/ui/Button.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import {
   deletePhotoStudioImage,
@@ -11,7 +12,7 @@ import {
   listPhotoStudioImages,
   replacePhotoStudioImage,
 } from '../../services/photoStudioService.js';
-import { listAdminAlbums, uploadAdminAlbumMedia, linkExistingToAlbum } from '../../services/classAlbumService.js';
+import { listAdminAlbums, uploadAdminAlbumMedia, linkExistingToAlbum, UPLOAD_TARGETS } from '../../services/classAlbumService.js';
 import {
   filterAcceptedClassroomMediaFiles,
   getMediaUploadLimitHint,
@@ -96,6 +97,7 @@ function filterLoadedImages(images, { searchQuery, typeFilter, dateFilter }) {
 
 export default function AdminPhotos() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { tenantPath } = useTenantPath();
   const fileInputRef = useRef(null);
   const replaceInputRef = useRef(null);
@@ -435,6 +437,11 @@ export default function AdminPhotos() {
       const beforeIds = new Set(images.map((img) => String(img.id)));
       const uploadResult = await uploadAdminAlbumMedia({
         albumId: selectedAlbumId,
+        classId: selectedAlbum?.classId || null,
+        className: selectedAlbum?.className || selectedAlbum?.albumName || null,
+        schoolId: user?.schoolId || null,
+        schoolName: user?.schoolName || null,
+        uploadTarget: selectedAlbum?.classId ? UPLOAD_TARGETS.CLASS_ALBUM : null,
         caption: uploadCaption.trim() || undefined,
         files: uploadFiles,
       });

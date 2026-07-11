@@ -14,6 +14,7 @@ import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getParentDashboard } from '../../services/parentService.js';
 import { getFeeByApplication } from '../../services/feeService.js';
 import { ENROLLMENT_STATUSES } from '../../constants/enrollmentStatuses.js';
+import '../../styles/parent-dashboard.css';
 
 function statusBadgeVariant(status) {
   if (status === ENROLLMENT_STATUSES.ADMISSION_CONFIRMED || status === ENROLLMENT_STATUSES.ACCOUNT_CREATED) return 'success';
@@ -54,6 +55,7 @@ export default function ParentDashboard() {
   }
 
   const { parent, school, children, summary, enrollPath } = data || {};
+  const enrollmentHref = enrollPath || tenantPath('/enrollment/kidzee-print-form');
   const pendingActions = [];
   children?.forEach((child) => {
     if (child.status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED) {
@@ -115,25 +117,24 @@ export default function ParentDashboard() {
           </section>
         </div>
 
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-brand">
-            <GraduationCap size={20} /> My Children
+        <div className="parent-dashboard-children-head">
+          <h2 className="parent-dashboard-children-title">
+            <GraduationCap size={20} aria-hidden />
+            My Children
           </h2>
-          <Link to={enrollPath || '/enrollment'} className="premium-btn premium-btn-primary premium-btn-sm">
-            <Plus size={14} /> Enroll Another Child
-          </Link>
         </div>
 
         {!children?.length ? (
-          <div className="sb-card mx-auto max-w-xl p-10 text-center">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#dce9ff] text-[#0058be]">
+          <div className="parent-dashboard-empty">
+            <div className="parent-dashboard-empty__icon" aria-hidden>
               <FileText size={28} />
             </div>
-            <h3 className="mb-2 font-display text-xl font-bold text-[#091426]">No Enrollments Yet</h3>
-            <p className="mx-auto mb-6 max-w-sm text-sm leading-relaxed text-[#45474c]">
+            <h3>No Enrollments Yet</h3>
+            <p>
               Start an enrollment application for your child at {school?.name}.
             </p>
-            <Link to={enrollPath || '/enrollment'} className="premium-btn premium-btn-primary premium-btn-lg inline-flex">
+            <Link to={enrollmentHref} className="parent-dashboard-enroll-btn">
+              <Plus size={16} aria-hidden />
               Start Enrollment
             </Link>
           </div>
@@ -185,6 +186,17 @@ export default function ParentDashboard() {
                 );
               })}
             </div>
+
+            <Link to={enrollmentHref} className="parent-dashboard-enroll-card">
+              <span className="parent-dashboard-enroll-card__icon" aria-hidden>
+                <Plus size={22} />
+              </span>
+              <span className="parent-dashboard-enroll-card__text">
+                <strong>Enroll Another Child</strong>
+                <span>Start a new application for a sibling at {school?.name}</span>
+              </span>
+              <ArrowRight size={18} className="parent-dashboard-enroll-card__arrow" aria-hidden />
+            </Link>
 
             {pendingActions.length > 0 && (
               <div className="mb-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm">
