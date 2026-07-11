@@ -70,7 +70,13 @@ function SectionToggle({ sectionKey, label, desc, enabled, onChange }) {
   );
 }
 
-export default function LandingPageSettings({ landingPage, onChange, tenantSlug }) {
+export default function LandingPageSettings({
+  landingPage,
+  onChange,
+  tenantSlug,
+  activeSection = 'hero',
+  onSectionChange,
+}) {
   if (!landingPage) return null;
 
   const setSection = (key, enabled) => {
@@ -118,15 +124,33 @@ export default function LandingPageSettings({ landingPage, onChange, tenantSlug 
   };
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-5">
       <p className="text-sm text-muted">
         Control which sections appear on your public homepage
         {tenantSlug ? <> at <strong>/{tenantSlug}/</strong></> : null}.
         Hero background uses the <strong>Landing Hero Image</strong> from Logo &amp; Images.
       </p>
 
+      <div className="portal-settings__landing-subnav" role="tablist" aria-label="Landing page sections">
+        {SECTION_OPTIONS.map(({ key, label }) => {
+          const enabled = landingPage.sections?.[key] !== false;
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={activeSection === key}
+              className={`portal-settings__landing-subnav-btn${activeSection === key ? ' portal-settings__landing-subnav-btn--active' : ''}${!enabled ? ' portal-settings__landing-subnav-btn--off' : ''}`}
+              onClick={() => onSectionChange?.(key)}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="portal-settings__login-list">
-        {SECTION_OPTIONS.map(({ key, label, desc }) => (
+        {SECTION_OPTIONS.filter(({ key }) => key === activeSection).map(({ key, label, desc }) => (
           <SectionToggle
             key={key}
             sectionKey={key}
@@ -138,7 +162,19 @@ export default function LandingPageSettings({ landingPage, onChange, tenantSlug 
         ))}
       </div>
 
-      {landingPage.sections?.hero !== false && (
+      {landingPage.sections?.[activeSection] === false && (
+        <p className="portal-settings__field-note">
+          This section is hidden on your homepage. Turn it on above to edit its content.
+        </p>
+      )}
+
+      {activeSection === 'footer' && landingPage.sections?.footer !== false && (
+        <p className="portal-settings__field-note">
+          Footer contact info comes from <strong>School Details</strong>. Legal links are managed platform-wide.
+        </p>
+      )}
+
+      {activeSection === 'hero' && landingPage.sections?.hero !== false && (
         <div className="portal-settings__panel portal-settings__panel--nested">
           <h3 className="portal-settings__section-title">Hero Banner</h3>
           <div className="grid gap-4">
@@ -191,7 +227,7 @@ export default function LandingPageSettings({ landingPage, onChange, tenantSlug 
         </div>
       )}
 
-      {landingPage.sections?.campusBanner !== false && (
+      {activeSection === 'campusBanner' && landingPage.sections?.campusBanner !== false && (
         <div className="portal-settings__panel portal-settings__panel--nested">
           <h3 className="portal-settings__section-title">Campus Image</h3>
           <p className="portal-settings__field-note mb-4">Static photo only — no 360° viewer.</p>
@@ -203,7 +239,7 @@ export default function LandingPageSettings({ landingPage, onChange, tenantSlug 
         </div>
       )}
 
-      {landingPage.sections?.timeline !== false && (
+      {activeSection === 'timeline' && landingPage.sections?.timeline !== false && (
         <div className="portal-settings__panel portal-settings__panel--nested">
           <h3 className="portal-settings__section-title">Features Timeline</h3>
           <div className="grid gap-4 mb-4">
@@ -241,7 +277,7 @@ export default function LandingPageSettings({ landingPage, onChange, tenantSlug 
         </div>
       )}
 
-      {landingPage.sections?.map !== false && (
+      {activeSection === 'map' && landingPage.sections?.map !== false && (
         <div className="portal-settings__panel portal-settings__panel--nested">
           <h3 className="portal-settings__section-title">Campus Map</h3>
           <div className="grid gap-4">
@@ -272,7 +308,7 @@ export default function LandingPageSettings({ landingPage, onChange, tenantSlug 
         </div>
       )}
 
-      {landingPage.sections?.finalCta !== false && (
+      {activeSection === 'finalCta' && landingPage.sections?.finalCta !== false && (
         <div className="portal-settings__panel portal-settings__panel--nested">
           <h3 className="portal-settings__section-title">Final Call-to-Action</h3>
           <div className="grid gap-4">

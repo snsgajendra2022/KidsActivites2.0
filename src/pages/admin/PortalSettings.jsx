@@ -34,9 +34,9 @@ const TABS = [
 
 const TAB_META = Object.fromEntries(TABS.map((t) => [t.id, t]));
 
-function SettingsSectionHead({ title, description }) {
+function SettingsSectionHead({ title, description, className = '' }) {
   return (
-    <div className="portal-settings__section-head">
+    <div className={`portal-settings__section-head ${className}`.trim()}>
       <h2 className="portal-settings__section-title">{title}</h2>
       {description && <p className="portal-settings__section-desc">{description}</p>}
     </div>
@@ -236,6 +236,7 @@ export default function PortalSettings() {
   const { toast } = useToast();
   const [editTarget, setEditTarget] = useState('school');
   const [tab, setTab] = useState('identity');
+  const [landingSection, setLandingSection] = useState('hero');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(null);
   const [platformForm, setPlatformForm] = useState(null);
@@ -295,6 +296,12 @@ export default function PortalSettings() {
       });
     }
   }, [config, activeSchoolId]);
+
+  useEffect(() => {
+    if (tab === 'landing') setLandingSection('hero');
+    const main = document.querySelector('.portal-shell main');
+    main?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [tab]);
 
   useEffect(() => {
     if (tab === 'theme' && form?.theme) {
@@ -584,8 +591,9 @@ export default function PortalSettings() {
               </nav>
 
               <div className="portal-settings__content">
-                <div className="portal-settings__panel">
+                <div className="portal-settings__panel portal-settings__panel--tab">
                   <SettingsSectionHead
+                    className="portal-settings__section-head--mobile"
                     title={TAB_META[tab]?.label}
                     description={TAB_META[tab]?.desc}
                   />
@@ -981,7 +989,7 @@ export default function PortalSettings() {
               iconUrl={form.branding.logoIconUrl}
               logoUrl={form.branding.logoUrl}
             />
-            <div className="portal-settings__grid-2">
+            <div className="portal-settings__images-grid">
               <ImageUploadField
                 label="Sidebar Icon"
                 hint="Square mark for the collapsed sidebar rail. PNG or SVG, 128×128 px recommended."
@@ -1040,6 +1048,8 @@ export default function PortalSettings() {
           <LandingPageSettings
             landingPage={form.landingPage}
             tenantSlug={activeSchoolMeta?.slug || tenantSlug}
+            activeSection={landingSection}
+            onSectionChange={setLandingSection}
             onChange={(landingPage) => setForm((f) => ({ ...f, landingPage }))}
           />
         )}
