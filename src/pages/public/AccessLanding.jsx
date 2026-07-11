@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
 import CinematicHero from '../../components/public/CinematicHero.jsx';
-import JourneyNav from '../../components/public/JourneyNav.jsx';
 import EditorialTimeline from '../../components/public/EditorialTimeline.jsx';
 import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
 import EditorialFooter from '../../components/public/EditorialFooter.jsx';
@@ -26,8 +25,6 @@ import imgConnected from '../../assets/timeline_connected.jpg';
 const DEFAULT_HERO_HEADLINE = ['Manage Kids Activities,', 'Admissions, and Parents', 'in One Platform'];
 const DEFAULT_HERO_SUBTEXT =
   'Launch your activity workspace in minutes.\nManage enrollments, schedules, payments, documents, and parent communication from one trusted platform.';
-
-
 
 const TIMELINE_STEPS = [
   {
@@ -101,12 +98,14 @@ export default function AccessLanding() {
           label: <>Create Your Workspace <ArrowRight size={18} /></>,
         }}
         secondaryAction={{
-          to: '/workspace/new',
-          label: 'Enrollment',
+          onClick: () => {
+            document.getElementById('platform-overview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          },
+          label: 'See All Features',
         }}
       />
 
-      <section className="sb-editorial-section sb-editorial-section--lavender">
+      <section className="sb-editorial-section sb-editorial-section--cream sb-access-section">
         <div className="sb-container sb-access-cards">
           <div className="sb-access-card">
             <div className="sb-access-card__icon">

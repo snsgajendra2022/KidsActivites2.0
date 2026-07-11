@@ -100,6 +100,33 @@
   color: var(--sb-purple-dark);
 }
 
+.sb-journey-nav--clickable .sb-journey-nav__step--clickable {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.sb-journey-nav--clickable .sb-journey-nav__step--clickable:hover .sb-journey-nav__dot {
+  border-color: var(--sb-purple);
+  color: var(--sb-purple);
+  transform: scale(1.06);
+}
+
+.sb-journey-nav--clickable .sb-journey-nav__step--clickable:hover .sb-journey-nav__label {
+  color: var(--sb-purple-dark);
+}
+
+.sb-journey-nav--clickable .sb-journey-nav__step--clickable:focus-visible {
+  outline: none;
+}
+
+.sb-journey-nav--clickable .sb-journey-nav__step--clickable:focus-visible .sb-journey-nav__dot {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sb-purple) 28%, transparent);
+}
+
 .sb-journey-nav--compact {
   padding: 1rem 0;
 }
