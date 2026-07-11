@@ -337,7 +337,8 @@ export function PortalConfigProvider({ children, user = null }) {
         : (config?.tagline || ''),
       footerText: isPlatformPublic
         ? (platform?.footerText || DEFAULT_PORTAL_CONFIG.footerText)
-        : (config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
+        : (config?.footer?.copyright || config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
+      footer: isPlatformPublic ? null : config?.footer,
       landingPage: isPlatformPublic ? null : config?.landingPage,
       branding: isPlatformPublic
         ? { ...DEFAULT_PORTAL_CONFIG.branding, ...(platform?.branding || {}) }

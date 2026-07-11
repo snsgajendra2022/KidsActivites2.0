@@ -2,7 +2,7 @@ import { ApiError } from '../services/api/client.js';
 import { getMediaUploadLimits } from '../services/mediaService.js';
 
 export const DEFAULT_MAX_IMAGE_MB = 25;
-export const DEFAULT_MAX_VIDEO_MB = 150;
+export const DEFAULT_MAX_VIDEO_MB = 128;
 
 export const ACCEPTED_CLASSROOM_MEDIA =
   'image/jpeg,image/png,image/webp,image/*,video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm,.m4v';

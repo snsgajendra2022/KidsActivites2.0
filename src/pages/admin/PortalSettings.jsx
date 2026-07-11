@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, KeyRound, Layout, Menu, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode, Home } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode, Home, PanelBottom } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -16,18 +16,20 @@ import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
 import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
 import EnrollmentFormBuilder from './EnrollmentFormBuilder.jsx';
 import { cloneEnrollmentFormConfig, DEFAULT_ENROLLMENT_FORM } from '../../data/defaultEnrollmentFormConfig.js';
-import { FOOTER_LINKS } from '../../components/layout/PublicFooter.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { mergeLandingPage } from '../../data/defaultLandingPage.js';
 import LandingPageSettings from '../../components/admin/LandingPageSettings.jsx';
+import FooterSettings from '../../components/admin/FooterSettings.jsx';
+import { mergeFooterConfig } from '../../data/defaultFooterConfig.js';
 
 const TABS = [
-  { id: 'identity', label: 'Portal Identity', icon: Layout, desc: 'Name, tagline & footer' },
+  { id: 'identity', label: 'Portal Identity', icon: Layout, desc: 'Name & tagline' },
   { id: 'login', label: 'Login Access', icon: KeyRound, desc: 'Sign-in methods' },
   { id: 'email', label: 'Email Settings', icon: Mail, desc: 'School SMTP mail' },
   // Theme Colors — hidden for now; re-enable when tenant theme customization is ready.
   // { id: 'theme', label: 'Theme Colors', icon: Palette, desc: 'Brand & accent colors' },
   { id: 'school', label: 'School Details', icon: Menu, desc: 'Contact information' },
+  { id: 'footer', label: 'Footer', icon: PanelBottom, desc: 'Contact, socials & links' },
   { id: 'images', label: 'Logo & Images', icon: Image, desc: 'Logos & hero images' },
   { id: 'landing', label: 'Landing Page', icon: Home, desc: 'Homepage sections & content' },
 ];
@@ -293,6 +295,11 @@ export default function PortalSettings() {
           config.portalName,
           config.school?.name,
         ),
+        footer: mergeFooterConfig(
+          config.footer,
+          config.school?.name,
+          config.footerText,
+        ),
       });
     }
   }, [config, activeSchoolId]);
@@ -414,6 +421,7 @@ export default function PortalSettings() {
       );
       await updateConfig({
         ...form,
+        footerText: form.footer?.copyright?.trim() || form.footerText,
         menuCustomization,
         customMenuItems: (form.customMenuItems || []).filter((i) => i.label?.trim() && i.to?.trim()),
         menuOrder: form.menuOrder || {},
@@ -618,12 +626,6 @@ export default function PortalSettings() {
                 label="Portal Tagline"
                 value={form.tagline}
                 onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
-                variant="enrollment"
-              />
-              <Input
-                label="Footer Text"
-                value={form.footerText}
-                onChange={(e) => setForm((f) => ({ ...f, footerText: e.target.value }))}
                 variant="enrollment"
               />
             </div>
@@ -861,12 +863,7 @@ export default function PortalSettings() {
               <div className="mb-6 rounded-xl border border-black/5 p-4" style={{ background: form.theme.brandColor }}>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-on-primary-muted">Footer preview</p>
                 <p className="text-sm font-semibold text-on-primary">{form.portalName}</p>
-                <p className="mt-1 text-xs text-on-primary-subtle">{form.footerText}</p>
-                <div className="mt-3 flex flex-wrap gap-4">
-                  {FOOTER_LINKS.map(({ label, to }) => (
-                    <Link key={to} to={to} className="public-footer-link">{label}</Link>
-                  ))}
-                </div>
+                <p className="mt-1 text-xs text-on-primary-subtle">{form.footer?.copyright || form.footerText}</p>
               </div>
 
               <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">Color Presets</p>
@@ -973,11 +970,21 @@ export default function PortalSettings() {
                 <>
                   Used on the public landing page, login page, and enrollment header for{' '}
                   <strong>/{activeSchoolMeta?.slug || tenantSlug}</strong>.
+                  Footer contact fields can also be edited under <strong>Footer</strong>.
                 </>
               ) : (
                 <>School contact details shown on the public school portal and login page.</>
               )
             }
+          />
+        )}
+
+        {tab === 'footer' && (
+          <FooterSettings
+            footer={form.footer}
+            school={form.school}
+            onFooterChange={(footer) => setForm((f) => ({ ...f, footer }))}
+            onSchoolChange={(school) => setForm((f) => ({ ...f, school }))}
           />
         )}
 

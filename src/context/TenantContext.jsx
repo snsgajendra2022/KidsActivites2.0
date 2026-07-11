@@ -11,6 +11,7 @@ import {
   isTenantSubdomainHost,
   resolveTenantSlug,
 } from '../services/api/config.js';
+import { isTransientApiError } from '../services/api/client.js';
 
 const TenantContext = createContext(null);
 
@@ -56,8 +57,8 @@ export function TenantProvider({ children }) {
       .then((resolved) => {
         if (!cancelled) setSchool(resolved);
       })
-      .catch(() => {
-        if (!cancelled) setSchool(null);
+      .catch((err) => {
+        if (!cancelled && !isTransientApiError(err)) setSchool(null);
       })
       .finally(() => {
         if (!cancelled) setSchoolResolving(false);

@@ -1,10 +1,10 @@
 import { useNetworkStore } from '../../store/networkStore.js';
-import { WifiOff, AlertTriangle } from 'lucide-react';
+import { WifiOff, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function NetworkBanner() {
-  const { isOnline, slowConnection } = useNetworkStore();
+  const { isOnline, slowConnection, serverReconnecting } = useNetworkStore();
 
-  if (isOnline && !slowConnection) return null;
+  if (isOnline && !slowConnection && !serverReconnecting) return null;
 
   const offline = !isOnline;
 
@@ -13,13 +13,20 @@ export default function NetworkBanner() {
       className={`flex shrink-0 items-center justify-center gap-2 border-b px-4 py-2.5 text-sm font-semibold ${
         offline
           ? 'border-rose-100 bg-rose-50 text-rose-600'
-          : 'border-amber-100 bg-amber-50 text-amber-700'
+          : serverReconnecting
+            ? 'border-sky-100 bg-sky-50 text-sky-700'
+            : 'border-amber-100 bg-amber-50 text-amber-700'
       }`}
     >
       {offline ? (
         <>
           <WifiOff size={16} />
           You are offline. Upload will resume when the connection is restored.
+        </>
+      ) : serverReconnecting ? (
+        <>
+          <RefreshCw size={16} className="animate-spin" />
+          Reconnecting to server… Your session is preserved.
         </>
       ) : (
         <>

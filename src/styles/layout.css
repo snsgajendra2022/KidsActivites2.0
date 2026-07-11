@@ -178,7 +178,12 @@
 /* Public footer */
 .public-footer {
   background-color: var(--sb-navy);
-  border-top-color: color-mix(in srgb, var(--sb-gold) 20%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--sb-gold) 20%, transparent);
+}
+
+.public-footer.sb-tenant-footer {
+  background: var(--tenant-footer-bg);
+  border-top: 3px solid var(--tenant-footer-accent, #0058be);
 }
 
 .public-footer-link {

@@ -170,7 +170,7 @@ export default function LandingPageSettings({
 
       {activeSection === 'footer' && landingPage.sections?.footer !== false && (
         <p className="portal-settings__field-note">
-          Footer contact info comes from <strong>School Details</strong>. Legal links are managed platform-wide.
+          Footer content is managed under <strong>Footer</strong> in the main settings tabs.
         </p>
       )}
 

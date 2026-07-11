@@ -10,6 +10,7 @@ import {
 } from '../services/authService.js';
 import { isDemoUser } from '../services/api/demoMode.js';
 import { clearMockStorage } from '../services/api/clearMockStorage.js';
+import { AUTH_SESSION_EXPIRED_EVENT, isTransientApiError } from '../services/api/client.js';
 import { getAccessToken } from '../services/api/tokenStorage.js';
 import { isApiEnabled } from '../services/api/config.js';
 import { disconnectChatRealtime } from '../services/chatRealtime.js';
@@ -59,8 +60,8 @@ export function AuthProvider({ children }) {
           persistUser({ ...profile, isDemoSession: false });
           setUser({ ...profile, isDemoSession: false });
         }
-      } catch {
-        if (!cancelled) {
+      } catch (err) {
+        if (!cancelled && !isTransientApiError(err)) {
           await logoutSession();
           localStorage.removeItem(STORAGE_KEY);
           setUser(null);
@@ -71,6 +72,20 @@ export function AuthProvider({ children }) {
     })();
 
     return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const onSessionExpired = () => {
+      disconnectChatRealtime();
+      disconnectNotificationRealtime();
+      logoutSession().finally(() => {
+        localStorage.removeItem(STORAGE_KEY);
+        setUser(null);
+      });
+    };
+
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, onSessionExpired);
+    return () => window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, onSessionExpired);
   }, []);
 
   const login = async ({ email, password }) => {

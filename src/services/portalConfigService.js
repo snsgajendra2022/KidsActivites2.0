@@ -1,4 +1,5 @@
 import { DEFAULT_PORTAL_CONFIG } from '../data/defaultPortalConfig.js';
+import { mergeFooterConfig } from '../data/defaultFooterConfig.js';
 import { mergeLandingPage } from '../data/defaultLandingPage.js';
 import { DEFAULT_ENROLLMENT_FORM, cloneEnrollmentFormConfig } from '../data/defaultEnrollmentFormConfig.js';
 import { NAV_BY_ROLE } from '../constants/navigation.js';
@@ -194,6 +195,7 @@ function buildDefaultsForSchool(schoolId, schoolFromApi = null) {
     customMenuItems: [],
     menuOrder: {},
     landingPage: mergeLandingPage(null, baseSchool.name || DEFAULT_PORTAL_CONFIG.portalName, baseSchool.name || 'our school'),
+    footer: mergeFooterConfig(null, baseSchool.name, DEFAULT_PORTAL_CONFIG.footerText),
   };
 }
 
@@ -250,6 +252,11 @@ function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID, schoolFromApi = null)
       stored.landingPage,
       stored.portalName || defaults.portalName,
       stored.school?.name || defaults.school?.name || 'our school',
+    ),
+    footer: mergeFooterConfig(
+      stored.footer,
+      stored.school?.name || defaults.school?.name,
+      stored.footerText || defaults.footerText,
     ),
   };
 
@@ -433,6 +440,13 @@ function mockSavePortalConfig(updates, schoolId) {
         updates.school?.name || current.school?.name,
       )
       : current.landingPage,
+    footer: updates.footer
+      ? mergeFooterConfig(
+        { ...current.footer, ...updates.footer },
+        updates.school?.name || current.school?.name,
+        updates.footerText || current.footerText,
+      )
+      : current.footer,
   };
   persistSchoolConfig(id, next);
   return next;
