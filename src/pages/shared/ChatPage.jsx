@@ -54,6 +54,29 @@ function roleLabel(role) {
   return 'Teacher';
 }
 
+function getTeacherParticipantLabel(conv, participantId) {
+  if (!participantId) return { title: '', subtitle: '' };
+  const parentName = conv.participantNames?.[participantId] || '';
+  const studentNames = conv.participantStudentNames?.[participantId];
+  if (studentNames) {
+    return {
+      title: studentNames,
+      subtitle: parentName ? `Parent · ${parentName}` : 'Parent',
+    };
+  }
+  return { title: parentName, subtitle: roleLabel(conv.role) };
+}
+
+function getTeacherContactLabel(contact) {
+  if (contact.studentNames) {
+    return {
+      title: contact.studentNames,
+      subtitle: contact.name ? `Parent · ${contact.name}` : 'Parent',
+    };
+  }
+  return { title: contact.name || '', subtitle: roleLabel(contact.role) };
+}
+
 function applyReadReceipt(messages, readerId, readAt, currentUserId) {
   if (!readAt || readerId === currentUserId) return messages;
   const readTime = new Date(readAt).getTime();
@@ -251,14 +274,17 @@ export default function ChatPage() {
       .finally(() => setContactsLoading(false));
   };
 
+  const isTeacher = user?.role === 'teacher';
+
   const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return conversations;
     return conversations.filter((c) => {
       const otherId = getOtherParticipant(c, user?.id);
       const name = c.participantNames[otherId]?.toLowerCase() || '';
+      const studentNames = c.participantStudentNames?.[otherId]?.toLowerCase() || '';
       const preview = c.lastMessage?.toLowerCase() || '';
-      return name.includes(q) || preview.includes(q);
+      return name.includes(q) || studentNames.includes(q) || preview.includes(q);
     });
   }, [conversations, search, user?.id]);
 
@@ -266,12 +292,18 @@ export default function ChatPage() {
     const q = contactSearch.trim().toLowerCase();
     if (!q) return contacts;
     return contacts.filter((c) =>
-      c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q));
+      c.name?.toLowerCase().includes(q)
+      || c.email?.toLowerCase().includes(q)
+      || c.studentNames?.toLowerCase().includes(q));
   }, [contacts, contactSearch]);
 
   const activeConv = conversations.find((c) => c.id === active);
   const otherId = activeConv ? getOtherParticipant(activeConv, user?.id) : null;
-  const otherName = otherId ? activeConv.participantNames[otherId] : '';
+  const otherParticipantLabel = isTeacher && activeConv
+    ? getTeacherParticipantLabel(activeConv, otherId)
+    : { title: otherId ? activeConv.participantNames[otherId] : '', subtitle: '' };
+  const otherName = otherParticipantLabel.title;
+  const otherMeta = otherParticipantLabel.subtitle;
   const isAdminThread = activeConv?.role === 'admin';
 
   const selectConversation = (id) => {
@@ -400,7 +432,10 @@ export default function ChatPage() {
               ) : (
                 filteredConversations.map((c) => {
                   const oid = getOtherParticipant(c, user.id);
-                  const name = c.participantNames[oid];
+                  const label = isTeacher
+                    ? getTeacherParticipantLabel(c, oid)
+                    : { title: c.participantNames[oid], subtitle: '' };
+                  const name = label.title;
                   const unread = getConversationUnread(c, user.id);
                   return (
                     <button
@@ -449,6 +484,8 @@ export default function ChatPage() {
                     <p className="messages-thread-head__meta">
                       {isAdminThread ? (
                         <><Shield size={12} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />School administration</>
+                      ) : isTeacher && otherMeta ? (
+                        otherMeta
                       ) : (
                         `Available · ${roleLabel(activeConv.role)}`
                       )}
@@ -558,7 +595,11 @@ export default function ChatPage() {
                 ) : filteredContacts.length === 0 ? (
                   <p className="messages-compose-modal__empty">No contacts available to message.</p>
                 ) : (
-                  filteredContacts.map((contact) => (
+                  filteredContacts.map((contact) => {
+                    const label = isTeacher
+                      ? getTeacherContactLabel(contact)
+                      : { title: contact.name, subtitle: roleLabel(contact.role) };
+                    return (
                     <button
                       key={contact.id}
                       type="button"
@@ -566,14 +607,15 @@ export default function ChatPage() {
                       onClick={() => handleStartConversation(contact)}
                     >
                       <div className={`messages-conv__avatar ${contact.role === 'admin' ? 'messages-conv__avatar--admin' : ''}`}>
-                        {getInitials(contact.name)}
+                        {getInitials(label.title)}
                       </div>
                       <div className="messages-compose-contact__body">
-                        <p className="messages-conv__name">{contact.name}</p>
-                        <p className="messages-compose-contact__meta">{roleLabel(contact.role)}</p>
+                        <p className="messages-conv__name">{label.title}</p>
+                        <p className="messages-compose-contact__meta">{label.subtitle}</p>
                       </div>
                     </button>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

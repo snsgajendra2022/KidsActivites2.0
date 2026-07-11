@@ -15,10 +15,29 @@ function mergePhotos(photoLists) {
   return Array.from(merged.values());
 }
 
+function attachChildContext(photos, children) {
+  return photos.map((photo) => {
+    const matchingChildren = (children || []).filter(
+      (child) => child.classId && photo.classId && String(child.classId) === String(photo.classId),
+    );
+    if (!matchingChildren.length) return photo;
+    const studentIds = [
+      ...new Set([
+        ...(photo.studentIds || []),
+        ...matchingChildren.map((child) => child.applicationId).filter(Boolean),
+      ]),
+    ];
+    const childNames = matchingChildren
+      .map((child) => child.studentName || child.student?.fullName)
+      .filter(Boolean);
+    return { ...photo, studentIds, childNames };
+  });
+}
+
 async function fetchClassAlbumPhotos(classId, className, school) {
   try {
     const album = await getParentAlbumByClass(classId);
-    const photos = albumDetailToParentPhotos(
+    return albumDetailToParentPhotos(
       {
         ...album,
         classId: album?.classId || classId,
@@ -27,21 +46,32 @@ async function fetchClassAlbumPhotos(classId, className, school) {
       },
       school,
     );
-    if (photos.length > 0) return photos;
-  } catch {
-    // fall through to media API
-  }
-
-  try {
-    return await getPhotos({ classId, className });
   } catch {
     return [];
   }
 }
 
+async function fetchDirectPhotos(children) {
+  const studentFetches = children
+    .filter((child) => child.applicationId)
+    .map((child) => getPhotos({ studentId: child.applicationId }).catch(() => []));
+
+  return mergePhotos(await Promise.all(studentFetches)).map((photo) => ({
+    ...photo,
+    source: photo.source || 'parent_direct',
+    studentIds: [
+      ...new Set([
+        ...(photo.studentIds || []),
+        ...(photo.studentId ? [photo.studentId] : []),
+      ]),
+    ],
+  }));
+}
+
 /**
- * Parent → dashboard/children → student classId → GET /parent/albums/{classId}
- * Also loads GET /media/photos?studentId= for direct shares.
+ * Parent photos split by source:
+ * - directPhotos: GET /media/photos?studentId= (PARENT_DIRECT shares)
+ * - albumPhotos: GET /parent/albums/{classId} (CLASS_ALBUM)
  */
 export async function loadParentClassPhotos(parentId, schoolId, user) {
   const dashboard = await getParentDashboard(parentId, schoolId, user);
@@ -68,20 +98,16 @@ export async function loadParentClassPhotos(parentId, schoolId, user) {
     fetchClassAlbumPhotos(classId, className, school)
   ));
 
-  const studentFetches = children
-    .filter((child) => child.applicationId)
-    .map((child) => getPhotos({
-      studentId: child.applicationId,
-      classId: child.classId,
-      className: child.className,
-    }).catch(() => []));
-
-  const photos = mergePhotos(await Promise.all([...albumFetches, ...studentFetches]));
+  const [albumPhotos, directPhotos] = await Promise.all([
+    attachChildContext(mergePhotos(await Promise.all(albumFetches)), children),
+    attachChildContext(await fetchDirectPhotos(children), children),
+  ]);
 
   return {
     school,
     children,
-    photos,
+    directPhotos,
+    albumPhotos,
     classTargets: [...classMap.values()],
   };
 }

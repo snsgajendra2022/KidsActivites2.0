@@ -5,6 +5,7 @@ import { routeRequest } from './api/routeRequest.js';
 import { getSchoolById } from './schoolService.js';
 import { STATUS_LABELS } from '../constants/enrollmentStatuses.js';
 import { INITIAL_APPLICATIONS } from '../data/mockApplications.js';
+import { getMyFee, normalizeFee } from './feeService.js';
 
 const APPS_KEY = 'sb_applications';
 
@@ -37,7 +38,12 @@ function mapChildApplication(app) {
     parent: app.parent,
     address: app.address,
     academic: app.academic,
+    medical: app.medical,
     documents: app.documents,
+    declaration: app.declaration,
+    signature: app.signature,
+    formType: app.formType,
+    formData: app.formData,
     statusHistory: app.statusHistory,
   });
 }
@@ -83,15 +89,27 @@ export function normalizeParentChild(child) {
     parent: child.parent || {},
     address: child.address || {},
     academic: child.academic || {},
+    medical: child.medical || {},
     documents: child.documents || {},
+    declaration: child.declaration || {},
+    signature: child.signature || {},
+    formType: child.formType || null,
+    formData: child.formData || child.printableEnrollment || null,
     statusHistory: child.statusHistory || [],
   };
+}
+
+function kidzeeEnrollPath(school) {
+  return school?.slug
+    ? `/${school.slug}/enrollment/kidzee-print-form`
+    : '/enrollment/kidzee-print-form';
 }
 
 function normalizeParentDashboard(data) {
   if (!data) return data;
   return {
     ...data,
+    enrollPath: kidzeeEnrollPath(data.school),
     children: (data.children || []).map((child) => normalizeParentChild(child)),
   };
 }
@@ -149,9 +167,7 @@ async function mockGetParentDashboard(parentId, schoolId) {
         'documents_pending',
       ].includes(c.status)).length,
     },
-    enrollPath: school?.slug
-      ? `/${school.slug}/enrollment/kidzee-print-form`
-      : '/enrollment/kidzee-print-form',
+    enrollPath: kidzeeEnrollPath(school),
   };
 }
 
@@ -192,6 +208,40 @@ export async function getParentChild(parentId, applicationId, user) {
     apiFn: async () => {
       const data = await api.get(`/parent/children/${applicationId}`);
       return normalizeParentChild(data);
+    },
+  });
+}
+
+/** Single call: child + fee + siblings for enrollment detail page. */
+export async function getParentEnrollmentDetail(applicationId, user) {
+  return routeRequest({
+    user,
+    mockFn: async () => {
+      await delay(200);
+      const parentId = user?.id;
+      const dashboard = await mockGetParentDashboard(parentId, user?.schoolId);
+      const child = dashboard.children.find((c) => c.applicationId === applicationId) || null;
+      let fee = null;
+      if (child?.applicationId) {
+        fee = await getMyFee(child.applicationId, user);
+      }
+      return {
+        child,
+        fee,
+        children: dashboard.children,
+        school: dashboard.school,
+        enrollPath: dashboard.enrollPath,
+      };
+    },
+    apiFn: async () => {
+      const data = await api.get(`/parent/children/${applicationId}/enrollment-detail`);
+      return {
+        ...data,
+        enrollPath: kidzeeEnrollPath(data.school),
+        child: normalizeParentChild(data.child),
+        children: (data.children || []).map((child) => normalizeParentChild(child)),
+        fee: data.fee ? normalizeFee(data.fee) : null,
+      };
     },
   });
 }

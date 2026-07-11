@@ -51,10 +51,9 @@ const ALL_ACCOUNT_ROLES = [
   ROLES.SUPPORT_STAFF,
 ];
 
-// Administrative roles that can be created via this page. Teachers use the Teachers page.
-const SCHOOL_ADMIN_CREATABLE = [ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER, ROLES.ACCOUNTANT];
+const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 
-const EMPTY_FORM = { name: '', email: '', mobile: '', role: ROLES.SCHOOL_ADMIN, schoolId: '' };
+const EMPTY_FORM = { name: '', email: '', mobile: '', schoolId: '' };
 
 export default function AdminUsers() {
   const { user } = useAuth();
@@ -74,11 +73,6 @@ export default function AdminUsers() {
   const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
   const canManage = isSuperAdmin || user?.role === ROLES.SCHOOL_ADMIN;
   const defaultSchoolId = isSuperAdmin ? activeSchoolId : (user?.schoolId || activeSchoolId);
-
-  const creatableRoles = useMemo(
-    () => (isSuperAdmin ? [ROLES.SUPER_ADMIN, ...SCHOOL_ADMIN_CREATABLE] : SCHOOL_ADMIN_CREATABLE),
-    [isSuperAdmin],
-  );
 
   const loadUsers = () => {
     setLoading(true);
@@ -119,13 +113,18 @@ export default function AdminUsers() {
       toast('Name and email are required.', 'warning');
       return;
     }
+    const mobile = form.mobile.trim();
+    if (mobile && !MOBILE_PATTERN.test(mobile)) {
+      toast('Mobile must be a valid 10-digit number.', 'warning');
+      return;
+    }
     setSaving(true);
     try {
       const result = await createAdminUser({
         name: form.name.trim(),
         email: form.email.trim(),
-        mobile: form.mobile.trim() || undefined,
-        role: form.role,
+        mobile: mobile || undefined,
+        role: ROLES.SCHOOL_ADMIN,
         schoolId: form.schoolId || defaultSchoolId || undefined,
       }, user);
       setTempPassword(result.tempPassword);
@@ -258,19 +257,9 @@ export default function AdminUsers() {
               value={form.mobile}
               onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))}
               placeholder="10-digit mobile"
+              inputMode="numeric"
+              maxLength={10}
             />
-            <label className="admin-field-label">
-              Role
-              <select
-                className="admin-users-filters__select"
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              >
-                {creatableRoles.map((r) => (
-                  <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>
-                ))}
-              </select>
-            </label>
             {isSuperAdmin && schools.length > 0 ? (
               <label className="admin-field-label">
                 School
