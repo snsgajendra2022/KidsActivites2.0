@@ -2,14 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
   BadgeCheck,
+  Camera,
   FileEdit,
   FileSignature,
   FileText,
   GraduationCap,
   Headphones,
   Heart,
+  MessageCircle,
+  Palette,
   Phone,
   RefreshCw,
+  School,
   SearchCheck,
   Send,
   Shield,
@@ -64,8 +68,41 @@ const tileEase = [0.22, 1, 0.36, 1];
 
 const ROLE_ICONS = [Shield, SearchCheck, Wallet, GraduationCap, Heart, Headphones];
 const MOBILE_ICONS = [Heart, GraduationCap, Shield];
+const HOW_ICONS = [School, Palette, FileText, BadgeCheck, Camera];
 
-function SpotlightPanel({ items, icons, onStepChange, stepPrefix = 'Step', ariaLabel }) {
+function SpotlightChip({
+  item,
+  index,
+  active,
+  onPick,
+  Icon,
+  iconSize = 16,
+}) {
+  return (
+    <motion.button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      className={`sb-enroll__chip sb-enroll__chip--card${active ? ' is-active' : ''}`}
+      onClick={() => onPick(index)}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.97 }}
+    >
+      {Icon && (
+        <span className="sb-enroll__chip-icon" aria-hidden>
+          <Icon size={iconSize} strokeWidth={1.75} />
+        </span>
+      )}
+      <span className="sb-enroll__chip-num">{item.step}</span>
+      <span className="sb-enroll__chip-label">{item.title}</span>
+      {item.description && (
+        <span className="sb-enroll__chip-desc">{item.description}</span>
+      )}
+    </motion.button>
+  );
+}
+
+function SpotlightPanel({ items, icons, onStepChange, stepPrefix = 'Step', ariaLabel, variant }) {
   const [active, setActive] = useState(0);
   const current = items[active] || items[0];
   const CurrentIcon = icons?.[active] || current?.icon;
@@ -81,7 +118,7 @@ function SpotlightPanel({ items, icons, onStepChange, stepPrefix = 'Step', ariaL
   };
 
   return (
-    <div className="sb-spotlight">
+    <div className={`sb-spotlight${variant ? ` sb-spotlight--${variant}` : ''}`}>
       <AnimatePresence mode="wait">
         <motion.div
           key={current?.title}
@@ -114,24 +151,14 @@ function SpotlightPanel({ items, icons, onStepChange, stepPrefix = 'Step', ariaL
         {items.map((item, index) => {
           const Icon = icons?.[index] || item.icon;
           return (
-            <motion.button
+            <SpotlightChip
               key={`${item.title}-${index}`}
-              type="button"
-              role="tab"
-              aria-selected={active === index}
-              className={`sb-enroll__chip${active === index ? ' is-active' : ''}`}
-              onClick={() => pick(index)}
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              {Icon && (
-                <span className="sb-enroll__chip-icon" aria-hidden>
-                  <Icon size={14} strokeWidth={1.75} />
-                </span>
-              )}
-              <span className="sb-enroll__chip-num">{item.step}</span>
-              <span className="sb-enroll__chip-label">{item.title}</span>
-            </motion.button>
+              item={item}
+              index={index}
+              active={active === index}
+              onPick={pick}
+              Icon={Icon}
+            />
           );
         })}
       </div>
@@ -139,7 +166,7 @@ function SpotlightPanel({ items, icons, onStepChange, stepPrefix = 'Step', ariaL
   );
 }
 
-function GroupedSpotlightPanel({ groups, onStepChange }) {
+function GroupedSpotlightPanel({ groups, onStepChange, variant, stepPrefix = 'Capability' }) {
   const flatItems = useMemo(
     () => groups.flatMap((group) => group.items),
     [groups],
@@ -161,7 +188,7 @@ function GroupedSpotlightPanel({ groups, onStepChange }) {
   let offset = 0;
 
   return (
-    <div className="sb-spotlight sb-spotlight--grouped">
+    <div className={`sb-spotlight sb-spotlight--grouped${variant ? ` sb-spotlight--${variant}` : ''}`}>
       <AnimatePresence mode="wait">
         <motion.div
           key={current?.title}
@@ -183,7 +210,7 @@ function GroupedSpotlightPanel({ groups, onStepChange }) {
             </motion.span>
           )}
           <div>
-            <span className="sb-enroll__spotlight-step">Capability {current?.step}</span>
+            <span className="sb-enroll__spotlight-step">{stepPrefix} {current?.step}</span>
             <h4>{current?.title}</h4>
             <p>{current?.description}</p>
           </div>
@@ -200,24 +227,14 @@ function GroupedSpotlightPanel({ groups, onStepChange }) {
                 const index = groupStart + localIndex;
                 const Icon = item.icon;
                 return (
-                  <motion.button
+                  <SpotlightChip
                     key={`${group.label}-${item.title}`}
-                    type="button"
-                    role="tab"
-                    aria-selected={active === index}
-                    className={`sb-enroll__chip${active === index ? ' is-active' : ''}`}
-                    onClick={() => pick(index)}
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    {Icon && (
-                      <span className="sb-enroll__chip-icon" aria-hidden>
-                        <Icon size={14} strokeWidth={1.75} />
-                      </span>
-                    )}
-                    <span className="sb-enroll__chip-num">{item.step}</span>
-                    <span className="sb-enroll__chip-label">{item.title}</span>
-                  </motion.button>
+                    item={item}
+                    index={index}
+                    active={active === index}
+                    onPick={pick}
+                    Icon={Icon}
+                  />
                 );
               })}
             </div>
@@ -230,75 +247,8 @@ function GroupedSpotlightPanel({ groups, onStepChange }) {
   );
 }
 
-function HowPanel({ items, onStepChange }) {
-  const [active, setActive] = useState(0);
-  const current = items[active] || items[0];
-
-  const pick = (index) => {
-    setActive(index);
-    onStepChange?.(index);
-  };
-
-  return (
-    <div className="sb-plat-how">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={current?.title}
-          className="sb-plat-how__hero"
-          initial={{ opacity: 0, y: 14, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -10, scale: 0.99 }}
-          transition={{ duration: 0.38, ease: tileEase }}
-        >
-          <motion.span
-            className="sb-plat-how__hero-step"
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.08 }}
-          >
-            Step {current?.step}
-          </motion.span>
-          <motion.h4
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.12, duration: 0.35 }}
-          >
-            {current?.title}
-          </motion.h4>
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.18, duration: 0.35 }}
-          >
-            {current?.description}
-          </motion.p>
-        </motion.div>
-      </AnimatePresence>
-
-      <div className="sb-plat-how__steps" role="tablist" aria-label="How it works steps">
-        {items.map((item, index) => (
-          <motion.button
-            key={item.title}
-            type="button"
-            role="tab"
-            aria-selected={active === index}
-            className={`sb-plat-how__pill${active === index ? ' is-active' : ''}`}
-            onClick={() => pick(index)}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-          >
-            <span>{item.step}</span>
-            {item.title}
-          </motion.button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 const ENROLL_VIEWS = [
-  { id: 'form', label: 'Kidzee form', icon: FileText },
+  { id: 'form', label: 'Form', icon: FileText },
   { id: 'pipeline', label: 'Pipeline', icon: BadgeCheck },
   { id: 'workflow', label: 'Workflow', icon: RefreshCw },
 ];
@@ -328,7 +278,7 @@ function EnrollmentPanel({ formItems, pipelineItems, onViewChange, onStepChange 
   };
 
   return (
-    <div className="sb-enroll">
+    <div className={`sb-enroll sb-enroll--${view}`}>
       <div className="sb-enroll__nav" role="tablist" aria-label="Enrollment views">
         {ENROLL_VIEWS.map(({ id, label, icon: Icon }) => (
           <motion.button
@@ -404,14 +354,20 @@ function EnrollmentPanel({ formItems, pipelineItems, onViewChange, onStepChange 
                 <CurrentIcon size={22} strokeWidth={1.75} />
               </motion.span>
               <div>
-                <span className="sb-enroll__spotlight-step">{current?.step}</span>
+                <span className="sb-enroll__spotlight-step">
+                  {view === 'form' ? `Page ${current?.step}` : `Stage ${current?.step}`}
+                </span>
                 <h4>{current?.title}</h4>
                 <p>{current?.description}</p>
               </div>
             </motion.div>
           </AnimatePresence>
 
-          <div className="sb-enroll__rail" role="tablist" aria-label={view === 'form' ? 'Form pages' : 'Admission pipeline'}>
+          <div
+            className="sb-enroll__rail"
+            role="tablist"
+            aria-label={view === 'form' ? 'Form pages' : 'Admission pipeline'}
+          >
             {items.map((item, index) => {
               const Icon = icons[index];
               return (
@@ -420,16 +376,19 @@ function EnrollmentPanel({ formItems, pipelineItems, onViewChange, onStepChange 
                   type="button"
                   role="tab"
                   aria-selected={active === index}
-                  className={`sb-enroll__chip${active === index ? ' is-active' : ''}`}
+                  className={`sb-enroll__chip sb-enroll__chip--card${active === index ? ' is-active' : ''}`}
                   onClick={() => pick(index)}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.97 }}
                 >
                   <span className="sb-enroll__chip-icon" aria-hidden>
-                    <Icon size={14} strokeWidth={1.75} />
+                    <Icon size={16} strokeWidth={1.75} />
                   </span>
                   <span className="sb-enroll__chip-num">{item.step}</span>
                   <span className="sb-enroll__chip-label">{item.title}</span>
+                  {item.description && (
+                    <span className="sb-enroll__chip-desc">{item.description}</span>
+                  )}
                 </motion.button>
               );
             })}
@@ -466,7 +425,16 @@ function PanelBody({
   onDetailStepChange,
 }) {
   if (activeTab === 'how') {
-    return <HowPanel items={data.how} onStepChange={onHowStepChange} />;
+    return (
+      <SpotlightPanel
+        items={data.how}
+        icons={HOW_ICONS}
+        onStepChange={onHowStepChange}
+        stepPrefix="Step"
+        ariaLabel="How it works steps"
+        variant="how"
+      />
+    );
   }
   if (activeTab === 'features') {
     return (
@@ -475,6 +443,7 @@ function PanelBody({
         onStepChange={onDetailStepChange}
         stepPrefix="Feature"
         ariaLabel="Platform features"
+        variant="features"
       />
     );
   }
@@ -493,6 +462,8 @@ function PanelBody({
       <GroupedSpotlightPanel
         groups={data.feeGroups}
         onStepChange={onDetailStepChange}
+        variant="fees"
+        stepPrefix="Capability"
       />
     );
   }
@@ -504,6 +475,7 @@ function PanelBody({
         onStepChange={onDetailStepChange}
         stepPrefix="Role"
         ariaLabel="Platform roles"
+        variant="roles"
       />
     );
   }
@@ -512,6 +484,8 @@ function PanelBody({
       <GroupedSpotlightPanel
         groups={data.mediaGroups}
         onStepChange={onDetailStepChange}
+        variant="media"
+        stepPrefix="Feature"
       />
     );
   }
@@ -524,6 +498,7 @@ function PanelBody({
           onStepChange={onDetailStepChange}
           stepPrefix="App"
           ariaLabel="Mobile app roles"
+          variant="mobile"
         />
         <div className="sb-plat-mobile-cta">
           <p>Download the Kids Activities app for parents, teachers, admins, and TV sign-in.</p>
@@ -550,7 +525,7 @@ export default function PlatformLandingSections() {
   const [detailStep, setDetailStep] = useState(0);
 
   const data = useMemo(() => ({
-    how: HOW_IT_WORKS,
+    how: toItems(HOW_IT_WORKS),
     features: toItems(PLATFORM_FEATURES),
     roles: toItems(PLATFORM_ROLES, 'title', 'items'),
     enrollmentForm: toItems(ENROLLMENT_PAGES, 'page', 'details'),

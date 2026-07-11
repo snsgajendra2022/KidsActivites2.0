@@ -79,12 +79,12 @@ const shellEnter = {
   transition: { duration: 0.45, ease },
 };
 
-function DemoShell({ label, children, tall }) {
+function DemoShell({ label, children, tall, variant }) {
   const particles = [12, 28, 45, 62, 78, 88];
 
   return (
     <motion.div
-      className={`sb-plat-demo${tall ? ' sb-plat-demo--tall' : ''}`}
+      className={`sb-plat-demo${tall ? ' sb-plat-demo--tall' : ''}${variant ? ` sb-plat-demo--${variant}` : ''}`}
       aria-hidden
       {...shellEnter}
     >
@@ -177,81 +177,91 @@ const MODULE_POSITIONS = [
   { label: 'TV', icon: Tv, pos: 'br' },
 ];
 
+/** Maps each platform feature to its orbit module (-1 = center focus only). */
+const FEATURE_TO_MODULE = [0, 1, 0, 2, 3, 4, 5, -1];
+
 function FeaturesDemo({ activeIndex = 0 }) {
   const feature = PLATFORM_FEATURES[activeIndex] || PLATFORM_FEATURES[0];
   const FeatureIcon = feature.icon;
+  const moduleIndex = FEATURE_TO_MODULE[activeIndex] ?? -1;
 
   return (
-    <DemoShell label="Live workspace modules">
+    <DemoShell label="Live workspace modules" tall variant="features">
       <BrowserFrame title={feature.title}>
         <div className="sb-plat-modules sb-plat-modules--orbit">
-          <svg className="sb-plat-modules__lines" viewBox="0 0 200 120" preserveAspectRatio="none">
-            {MODULE_POSITIONS.map(({ label }, i) => (
-              <motion.line
-                key={label}
-                x1="100"
-                y1="60"
-                x2={[30, 170, 20, 180, 40, 160][i]}
-                y2={[28, 28, 60, 60, 92, 92][i]}
-                stroke={i === activeIndex % MODULE_POSITIONS.length ? 'rgba(201,162,39,0.75)' : 'rgba(255,255,255,0.2)'}
-                strokeWidth={i === activeIndex % MODULE_POSITIONS.length ? 2 : 1}
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: [0, 1, 1], opacity: [0, 0.6, i === activeIndex % MODULE_POSITIONS.length ? 0.9 : 0.25] }}
-                transition={{ duration: 2.2, delay: i * 0.15, repeat: Infinity, repeatDelay: 3 }}
-              />
-            ))}
-          </svg>
-          <motion.div
-            className="sb-plat-modules__pulse"
-            animate={{
-              boxShadow: [
-                '0 0 0 0 rgba(201,162,39,0.35)',
-                '0 0 0 14px rgba(201,162,39,0)',
-                '0 0 0 0 rgba(201,162,39,0)',
-              ],
-            }}
-            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeOut' }}
-          >
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={feature.title}
-                initial={{ scale: 0.7, opacity: 0, rotate: -12 }}
-                animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                exit={{ scale: 0.8, opacity: 0, rotate: 12 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-              >
-                <IconWrap size="lg" pulse>
-                  <FeatureIcon size={20} strokeWidth={1.75} />
-                </IconWrap>
-              </motion.span>
-            </AnimatePresence>
-          </motion.div>
-          {MODULE_POSITIONS.map(({ icon: Icon, label, pos }, i) => {
-            const lit = i === activeIndex % MODULE_POSITIONS.length;
-            return (
-              <motion.div
-                key={label}
-                className={`sb-plat-modules__tile sb-plat-modules__tile--${pos}${lit ? ' is-lit' : ''}`}
-                initial={{ opacity: 0 }}
-                animate={{
-                  opacity: lit ? [0.85, 1, 0.85] : [0.35, 0.55, 0.35],
-                  y: lit ? [0, -8, 0] : [0, -3, 0],
-                  scale: lit ? [1, 1.08, 1] : 1,
-                }}
-                transition={{ duration: lit ? 2.2 : 2.8, repeat: Infinity, delay: i * 0.35, ease: 'easeInOut' }}
-              >
-                <motion.span
-                  className="sb-plat-modules__tile-glow"
-                  animate={{ opacity: lit ? [0.4, 1, 0.4] : [0, 0.3, 0] }}
-                  transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.35 }}
+          <svg className="sb-plat-modules__lines" viewBox="0 0 200 132" preserveAspectRatio="xMidYMid meet">
+            {MODULE_POSITIONS.map(({ label }, i) => {
+              const lit = moduleIndex === i;
+              return (
+                <motion.line
+                  key={label}
+                  x1="100"
+                  y1="66"
+                  x2={[32, 168, 22, 178, 42, 158][i]}
+                  y2={[24, 24, 66, 66, 108, 108][i]}
+                  stroke={lit ? 'rgba(201,162,39,0.85)' : 'rgba(255,255,255,0.18)'}
+                  strokeWidth={lit ? 2.5 : 1}
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: [0, 1, 1], opacity: [0, 0.65, lit ? 0.95 : 0.2] }}
+                  transition={{ duration: 2.2, delay: i * 0.15, repeat: Infinity, repeatDelay: 3 }}
                 />
-                <IconWrap size="sm">
-                  <Icon size={16} strokeWidth={1.75} />
-                </IconWrap>
-                <span>{label}</span>
-              </motion.div>
-            );
-          })}
+              );
+            })}
+          </svg>
+
+          <div className="sb-plat-modules__orbit-grid">
+            {MODULE_POSITIONS.map(({ icon: Icon, label, pos }, i) => {
+              const lit = moduleIndex === i;
+              return (
+                <motion.div
+                  key={label}
+                  className={`sb-plat-modules__tile sb-plat-modules__tile--${pos}${lit ? ' is-lit' : ''}`}
+                  initial={{ opacity: 0 }}
+                  animate={{
+                    opacity: lit ? 1 : [0.55, 0.75, 0.55],
+                    scale: lit ? [1, 1.05, 1] : 1,
+                  }}
+                  transition={{ duration: lit ? 2.2 : 2.8, repeat: Infinity, delay: i * 0.35, ease: 'easeInOut' }}
+                >
+                  <motion.span
+                    className="sb-plat-modules__tile-glow"
+                    animate={{ opacity: lit ? [0.45, 1, 0.45] : [0, 0.2, 0] }}
+                    transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.35 }}
+                  />
+                  <span className="sb-plat-modules__tile-icon" aria-hidden>
+                    <Icon size={18} strokeWidth={1.75} />
+                  </span>
+                  <span className="sb-plat-modules__tile-label">{label}</span>
+                </motion.div>
+              );
+            })}
+
+            <motion.div
+              className="sb-plat-modules__pulse"
+              animate={{
+                scale: moduleIndex === -1 ? [1, 1.08, 1] : [1, 1.05, 1],
+                boxShadow: [
+                  '0 0 0 0 rgba(201,162,39,0.35)',
+                  '0 0 0 14px rgba(201,162,39,0)',
+                  '0 0 0 0 rgba(201,162,39,0)',
+                ],
+              }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeOut' }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={feature.title}
+                  className="sb-plat-modules__center-icon"
+                  initial={{ scale: 0.7, opacity: 0, rotate: -12 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  exit={{ scale: 0.8, opacity: 0, rotate: 12 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                >
+                  <FeatureIcon size={22} strokeWidth={1.75} />
+                </motion.span>
+              </AnimatePresence>
+            </motion.div>
+          </div>
         </div>
       </BrowserFrame>
     </DemoShell>
@@ -454,7 +464,6 @@ function HowDemo({ activeIndex = 0 }) {
 }
 
 const ROLE_ICONS = [Shield, SearchCheck, Wallet, GraduationCap, Heart, Headphones];
-const ROLE_SHORT = ['Admin', 'Admissions', 'Finance', 'Teacher', 'Parent', 'Support'];
 const MOBILE_ROLE_ICONS = [Heart, GraduationCap, Shield];
 
 function RolesDemo({ activeIndex = 0 }) {
@@ -504,7 +513,7 @@ function RolesDemo({ activeIndex = 0 }) {
                   <span className="sb-plat-role-strip__icon">
                     <Icon size={14} strokeWidth={1.75} />
                   </span>
-                  <span className="sb-plat-role-strip__label">{ROLE_SHORT[i]}</span>
+                  <span className="sb-plat-role-strip__label">{item.title}</span>
                 </motion.div>
               );
             })}
@@ -522,7 +531,7 @@ function EnrollmentDemo({ view = 'form', step = 0 }) {
   const stage = stages[step] || stages[0];
 
   return (
-    <DemoShell label="Kidzee admissions">
+    <DemoShell label="Enrollment">
       <BrowserFrame title={view === 'workflow' ? 'Application workflow' : view === 'pipeline' ? 'Admission pipeline' : page.page}>
         <AnimatePresence mode="wait">
           <motion.div
@@ -904,7 +913,6 @@ function MediaDemo({ activeIndex = 0 }) {
                   <motion.div
                     key={i}
                     className="sb-plat-media__photo"
-                    style={{ '--i': i }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.15, repeat: Infinity, repeatDelay: 2.5 }}

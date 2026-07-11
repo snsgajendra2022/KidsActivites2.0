@@ -32,7 +32,7 @@ export const HOW_IT_WORKS = [
 
 export const PLATFORM_FEATURES = [
   { icon: ClipboardList, title: 'Online Enrollment', description: 'Digital admissions with live status tracking.' },
-  { icon: FileText, title: 'Kidzee Form', description: '5-page printable form and PDF download.' },
+  { icon: FileText, title: 'Form', description: '5-page printable form and PDF download.' },
   { icon: SearchCheck, title: 'Application Review', description: 'Approve, reject, or request corrections.' },
   { icon: FolderOpen, title: 'Documents & Fees', description: 'Uploads, payment proof, and receipts.' },
   { icon: MessageCircle, title: 'Chat & Alerts', description: 'Parent communication and notifications.' },
