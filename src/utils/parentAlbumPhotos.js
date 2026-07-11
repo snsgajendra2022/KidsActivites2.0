@@ -51,8 +51,13 @@ export function mapAlbumMediaToParentPhoto(item, albumDetail, school = null) {
 }
 
 export function albumDetailToParentPhotos(albumDetail, school = null) {
-  if (!albumDetail?.classId) return [];
-  return (albumDetail.media || [])
+  if (!albumDetail?.media?.length) return [];
+  const classId = albumDetail.classId || null;
+  return albumDetail.media
     .filter(isParentVisibleAlbumItem)
-    .map((item) => mapAlbumMediaToParentPhoto(item, albumDetail, school));
+    .map((item) => mapAlbumMediaToParentPhoto(
+      item,
+      { ...albumDetail, classId: classId || albumDetail.classId },
+      school,
+    ));
 }

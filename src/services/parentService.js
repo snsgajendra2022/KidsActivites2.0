@@ -23,7 +23,7 @@ function findParentUser(parentId) {
 }
 
 function mapChildApplication(app) {
-  return {
+  return normalizeParentChild({
     applicationId: app.id,
     applicationNo: app.applicationNo,
     status: app.status,
@@ -31,15 +31,83 @@ function mapChildApplication(app) {
     submittedAt: app.submittedAt,
     updatedAt: app.updatedAt,
     schoolId: app.schoolId,
-    classId: app.classId || app.student?.classId || null,
-    className: app.className || app.student?.className || app.student?.classApplying || null,
-    student: app.student || {},
-    parent: app.parent || {},
-    address: app.address || {},
-    academic: app.academic || {},
-    documents: app.documents || {},
-    statusHistory: app.statusHistory || [],
+    classId: app.classId,
+    className: app.className,
+    student: app.student,
+    parent: app.parent,
+    address: app.address,
+    academic: app.academic,
+    documents: app.documents,
+    statusHistory: app.statusHistory,
+  });
+}
+
+export function normalizeParentChild(child) {
+  if (!child) return null;
+  const student = child.student || {};
+  const cls = child.class || {};
+  const academic = child.academic || {};
+  const applicationId = child.applicationId || child.id;
+  const classId = child.classId
+    || child.assignedClassId
+    || child.enrolledClassId
+    || student.classId
+    || academic.classId
+    || cls.id
+    || cls.classId
+    || null;
+  const className = child.className
+    || student.className
+    || cls.name
+    || cls.className
+    || academic.className
+    || student.classApplying
+    || academic.classApplying
+    || null;
+  const studentName = student.fullName
+    || [student.firstName, student.lastName].filter(Boolean).join(' ')
+    || null;
+
+  return {
+    applicationId,
+    applicationNo: child.applicationNo,
+    status: child.status,
+    statusLabel: child.statusLabel || STATUS_LABELS[child.status] || child.status,
+    submittedAt: child.submittedAt,
+    updatedAt: child.updatedAt,
+    schoolId: child.schoolId,
+    classId,
+    className,
+    studentName,
+    student,
+    parent: child.parent || {},
+    address: child.address || {},
+    academic: child.academic || {},
+    documents: child.documents || {},
+    statusHistory: child.statusHistory || [],
   };
+}
+
+function normalizeParentDashboard(data) {
+  if (!data) return data;
+  return {
+    ...data,
+    children: (data.children || []).map((child) => normalizeParentChild(child)),
+  };
+}
+
+export async function enrichParentChildrenWithClass(parentId, children, user) {
+  const normalized = (children || []).map((child) => normalizeParentChild(child));
+  return Promise.all(normalized.map(async (child) => {
+    if (child.classId) return child;
+    if (!child.applicationId) return child;
+    try {
+      const detail = await getParentChild(parentId, child.applicationId, user);
+      return normalizeParentChild({ ...child, ...detail });
+    } catch {
+      return child;
+    }
+  }));
 }
 
 async function mockGetParentDashboard(parentId, schoolId) {
@@ -91,7 +159,25 @@ export async function getParentDashboard(parentId, schoolId, user) {
   return routeRequest({
     user,
     mockFn: () => mockGetParentDashboard(parentId, schoolId),
-    apiFn: () => api.get('/parent/dashboard', { schoolId }),
+    apiFn: async () => {
+      const data = await api.get('/parent/dashboard', { schoolId });
+      return normalizeParentDashboard(data);
+    },
+  });
+}
+
+export async function getParentChildren(user) {
+  return routeRequest({
+    user,
+    mockFn: async () => {
+      await delay(150);
+      return readParentApplications(user?.id).map(mapChildApplication);
+    },
+    apiFn: async () => {
+      const data = await api.get('/parent/children');
+      const list = Array.isArray(data) ? data : [];
+      return list.map((child) => normalizeParentChild(child));
+    },
   });
 }
 
@@ -103,6 +189,9 @@ export async function getParentChild(parentId, applicationId, user) {
       const children = readParentApplications(parentId).map(mapChildApplication);
       return children.find((c) => c.applicationId === applicationId) || null;
     },
-    apiFn: () => api.get(`/parent/children/${applicationId}`),
+    apiFn: async () => {
+      const data = await api.get(`/parent/children/${applicationId}`);
+      return normalizeParentChild(data);
+    },
   });
 }

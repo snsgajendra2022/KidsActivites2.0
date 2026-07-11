@@ -1,20 +1,14 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Image } from 'lucide-react';
+import { GraduationCap, Image } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { getPhotos } from '../../services/mediaService.js';
-import { getParentDashboard } from '../../services/parentService.js';
-import { getParentAlbumByClass } from '../../services/classAlbumService.js';
-import {
-  albumDetailToParentPhotos,
-  getChildClassTargets,
-} from '../../utils/parentAlbumPhotos.js';
-import { FEATURED_HIGHLIGHT } from '../../data/mockPhotos.js';
+import { loadParentClassPhotos } from '../../services/parentPhotoService.js';
 import '../../styles/parent-photos.css';
 
 const INITIAL_VISIBLE_GROUPS = 2;
 const GROUPS_PER_LOAD = 2;
+const ALL_CHILDREN = 'all';
 
 function getInitials(name = '') {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -78,17 +72,6 @@ function getPhotoGrade(photo) {
   return photo.grade || photo.className || '';
 }
 
-/** Parent's child application ids and class ids for photo filtering */
-function getChildPhotoFilters(children = []) {
-  return children
-    .filter((child) => child.applicationId)
-    .map((child) => ({
-      studentId: child.applicationId,
-      classId: child.classId || null,
-      className: child.className || child.student?.classApplying || null,
-    }));
-}
-
 function getPhotoSchoolLine(photo) {
   const parts = [photo.schoolName, photo.className || photo.grade].filter(Boolean);
   return parts.join(' · ');
@@ -145,50 +128,52 @@ function GalleryCard({ photo, onOpen }) {
 export default function ParentPhotos() {
   const { user } = useAuth();
   const [photos, setPhotos] = useState([]);
+  const [children, setChildren] = useState([]);
+  const [classTargets, setClassTargets] = useState([]);
   const [schoolName, setSchoolName] = useState('');
+  const [selectedChildId, setSelectedChildId] = useState(ALL_CHILDREN);
   const [loading, setLoading] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [visibleGroups, setVisibleGroups] = useState(INITIAL_VISIBLE_GROUPS);
 
   useEffect(() => {
     if (!user?.id) return;
-    getParentDashboard(user.id, user.schoolId, user)
-      .then(async (dashboard) => {
-        const school = dashboard?.school || null;
+    setLoading(true);
+    loadParentClassPhotos(user.id, user.schoolId, user)
+      .then(({ school, children: loadedChildren, photos: loadedPhotos, classTargets: targets }) => {
         setSchoolName(school?.name || '');
-        const children = dashboard?.children || [];
-        const childFilters = getChildPhotoFilters(children);
-        const classTargets = getChildClassTargets(children, school);
-
-        const [albumPhotoBatches, directPhotoBatches] = await Promise.all([
-          Promise.all(
-            classTargets.map(({ classId }) => (
-              getParentAlbumByClass(classId)
-                .then((album) => albumDetailToParentPhotos(album, school))
-                .catch(() => [])
-            )),
-          ),
-          Promise.all(
-            childFilters.map(({ studentId, classId, className }) => (
-              getPhotos({ studentId, classId, className }).catch(() => [])
-            )),
-          ),
-        ]);
-
-        const merged = new Map();
-        [...albumPhotoBatches.flat(), ...directPhotoBatches.flat()].forEach((photo) => {
-          if (photo?.id) merged.set(photo.id, photo);
-        });
-        return Array.from(merged.values());
+        setChildren(loadedChildren);
+        setClassTargets(targets);
+        setPhotos(loadedPhotos);
+        setSelectedChildId(ALL_CHILDREN);
+        setVisibleGroups(INITIAL_VISIBLE_GROUPS);
       })
-      .then(setPhotos)
-      .catch(() => setPhotos([]))
+      .catch(() => {
+        setPhotos([]);
+        setChildren([]);
+        setClassTargets([]);
+      })
       .finally(() => setLoading(false));
   }, [user?.id, user?.schoolId]);
 
+  const selectedChild = useMemo(
+    () => children.find((child) => child.applicationId === selectedChildId) || null,
+    [children, selectedChildId],
+  );
+
+  const filteredPhotos = useMemo(() => {
+    if (selectedChildId === ALL_CHILDREN) return photos;
+    const classId = selectedChild?.classId;
+    return photos.filter((photo) => {
+      if (photo.studentIds?.some((id) => String(id) === String(selectedChildId))) return true;
+      if (classId && photo.classId && String(photo.classId) === String(classId)) return true;
+      return false;
+    });
+  }, [photos, selectedChildId, selectedChild]);
+
   const sortedPhotos = useMemo(
-    () => [...photos].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)),
-    [photos],
+    () => [...filteredPhotos].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)),
+    [filteredPhotos],
   );
 
   const photoGroups = useMemo(
@@ -201,11 +186,18 @@ export default function ParentPhotos() {
     [photoGroups, visibleGroups],
   );
 
+  const featuredPhoto = useMemo(
+    () => sortedPhotos.find((p) => p.imageUrl && p.type !== 'video' && p.mediaType !== 'VIDEO'),
+    [sortedPhotos],
+  );
+
   const featuredSideCards = useMemo(() => {
     const heroSide = sortedPhotos.filter((p) => p.heroSide && p.imageUrl);
     if (heroSide.length >= 2) return heroSide.slice(0, 2);
-    return sortedPhotos.filter((p) => p.featured && p.type !== 'video' && p.mediaType !== 'VIDEO' && p.imageUrl).slice(0, 2);
-  }, [sortedPhotos]);
+    return sortedPhotos
+      .filter((p) => p.id !== featuredPhoto?.id && p.type !== 'video' && p.mediaType !== 'VIDEO' && p.imageUrl)
+      .slice(0, 2);
+  }, [sortedPhotos, featuredPhoto?.id]);
 
   const lightboxPhotos = useMemo(
     () => sortedPhotos.filter((p) => p.type !== 'video' && p.mediaType !== 'VIDEO' && p.imageUrl),
@@ -213,6 +205,13 @@ export default function ParentPhotos() {
   );
 
   const lightboxPhoto = lightboxIndex >= 0 ? lightboxPhotos[lightboxIndex] : null;
+
+  const activeClassLabel = useMemo(() => {
+    if (selectedChild?.className) return selectedChild.className;
+    if (classTargets.length === 1) return classTargets[0].className;
+    if (classTargets.length > 1) return `${classTargets.length} classes`;
+    return null;
+  }, [selectedChild, classTargets]);
 
   const openLightbox = useCallback((photo) => {
     const idx = lightboxPhotos.findIndex((p) => p.id === photo.id);
@@ -237,11 +236,13 @@ export default function ParentPhotos() {
         <section className="parent-photos-highlights">
           <div className="parent-photos-highlights__header">
             <div>
-              <h1>School Moments</h1>
+              <h1>Student Class</h1>
               <p>
-                {schoolName
-                  ? `${schoolName} — classroom photos shared with your family.`
-                  : 'Capturing growth, one discovery at a time.'}
+                {schoolName && activeClassLabel
+                  ? `${schoolName} · ${activeClassLabel} — classroom photos from your child’s class.`
+                  : schoolName
+                    ? `${schoolName} — classroom photos shared with your family.`
+                    : 'Classroom photos shared with your family.'}
               </p>
             </div>
             <div className="parent-photos-highlights__actions">
@@ -254,23 +255,56 @@ export default function ParentPhotos() {
             </div>
           </div>
 
-          {!loading && sortedPhotos.length > 0 && (
+          {children.length > 0 && (
+            <div className="parent-photos-child-filter" role="tablist" aria-label="Filter by child">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedChildId === ALL_CHILDREN}
+                className={`parent-photos-child-chip${selectedChildId === ALL_CHILDREN ? ' is-active' : ''}`}
+                onClick={() => {
+                  setSelectedChildId(ALL_CHILDREN);
+                  setVisibleGroups(INITIAL_VISIBLE_GROUPS);
+                }}
+              >
+                All children
+              </button>
+              {children.map((child) => (
+                <button
+                  key={child.applicationId}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedChildId === child.applicationId}
+                  className={`parent-photos-child-chip${selectedChildId === child.applicationId ? ' is-active' : ''}`}
+                  onClick={() => {
+                    setSelectedChildId(child.applicationId);
+                    setVisibleGroups(INITIAL_VISIBLE_GROUPS);
+                  }}
+                >
+                  <GraduationCap size={14} aria-hidden />
+                  {child.studentName || child.student?.fullName || 'Child'}
+                  {child.className ? ` · ${child.className}` : ''}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {!loading && featuredPhoto && (
             <div className="parent-photos-hero-grid">
               <button
                 type="button"
                 className="parent-photos-hero-featured"
-                onClick={() => {
-                  const match = sortedPhotos.find((p) => p.imageUrl);
-                  if (match) openLightbox(match);
-                }}
-                aria-label={FEATURED_HIGHLIGHT.title}
+                onClick={() => openLightbox(featuredPhoto)}
+                aria-label={getPhotoTitle(featuredPhoto)}
               >
-                <img src={FEATURED_HIGHLIGHT.imageUrl} alt="" />
+                <img src={featuredPhoto.imageUrl} alt="" />
                 <div className="parent-photos-hero-featured__overlay" />
                 <div className="parent-photos-hero-featured__content">
-                  <span className="parent-photos-hero-badge">{FEATURED_HIGHLIGHT.badge}</span>
-                  <h2>{FEATURED_HIGHLIGHT.title}</h2>
-                  <p>{FEATURED_HIGHLIGHT.subtitle}</p>
+                  <span className="parent-photos-hero-badge">
+                    {featuredPhoto.className || 'CLASSROOM'}
+                  </span>
+                  <h2>{getPhotoTitle(featuredPhoto)}</h2>
+                  <p>{getPhotoSchoolLine(featuredPhoto) || schoolName}</p>
                 </div>
               </button>
 
@@ -304,9 +338,11 @@ export default function ParentPhotos() {
             <div className="parent-photos-empty__icon">
               <Image size={28} strokeWidth={1.75} />
             </div>
-            <h2>No photos shared yet</h2>
+            <h2>No class photos yet</h2>
             <p>
-              When your child&apos;s teacher shares classroom photos, they will appear here.
+              {selectedChild?.className
+                ? `No photos have been shared for ${selectedChild.className} yet. When the teacher uploads to the class album, they will appear here.`
+                : 'When your child\'s teacher shares classroom photos to the class album, they will appear here.'}
             </p>
           </div>
         ) : (

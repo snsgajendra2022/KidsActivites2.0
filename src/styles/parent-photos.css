@@ -58,7 +58,39 @@
   background: transparent;
   color: var(--sb-primary);
   cursor: pointer;
-  transition: background 0.15s;
+}
+
+.parent-photos-child-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.parent-photos-child-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--sb-outline-variant);
+  border-radius: 999px;
+  background: var(--sb-surface);
+  color: var(--sb-on-surface-variant);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.parent-photos-child-chip:hover {
+  border-color: color-mix(in srgb, var(--sb-secondary) 35%, transparent);
+  color: var(--sb-primary);
+}
+
+.parent-photos-child-chip.is-active {
+  border-color: color-mix(in srgb, var(--sb-secondary) 45%, transparent);
+  background: color-mix(in srgb, var(--sb-secondary) 10%, var(--sb-surface));
+  color: var(--sb-primary);
 }
 
 .parent-photos-icon-btn:hover {
