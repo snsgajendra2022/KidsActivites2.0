@@ -6,7 +6,7 @@ function isUploadEndpointUnavailable(err) {
   if (err instanceof TypeError) return true;
   if (err instanceof ApiError) {
     if (err.status === 0 || err.code === 'NETWORK_ERROR') return true;
-    if ([404, 405, 413, 501, 502, 503].includes(err.status)) return true;
+    if ([404, 405, 501, 502, 503].includes(err.status)) return true;
   }
   return err?.message === 'Failed to fetch';
 }

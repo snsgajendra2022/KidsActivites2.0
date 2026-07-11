@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { useProgressiveImageSrc } from '../../hooks/useProgressiveImageSrc.js';
 import { isVideoPlaybackReady, resolveVideoStreamUrl } from '../../utils/photoStudioProgressive.js';
+import { normalizeVideoMediaItem, resolveLayoutRendition } from '../../utils/videoMediaNormalize.js';
 import VideoHlsPlayer from './VideoHlsPlayer.jsx';
 import '../../styles/photo-lightbox.css';
 import '../../styles/progressive-image.css';
@@ -13,9 +14,18 @@ export default function PhotoLightbox({
   onNext,
   hasPrev,
   hasNext,
+  positionLabel,
 }) {
+  const normalizedVideo = useMemo(
+    () => (photo?.mediaType === 'VIDEO' ? normalizeVideoMediaItem(photo) : null),
+    [photo],
+  );
+
   const studioImage = photo?.studioImage || (photo?.variants ? photo : null);
-  const streamUrl = useMemo(() => resolveVideoStreamUrl(photo), [photo]);
+  const streamUrl = useMemo(
+    () => normalizedVideo?.masterStreamUrl || resolveVideoStreamUrl(photo),
+    [normalizedVideo, photo],
+  );
   const isVideo = photo?.mediaType === 'VIDEO' && Boolean(streamUrl);
   const videoReady = isVideo && isVideoPlaybackReady(photo);
   const { src: progressiveSrc, loading, qualityLabel } = useProgressiveImageSrc(
@@ -27,8 +37,28 @@ export default function PhotoLightbox({
     : (photo?.previewUrl || photo?.thumbnailUrl || photo?.imageUrl);
 
   const videoRenditions = useMemo(
-    () => (Array.isArray(photo?.renditions) ? photo.renditions : []),
-    [photo?.renditions],
+    () => normalizedVideo?.renditions ?? (Array.isArray(photo?.renditions) ? photo.renditions : []),
+    [normalizedVideo, photo],
+  );
+
+  const defaultQuality = normalizedVideo?.defaultQuality;
+
+  const layoutRendition = useMemo(
+    () => (isVideo ? resolveLayoutRendition(videoRenditions, photo) : null),
+    [isVideo, videoRenditions, photo],
+  );
+
+  const videoLayoutStyle = useMemo(() => {
+    if (!layoutRendition?.width || !layoutRendition?.height) return undefined;
+    return {
+      '--video-aspect-ratio': `${layoutRendition.width} / ${layoutRendition.height}`,
+      '--video-ar-w': layoutRendition.width,
+      '--video-ar-h': layoutRendition.height,
+    };
+  }, [layoutRendition]);
+
+  const isPortraitVideo = Boolean(
+    layoutRendition?.width && layoutRendition?.height && layoutRendition.height > layoutRendition.width,
   );
 
   useEffect(() => {
@@ -58,16 +88,28 @@ export default function PhotoLightbox({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Photo preview"
+      aria-label="Media preview"
     >
-      <button
-        type="button"
-        className="photo-lightbox__close"
-        onClick={onClose}
-        aria-label="Close preview"
-      >
-        <X size={22} />
-      </button>
+      <div className="photo-lightbox__topbar" onClick={(e) => e.stopPropagation()}>
+        <div className="photo-lightbox__topbar-info">
+          {positionLabel && (
+            <span className="photo-lightbox__position" aria-live="polite">{positionLabel}</span>
+          )}
+          {photo.caption && (
+            <span className="photo-lightbox__topbar-caption" title={photo.caption}>
+              {photo.caption}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          className="photo-lightbox__close"
+          onClick={onClose}
+          aria-label="Close preview"
+        >
+          <X size={22} />
+        </button>
+      </div>
 
       {hasPrev && (
         <button
@@ -81,37 +123,54 @@ export default function PhotoLightbox({
       )}
 
       <div className="photo-lightbox__content" onClick={(e) => e.stopPropagation()}>
-        <div className="photo-lightbox__image-wrap">
+        <div
+          className={`photo-lightbox__media-stage${
+            isVideo
+              ? ` photo-lightbox__media-stage--video${isPortraitVideo ? ' is-portrait' : ' is-landscape'}`
+              : ''
+          }`}
+          style={isVideo ? videoLayoutStyle : undefined}
+        >
           {isVideo ? (
             videoReady ? (
               <VideoHlsPlayer
-                className="photo-lightbox__image photo-lightbox__video"
+                className="photo-lightbox__video"
                 src={streamUrl}
                 poster={photo.thumbnailUrl || photo.previewUrl || undefined}
                 renditions={videoRenditions}
+                defaultQuality={defaultQuality}
               />
             ) : (
-              <div className="photo-lightbox__video-processing">
-                <p>Video is still processing…</p>
-                {photo.thumbnailUrl ? (
-                  <img
-                    src={photo.thumbnailUrl}
-                    alt=""
-                    className="photo-lightbox__image"
-                  />
-                ) : null}
+              <div className="photo-lightbox__video-processing photo-lightbox__video-shell">
+                <div className="photo-lightbox__video-processing-body">
+                  <span className="photo-lightbox__processing-spinner" aria-hidden />
+                  <p>Video is still processing…</p>
+                  {photo.thumbnailUrl ? (
+                    <img
+                      src={photo.thumbnailUrl}
+                      alt=""
+                      className="photo-lightbox__video-processing-thumb"
+                    />
+                  ) : (
+                    <div className="photo-lightbox__processing-placeholder" aria-hidden>
+                      <ImageIcon size={32} />
+                    </div>
+                  )}
+                </div>
               </div>
             )
           ) : (
-            <img
-              src={imgSrc}
-              alt={photo.caption || 'Classroom photo'}
-              className={`photo-lightbox__image progressive-image ${loading ? 'is-upgrading' : 'is-ready'}`}
-            />
+            <div className="photo-lightbox__image-wrap">
+              <img
+                src={imgSrc}
+                alt={photo.caption || 'Classroom photo'}
+                className={`photo-lightbox__image progressive-image ${loading ? 'is-upgrading' : 'is-ready'}`}
+              />
+              {studioImage && loading && qualityLabel ? (
+                <span className="photo-lightbox__quality">{qualityLabel}</span>
+              ) : null}
+            </div>
           )}
-          {studioImage && loading && qualityLabel ? (
-            <span className="photo-lightbox__quality">{qualityLabel}</span>
-          ) : null}
         </div>
         <div className="photo-lightbox__info">
           {photo.caption ? (

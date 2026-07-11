@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
     "lint": "eslint .",
     "pdf:install": "playwright install chromium",
     "pdf:generate": "node scripts/generate-kidzee-pdf.mjs"
@@ -60,6 +61,7 @@
     "eslint-plugin-react-refresh": "latest",
     "globals": "latest",
     "playwright": "^1.52.0",
-    "tailwindcss": "^4.1.8"
+    "tailwindcss": "^4.1.8",
+    "vitest": "^4.1.10"
   }
 }

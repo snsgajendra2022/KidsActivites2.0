@@ -8,13 +8,21 @@ import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
-import { ApiError } from '../../services/api/client.js';
 import {
   UPLOAD_TARGETS,
   getTeacherAlbumClasses,
   uploadTeacherAlbumMedia,
 } from '../../services/classAlbumService.js';
 import { getTeacherStudents } from '../../services/teacherService.js';
+import {
+  ACCEPTED_CLASSROOM_MEDIA,
+  filterAcceptedClassroomMediaFiles,
+  getMediaUploadLimitHint,
+  isVideoMediaFile,
+  loadMediaUploadLimits,
+  resolveMediaUploadError,
+  validateMediaUploadFiles,
+} from '../../utils/mediaUploadLimits.js';
 import '../../styles/send-photos.css';
 
 const UPLOAD_TARGET_OPTIONS = [
@@ -44,20 +52,14 @@ const SEND_TYPES = [
   { value: 'individual', label: 'Individual', icon: User },
 ];
 
-const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,image/*,video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm,.m4v';
+const ACCEPTED_MEDIA = ACCEPTED_CLASSROOM_MEDIA;
 
 function isAcceptedMediaFile(file) {
-  if (!file) return false;
-  if (file.type.startsWith('image/') || file.type.startsWith('video/')) return true;
-  const name = (file.name || '').toLowerCase();
-  return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.mov', '.webm', '.m4v'].some((ext) => name.endsWith(ext));
+  return filterAcceptedClassroomMediaFiles([file]).length > 0;
 }
 
 function isVideoFile(file) {
-  if (!file) return false;
-  if (file.type.startsWith('video/')) return true;
-  const name = (file.name || '').toLowerCase();
-  return ['.mp4', '.mov', '.webm', '.m4v'].some((ext) => name.endsWith(ext));
+  return isVideoMediaFile(file);
 }
 
 const SUCCESS_MESSAGES = {
@@ -83,8 +85,17 @@ export default function SendPhotos() {
   });
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadLimits, setUploadLimits] = useState(null);
+  const uploadLimitHint = useMemo(
+    () => getMediaUploadLimitHint(uploadLimits || {}),
+    [uploadLimits],
+  );
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    loadMediaUploadLimits().then(setUploadLimits).catch(() => setUploadLimits(null));
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -151,7 +162,12 @@ export default function SendPhotos() {
     if (picked.length < (fileList?.length || 0)) {
       toast('Some files were skipped. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
     }
-    setForm((prev) => ({ ...prev, files: picked }));
+    const sizeCheck = validateMediaUploadFiles(picked, uploadLimits || {});
+    if (!sizeCheck.valid) {
+      toast(sizeCheck.error, 'error');
+      return;
+    }
+    setForm((prev) => ({ ...prev, files: sizeCheck.files }));
   };
 
   const onFilesChange = (e) => {
@@ -185,6 +201,11 @@ export default function SendPhotos() {
     }
     if (form.files.some((f) => !isAcceptedMediaFile(f))) {
       toast('Unsupported file type. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
+      return false;
+    }
+    const sizeCheck = validateMediaUploadFiles(form.files, uploadLimits || {});
+    if (!sizeCheck.valid) {
+      toast(sizeCheck.error, 'error');
       return false;
     }
     return true;
@@ -222,10 +243,10 @@ export default function SendPhotos() {
         files: [],
       });
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'CLASS_INACTIVE') {
+      if (err?.code === 'CLASS_INACTIVE') {
         toast('This class is inactive. Please contact admin.', 'error');
       } else {
-        toast(err?.message || 'Upload failed. Please try again.', 'error');
+        toast(resolveMediaUploadError(err, uploadLimits || {}), 'error');
       }
     } finally {
       setLoading(false);
@@ -398,6 +419,7 @@ export default function SendPhotos() {
                 onChange={onFilesChange}
               />
             </div>
+            <p className="send-photos-upload-limit-hint">{uploadLimitHint}</p>
             {form.files.length > 0 && (
               <div className="send-photos-file-preview">
                 {form.files.map((file) => (

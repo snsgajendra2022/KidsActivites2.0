@@ -65,7 +65,12 @@
   margin: 0;
   max-width: 32rem;
   font-size: 0.875rem;
-  line-height: 1.5;
+}
+
+.admin-photos-upload__limit-hint {
+  margin-top: 0.35rem !important;
+  font-size: 0.8125rem !important;
+  color: var(--admin-muted, #6b7280);
 }
 
 .admin-photos-upload__input {

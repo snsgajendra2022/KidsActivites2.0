@@ -345,6 +345,12 @@
   height: 100%;
 }
 
+.send-photos-upload-limit-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--sb-on-surface-variant);
+}
+
 .send-photos-form .form-field {
   margin: 0;
   width: 100%;

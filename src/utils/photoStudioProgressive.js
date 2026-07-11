@@ -1,4 +1,5 @@
 import { rewritePhotoStudioUrl } from './photoStudioUrls.js';
+import { normalizeVideoMediaItem } from './videoMediaNormalize.js';
 
 /** Progressive quality tiers — s01 (lowest) → s10 (highest). */
 export const PHOTO_STUDIO_TIERS = [
@@ -43,39 +44,13 @@ function isThumbnailUrl(url) {
   return typeof url === 'string' && /\/thumbnail(\?|$)/.test(url);
 }
 
-function isVideoStreamUrl(url) {
-  return typeof url === 'string'
-    && (/\/stream\/master\.m3u8/i.test(url) || /\.m3u8(\?|$)/i.test(url) || /\.(mp4|webm|mov)(\?|$)/i.test(url));
-}
-
 /**
  * Best playback URL for videos: HLS master / download / stream — never thumbnail.
  */
 export function resolveVideoStreamUrl(image) {
   if (!image || image.mediaType !== 'VIDEO') return null;
-
-  const candidates = [
-    image.streamUrl,
-    image.playbackUrl,
-    image.downloadUrl,
-    image.originalUrl,
-    image.previewUrl,
-  ];
-
-  for (const url of candidates) {
-    if (typeof url !== 'string' || !url || isThumbnailUrl(url)) continue;
-    if (isVideoStreamUrl(url)) {
-      return rewritePhotoStudioUrl(url);
-    }
-  }
-
-  for (const url of candidates) {
-    if (typeof url === 'string' && url && !isThumbnailUrl(url)) {
-      return rewritePhotoStudioUrl(url);
-    }
-  }
-
-  return null;
+  const normalized = normalizeVideoMediaItem(image);
+  return normalized?.masterStreamUrl || null;
 }
 
 /**
