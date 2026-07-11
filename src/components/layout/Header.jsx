@@ -43,7 +43,7 @@ export default function Header({ user, onMenuClick, onLogout }) {
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <div className="hidden items-center gap-1.5 rounded-full border border-black/5 sb-surface px-3 py-1.5 text-xs font-semibold text-muted lg:flex">
-            <Calendar size={14} className="text-[#6b7a8c]" />
+            <Calendar size={14} className="text-[fff]" />
             {school?.academicYear}
           </div>
 
