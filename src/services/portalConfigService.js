@@ -251,6 +251,8 @@ function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID, schoolFromApi = null)
       stored.portalName || defaults.portalName,
       stored.school?.name || defaults.school?.name || 'our school',
     ),
+    landingPageDraft: stored.landingPageDraft || null,
+    landingPagePublished: stored.landingPagePublished || null,
   };
 
   Object.keys(NAV_BY_ROLE).forEach((role) => {
@@ -433,9 +435,27 @@ function mockSavePortalConfig(updates, schoolId) {
         updates.school?.name || current.school?.name,
       )
       : current.landingPage,
+    landingPageDraft: updates.landingPageDraft !== undefined
+      ? updates.landingPageDraft
+      : current.landingPageDraft,
+    landingPagePublished: updates.landingPagePublished !== undefined
+      ? updates.landingPagePublished
+      : current.landingPagePublished,
   };
   persistSchoolConfig(id, next);
   return next;
+}
+
+/** Internal mock config read — used by landing page builder API. */
+export function mockGetPortalConfigInternal(schoolId) {
+  return mockGetPortalConfig(schoolId);
+}
+
+/** Persist landing draft/published without full portal save. */
+export function persistSchoolConfigForLanding(schoolId, patch) {
+  const id = schoolId || getAdminSelectedSchoolId() || getPublicSchoolId();
+  const current = mockGetPortalConfig(id);
+  persistSchoolConfig(id, { ...current, ...patch });
 }
 
 async function fetchPortalConfigFromApi() {

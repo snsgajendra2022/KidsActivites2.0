@@ -344,6 +344,8 @@ export function PortalConfigProvider({ children, user = null }) {
         ? (platform?.footerText || DEFAULT_PORTAL_CONFIG.footerText)
         : (config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
       landingPage: isPlatformPublic ? null : config?.landingPage,
+      landingPagePublished: isPlatformPublic ? null : config?.landingPagePublished,
+      landingPageDraft: isPlatformPublic ? null : config?.landingPageDraft,
       branding: isPlatformPublic
         ? { ...DEFAULT_PORTAL_CONFIG.branding, ...(platform?.branding || {}) }
         : config?.branding,

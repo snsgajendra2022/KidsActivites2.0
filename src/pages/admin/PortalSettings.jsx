@@ -19,7 +19,7 @@ import { cloneEnrollmentFormConfig, DEFAULT_ENROLLMENT_FORM } from '../../data/d
 import { FOOTER_LINKS } from '../../components/layout/PublicFooter.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { mergeLandingPage } from '../../data/defaultLandingPage.js';
-import LandingPageSettings from '../../components/admin/LandingPageSettings.jsx';
+import LandingBuilder from '../../landing-builder/admin/LandingBuilder.jsx';
 
 const TABS = [
   { id: 'identity', label: 'Portal Identity', icon: Layout, desc: 'Name, tagline & footer' },
@@ -236,7 +236,6 @@ export default function PortalSettings() {
   const { toast } = useToast();
   const [editTarget, setEditTarget] = useState('school');
   const [tab, setTab] = useState('identity');
-  const [landingSection, setLandingSection] = useState('hero');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(null);
   const [platformForm, setPlatformForm] = useState(null);
@@ -298,7 +297,6 @@ export default function PortalSettings() {
   }, [config, activeSchoolId]);
 
   useEffect(() => {
-    if (tab === 'landing') setLandingSection('hero');
     const main = document.querySelector('.portal-shell main');
     main?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [tab]);
@@ -1045,12 +1043,11 @@ export default function PortalSettings() {
         )}
 
         {tab === 'landing' && (
-          <LandingPageSettings
-            landingPage={form.landingPage}
+          <LandingBuilder
+            schoolId={activeSchoolId}
+            schoolName={form.school?.name}
+            portalName={form.portalName}
             tenantSlug={activeSchoolMeta?.slug || tenantSlug}
-            activeSection={landingSection}
-            onSectionChange={setLandingSection}
-            onChange={(landingPage) => setForm((f) => ({ ...f, landingPage }))}
           />
         )}
 
