@@ -1,7 +1,9 @@
 import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import Input from '../../components/ui/Input.jsx';
 import ToggleSwitch from '../../components/ui/ToggleSwitch.jsx';
 import { readFileAsDataUrl } from '../../services/portalConfigService.js';
+import { landingPageAction } from '../../services/landingPageApi.js';
 import { BLOCK_PALETTE, BLOCK_TYPES, LAYOUT_OPTIONS, createDefaultBlock } from '../blockRegistry.js';
 import { cloneBlock, moveBlock, removeBlockAt, updateBlockAt, updateBlockContent, updateBlockStyle } from '../blockUtils.js';
 
@@ -9,11 +11,32 @@ function blockLabel(type) {
   return BLOCK_PALETTE.find((b) => b.type === type)?.label || type;
 }
 
-function ImageField({ label, value, onChange }) {
+function ImageField({ label, value, onChange, schoolId }) {
+  const [uploading, setUploading] = useState(false);
+
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    onChange(await readFileAsDataUrl(file));
+    setUploading(true);
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      try {
+        const result = await landingPageAction('uploadAsset', {
+          field: label,
+          fileName: file.name,
+          mimeType: file.type || 'image/png',
+          dataUrl,
+        }, { schoolId });
+        onChange(result.url || dataUrl);
+      } catch (err) {
+        console.error('[LandingBuilder] image upload failed', err);
+        // Keep local preview; saveDraft/publish will upload base64 on the server.
+        onChange(dataUrl);
+      }
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -26,12 +49,12 @@ function ImageField({ label, value, onChange }) {
           <div className="landing-builder__image-empty">No image</div>
         )}
         <div className="landing-builder__image-actions">
-          <label className="premium-btn premium-btn-secondary premium-btn-sm">
-            Upload
-            <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <label className={`premium-btn premium-btn-secondary premium-btn-sm${uploading ? ' is-disabled' : ''}`}>
+            {uploading ? 'Uploading…' : 'Upload'}
+            <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
           </label>
           {value && (
-            <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={() => onChange(null)}>
+            <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={() => onChange(null)} disabled={uploading}>
               Remove
             </button>
           )}
@@ -41,7 +64,7 @@ function ImageField({ label, value, onChange }) {
   );
 }
 
-function HeroInspector({ block, onContent, onStyle }) {
+function HeroInspector({ block, onContent, onStyle, schoolId }) {
   const c = block.content || {};
   return (
     <div className="landing-builder__inspector-fields">
@@ -56,7 +79,7 @@ function HeroInspector({ block, onContent, onStyle }) {
           onChange={(e) => onContent({ subtitle: e.target.value })}
         />
       </div>
-      <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} />
+      <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} schoolId={schoolId} />
       <Input label="Primary button label" value={c.primaryButton?.label || ''} onChange={(e) => onContent({ primaryButton: { ...c.primaryButton, label: e.target.value } })} variant="enrollment" />
       <Input label="Secondary button label" value={c.secondaryButton?.label || ''} onChange={(e) => onContent({ secondaryButton: { ...c.secondaryButton, label: e.target.value } })} variant="enrollment" />
       <ToggleSwitch checked={c.showPrimaryButton !== false} onChange={(v) => onContent({ showPrimaryButton: v })} label="Show primary button" />
@@ -65,7 +88,7 @@ function HeroInspector({ block, onContent, onStyle }) {
   );
 }
 
-function FeaturesInspector({ block, onContent }) {
+function FeaturesInspector({ block, onContent, schoolId }) {
   const c = block.content || {};
   const items = c.items || [];
 
@@ -84,45 +107,45 @@ function FeaturesInspector({ block, onContent }) {
         <div key={item.id || index} className="landing-builder__feature-item">
           <Input label={`Item ${index + 1} title`} value={item.title || ''} onChange={(e) => patchItem(index, { title: e.target.value })} variant="enrollment" />
           <Input label="Description" value={item.description || ''} onChange={(e) => patchItem(index, { description: e.target.value })} variant="enrollment" />
-          <ImageField label="Image" value={item.imageUrl} onChange={(url) => patchItem(index, { imageUrl: url })} />
+          <ImageField label="Image" value={item.imageUrl} onChange={(url) => patchItem(index, { imageUrl: url })} schoolId={schoolId} />
         </div>
       ))}
     </div>
   );
 }
 
-function ImageBannerInspector({ block, onContent }) {
+function ImageBannerInspector({ block, onContent, schoolId }) {
   const c = block.content || {};
   return (
     <div className="landing-builder__inspector-fields">
       <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
       <Input label="Subtitle" value={c.subtitle || ''} onChange={(e) => onContent({ subtitle: e.target.value })} variant="enrollment" />
-      <ImageField label="Banner image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} />
+      <ImageField label="Banner image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} />
     </div>
   );
 }
 
-function MapInspector({ block, onContent }) {
+function MapInspector({ block, onContent, schoolId }) {
   const c = block.content || {};
   return (
     <div className="landing-builder__inspector-fields">
       <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
       <Input label="Subtitle" value={c.subtitle || ''} onChange={(e) => onContent({ subtitle: e.target.value })} variant="enrollment" />
       <Input label="Map embed URL" value={c.embedUrl || ''} onChange={(e) => onContent({ embedUrl: e.target.value })} variant="enrollment" helper="Google Maps embed iframe src URL" />
-      <ImageField label="Fallback image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} />
+      <ImageField label="Fallback image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} />
       <ToggleSwitch checked={c.showAddress !== false} onChange={(v) => onContent({ showAddress: v })} label="Show school address" />
     </div>
   );
 }
 
-function CtaInspector({ block, onContent, onStyle }) {
+function CtaInspector({ block, onContent, onStyle, schoolId }) {
   const c = block.content || {};
   return (
     <div className="landing-builder__inspector-fields">
       <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
       <Input label="Subtitle" value={c.subtitle || ''} onChange={(e) => onContent({ subtitle: e.target.value })} variant="enrollment" />
       <Input label="Button label" value={c.button?.label || ''} onChange={(e) => onContent({ button: { ...c.button, label: e.target.value } })} variant="enrollment" />
-      <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} />
+      <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} schoolId={schoolId} />
       <div>
         <label className="landing-builder__field-label">Background color</label>
         <input
@@ -146,7 +169,7 @@ function FooterInspector({ block, onContent }) {
   );
 }
 
-export default function BlockInspector({ block, draft, onDraftChange, schoolName, portalName }) {
+export default function BlockInspector({ block, draft, onDraftChange, schoolName, portalName, schoolId }) {
   if (!block) {
     return (
       <div className="landing-builder__inspector landing-builder__inspector--empty">
@@ -200,11 +223,11 @@ export default function BlockInspector({ block, draft, onDraftChange, schoolName
         </div>
       )}
 
-      {block.type === BLOCK_TYPES.HERO && <HeroInspector block={block} onContent={onContent} onStyle={onStyle} />}
-      {block.type === BLOCK_TYPES.FEATURES && <FeaturesInspector block={block} onContent={onContent} />}
-      {block.type === BLOCK_TYPES.IMAGE_BANNER && <ImageBannerInspector block={block} onContent={onContent} />}
-      {block.type === BLOCK_TYPES.MAP && <MapInspector block={block} onContent={onContent} />}
-      {block.type === BLOCK_TYPES.CTA && <CtaInspector block={block} onContent={onContent} onStyle={onStyle} />}
+      {block.type === BLOCK_TYPES.HERO && <HeroInspector block={block} onContent={onContent} onStyle={onStyle} schoolId={schoolId} />}
+      {block.type === BLOCK_TYPES.FEATURES && <FeaturesInspector block={block} onContent={onContent} schoolId={schoolId} />}
+      {block.type === BLOCK_TYPES.IMAGE_BANNER && <ImageBannerInspector block={block} onContent={onContent} schoolId={schoolId} />}
+      {block.type === BLOCK_TYPES.MAP && <MapInspector block={block} onContent={onContent} schoolId={schoolId} />}
+      {block.type === BLOCK_TYPES.CTA && <CtaInspector block={block} onContent={onContent} onStyle={onStyle} schoolId={schoolId} />}
       {block.type === BLOCK_TYPES.FOOTER && <FooterInspector block={block} onContent={onContent} />}
     </div>
   );

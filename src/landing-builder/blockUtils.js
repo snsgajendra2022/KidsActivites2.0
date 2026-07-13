@@ -40,19 +40,47 @@ export function updateBlockStyle(blocks, blockId, stylePatch) {
 
 export const PREVIEW_STORAGE_KEY = (schoolId) => `ka_landing_preview_${schoolId}`;
 
-export function stashPreviewDraft(schoolId, page) {
+function writeStorage(storage, key, page) {
   try {
-    sessionStorage.setItem(PREVIEW_STORAGE_KEY(schoolId), JSON.stringify(page));
+    storage.setItem(key, JSON.stringify(page));
   } catch {
-    // quota
+    // quota / private mode
   }
 }
 
-export function readPreviewDraft(schoolId) {
+function readStorage(storage, key) {
   try {
-    const raw = sessionStorage.getItem(PREVIEW_STORAGE_KEY(schoolId));
+    const raw = storage.getItem(key);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
+
+/** Stash draft for Preview tab — uses both session + local storage under all known keys. */
+export function stashPreviewDraft(schoolId, page, extraKeys = []) {
+  if (!page) return;
+  const keys = [schoolId, ...extraKeys].filter(Boolean);
+  const unique = [...new Set(keys.map(String))];
+  for (const id of unique) {
+    const key = PREVIEW_STORAGE_KEY(id);
+    writeStorage(sessionStorage, key, page);
+    writeStorage(localStorage, key, page);
+  }
+}
+
+export function readPreviewDraft(schoolId) {
+  if (!schoolId) return null;
+  const key = PREVIEW_STORAGE_KEY(schoolId);
+  return readStorage(sessionStorage, key) || readStorage(localStorage, key);
+}
+
+/** Try several keys (school id, slug, etc.) and return the first valid v2 draft. */
+export function readPreviewDraftFromKeys(keys = []) {
+  for (const id of keys) {
+    const page = readPreviewDraft(id);
+    if (page?.version === 2 && page?.blocks?.length) return page;
+  }
+  return null;
+}
+

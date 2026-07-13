@@ -1,11 +1,81 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ExternalLink, Globe, LayoutTemplate, RefreshCw, Save, Upload } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ExternalLink, Globe, LayoutTemplate, RefreshCw, Save, Upload, X } from 'lucide-react';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { landingPageAction } from '../../services/landingPageApi.js';
 import { stashPreviewDraft } from '../blockUtils.js';
+import LandingPageRenderer from '../LandingPageRenderer.jsx';
 import BlockInspector, { BlockList } from './BlockInspector.jsx';
 import '../../styles/landing-builder.css';
+
+function actionErrorMessage(err, fallback) {
+  return err?.message || err?.details?.[0]?.message || fallback;
+}
+
+function DraftPreviewOverlay({
+  open,
+  draft,
+  branding,
+  school,
+  portalName,
+  tenantPath,
+  tenantSlug,
+  onClose,
+  onOpenPublicTab,
+}) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open, onClose]);
+
+  if (!open || !draft || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="landing-builder__preview-overlay" role="dialog" aria-modal="true" aria-label="Landing page preview">
+      <div className="landing-builder__preview-chrome">
+        <div className="landing-builder__preview-chrome-text">
+          <strong>Draft preview</strong>
+          <span>This is your current builder draft — not live until you publish.</span>
+        </div>
+        <div className="landing-builder__preview-chrome-actions">
+          <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={onOpenPublicTab}>
+            <ExternalLink size={14} />
+            Open public URL
+          </button>
+          <button type="button" className="premium-btn premium-btn-primary premium-btn-sm" onClick={onClose}>
+            <X size={14} />
+            Close preview
+          </button>
+        </div>
+      </div>
+      <div className="landing-builder__preview-scroll">
+        <LandingPageRenderer
+          page={draft}
+          branding={branding}
+          school={school}
+          portalName={portalName}
+          tenantPath={tenantPath}
+        />
+      </div>
+      {tenantSlug && (
+        <p className="landing-builder__preview-hint">
+          Public page after publish: /{tenantSlug}
+        </p>
+      )}
+    </div>,
+    document.body,
+  );
+}
 
 export default function LandingBuilder({
   schoolId,
@@ -14,7 +84,8 @@ export default function LandingBuilder({
   tenantSlug,
 }) {
   const { toast } = useToast();
-  const { reload } = usePortalConfig();
+  const { reload, config } = usePortalConfig();
+  const { tenantPath } = useTenantPath();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -22,24 +93,29 @@ export default function LandingBuilder({
   const [draft, setDraft] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [dirty, setDirty] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const loadEditor = useCallback(async () => {
-    if (!schoolId) return;
+    if (!schoolId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await landingPageAction('getEditor', {}, { schoolId });
       setMeta(data);
       setDraft(data.draft);
       setDirty(Boolean(data.isDraftDirty));
-      if (data.draft?.blocks?.length && !selectedId) {
-        setSelectedId(data.draft.blocks[0].id);
-      }
+      setSelectedId((prev) => {
+        if (prev && data.draft?.blocks?.some((b) => b.id === prev)) return prev;
+        return data.draft?.blocks?.[0]?.id || null;
+      });
     } catch (err) {
-      toast(err?.message || 'Failed to load landing page editor.', 'error');
+      toast(actionErrorMessage(err, 'Failed to load landing page editor.'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [schoolId, toast, selectedId]);
+  }, [schoolId, toast]);
 
   useEffect(() => {
     setSelectedId(null);
@@ -58,9 +134,10 @@ export default function LandingBuilder({
       const result = await landingPageAction('saveDraft', { landingPage: draft }, { schoolId });
       setDraft(result.draft);
       setDirty(false);
+      setMeta((m) => (m ? { ...m, draft: result.draft, isDraftDirty: false } : m));
       toast('Draft saved.', 'success');
-    } catch {
-      toast('Failed to save draft.', 'error');
+    } catch (err) {
+      toast(actionErrorMessage(err, 'Failed to save draft.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -69,29 +146,43 @@ export default function LandingBuilder({
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      if (dirty) {
-        await landingPageAction('saveDraft', { landingPage: draft }, { schoolId });
+      let page = draft;
+      if (dirty && draft) {
+        const saved = await landingPageAction('saveDraft', { landingPage: draft }, { schoolId });
+        page = saved.draft;
+        setDraft(page);
       }
       const result = await landingPageAction('publish', {}, { schoolId });
+      const published = result.published && typeof result.published === 'object'
+        ? result.published
+        : page;
       setDirty(false);
+      setMeta((m) => ({
+        ...m,
+        draft: page,
+        published,
+        isDraftDirty: false,
+      }));
       toast('Landing page published.', 'success');
-      setMeta((m) => ({ ...m, published: result.published, isDraftDirty: false }));
       await reload?.();
-    } catch {
-      toast('Failed to publish.', 'error');
+    } catch (err) {
+      toast(actionErrorMessage(err, 'Failed to publish.'), 'error');
     } finally {
       setPublishing(false);
     }
   };
 
   const handleDiscard = async () => {
+    if (!window.confirm('Discard draft changes and restore the last published page?')) return;
     try {
       const result = await landingPageAction('discardDraft', {}, { schoolId });
       setDraft(result.draft);
       setDirty(false);
+      setSelectedId(result.draft?.blocks?.[0]?.id || null);
+      setMeta((m) => (m ? { ...m, draft: result.draft, isDraftDirty: false } : m));
       toast('Draft reset to last published version.', 'success');
-    } catch {
-      toast('Failed to discard draft.', 'error');
+    } catch (err) {
+      toast(actionErrorMessage(err, 'Failed to discard draft.'), 'error');
     }
   };
 
@@ -103,16 +194,41 @@ export default function LandingBuilder({
       setDirty(true);
       setSelectedId(result.draft?.blocks?.[0]?.id || null);
       toast('Template applied to draft.', 'success');
-    } catch {
-      toast('Failed to apply template.', 'error');
+    } catch (err) {
+      toast(actionErrorMessage(err, 'Failed to apply template.'), 'error');
     }
   };
 
   const handlePreview = () => {
+    if (!draft) {
+      toast('Nothing to preview yet.', 'warning');
+      return;
+    }
+    const keys = [schoolId, tenantSlug, 'default'].filter(Boolean);
+    stashPreviewDraft(schoolId || tenantSlug || 'default', draft, keys);
+    setPreviewOpen(true);
+  };
+
+  const handleOpenPublicTab = async () => {
     if (!draft) return;
-    stashPreviewDraft(schoolId, draft);
-    const url = tenantSlug ? `/${tenantSlug}?preview=1` : '/?preview=1';
-    window.open(url, '_blank', 'noopener,noreferrer');
+    try {
+      let page = draft;
+      if (dirty) {
+        setSaving(true);
+        const saved = await landingPageAction('saveDraft', { landingPage: draft }, { schoolId });
+        page = saved.draft || draft;
+        setDraft(page);
+        setDirty(false);
+        setSaving(false);
+      }
+      const keys = [schoolId, tenantSlug, 'default'].filter(Boolean);
+      stashPreviewDraft(schoolId || tenantSlug || 'default', page, keys);
+      const path = tenantSlug ? `/${tenantSlug}?preview=1` : '/?preview=1';
+      window.open(`${window.location.origin}${path}`, '_blank');
+    } catch (err) {
+      setSaving(false);
+      toast(actionErrorMessage(err, 'Could not open public preview tab.'), 'error');
+    }
   };
 
   const handleMigrate = async () => {
@@ -120,21 +236,32 @@ export default function LandingBuilder({
       const result = await landingPageAction('migrateFromV1', {}, { schoolId });
       setDraft(result.draft);
       setDirty(true);
+      setSelectedId(result.draft?.blocks?.[0]?.id || null);
       toast('Converted legacy landing page to builder format.', 'success');
-    } catch {
-      toast('Migration failed.', 'error');
+    } catch (err) {
+      toast(actionErrorMessage(err, 'Migration failed.'), 'error');
     }
   };
 
   const selectedBlock = draft?.blocks?.find((b) => b.id === selectedId) || null;
   const publicUrl = meta?.publicUrl || (tenantSlug ? `/${tenantSlug}` : '/');
+  const canDiscard = Boolean(meta?.published) || dirty;
 
   if (loading) {
     return <div className="landing-builder__loading">Loading landing page builder…</div>;
   }
 
   if (!draft) {
-    return <div className="landing-builder__loading">No landing page data available.</div>;
+    return (
+      <div className="landing-builder__loading">
+        No landing page data available.
+        <div style={{ marginTop: '0.75rem' }}>
+          <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={loadEditor}>
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -143,7 +270,10 @@ export default function LandingBuilder({
         <div className="landing-builder__toolbar-info">
           <Globe size={16} />
           <span>
-            Public URL: <strong>{publicUrl}</strong>
+            Public URL:{' '}
+            <a href={publicUrl} target="_blank" rel="noopener noreferrer">
+              <strong>{publicUrl}</strong>
+            </a>
             {dirty && <span className="landing-builder__dirty-badge">Unsaved changes</span>}
           </span>
         </div>
@@ -154,7 +284,7 @@ export default function LandingBuilder({
               Import legacy page
             </button>
           )}
-          <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={handleDiscard} disabled={!meta?.published}>
+          <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={handleDiscard} disabled={!canDiscard}>
             Discard draft
           </button>
           <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={handlePreview}>
@@ -165,7 +295,7 @@ export default function LandingBuilder({
             <Save size={14} />
             {saving ? 'Saving…' : 'Save draft'}
           </button>
-          <button type="button" className="premium-btn premium-btn-primary premium-btn-sm" onClick={handlePublish} disabled={publishing}>
+          <button type="button" className="premium-btn premium-btn-primary premium-btn-sm" onClick={handlePublish} disabled={publishing || saving}>
             <Upload size={14} />
             {publishing ? 'Publishing…' : 'Publish'}
           </button>
@@ -212,6 +342,7 @@ export default function LandingBuilder({
           onDraftChange={handleDraftChange}
           schoolName={schoolName}
           portalName={portalName}
+          schoolId={schoolId}
         />
       </div>
 
@@ -242,6 +373,18 @@ export default function LandingBuilder({
           </label>
         </div>
       </section>
+
+      <DraftPreviewOverlay
+        open={previewOpen}
+        draft={draft}
+        branding={config?.branding}
+        school={config?.school || { name: schoolName }}
+        portalName={portalName}
+        tenantPath={tenantPath}
+        tenantSlug={tenantSlug}
+        onClose={() => setPreviewOpen(false)}
+        onOpenPublicTab={handleOpenPublicTab}
+      />
     </div>
   );
 }

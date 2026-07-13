@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
@@ -8,12 +9,15 @@ import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
 import EditorialFooter from '../../components/public/EditorialFooter.jsx';
 import StaticCampusBanner from '../../components/public/StaticCampusBanner.jsx';
 import LandingPageRenderer from '../../landing-builder/LandingPageRenderer.jsx';
-import { readPreviewDraft } from '../../landing-builder/blockUtils.js';
+import { readPreviewDraftFromKeys } from '../../landing-builder/blockUtils.js';
+import { landingPageAction } from '../../services/landingPageApi.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import { getAccessToken } from '../../services/api/tokenStorage.js';
 import '../../styles/landing-builder.css';
 
 import imgSecure from '../../assets/timeline_secure.jpg';
@@ -67,13 +71,85 @@ function renderMultiline(text) {
 
 export default function Landing() {
   const { isPlatformHome } = useTenant();
+  const { user, bootstrapping } = useAuth();
   const { portalName, school, branding, platform, landingPage, landingPagePublished, activeSchoolId } = usePortalConfig();
-  const { loginPath, tenantPath } = useTenantPath();
+  const { loginPath, tenantPath, tenantSlug } = useTenantPath();
   const [searchParams] = useSearchParams();
   const isPreview = searchParams.get('preview') === '1';
   const enrollPath = useSchoolEnrollPath();
   const enrollmentFormPath = tenantPath('/enrollment/kidzee-print-form');
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
+
+  const previewKeys = useMemo(
+    () => [activeSchoolId, school?.id, tenantSlug, user?.schoolId].filter(Boolean),
+    [activeSchoolId, school?.id, tenantSlug, user?.schoolId],
+  );
+
+  const [previewDraft, setPreviewDraft] = useState(null);
+  const [previewSource, setPreviewSource] = useState(null); // 'stash' | 'api' | 'published'
+  const [previewLoading, setPreviewLoading] = useState(isPreview);
+
+  useEffect(() => {
+    if (!isPreview || isPlatformHome) {
+      setPreviewDraft(null);
+      setPreviewSource(null);
+      setPreviewLoading(false);
+      return undefined;
+    }
+
+    // Wait for auth bootstrap so we can load the admin draft with the access token.
+    if (bootstrapping) {
+      setPreviewLoading(true);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setPreviewLoading(true);
+
+    const finish = (draft, source) => {
+      if (cancelled) return;
+      setPreviewDraft(draft);
+      setPreviewSource(source);
+      setPreviewLoading(false);
+    };
+
+    const stashed = readPreviewDraftFromKeys(previewKeys);
+    if (stashed) {
+      finish(stashed, 'stash');
+      return undefined;
+    }
+
+    const token = getAccessToken();
+    if (!token) {
+      finish(null, landingPagePublished?.blocks?.length ? 'published' : null);
+      return undefined;
+    }
+
+    const schoolId = activeSchoolId || school?.id || user?.schoolId || undefined;
+    landingPageAction('getEditor', {}, { schoolId })
+      .then((data) => {
+        if (data?.draft?.version === 2 && data.draft?.blocks?.length) {
+          finish(data.draft, 'api');
+          return;
+        }
+        finish(null, landingPagePublished?.blocks?.length ? 'published' : null);
+      })
+      .catch(() => {
+        finish(null, landingPagePublished?.blocks?.length ? 'published' : null);
+      });
+
+    return () => { cancelled = true; };
+  }, [
+    isPreview,
+    isPlatformHome,
+    bootstrapping,
+    previewKeys,
+    activeSchoolId,
+    school?.id,
+    user?.schoolId,
+    landingPagePublished,
+  ]);
+
 
   if (isPlatformHome) {
     const heroLines = parseHeroHeadline(platform?.heroHeadline);
@@ -131,14 +207,42 @@ export default function Landing() {
     );
   }
 
-  const previewPage = isPreview ? readPreviewDraft(activeSchoolId || school?.id) : null;
-  const v2Page = isPreview ? previewPage : landingPagePublished;
+  if (isPreview && previewLoading) {
+    return (
+      <PublicLayout hideFooter className="sb-editorial-page">
+        <div className="landing-builder__loading">Loading landing page preview…</div>
+      </PublicLayout>
+    );
+  }
+
+  const v2Page = isPreview
+    ? (previewDraft || landingPagePublished)
+    : landingPagePublished;
+  const showingPreviewDraft = isPreview && Boolean(previewDraft);
+  const showingPublishedFallback = isPreview && !previewDraft && Boolean(landingPagePublished?.blocks?.length);
+
   if (v2Page?.version === 2 && v2Page?.blocks?.length) {
     return (
       <PublicLayout hideFooter className="sb-editorial-page">
         {isPreview && (
           <div className="landing-builder__preview-banner" role="status">
-            Preview mode — this draft is not visible to the public until you publish.
+            <span>
+              {showingPreviewDraft
+                ? (previewSource === 'api'
+                  ? 'Preview mode — showing your latest saved draft (not published yet).'
+                  : 'Preview mode — this draft is not visible to the public until you publish.')
+                : showingPublishedFallback
+                  ? 'Preview mode — could not load draft, showing the published page. Click Preview again from Portal Settings while signed in.'
+                  : 'Preview mode'}
+            </span>
+            {tenantSlug && (
+              <a
+                className="landing-builder__preview-back"
+                href={`/${tenantSlug}/admin/portal-settings`}
+              >
+                Back to editor
+              </a>
+            )}
           </div>
         )}
         <LandingPageRenderer
@@ -151,6 +255,7 @@ export default function Landing() {
       </PublicLayout>
     );
   }
+
 
   const sections = landingPage?.sections || {};
   const hero = landingPage?.hero || {};
