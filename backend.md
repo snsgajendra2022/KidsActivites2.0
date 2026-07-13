@@ -725,12 +725,13 @@ Public portal branding for school landing (`/{slug}`), school login, and school 
       "Admissions open for 2026–2027 — enroll online today",
       "Last date for fee submission: 31 July 2026"
     ],
-    "enrollmentForm": { "steps": [ ] }
+    "enrollmentForm": { "steps": [ ] },
+    "landingPage": { }
   }
 }
 ```
 
-> Public response may omit `menuVisibility` (admin-only). `enrollmentForm` and `school` (Enrollment School Details) are required for `/{slug}/enroll`.
+> Public landing page v2 builder: see [landing_page_backend.md](./landing_page_backend.md). Legacy v1 uses `landingPage` above.
 
 **Mock function:** `getPortalConfig(schoolId)`
 
@@ -1982,6 +1983,7 @@ Filtered server-side using `menuVisibility` from portal config + role permission
 | `getDemoAccounts` | GET | `/auth/demo-accounts` |
 | `getPortalConfig` | GET | `/portal/config` |
 | `savePortalConfig` | PUT | `/admin/portal-settings` |
+| `landingPageAction` | POST | `/admin/landing-page` — see [landing_page_backend.md](./landing_page_backend.md) |
 | `setMenuVisibility` | PATCH | `/admin/portal-settings/menus` |
 | `updateMenuItemCustomization` | PATCH | `/admin/portal-settings/menus/:menuId` |
 | `addCustomMenuItem` | POST | `/admin/portal-settings/menus/custom` |

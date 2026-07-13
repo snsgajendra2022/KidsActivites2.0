@@ -124,7 +124,7 @@ function buildHeaders(extra = {}, { auth = true, skipTenantHeader = false } = {}
 }
 
 /** @returns {{ ok: true, token: string } | { ok: false, reason: 'missing' | 'expired' | 'transient' }} */
-async function refreshAccessToken() {
+async function refreshAccessTokenResult() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return { ok: false, reason: 'missing' };
 
@@ -162,6 +162,12 @@ async function refreshAccessToken() {
 
   setServerReconnecting(true);
   return { ok: false, reason: 'transient' };
+}
+
+/** Public refresh — returns access token string or null (used by upload queue). */
+export async function refreshAccessToken() {
+  const result = await refreshAccessTokenResult();
+  return result.ok ? result.token : null;
 }
 
 function buildUrl(path, params) {
@@ -208,7 +214,7 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
   }
 
   if (res.status === 401 && auth && retry) {
-    const refresh = await refreshAccessToken();
+    const refresh = await refreshAccessTokenResult();
     if (refresh.ok) {
       return executeRequest(path, { ...options, retry: false }, parser);
     }

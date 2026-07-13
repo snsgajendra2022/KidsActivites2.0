@@ -173,6 +173,16 @@
 }
 
 /* ── Upload panel ──────────────────────────────────────────────── */
+.admin-photos-upload-status {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.admin-photos-queue {
+  margin-top: 1rem;
+}
+
 .photo-upload-panel {
   padding: 1.25rem;
   border: 1px solid var(--admin-purple-border);
@@ -354,10 +364,16 @@
   justify-content: center;
 }
 
-.photo-upload-preview__thumb img {
+.photo-upload-preview__thumb img,
+.photo-upload-preview__thumb video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.photo-upload-preview__thumb--video {
+  background: color-mix(in srgb, var(--admin-purple-mid) 12%, #fff);
 }
 
 .photo-upload-preview__icon {

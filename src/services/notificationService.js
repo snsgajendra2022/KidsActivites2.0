@@ -67,3 +67,22 @@ export async function markAllRead(userId) {
 export function getUnreadCount(userId) {
   return getAll().filter((n) => n.userId === userId && !n.read).length;
 }
+
+/** Called when a notice is published — does not affect existing notification types. */
+export function pushNoticeNotification({ userId, noticeId, title }) {
+  const notifs = getAll();
+  const exists = notifs.some((n) => n.userId === userId && n.noticeId === noticeId);
+  if (exists) return;
+  notifs.unshift({
+    id: `notif-notice-${noticeId}-${userId}`,
+    userId,
+    noticeId,
+    title: `New Notice: ${title}`,
+    message: 'A new notice has been shared by your school.',
+    type: 'notice',
+    read: false,
+    createdAt: new Date().toISOString(),
+    link: `/notice-board/${noticeId}`,
+  });
+  setStore(KEY, notifs);
+}

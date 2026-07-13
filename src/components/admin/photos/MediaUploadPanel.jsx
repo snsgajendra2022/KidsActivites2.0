@@ -2,14 +2,16 @@ import { useRef } from 'react';
 import { Upload, X, FileImage, Film, Loader2 } from 'lucide-react';
 import Button from '../../ui/Button.jsx';
 import { ACCEPTED_MEDIA, formatAlbumLabel, formatAlbumOptionLabel } from './utils.js';
-import { isVideoMediaFile } from '../../../utils/mediaUploadLimits.js';
+import { isVideoMediaFile, isVideoQueueItem } from '../../../utils/mediaUploadLimits.js';
 
-function PendingFileItem({ file, previewUrl, onRemove, disabled }) {
-  const isVideo = isVideoMediaFile(file);
+function PendingFileItem({ file, previewUrl, onRemove, disabled, isVideo: isVideoProp }) {
+  const isVideo = isVideoProp ?? isVideoMediaFile(file);
   return (
     <li className="photo-upload-preview__item">
-      <div className="photo-upload-preview__thumb">
-        {previewUrl ? (
+      <div className={`photo-upload-preview__thumb${isVideo ? ' photo-upload-preview__thumb--video' : ''}`}>
+        {previewUrl && isVideo ? (
+          <video src={previewUrl} muted playsInline preload="metadata" aria-hidden />
+        ) : previewUrl ? (
           <img src={previewUrl} alt="" />
         ) : (
           <span className="photo-upload-preview__icon" aria-hidden>
@@ -52,8 +54,11 @@ export default function MediaUploadPanel({
   onDragOver,
   onDragLeave,
   onDrop,
-  pendingFiles,
-  pendingPreviews,
+  pendingFiles = [],
+  pendingPreviews = [],
+  queueItems = [],
+  queuePreviewUrls = new Map(),
+  queueCount = 0,
   onRemovePendingFile,
   onChooseFiles,
   onUpload,
@@ -61,6 +66,7 @@ export default function MediaUploadPanel({
   fileInputRef,
   replaceInputRef,
   onReplaceFileChange,
+  isAddingFiles = false,
 }) {
   const internalFileRef = useRef(null);
   const inputRef = fileInputRef || internalFileRef;
@@ -68,6 +74,9 @@ export default function MediaUploadPanel({
   if (!visible) return null;
 
   const selectedAlbum = albums.find((a) => a.id === selectedAlbumId);
+  const fileCount = queueCount > 0 ? queueCount : pendingFiles.length;
+  const showPendingList = queueCount === 0 && pendingFiles.length > 0;
+  const showQueueList = queueItems.length > 0;
 
   return (
     <section
@@ -124,9 +133,9 @@ export default function MediaUploadPanel({
             className="photo-upload-dropzone"
             role="button"
             tabIndex={0}
-            onClick={() => !uploading && onChooseFiles?.()}
+            onClick={() => !uploading && !isAddingFiles && onChooseFiles?.()}
             onKeyDown={(e) => {
-              if ((e.key === 'Enter' || e.key === ' ') && !uploading) {
+              if ((e.key === 'Enter' || e.key === ' ') && !uploading && !isAddingFiles) {
                 e.preventDefault();
                 onChooseFiles?.();
               }
@@ -144,24 +153,25 @@ export default function MediaUploadPanel({
               type="button"
               variant="secondary"
               size="sm"
-              disabled={uploading || !selectedAlbumId}
+              disabled={uploading || isAddingFiles || !selectedAlbumId}
               onClick={(e) => { e.stopPropagation(); onChooseFiles?.(); }}
             >
-              Choose files
+              {isAddingFiles ? 'Adding…' : 'Choose files'}
             </Button>
           </div>
 
-          {pendingFiles.length > 0 && (
+          {fileCount > 0 && (
             <div className="photo-upload-preview">
               <div className="photo-upload-preview__header">
-                <span>{pendingFiles.length} file{pendingFiles.length !== 1 ? 's' : ''} selected</span>
+                <span>{fileCount} file{fileCount !== 1 ? 's' : ''} {queueCount > 0 ? 'in queue' : 'selected'}</span>
                 {uploading && (
                   <span className="photo-upload-preview__progress" aria-live="polite">
                     <Loader2 size={14} className="photo-sharing-spin" aria-hidden />
-                    Uploading… {uploadProgress}%
+                    Uploading…
                   </span>
                 )}
               </div>
+              {showPendingList && (
               <ul className="photo-upload-preview__list" aria-label="Selected files">
                 {pendingFiles.map((file, index) => (
                   <PendingFileItem
@@ -173,18 +183,32 @@ export default function MediaUploadPanel({
                   />
                 ))}
               </ul>
+              )}
+              {showQueueList && (
+              <ul className="photo-upload-preview__list" aria-label="Files in upload queue">
+                {queueItems.map((item) => (
+                  <PendingFileItem
+                    key={item.id}
+                    file={item.file || { name: item.fileName, size: item.fileSize, type: item.fileType }}
+                    previewUrl={queuePreviewUrls.get(item.id)}
+                    isVideo={isVideoQueueItem(item)}
+                    disabled
+                  />
+                ))}
+              </ul>
+              )}
               {!uploading && (
                 <Button
                   type="button"
                   variant="primary"
-                  disabled={!selectedAlbumId}
+                  disabled={!selectedAlbumId || fileCount === 0}
                   onClick={onUpload}
                   className="photo-upload-preview__submit"
                 >
-                  Upload {pendingFiles.length} file{pendingFiles.length !== 1 ? 's' : ''}
+                  Upload {fileCount} file{fileCount !== 1 ? 's' : ''}
                 </Button>
               )}
-              {uploading && (
+              {uploading && uploadProgress > 0 && (
                 <div
                   className="photo-upload-progress"
                   role="progressbar"

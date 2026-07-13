@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell, CheckCheck, FileText, CreditCard, Image, MessageCircle,
-  Inbox, Filter,
+  Inbox, Filter, Megaphone,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -20,6 +20,7 @@ const TYPE_CONFIG = {
   fee: { label: 'Fees', icon: CreditCard, filter: 'fee' },
   photo: { label: 'Photos', icon: Image, filter: 'photo' },
   chat: { label: 'Messages', icon: MessageCircle, filter: 'chat' },
+  notice: { label: 'Notices', icon: Megaphone, filter: 'notice' },
   system: { label: 'System', icon: Bell, filter: 'system' },
 };
 
@@ -30,6 +31,7 @@ const FILTERS = [
   { id: 'fee', label: 'Fees' },
   { id: 'photo', label: 'Photos' },
   { id: 'chat', label: 'Messages' },
+  { id: 'notice', label: 'Notices' },
   { id: 'system', label: 'System' },
 ];
 

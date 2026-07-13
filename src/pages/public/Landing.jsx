@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
 import CinematicHero from '../../components/public/CinematicHero.jsx';
@@ -6,11 +7,14 @@ import MapFeatureSection from '../../components/public/MapFeatureSection.jsx';
 import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
 import EditorialFooter from '../../components/public/EditorialFooter.jsx';
 import StaticCampusBanner from '../../components/public/StaticCampusBanner.jsx';
+import LandingPageRenderer from '../../landing-builder/LandingPageRenderer.jsx';
+import { readPreviewDraft } from '../../landing-builder/blockUtils.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import '../../styles/landing-builder.css';
 
 import imgSecure from '../../assets/timeline_secure.jpg';
 import imgDocs from '../../assets/timeline_docs.jpg';
@@ -63,8 +67,10 @@ function renderMultiline(text) {
 
 export default function Landing() {
   const { isPlatformHome } = useTenant();
-  const { portalName, school, branding, platform, landingPage } = usePortalConfig();
+  const { portalName, school, branding, platform, landingPage, landingPagePublished, activeSchoolId } = usePortalConfig();
   const { loginPath, tenantPath } = useTenantPath();
+  const [searchParams] = useSearchParams();
+  const isPreview = searchParams.get('preview') === '1';
   const enrollPath = useSchoolEnrollPath();
   const enrollmentFormPath = tenantPath('/enrollment/kidzee-print-form');
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
@@ -121,6 +127,27 @@ export default function Landing() {
         />
 
         <EditorialFooter compact />
+      </PublicLayout>
+    );
+  }
+
+  const previewPage = isPreview ? readPreviewDraft(activeSchoolId || school?.id) : null;
+  const v2Page = isPreview ? previewPage : landingPagePublished;
+  if (v2Page?.version === 2 && v2Page?.blocks?.length) {
+    return (
+      <PublicLayout hideFooter className="sb-editorial-page">
+        {isPreview && (
+          <div className="landing-builder__preview-banner" role="status">
+            Preview mode — this draft is not visible to the public until you publish.
+          </div>
+        )}
+        <LandingPageRenderer
+          page={v2Page}
+          branding={branding}
+          school={school}
+          portalName={portalName}
+          tenantPath={tenantPath}
+        />
       </PublicLayout>
     );
   }
