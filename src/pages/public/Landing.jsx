@@ -222,8 +222,9 @@ export default function Landing() {
   const showingPublishedFallback = isPreview && !previewDraft && Boolean(landingPagePublished?.blocks?.length);
 
   if (v2Page?.version === 2 && v2Page?.blocks?.length) {
+    const isLaughAndLearn = v2Page.theme?.skin === 'laugh-and-learn';
     return (
-      <PublicLayout hideFooter className="sb-editorial-page">
+      <PublicLayout hideFooter hideHeader={isLaughAndLearn} className={isLaughAndLearn ? 'lal-public-page' : 'sb-editorial-page'}>
         {isPreview && (
           <div className="landing-builder__preview-banner" role="status">
             <span>

@@ -534,6 +534,7 @@ POST /admin/landing-page
 | `admissions-minimal` | Minimal Clean |
 | `single-cta` | One Page Enroll |
 | `photo-gallery-focus` | Photo Gallery Focus |
+| `laugh-and-learn-academy` | Laugh & Learn Academy (preschool / daycare) |
 
 **Frontend catalog:** `src/landing-builder/templates/index.js`
 

@@ -8,16 +8,18 @@ import EditorialFooter from '../components/public/EditorialFooter.jsx';
 import StaticCampusBanner from '../components/public/StaticCampusBanner.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../data/defaultPortalConfig.js';
 import { BLOCK_TYPES } from './blockRegistry.js';
+import { isLaughAndLearnBlock, renderLaughAndLearnBlock } from './skins/laughAndLearnRenderers.jsx';
+import '../styles/landing-template-laugh-and-learn.css';
 
 function resolveHref(href, tenantPath) {
   if (!href) return tenantPath('/');
-  if (href.startsWith('http')) return href;
+  if (href.startsWith('http') || href.startsWith('#')) return href;
   return tenantPath(href.startsWith('/') ? href : `/${href}`);
 }
 
 function HeroBlock({ block, branding, tenantPath, defaultHeroImage }) {
   const { content, style, layout } = block;
-  const bg = style?.backgroundImageUrl || branding?.heroImageUrl || defaultHeroImage;
+  const bg = style?.backgroundImageUrl || content?.heroImageUrl || branding?.heroImageUrl || defaultHeroImage;
 
   return (
     <CinematicHero
@@ -28,7 +30,13 @@ function HeroBlock({ block, branding, tenantPath, defaultHeroImage }) {
           {content.badge}
         </>
       ) : null}
-      title={content.title}
+      title={content.titleHighlight ? (
+        <>
+          {content.title}{' '}
+          <span style={{ color: 'var(--sb-secondary, #006875)' }}>{content.titleHighlight}</span>
+          {content.titleSuffix ? ` ${content.titleSuffix}` : ''}
+        </>
+      ) : content.title}
       subtitle={content.subtitle}
       primaryAction={content.showPrimaryButton !== false && content.primaryButton ? {
         to: resolveHref(content.primaryButton.href, tenantPath),
@@ -174,6 +182,45 @@ function FooterBlock({ block }) {
   return <EditorialFooter />;
 }
 
+function renderStandardBlock(block, ctx) {
+  switch (block.type) {
+    case BLOCK_TYPES.HERO:
+      return (
+        <HeroBlock
+          block={block}
+          branding={ctx.branding}
+          tenantPath={ctx.tenantPath}
+          defaultHeroImage={ctx.defaultHeroImage}
+        />
+      );
+    case BLOCK_TYPES.FEATURES:
+      return <FeaturesBlock block={block} />;
+    case BLOCK_TYPES.IMAGE_BANNER:
+      return <ImageBannerBlock block={block} />;
+    case BLOCK_TYPES.MAP:
+      return <MapBlock block={block} school={ctx.school} />;
+    case BLOCK_TYPES.CTA:
+      return (
+        <CtaBlock
+          block={block}
+          tenantPath={ctx.tenantPath}
+          portalName={ctx.portalName}
+          school={ctx.school}
+        />
+      );
+    case BLOCK_TYPES.FOOTER:
+      return <FooterBlock block={block} />;
+    case BLOCK_TYPES.CONTENT_SPLIT:
+    case BLOCK_TYPES.BENTO_PAIR:
+    case BLOCK_TYPES.FEATURE_PANEL:
+    case BLOCK_TYPES.HIGHLIGHTS:
+    case BLOCK_TYPES.TESTIMONIALS:
+      return renderLaughAndLearnBlock(block, { tenantPath: ctx.tenantPath });
+    default:
+      return null;
+  }
+}
+
 export default function LandingPageRenderer({
   page,
   branding,
@@ -185,43 +232,25 @@ export default function LandingPageRenderer({
 
   const defaultHeroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
   const visible = page.blocks.filter((b) => b.visible !== false);
+  const useLalSkin = page.theme?.skin === 'laugh-and-learn';
+  const ctx = { branding, school, portalName, tenantPath, defaultHeroImage };
 
-  return (
-    <>
-      {visible.map((block) => {
-        switch (block.type) {
-          case BLOCK_TYPES.HERO:
-            return (
-              <HeroBlock
-                key={block.id}
-                block={block}
-                branding={branding}
-                tenantPath={tenantPath}
-                defaultHeroImage={defaultHeroImage}
-              />
-            );
-          case BLOCK_TYPES.FEATURES:
-            return <FeaturesBlock key={block.id} block={block} />;
-          case BLOCK_TYPES.IMAGE_BANNER:
-            return <ImageBannerBlock key={block.id} block={block} />;
-          case BLOCK_TYPES.MAP:
-            return <MapBlock key={block.id} block={block} school={school} />;
-          case BLOCK_TYPES.CTA:
-            return (
-              <CtaBlock
-                key={block.id}
-                block={block}
-                tenantPath={tenantPath}
-                portalName={portalName}
-                school={school}
-              />
-            );
-          case BLOCK_TYPES.FOOTER:
-            return <FooterBlock key={block.id} block={block} />;
-          default:
-            return null;
-        }
-      })}
-    </>
-  );
+  let lalHeaderDone = false;
+
+  const content = visible.map((block) => {
+    if (useLalSkin && isLaughAndLearnBlock(block)) {
+      const includeHeader = !lalHeaderDone && block.type === BLOCK_TYPES.HERO;
+      if (includeHeader) lalHeaderDone = true;
+      const node = renderLaughAndLearnBlock(block, { tenantPath, includeHeader });
+      return node ? <div key={block.id}>{node}</div> : null;
+    }
+    const node = renderStandardBlock(block, ctx);
+    return node ? <div key={block.id}>{node}</div> : null;
+  });
+
+  if (useLalSkin) {
+    return <div className="lal-page">{content}</div>;
+  }
+
+  return <>{content}</>;
 }

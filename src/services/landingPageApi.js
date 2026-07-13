@@ -81,7 +81,10 @@ async function mockLandingAction(action, payload = {}, schoolId) {
     }
 
     case 'publish': {
-      const draft = ensureDraft(config, id);
+      let draft = readLandingPage(id, 'draft') || config.landingPageDraft;
+      if (!draft?.blocks?.length) {
+        draft = ensureDraft(config, id);
+      }
       const published = {
         ...draft,
         publishedAt: new Date().toISOString(),
@@ -158,10 +161,19 @@ async function apiLandingAction(action, payload = {}, schoolId) {
 
 /** Single entry point for all landing page builder operations. */
 export async function landingPageAction(action, payload = {}, { schoolId } = {}) {
-  return routeRequest({
-    mockFn: () => mockLandingAction(action, payload, schoolId),
-    apiFn: () => apiLandingAction(action, payload, schoolId),
-  });
+  try {
+    return await routeRequest({
+      mockFn: () => mockLandingAction(action, payload, schoolId),
+      apiFn: () => apiLandingAction(action, payload, schoolId),
+    });
+  } catch (err) {
+    const notFound = err?.code === 'NOT_FOUND' || err?.status === 404;
+    if (notFound) {
+      console.warn('[LandingPage] /admin/landing-page not on server yet — using local builder storage.');
+      return mockLandingAction(action, payload, schoolId);
+    }
+    throw err;
+  }
 }
 
 export function getPublishedLandingFromConfig(config, schoolId) {

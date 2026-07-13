@@ -315,6 +315,50 @@
   font-size: 0.6875rem;
   font-weight: 600;
   cursor: pointer;
+  color: #374151;
+}
+
+.landing-builder__layout-btn:hover {
+  border-color: var(--sb-secondary, #5b4bdb);
+  background: #f8faff;
+}
+
+.landing-builder__inspector-note {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.landing-builder__live-preview {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  overflow: hidden;
+}
+
+.landing-builder__live-preview-hint {
+  margin: 0;
+  padding: 0 1rem 0.75rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.landing-builder__live-preview .landing-builder__field-label {
+  padding: 1rem 1rem 0.25rem;
+  margin: 0;
+}
+
+.landing-builder__live-preview-frame {
+  max-height: 520px;
+  overflow: auto;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: #f6f9ff;
+}
+
+.landing-builder__live-preview-frame .lal-page,
+.landing-builder__live-preview-frame .sb-editorial-page {
+  min-height: 200px;
 }
 
 .landing-builder__layout-btn--active {

@@ -5,6 +5,7 @@ import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { landingPageAction } from '../../services/landingPageApi.js';
+import { listTemplateSummaries } from '../templates/index.js';
 import { stashPreviewDraft } from '../blockUtils.js';
 import LandingPageRenderer from '../LandingPageRenderer.jsx';
 import BlockInspector, { BlockList } from './BlockInspector.jsx';
@@ -74,6 +75,35 @@ function DraftPreviewOverlay({
       )}
     </div>,
     document.body,
+  );
+}
+
+function TemplateThumb({ src, alt }) {
+  const [broken, setBroken] = useState(false);
+  const display = broken ? '/assets/kidsactivites-hero-placeholder.svg' : (src || '/assets/kidsactivites-hero-placeholder.svg');
+  return (
+    <div className="landing-builder__template-thumb">
+      <img src={display} alt={alt || ''} onError={() => setBroken(true)} />
+    </div>
+  );
+}
+
+function LivePreviewPanel({ draft, config, schoolName, portalName, tenantPath }) {
+  if (!draft) return null;
+  return (
+    <section className="landing-builder__live-preview">
+      <p className="landing-builder__field-label">Live preview</p>
+      <p className="landing-builder__live-preview-hint">Updates as you edit — same view as Preview &amp; publish.</p>
+      <div className="landing-builder__live-preview-frame">
+        <LandingPageRenderer
+          page={draft}
+          branding={config?.branding}
+          school={config?.school || { name: schoolName }}
+          portalName={portalName}
+          tenantPath={tenantPath}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -246,6 +276,7 @@ export default function LandingBuilder({
   const selectedBlock = draft?.blocks?.find((b) => b.id === selectedId) || null;
   const publicUrl = meta?.publicUrl || (tenantSlug ? `/${tenantSlug}` : '/');
   const canDiscard = Boolean(meta?.published) || dirty;
+  const templates = listTemplateSummaries();
 
   if (loading) {
     return <div className="landing-builder__loading">Loading landing page builder…</div>;
@@ -309,16 +340,14 @@ export default function LandingBuilder({
           <p>Click to replace your draft with a starter layout.</p>
         </div>
         <div className="landing-builder__template-grid">
-          {(meta?.templates || []).map((tpl) => (
+          {templates.map((tpl) => (
             <button
               key={tpl.id}
               type="button"
               className="landing-builder__template-card"
               onClick={() => handleApplyTemplate(tpl.id)}
             >
-              <div className="landing-builder__template-thumb">
-                <img src={tpl.thumbnailUrl} alt="" />
-              </div>
+              <TemplateThumb src={tpl.thumbnailUrl} alt={tpl.name} />
               <p className="landing-builder__template-name">{tpl.name}</p>
               <p className="landing-builder__template-desc">{tpl.description}</p>
               <span className="landing-builder__template-meta">{tpl.blockCount} sections</span>
@@ -345,6 +374,14 @@ export default function LandingBuilder({
           schoolId={schoolId}
         />
       </div>
+
+      <LivePreviewPanel
+        draft={draft}
+        config={config}
+        schoolName={schoolName}
+        portalName={portalName}
+        tenantPath={tenantPath}
+      />
 
       <section className="landing-builder__theme">
         <p className="landing-builder__field-label">Theme colors</p>

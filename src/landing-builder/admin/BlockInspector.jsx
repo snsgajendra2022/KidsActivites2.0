@@ -8,7 +8,14 @@ import { BLOCK_PALETTE, BLOCK_TYPES, LAYOUT_OPTIONS, createDefaultBlock } from '
 import { cloneBlock, moveBlock, removeBlockAt, updateBlockAt, updateBlockContent, updateBlockStyle } from '../blockUtils.js';
 
 function blockLabel(type) {
-  return BLOCK_PALETTE.find((b) => b.type === type)?.label || type;
+  const labels = {
+    contentSplit: 'Split content',
+    bentoPair: 'Vision & mission',
+    featurePanel: 'Feature panel',
+    highlights: 'Highlights grid',
+    testimonials: 'Testimonials',
+  };
+  return BLOCK_PALETTE.find((b) => b.type === type)?.label || labels[type] || type;
 }
 
 function ImageField({ label, value, onChange, schoolId }) {
@@ -66,10 +73,23 @@ function ImageField({ label, value, onChange, schoolId }) {
 
 function HeroInspector({ block, onContent, onStyle, schoolId }) {
   const c = block.content || {};
+  const isSplit = block.layout === 'split-playful';
   return (
     <div className="landing-builder__inspector-fields">
+      {isSplit && (
+        <>
+          <Input label="Brand / school name" value={c.brandName || ''} onChange={(e) => onContent({ brandName: e.target.value })} variant="enrollment" />
+          <ImageField label="Logo" value={c.logoUrl} onChange={(url) => onContent({ logoUrl: url })} schoolId={schoolId} />
+          <ImageField label="Hero image" value={c.heroImageUrl} onChange={(url) => onContent({ heroImageUrl: url })} schoolId={schoolId} />
+          <Input label="Title (before highlight)" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
+          <Input label="Highlighted words" value={c.titleHighlight || ''} onChange={(e) => onContent({ titleHighlight: e.target.value })} variant="enrollment" />
+          <Input label="Title (after highlight)" value={c.titleSuffix || ''} onChange={(e) => onContent({ titleSuffix: e.target.value })} variant="enrollment" />
+        </>
+      )}
+      {!isSplit && (
+        <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
+      )}
       <Input label="Badge" value={c.badge || ''} onChange={(e) => onContent({ badge: e.target.value })} variant="enrollment" />
-      <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
       <div>
         <label className="landing-builder__field-label">Subtitle</label>
         <textarea
@@ -79,9 +99,13 @@ function HeroInspector({ block, onContent, onStyle, schoolId }) {
           onChange={(e) => onContent({ subtitle: e.target.value })}
         />
       </div>
-      <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} schoolId={schoolId} />
+      {!isSplit && (
+        <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} schoolId={schoolId} />
+      )}
       <Input label="Primary button label" value={c.primaryButton?.label || ''} onChange={(e) => onContent({ primaryButton: { ...c.primaryButton, label: e.target.value } })} variant="enrollment" />
+      <Input label="Primary button link" value={c.primaryButton?.href || ''} onChange={(e) => onContent({ primaryButton: { ...c.primaryButton, href: e.target.value } })} variant="enrollment" />
       <Input label="Secondary button label" value={c.secondaryButton?.label || ''} onChange={(e) => onContent({ secondaryButton: { ...c.secondaryButton, label: e.target.value } })} variant="enrollment" />
+      <Input label="Secondary button link" value={c.secondaryButton?.href || ''} onChange={(e) => onContent({ secondaryButton: { ...c.secondaryButton, href: e.target.value } })} variant="enrollment" />
       <ToggleSwitch checked={c.showPrimaryButton !== false} onChange={(v) => onContent({ showPrimaryButton: v })} label="Show primary button" />
       <ToggleSwitch checked={c.showSecondaryButton !== false} onChange={(v) => onContent({ showSecondaryButton: v })} label="Show secondary button" />
     </div>
@@ -160,12 +184,86 @@ function CtaInspector({ block, onContent, onStyle, schoolId }) {
 }
 
 function FooterInspector({ block, onContent }) {
+  const c = block.content || {};
+  const isRich = block.layout === 'rich-contact';
+  if (isRich) {
+    return (
+      <div className="landing-builder__inspector-fields">
+        <Input label="School name" value={c.brandName || ''} onChange={(e) => onContent({ brandName: e.target.value })} variant="enrollment" />
+        <Input label="Tagline" value={c.tagline || ''} onChange={(e) => onContent({ tagline: e.target.value })} variant="enrollment" />
+        <Input label="Address" value={c.address || ''} onChange={(e) => onContent({ address: e.target.value })} variant="enrollment" />
+        <Input label="Email" value={c.email || ''} onChange={(e) => onContent({ email: e.target.value })} variant="enrollment" />
+        <Input label="Phone" value={c.phone || ''} onChange={(e) => onContent({ phone: e.target.value })} variant="enrollment" />
+      </div>
+    );
+  }
   return (
     <ToggleSwitch
       checked={block.content?.compact !== false}
       onChange={(v) => onContent({ compact: v })}
       label="Compact footer"
     />
+  );
+}
+
+function ContentSplitInspector({ block, onContent, schoolId }) {
+  const c = block.content || {};
+  return (
+    <div className="landing-builder__inspector-fields">
+      <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
+      {(c.body || ['']).map((para, i) => (
+        <div key={i}>
+          <label className="landing-builder__field-label">Paragraph {i + 1}</label>
+          <textarea
+            className="landing-builder__textarea"
+            rows={3}
+            value={para}
+            onChange={(e) => {
+              const body = [...(c.body || [])];
+              body[i] = e.target.value;
+              onContent({ body });
+            }}
+          />
+        </div>
+      ))}
+      <Input label="Quote" value={c.quote || ''} onChange={(e) => onContent({ quote: e.target.value })} variant="enrollment" />
+      <ImageField label="Image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} />
+    </div>
+  );
+}
+
+function TestimonialsInspector({ block, onContent, schoolId }) {
+  const c = block.content || {};
+  const items = c.items || [];
+  const patchItem = (index, patch) => {
+    onContent({ items: items.map((item, i) => (i === index ? { ...item, ...patch } : item)) });
+  };
+  return (
+    <div className="landing-builder__inspector-fields">
+      <Input label="Section title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
+      {items.map((item, index) => (
+        <div key={item.id || index} className="landing-builder__feature-item">
+          <Input label={`Review ${index + 1}`} value={item.quote || ''} onChange={(e) => patchItem(index, { quote: e.target.value })} variant="enrollment" />
+          <Input label="Name" value={item.name || ''} onChange={(e) => patchItem(index, { name: e.target.value })} variant="enrollment" />
+          <ImageField label="Avatar" value={item.avatar} onChange={(url) => patchItem(index, { avatar: url })} schoolId={schoolId} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GenericTextInspector({ block, onContent, schoolId, fields }) {
+  const c = block.content || {};
+  return (
+    <div className="landing-builder__inspector-fields">
+      {fields.map(({ key, label, type = 'text' }) => (
+        type === 'image' ? (
+          <ImageField key={key} label={label} value={c[key]} onChange={(url) => onContent({ [key]: url })} schoolId={schoolId} />
+        ) : (
+          <Input key={key} label={label} value={c[key] || ''} onChange={(e) => onContent({ [key]: e.target.value })} variant="enrollment" />
+        )
+      ))}
+    </div>
   );
 }
 
@@ -229,6 +327,34 @@ export default function BlockInspector({ block, draft, onDraftChange, schoolName
       {block.type === BLOCK_TYPES.MAP && <MapInspector block={block} onContent={onContent} schoolId={schoolId} />}
       {block.type === BLOCK_TYPES.CTA && <CtaInspector block={block} onContent={onContent} onStyle={onStyle} schoolId={schoolId} />}
       {block.type === BLOCK_TYPES.FOOTER && <FooterInspector block={block} onContent={onContent} />}
+      {block.type === BLOCK_TYPES.CONTENT_SPLIT && <ContentSplitInspector block={block} onContent={onContent} schoolId={schoolId} />}
+      {block.type === BLOCK_TYPES.TESTIMONIALS && <TestimonialsInspector block={block} onContent={onContent} schoolId={schoolId} />}
+      {block.type === BLOCK_TYPES.FEATURE_PANEL && (
+        <GenericTextInspector
+          block={block}
+          onContent={onContent}
+          schoolId={schoolId}
+          fields={[
+            { key: 'title', label: 'Title' },
+            { key: 'description', label: 'Description' },
+            { key: 'imageUrl', label: 'Image', type: 'image' },
+          ]}
+        />
+      )}
+      {block.type === BLOCK_TYPES.HIGHLIGHTS && (
+        <GenericTextInspector
+          block={block}
+          onContent={onContent}
+          schoolId={schoolId}
+          fields={[
+            { key: 'title', label: 'Title' },
+            { key: 'subtitle', label: 'Subtitle' },
+          ]}
+        />
+      )}
+      {block.type === BLOCK_TYPES.BENTO_PAIR && (
+        <p className="landing-builder__inspector-note">Edit vision &amp; mission cards in the draft JSON or re-apply the Laugh &amp; Learn template.</p>
+      )}
     </div>
   );
 }
@@ -285,7 +411,7 @@ export function BlockList({
                 type="button"
                 title="Move up"
                 disabled={index === 0}
-                onClick={() => setBlocks(moveBlock(blocks, index, index - 1))}
+                onClick={(e) => { e.stopPropagation(); setBlocks(moveBlock(blocks, index, index - 1)); }}
               >
                 <ChevronUp size={14} />
               </button>
@@ -293,21 +419,25 @@ export function BlockList({
                 type="button"
                 title="Move down"
                 disabled={index === blocks.length - 1}
-                onClick={() => setBlocks(moveBlock(blocks, index, index + 1))}
+                onClick={(e) => { e.stopPropagation(); setBlocks(moveBlock(blocks, index, index + 1)); }}
               >
                 <ChevronDown size={14} />
               </button>
               <button
                 type="button"
                 title={block.visible === false ? 'Show section' : 'Hide section'}
-                onClick={() => setBlocks(updateBlockAt(blocks, index, { visible: block.visible === false }))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setBlocks(updateBlockAt(blocks, index, { visible: block.visible === false }));
+                }}
               >
                 {block.visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
               <button
                 type="button"
                 title="Duplicate"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   const copy = cloneBlock(block);
                   const next = [...blocks];
                   next.splice(index + 1, 0, copy);
@@ -321,7 +451,8 @@ export function BlockList({
                 type="button"
                 title="Remove"
                 className="landing-builder__block-remove"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setBlocks(removeBlockAt(blocks, index));
                   if (selectedId === block.id) onSelect(null);
                 }}

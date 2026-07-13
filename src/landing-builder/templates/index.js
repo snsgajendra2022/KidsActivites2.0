@@ -1,5 +1,6 @@
 import { createEmptyLandingPage } from '../blockRegistry.js';
 import { buildDefaultTheme } from '../defaultTheme.js';
+import { createLaughAndLearnPage, LAUGH_AND_LEARN_TEMPLATE_META } from './laughAndLearn.js';
 
 function tpl(id, name, description, pageFactory) {
   const page = pageFactory();
@@ -42,6 +43,19 @@ export const LANDING_TEMPLATES = [
       blocks: page.blocks.filter((b) => b.type !== 'map'),
     };
   }),
+
+  (() => {
+    const page = createLaughAndLearnPage();
+    return {
+      id: LAUGH_AND_LEARN_TEMPLATE_META.id,
+      name: LAUGH_AND_LEARN_TEMPLATE_META.name,
+      description: LAUGH_AND_LEARN_TEMPLATE_META.description,
+      thumbnailUrl: LAUGH_AND_LEARN_TEMPLATE_META.thumbnailUrl,
+      category: LAUGH_AND_LEARN_TEMPLATE_META.category,
+      blockCount: page.blocks.length,
+      page,
+    };
+  })(),
 ];
 
 export function getTemplateById(templateId) {
@@ -60,6 +74,13 @@ export function listTemplateSummaries() {
 }
 
 export function applyTemplate(templateId, { schoolName, portalName } = {}) {
+  if (templateId === LAUGH_AND_LEARN_TEMPLATE_META.id) {
+    // Always return exact demo content — same images and text as original HTML.
+    const page = createLaughAndLearnPage();
+    page.updatedAt = new Date().toISOString();
+    return page;
+  }
+
   const template = getTemplateById(templateId);
   if (!template) return null;
   const page = JSON.parse(JSON.stringify(template.page));

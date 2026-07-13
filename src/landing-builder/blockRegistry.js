@@ -8,6 +8,11 @@ export const BLOCK_TYPES = {
   MAP: 'map',
   CTA: 'cta',
   FOOTER: 'footer',
+  CONTENT_SPLIT: 'contentSplit',
+  BENTO_PAIR: 'bentoPair',
+  FEATURE_PANEL: 'featurePanel',
+  HIGHLIGHTS: 'highlights',
+  TESTIMONIALS: 'testimonials',
 };
 
 export const BLOCK_PALETTE = [
@@ -23,11 +28,13 @@ export const LAYOUT_OPTIONS = {
   [BLOCK_TYPES.HERO]: [
     { id: 'full-bleed-image', label: 'Full width image' },
     { id: 'minimal', label: 'Minimal (no bg image)' },
+    { id: 'split-playful', label: 'Split hero (playful)' },
   ],
   [BLOCK_TYPES.FEATURES]: [
     { id: 'timeline', label: 'Timeline scroll' },
     { id: 'grid-3', label: '3-column grid' },
     { id: 'circular-icons', label: 'Circular icons' },
+    { id: 'curriculum-grid', label: 'Curriculum cards (6)' },
   ],
   [BLOCK_TYPES.IMAGE_BANNER]: [
     { id: 'wide', label: 'Wide banner' },
@@ -42,6 +49,23 @@ export const LAYOUT_OPTIONS = {
   ],
   [BLOCK_TYPES.FOOTER]: [
     { id: 'default', label: 'Default footer' },
+    { id: 'rich-contact', label: 'Contact footer' },
+  ],
+  [BLOCK_TYPES.CONTENT_SPLIT]: [
+    { id: 'image-left', label: 'Image left' },
+    { id: 'image-right', label: 'Image right' },
+  ],
+  [BLOCK_TYPES.BENTO_PAIR]: [
+    { id: 'default', label: 'Two cards' },
+  ],
+  [BLOCK_TYPES.FEATURE_PANEL]: [
+    { id: 'split-card', label: 'Split card' },
+  ],
+  [BLOCK_TYPES.HIGHLIGHTS]: [
+    { id: 'dark-grid', label: 'Dark icon grid' },
+  ],
+  [BLOCK_TYPES.TESTIMONIALS]: [
+    { id: 'grid', label: 'Review grid' },
   ],
 };
 
