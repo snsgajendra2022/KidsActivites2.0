@@ -2,7 +2,7 @@ import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
 import { NAV_BY_ROLE } from '../constants/navigation.js';
 import { resolveMenuIcon } from '../constants/menuIcons.js';
-import { resolveNavItemsForRole } from '../utils/navUtils.js';
+import { mergeMissingBuiltinNavItems, resolveNavItemsForRole } from '../utils/navUtils.js';
 import { getStoredUser } from './api/demoMode.js';
 
 function findBuiltinItem(role, id) {
@@ -35,7 +35,8 @@ export async function getNavigationForRole(role, portalConfig = {}) {
       const data = await api.get('/navigation');
       const resolvedRole = data?.role || role;
       const items = data?.items || [];
-      return items.map((item) => mapApiNavItem(item, resolvedRole));
+      const mapped = items.map((item) => mapApiNavItem(item, resolvedRole));
+      return mergeMissingBuiltinNavItems(mapped, resolvedRole, portalConfig);
     },
   });
 }

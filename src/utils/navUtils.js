@@ -46,6 +46,16 @@ export function sortNavItemsByOrder(items, orderIds = []) {
   });
 }
 
+/** Append built-in nav items missing from API responses (e.g. newly shipped routes). */
+export function mergeMissingBuiltinNavItems(apiItems, role, config = {}) {
+  const localItems = resolveNavItemsForRole(role, config);
+  const seen = new Set(apiItems.map((item) => item.id));
+  const missing = localItems.filter((item) => !seen.has(item.id));
+  if (!missing.length) return apiItems;
+  const orderIds = resolveMenuOrderForRole(role, config.menuOrder, config.customMenuItems);
+  return sortNavItemsByOrder([...apiItems, ...missing], orderIds);
+}
+
 /**
  * Ordered editor rows for a role (built-in + custom).
  * @returns {{ id: string, kind: 'builtin' | 'custom', item: object }[]}

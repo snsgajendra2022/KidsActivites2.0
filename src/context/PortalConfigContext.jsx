@@ -11,7 +11,7 @@ import { listSchoolsAdmin } from '../services/schoolService.js';
 import { getNavigationForRole } from '../services/navigationService.js';
 import { isApiEnabled } from '../services/api/config.js';
 import { useTenant } from './TenantContext.jsx';
-import { resolveNavItemsForRole } from '../utils/navUtils.js';
+import { mergeMissingBuiltinNavItems, resolveNavItemsForRole } from '../utils/navUtils.js';
 import { prefixTenantPath } from '../utils/tenantUtils.js';
 import { applyPortalTheme } from '../utils/themeUtils.js';
 import { ROLES } from '../constants/roles.js';
@@ -299,7 +299,12 @@ export function PortalConfigProvider({ children, user = null }) {
     (role) => {
       let items;
       if (isApiEnabled() && navLoadedRoles[role] && role in apiNavByRole) {
-        items = apiNavByRole[role];
+        items = mergeMissingBuiltinNavItems(apiNavByRole[role], role, {
+          menuVisibility: config?.menuVisibility,
+          menuCustomization: config?.menuCustomization,
+          customMenuItems: config?.customMenuItems,
+          menuOrder: config?.menuOrder,
+        });
       } else {
         items = resolveNavItemsForRole(role, {
           menuVisibility: config?.menuVisibility,

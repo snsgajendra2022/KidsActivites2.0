@@ -1,6 +1,6 @@
 import {
   BarChart3, Bell, CreditCard, FileText, FolderOpen, GraduationCap,
-  Home, Image, LogOut, MessageCircle, Palette, Settings, Shield, UserCheck, Users, ClipboardList, Tv,
+  Home, Image, LogOut, Megaphone, MessageCircle, Palette, Settings, Shield, UserCheck, Users, ClipboardList, Tv,
 } from 'lucide-react';
 import { ROLES } from './roles.js';
 
@@ -21,6 +21,7 @@ const ADMIN_CORE_NAV = [
   { id: 'admin_albums', to: '/admin/albums', label: 'Class Albums', icon: Tv, iconName: 'Tv', section: 'Media & Albums' },
   { id: 'admin_fees', to: '/admin/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Fees & Finance' },
   { id: 'admin_chat', to: '/admin/chat', label: 'Chat', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
+  { id: 'admin_notice_board', to: '/admin/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
   { id: 'admin_notifications', to: '/admin/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell', section: 'Communication' },
   { id: 'admin_reports', to: '/admin/reports', label: 'Reports', icon: BarChart3, iconName: 'BarChart3', section: 'Reports' },
   { id: 'admin_settings', to: '/admin/settings', label: 'Settings', icon: Settings, iconName: 'Settings', section: 'Settings' },
@@ -57,6 +58,7 @@ export const PARENT_NAV = [
   { id: 'parent_student_class', to: '/parent/photos', label: 'Student Class', icon: GraduationCap, iconName: 'GraduationCap', section: 'Photos & Media' },
   { id: 'parent_fees', to: '/parent/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Fees & Payments' },
   { id: 'parent_messages', to: '/parent/messages', label: 'Messages', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
+  { id: 'parent_notice_board', to: '/parent/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
   { id: 'parent_notifications', to: '/parent/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell', section: 'Communication' },
   { id: 'parent_profile', to: '/profile', label: 'Profile', icon: UserCheck, iconName: 'UserCheck', section: 'Account' },
 ];
@@ -68,12 +70,14 @@ export const TEACHER_NAV = [
   { id: 'teacher_photos', to: '/teacher/photos', label: 'Send Photos', icon: Image, iconName: 'Image', section: 'Photos & Media' },
   { id: 'teacher_class_album', to: '/teacher/class-album', label: 'Class Album', icon: Tv, iconName: 'Tv', section: 'Photos & Media' },
   { id: 'teacher_messages', to: '/teacher/messages', label: 'Messages', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
+  { id: 'teacher_notice_board', to: '/teacher/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
   { id: 'teacher_profile', to: '/profile', label: 'Profile', icon: UserCheck, iconName: 'UserCheck', section: 'Account' },
 ];
 
 export const ACCOUNTANT_NAV = [
   { id: 'admin_fees', to: '/admin/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Fees & Finance' },
   { id: 'admin_reports', to: '/admin/reports', label: 'Reports', icon: BarChart3, iconName: 'BarChart3', section: 'Reports' },
+  { id: 'admin_notice_board', to: '/admin/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
   { id: 'admin_notifications', to: '/admin/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell', section: 'Communication' },
 ];
 
