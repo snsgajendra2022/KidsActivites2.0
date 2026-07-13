@@ -19,6 +19,15 @@ export function isVideoMediaFile(file) {
   return VIDEO_EXTENSIONS.some((ext) => name.endsWith(ext));
 }
 
+/** Detect video from a queue item (file object or persisted metadata). */
+export function isVideoQueueItem(item) {
+  if (!item) return false;
+  if (item.file) return isVideoMediaFile(item.file);
+  if (item.fileType?.startsWith('video/')) return true;
+  const name = (item.fileName || '').toLowerCase();
+  return VIDEO_EXTENSIONS.some((ext) => name.endsWith(ext));
+}
+
 export function isAcceptedClassroomMediaFile(file) {
   if (!file) return false;
   if (file.type?.startsWith('image/') || file.type?.startsWith('video/')) return true;

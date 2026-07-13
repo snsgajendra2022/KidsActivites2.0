@@ -1,6 +1,6 @@
 import { isApiEnabled, isForceMock } from './config.js';
 
-const USER_STORAGE_KEY = 'kidsactivites_user';
+import { USER_STORAGE_KEY } from './authSession.js';
 
 export function getStoredUser() {
   try {

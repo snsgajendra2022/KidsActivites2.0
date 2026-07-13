@@ -1,4 +1,7 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { probeUploadBandwidth } from './services/uploadBandwidthService.js';
+import { classroomUploadManager } from './utils/classroomUploadQueue.js';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import TenantPathGate from './components/routing/TenantPathGate.jsx';
 import { ROLES } from './constants/roles.js';
@@ -88,6 +91,11 @@ function TenantLayout() {
 }
 
 export default function App() {
+  useEffect(() => {
+    void probeUploadBandwidth();
+    void classroomUploadManager.hydrateFromPersisted();
+  }, []);
+
   return (
     <Routes>
       {/* Platform routes (no tenant prefix) */}

@@ -1,6 +1,6 @@
 import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from './config.js';
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from './tokenStorage.js';
-import { schoolLoginPath } from '../../utils/tenantUtils.js';
+import { redirectToLoginOnce } from './authSession.js';
 
 class ApiError extends Error {
   constructor(message, status, code, details) {
@@ -166,11 +166,8 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
     if (newToken) {
       return executeRequest(path, { ...options, retry: false }, parser);
     }
-    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      clearTokens();
-      const loginPath = schoolLoginPath(resolveTenantSlug());
-      window.location.assign(loginPath);
-    }
+    redirectToLoginOnce();
+    throw new ApiError('Session expired. Please sign in again.', 401, 'UNAUTHORIZED');
   }
 
   if (res.status === 403 && typeof window !== 'undefined') {
@@ -202,4 +199,4 @@ export const api = {
   getWithMeta: (path, params, opts) => apiRequestWithMeta(path, { ...opts, method: 'GET', params }),
 };
 
-export { ApiError };
+export { ApiError, refreshAccessToken };

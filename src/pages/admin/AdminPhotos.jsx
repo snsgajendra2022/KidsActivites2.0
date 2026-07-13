@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import Button from '../../components/ui/Button.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
+import ClassroomUploadQueuePanel from '../../components/upload/ClassroomUploadQueuePanel.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
@@ -12,7 +13,11 @@ import {
   listPhotoStudioImages,
   replacePhotoStudioImage,
 } from '../../services/photoStudioService.js';
-import { listAdminAlbums, uploadAdminAlbumMedia, linkExistingToAlbum, UPLOAD_TARGETS } from '../../services/classAlbumService.js';
+import {
+  listAdminAlbums,
+  linkExistingToAlbum,
+  UPLOAD_TARGETS,
+} from '../../services/classAlbumService.js';
 import {
   filterAcceptedClassroomMediaFiles,
   getMediaUploadLimitHint,
@@ -21,6 +26,16 @@ import {
   validateMediaUploadFile,
   validateMediaUploadFiles,
 } from '../../utils/mediaUploadLimits.js';
+import {
+  classroomUploadManager,
+  MAX_UPLOAD_QUEUE,
+  LARGE_FILE_BYTES,
+  UPLOAD_ENDPOINT,
+  isAdminQueueItem,
+} from '../../utils/classroomUploadQueue.js';
+import { prepareFilesForUpload } from '../../utils/compressClassroomImage.js';
+import { getUploadTuning, probeUploadBandwidth } from '../../services/uploadBandwidthService.js';
+import { useUploadBandwidth } from '../../hooks/useUploadBandwidth.js';
 import { rewritePhotoStudioUrl } from '../../utils/photoStudioUrls.js';
 import { downloadPhotoStudioAsset } from '../../utils/photoStudioDownload.js';
 import {
@@ -56,6 +71,7 @@ import {
   formatAlbumLabel,
 } from '../../components/admin/photos/utils.js';
 import '../../styles/photos/photo-sharing.css';
+import '../../styles/send-photos.css';
 
 function matchesDateFilter(uploadTime, dateFilter) {
   if (!uploadTime || dateFilter === 'all') return true;
@@ -97,11 +113,12 @@ function filterLoadedImages(images, { searchQuery, typeFilter, dateFilter }) {
 
 export default function AdminPhotos() {
   const { toast } = useToast();
+  useUploadBandwidth();
   const { user } = useAuth();
   const { tenantPath } = useTenantPath();
   const fileInputRef = useRef(null);
   const replaceInputRef = useRef(null);
-  const pendingPreviewsRef = useRef([]);
+  const handledUploadIdsRef = useRef(new Set());
 
   const [config, setConfig] = useState(null);
   const [images, setImages] = useState([]);
@@ -110,9 +127,10 @@ export default function AdminPhotos() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
+  const [queueState, setQueueState] = useState(() => classroomUploadManager.getState());
+  const [isAddingFiles, setIsAddingFiles] = useState(false);
+  const [thumbnailUrls, setThumbnailUrls] = useState(() => new Map());
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -131,8 +149,6 @@ export default function AdminPhotos() {
   const [localPreviews, setLocalPreviews] = useState({});
   const [localPreviewsByFilename, setLocalPreviewsByFilename] = useState({});
   const [showUploadPanel, setShowUploadPanel] = useState(true);
-  const [pendingFiles, setPendingFiles] = useState([]);
-  const [pendingPreviews, setPendingPreviews] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
@@ -152,7 +168,7 @@ export default function AdminPhotos() {
   useEffect(() => () => {
     Object.values(localPreviewsRef.current).forEach((url) => URL.revokeObjectURL(url));
     Object.values(localPreviewsByFilenameRef.current).forEach((url) => URL.revokeObjectURL(url));
-    pendingPreviewsRef.current.forEach((url) => { if (url) URL.revokeObjectURL(url); });
+    thumbnailUrls.forEach((url) => URL.revokeObjectURL(url));
   }, []);
 
   const revokeLocalPreview = useCallback((id, filename) => {
@@ -230,6 +246,187 @@ export default function AdminPhotos() {
       setRefreshing(false);
     }
   }, [loadPage]);
+
+  useEffect(() => {
+    const unsub = classroomUploadManager.subscribe(() => {
+      setQueueState(classroomUploadManager.getState());
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const onOnline = () => classroomUploadManager.setOnline(true);
+    const onOffline = () => classroomUploadManager.setOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  const adminQueueItems = useMemo(
+    () => queueState.items.filter(isAdminQueueItem),
+    [queueState.items],
+  );
+
+  const adminQueueThumbKey = useMemo(
+    () => adminQueueItems.map((i) => `${i.id}:${i.fileKey}`).join('|'),
+    [adminQueueItems],
+  );
+
+  useEffect(() => {
+    setThumbnailUrls((prev) => {
+      const next = new Map(prev);
+      let changed = false;
+      adminQueueItems.forEach((item) => {
+        if (next.has(item.id)) return;
+        if (item.file) {
+          next.set(item.id, URL.createObjectURL(item.file));
+          changed = true;
+        }
+      });
+      Array.from(next.keys()).forEach((id) => {
+        if (!adminQueueItems.some((i) => i.id === id)) {
+          URL.revokeObjectURL(next.get(id));
+          next.delete(id);
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [adminQueueThumbKey, adminQueueItems]);
+
+  const pendingQueueItems = useMemo(
+    () => adminQueueItems.filter((i) => i.status === 'waiting' || i.status === 'paused'),
+    [adminQueueItems],
+  );
+
+  const activeQueueItems = useMemo(
+    () => adminQueueItems.filter((i) =>
+      i.status === 'waiting' || i.status === 'paused' || i.status === 'uploading'),
+    [adminQueueItems],
+  );
+
+  const isUploading = useMemo(
+    () => adminQueueItems.some((i) => i.status === 'uploading'),
+    [adminQueueItems],
+  );
+
+  const hasActiveBatch = useMemo(
+    () => adminQueueItems.some((i) =>
+      i.status === 'uploading' || i.status === 'waiting' || i.status === 'paused'),
+    [adminQueueItems],
+  );
+
+  const completedCount = useMemo(
+    () => adminQueueItems.filter((i) => i.status === 'completed').length,
+    [adminQueueItems],
+  );
+
+  const failedCount = useMemo(
+    () => adminQueueItems.filter((i) => i.status === 'failed').length,
+    [adminQueueItems],
+  );
+
+  const remainingCount = useMemo(
+    () => adminQueueItems.filter((i) => i.status !== 'completed').length,
+    [adminQueueItems],
+  );
+
+  const finishedCount = completedCount + failedCount;
+
+  const overallProgressPct = adminQueueItems.length
+    ? Math.round((completedCount / adminQueueItems.length) * 100)
+    : 0;
+
+  const revokeThumbnail = useCallback((id) => {
+    setThumbnailUrls((prev) => {
+      const url = prev.get(id);
+      if (!url) return prev;
+      URL.revokeObjectURL(url);
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const applyPickedFiles = useCallback(async (fileList) => {
+    const accepted = filterAcceptedClassroomMediaFiles(fileList);
+    if (accepted.length === 0) {
+      toast('Please choose image or video files (MP4, MOV, WebM).', 'warning');
+      return;
+    }
+    if (accepted.length < Array.from(fileList || []).length) {
+      toast('Some files were skipped. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
+    }
+    const sizeCheck = validateMediaUploadFiles(accepted, uploadLimits);
+    if (!sizeCheck.valid) {
+      toast(sizeCheck.error, 'error');
+      return;
+    }
+
+    setIsAddingFiles(true);
+    try {
+      await probeUploadBandwidth();
+      const tuning = getUploadTuning();
+      const prepared = await prepareFilesForUpload(sizeCheck.files, {
+        quality: tuning.compressionQuality,
+        maxWidth: tuning.maxWidth,
+        maxHeight: tuning.maxHeight,
+        targetMaxBytes: tuning.targetMaxBytes,
+      });
+      const { added, skipped, skippedDueToLimit } = await classroomUploadManager.addFiles(prepared, {
+        originEndpoint: UPLOAD_ENDPOINT.ADMIN,
+      });
+      if (added) {
+        toast(`${added} file${added === 1 ? '' : 's'} added to upload queue`, 'success');
+        setShowUploadPanel(true);
+      }
+      if (skipped) toast(`${skipped} file${skipped === 1 ? '' : 's'} already in queue`, 'warning');
+      if (skippedDueToLimit) {
+        toast(`Queue limit (${MAX_UPLOAD_QUEUE}) reached — ${skippedDueToLimit} file(s) not added`, 'error');
+      }
+    } finally {
+      setIsAddingFiles(false);
+    }
+  }, [toast, uploadLimits]);
+
+  const handleGalleryUploadComplete = useCallback(async (item) => {
+    const uploadResult = item.uploadResult;
+    const filePreviews = createFilePreviewUrls([item.file]);
+    const previewsByFilename = {};
+    if (filePreviews[0]) previewsByFilename[item.file.name.toLowerCase()] = filePreviews[0];
+    setLocalPreviewsByFilename((prev) => ({ ...prev, ...previewsByFilename }));
+
+    const uploadedImages = extractImagesFromUploadResult(uploadResult);
+    if (uploadedImages.length > 0) {
+      setImages((prev) => dedupeImages([...uploadedImages, ...prev]));
+    }
+
+    const beforeIds = new Set(images.map((img) => String(img.id)));
+    try {
+      const { batch } = await waitForGalleryRefresh(loadPage, beforeIds, uploadResult, [item.file]);
+      const newIds = detectNewlyUploadedIds(beforeIds, batch, [item.file], uploadResult);
+      const previewsById = {
+        ...assignPreviewsByIndex(filePreviews, newIds),
+        ...assignPreviewsByFilename([item.file], filePreviews, batch),
+      };
+      markHighlighted(newIds);
+      setLocalPreviews((prev) => ({ ...prev, ...previewsById }));
+    } catch {
+      // gallery refresh is best-effort
+    }
+  }, [images, loadPage, markHighlighted]);
+
+  useEffect(() => {
+    queueState.items.forEach((item) => {
+      if (item.status !== 'completed' || handledUploadIdsRef.current.has(item.id)) return;
+      if (item.uploadParams?.endpoint !== UPLOAD_ENDPOINT.ADMIN) return;
+      handledUploadIdsRef.current.add(item.id);
+      void handleGalleryUploadComplete(item);
+    });
+  }, [queueState.items, handleGalleryUploadComplete]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -340,6 +537,107 @@ export default function AdminPhotos() {
     [albums, selectedAlbumId],
   );
 
+  const buildUploadParams = useCallback(() => ({
+    endpoint: UPLOAD_ENDPOINT.ADMIN,
+    albumId: selectedAlbumId,
+    classId: selectedAlbum?.classId || null,
+    className: selectedAlbum?.className || selectedAlbum?.albumName || null,
+    schoolId: user?.schoolId || null,
+    schoolName: user?.schoolName || null,
+    uploadTarget: selectedAlbum?.classId ? UPLOAD_TARGETS.CLASS_ALBUM : null,
+    caption: uploadCaption.trim() || undefined,
+  }), [selectedAlbum, selectedAlbumId, uploadCaption, user?.schoolId, user?.schoolName]);
+
+  const batchSuccessShownRef = useRef(false);
+
+  useEffect(() => {
+    const hasWaiting = adminQueueItems.some(
+      (i) => i.status === 'waiting' || i.status === 'uploading' || i.status === 'paused',
+    );
+    const allDone = adminQueueItems.length > 0
+      && adminQueueItems.every((i) => i.status === 'completed' || i.status === 'failed');
+    if (hasWaiting || !allDone) {
+      batchSuccessShownRef.current = false;
+      return;
+    }
+    if (batchSuccessShownRef.current) return;
+
+    const adminCompleted = adminQueueItems.filter((i) => i.status === 'completed').length;
+    const adminFailed = adminQueueItems.filter((i) => i.status === 'failed').length;
+
+    if (adminCompleted > 0 && adminFailed === 0) {
+      batchSuccessShownRef.current = true;
+      const albumLabel = formatAlbumLabel(selectedAlbum);
+      toast(
+        adminCompleted === 1
+          ? `Added to ${albumLabel}.`
+          : `${adminCompleted} files added to ${albumLabel}.`,
+        'success',
+      );
+    } else if (adminFailed > 0 && adminCompleted === 0) {
+      batchSuccessShownRef.current = true;
+      toast('Upload failed. Check the queue for details.', 'error');
+    }
+  }, [completedCount, failedCount, adminQueueItems, selectedAlbum, toast]);
+
+  const handleStartUpload = useCallback(async () => {
+    if (!photosReady) {
+      toast('Photo storage is not connected for this workspace yet.', 'warning');
+      return;
+    }
+    if (!selectedAlbumId) {
+      toast('Choose a class album before uploading.', 'warning');
+      return;
+    }
+    if (pendingQueueItems.length === 0) {
+      toast('Add at least one file to the queue.', 'warning');
+      return;
+    }
+
+    batchSuccessShownRef.current = false;
+    try {
+      const count = await classroomUploadManager.submitPending(buildUploadParams(), {
+        scopeEndpoint: UPLOAD_ENDPOINT.ADMIN,
+      });
+      if (count === 0) {
+        toast('No files waiting to upload.', 'warning');
+      }
+    } catch (err) {
+      toast(resolveMediaUploadError(err, uploadLimits), 'error');
+    }
+  }, [buildUploadParams, pendingQueueItems.length, photosReady, selectedAlbumId, toast, uploadLimits]);
+
+  const cancelUpload = useCallback(async (id) => {
+    revokeThumbnail(id);
+    await classroomUploadManager.cancel(id);
+    toast('Upload cancelled.', 'warning');
+  }, [revokeThumbnail, toast]);
+
+  const cancelAllUploads = useCallback(async () => {
+    const activeIds = adminQueueItems
+      .filter((i) => i.status === 'uploading' || i.status === 'waiting' || i.status === 'paused')
+      .map((i) => i.id);
+    activeIds.forEach((id) => revokeThumbnail(id));
+    await classroomUploadManager.cancelAllActive({ scopeEndpoint: UPLOAD_ENDPOINT.ADMIN });
+    toast('All uploads cancelled.', 'warning');
+  }, [adminQueueItems, revokeThumbnail, toast]);
+
+  const removeFromQueue = useCallback(async (id) => {
+    revokeThumbnail(id);
+    await classroomUploadManager.remove(id);
+  }, [revokeThumbnail]);
+
+  const retryUpload = useCallback(async (id) => {
+    await classroomUploadManager.retry(id);
+  }, []);
+
+  const handleClearFinished = useCallback(async () => {
+    const removedIds = await classroomUploadManager.clearFinished({
+      scopeEndpoint: UPLOAD_ENDPOINT.ADMIN,
+    });
+    removedIds.forEach((id) => revokeThumbnail(id));
+  }, [revokeThumbnail]);
+
   const openLightbox = useCallback((image) => {
     const idx = filteredImages.findIndex((img) => img.id === image.id);
     if (idx >= 0) setLightboxIndex(idx);
@@ -354,129 +652,6 @@ export default function AdminPhotos() {
       toast(err?.message || 'Failed to load more photos.', 'error');
     } finally {
       setLoadingMore(false);
-    }
-  };
-
-  const clearPendingFiles = useCallback(() => {
-    pendingPreviewsRef.current.forEach((url) => { if (url) URL.revokeObjectURL(url); });
-    pendingPreviewsRef.current = [];
-    setPendingFiles([]);
-    setPendingPreviews([]);
-  }, []);
-
-  const addPendingFiles = useCallback((fileList) => {
-    const accepted = filterAcceptedClassroomMediaFiles(fileList);
-    if (accepted.length === 0) {
-      toast('Please choose image or video files (MP4, MOV, WebM).', 'warning');
-      return;
-    }
-    if (accepted.length < Array.from(fileList || []).length) {
-      toast('Some files were skipped. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
-    }
-    const sizeCheck = validateMediaUploadFiles(accepted, uploadLimits);
-    if (!sizeCheck.valid) {
-      toast(sizeCheck.error, 'error');
-      return;
-    }
-    const previews = createFilePreviewUrls(sizeCheck.files);
-    pendingPreviewsRef.current = [...pendingPreviewsRef.current, ...previews];
-    setPendingFiles((prev) => [...prev, ...sizeCheck.files]);
-    setPendingPreviews((prev) => [...prev, ...previews]);
-    setShowUploadPanel(true);
-  }, [toast, uploadLimits]);
-
-  const handleRemovePendingFile = useCallback((file) => {
-    setPendingFiles((prev) => {
-      const index = prev.indexOf(file);
-      if (index < 0) return prev;
-      setPendingPreviews((p) => {
-        const next = [...p];
-        if (next[index]) URL.revokeObjectURL(next[index]);
-        next.splice(index, 1);
-        pendingPreviewsRef.current = next;
-        return next;
-      });
-      const next = [...prev];
-      next.splice(index, 1);
-      return next;
-    });
-  }, []);
-
-  const handleUploadFiles = async (fileList) => {
-    if (!photosReady) {
-      toast('Photo storage is not connected for this workspace yet.', 'warning');
-      return;
-    }
-    if (!selectedAlbumId) {
-      toast('Choose a class album before uploading.', 'warning');
-      return;
-    }
-
-    const files = fileList?.length ? Array.from(fileList) : pendingFiles;
-    if (!files.length) return;
-
-    const accepted = filterAcceptedClassroomMediaFiles(files);
-    const sizeCheck = validateMediaUploadFiles(accepted, uploadLimits);
-    if (!sizeCheck.valid) {
-      toast(sizeCheck.error, 'error');
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress(10);
-    const uploadFiles = sizeCheck.files;
-    const filePreviews = createFilePreviewUrls(uploadFiles);
-    const previewsByFilename = {};
-    uploadFiles.forEach((file, index) => {
-      if (filePreviews[index]) previewsByFilename[file.name.toLowerCase()] = filePreviews[index];
-    });
-    setLocalPreviewsByFilename((prev) => ({ ...prev, ...previewsByFilename }));
-
-    try {
-      setUploadProgress(35);
-      const beforeIds = new Set(images.map((img) => String(img.id)));
-      const uploadResult = await uploadAdminAlbumMedia({
-        albumId: selectedAlbumId,
-        classId: selectedAlbum?.classId || null,
-        className: selectedAlbum?.className || selectedAlbum?.albumName || null,
-        schoolId: user?.schoolId || null,
-        schoolName: user?.schoolName || null,
-        uploadTarget: selectedAlbum?.classId ? UPLOAD_TARGETS.CLASS_ALBUM : null,
-        caption: uploadCaption.trim() || undefined,
-        files: uploadFiles,
-      });
-      setUploadProgress(70);
-
-      const uploadedImages = extractImagesFromUploadResult(uploadResult);
-      if (uploadedImages.length > 0) {
-        setImages((prev) => dedupeImages([...uploadedImages, ...prev]));
-      }
-
-      const { batch } = await waitForGalleryRefresh(loadPage, beforeIds, uploadResult, uploadFiles);
-      const newIds = detectNewlyUploadedIds(beforeIds, batch, uploadFiles, uploadResult);
-      const previewsById = {
-        ...assignPreviewsByIndex(filePreviews, newIds),
-        ...assignPreviewsByFilename(uploadFiles, filePreviews, batch),
-      };
-
-      markHighlighted(newIds);
-      setLocalPreviews((prev) => ({ ...prev, ...previewsById }));
-      setUploadProgress(100);
-
-      const albumLabel = formatAlbumLabel(selectedAlbum);
-      toast(
-        uploadFiles.length === 1
-          ? `Added to ${albumLabel}.`
-          : `${uploadFiles.length} files added to ${albumLabel}.`,
-        'success',
-      );
-      clearPendingFiles();
-    } catch (err) {
-      toast(resolveMediaUploadError(err, uploadLimits), 'error');
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -618,7 +793,7 @@ export default function AdminPhotos() {
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    addPendingFiles(e.dataTransfer.files);
+    void applyPickedFiles(e.dataTransfer.files);
   };
 
   const hasActiveFilters = searchQuery.trim() || typeFilter !== 'all' || dateFilter !== 'all';
@@ -650,33 +825,62 @@ export default function AdminPhotos() {
         )}
 
         {photosReady && (
-          <MediaUploadPanel
-            visible={showUploadPanel}
-            albums={albums}
-            selectedAlbumId={selectedAlbumId}
-            onAlbumChange={setSelectedAlbumId}
-            uploadCaption={uploadCaption}
-            onCaptionChange={setUploadCaption}
-            uploadLimitHint={uploadLimitHint}
-            uploading={uploading}
-            uploadProgress={uploadProgress}
-            dragOver={dragOver}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-            pendingFiles={pendingFiles}
-            pendingPreviews={pendingPreviews}
-            onRemovePendingFile={handleRemovePendingFile}
-            onChooseFiles={() => fileInputRef.current?.click()}
-            onUpload={() => handleUploadFiles()}
-            onFileInputChange={(e) => {
-              addPendingFiles(e.target.files);
-              if (fileInputRef.current) fileInputRef.current.value = '';
-            }}
-            fileInputRef={fileInputRef}
-            replaceInputRef={replaceInputRef}
-            onReplaceFileChange={(e) => handleReplaceFile(e.target.files)}
-          />
+          <>
+            <div className="admin-photos-upload-status" aria-live="polite">
+              {queueState.isOnline ? (
+                <span className="send-photos-online-badge">
+                  <Wifi size={14} aria-hidden />
+                  Online
+                </span>
+              ) : (
+                <span className="send-photos-online-badge">
+                  <WifiOff size={14} aria-hidden />
+                  Offline — uploads paused
+                </span>
+              )}
+            </div>
+            <MediaUploadPanel
+              visible={showUploadPanel}
+              albums={albums}
+              selectedAlbumId={selectedAlbumId}
+              onAlbumChange={setSelectedAlbumId}
+              uploadCaption={uploadCaption}
+              onCaptionChange={setUploadCaption}
+              uploadLimitHint={`${uploadLimitHint} · photos auto-compress · large videos upload at network speed`}
+              uploading={isUploading}
+              uploadProgress={overallProgressPct}
+              dragOver={dragOver}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              queueCount={activeQueueItems.length}
+              queueItems={activeQueueItems}
+              queuePreviewUrls={thumbnailUrls}
+              isAddingFiles={isAddingFiles}
+              onChooseFiles={() => fileInputRef.current?.click()}
+              onUpload={() => { void handleStartUpload(); }}
+              onFileInputChange={(e) => {
+                void applyPickedFiles(e.target.files);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }}
+              fileInputRef={fileInputRef}
+              replaceInputRef={replaceInputRef}
+              onReplaceFileChange={(e) => handleReplaceFile(e.target.files)}
+            />
+            <ClassroomUploadQueuePanel
+              items={adminQueueItems}
+              thumbnailUrls={thumbnailUrls}
+              hasActiveBatch={hasActiveBatch}
+              remainingCount={remainingCount}
+              finishedCount={finishedCount}
+              onCancel={cancelUpload}
+              onCancelAll={cancelAllUploads}
+              onRemove={removeFromQueue}
+              onRetry={retryUpload}
+                onClearFinished={() => { void handleClearFinished(); }}
+              className="send-photos-card send-photos-queue admin-photos-queue"
+            />
+          </>
         )}
 
         {error && (
