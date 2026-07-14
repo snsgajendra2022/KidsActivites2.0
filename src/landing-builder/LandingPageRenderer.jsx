@@ -214,6 +214,7 @@ function renderStandardBlock(block, ctx) {
     case BLOCK_TYPES.BENTO_PAIR:
     case BLOCK_TYPES.FEATURE_PANEL:
     case BLOCK_TYPES.HIGHLIGHTS:
+    case BLOCK_TYPES.GALLERY:
     case BLOCK_TYPES.TESTIMONIALS:
       return renderLaughAndLearnBlock(block, { tenantPath: ctx.tenantPath });
     default:

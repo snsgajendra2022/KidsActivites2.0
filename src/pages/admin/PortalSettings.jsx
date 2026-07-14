@@ -436,7 +436,7 @@ export default function PortalSettings() {
   return (
     <AppLayout>
       <PageTransition>
-        <div className="portal-settings">
+        <div className={tab === 'landing' ? 'portal-settings_landing' : 'portal-settings'}>
         <PageHeader
           title="Portal Branding & Configuration"
           subtitle={

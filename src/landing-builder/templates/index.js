@@ -52,7 +52,7 @@ export const LANDING_TEMPLATES = [
       description: LAUGH_AND_LEARN_TEMPLATE_META.description,
       thumbnailUrl: LAUGH_AND_LEARN_TEMPLATE_META.thumbnailUrl,
       category: LAUGH_AND_LEARN_TEMPLATE_META.category,
-      blockCount: page.blocks.length,
+      blockCount: LAUGH_AND_LEARN_TEMPLATE_META.blockCount || page.blocks.length,
       page,
     };
   })(),

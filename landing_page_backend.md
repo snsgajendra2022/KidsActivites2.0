@@ -26,10 +26,11 @@
 
 | Layer | Status |
 |-------|--------|
-| Frontend builder + renderer | **Done** |
+| Frontend builder + renderer | **Done** (12 block types incl. `gallery`) |
+| Laugh & Learn template | **Done** — **9 sections** incl. Our Gallery |
 | Backend `POST /admin/landing-page` | **Not deployed** — frontend falls back to localStorage mock on 404/401 |
 | `GET /portal/config` → `landingPagePublished` | **Not deployed** — public page uses mock/local data |
-| Image CDN upload for builder | **Not deployed** — mock accepts data URLs in dev |
+| Image CDN upload for builder | **Not deployed** — local data URLs in builder; production needs multipart up to **100 MB** |
 
 **When backend is live:** remove mock fallback in production; drafts/published persist per school in DB and sync across devices.
 
@@ -200,11 +201,11 @@ landingPageAction(action, payload, { schoolId })
 | Rule | Error code |
 |------|------------|
 | `landingPage.version` must be `2` | `INVALID_VERSION` |
-| Max JSON size ~500 KB | `PAYLOAD_TOO_LARGE` |
+| Max landing page JSON ~100 MB (URLs only — no base64 in production) | `PAYLOAD_TOO_LARGE` |
 | Each block must have `id`, `type`, `layout`, `visible` | `VALIDATION_ERROR` |
 | Image fields must be URLs (not base64) in production | `INVALID_ASSET_URL` |
 | Max 50 blocks per page | `TOO_MANY_BLOCKS` |
-| Unknown `type`/`layout` — **warn only**, store JSON as-is (forward compatible) | — |
+| Unknown `type`/`layout` — **warn only**, store JSON as-is (forward compatible; must accept `gallery`) | — |
 
 ---
 
@@ -323,12 +324,16 @@ Content-Type: multipart/form-data
 
 action=uploadAsset
 schoolId=school-1
-blockId=blk_hero_1
-field=style.backgroundImageUrl
+blockId=blk_gallery_1
+field=content.images[0].imageUrl
 file=<binary>
 ```
 
-**Option B — JSON base64 (dev / small images only, < 500 KB):**
+**Limits (production multipart):** max **100 MB** per image file. Allowed MIME: `image/jpeg`, `image/png`, `image/webp`, `image/gif`.
+
+**Option B — JSON data URL (dev / local builder only):**
+
+Frontend may send a data URL while CDN upload is unavailable; production `saveDraft` should still prefer CDN URLs and reject huge base64 bodies in persisted JSON.
 
 ```json
 {
@@ -503,6 +508,7 @@ Alternatively: seed from frontend template files at deploy time (same IDs as §1
 | `hero` | `full-bleed-image`, `minimal`, `split-playful` |
 | `features` | `timeline`, `grid-3`, `circular-icons`, `curriculum-grid` |
 | `imageBanner` | `wide`, `contained` |
+| `gallery` | `photo-grid` |
 | `map` | `embed` |
 | `cta` | `image-bg`, `solid-color` |
 | `footer` | `default`, `rich-contact` |
@@ -513,6 +519,8 @@ Alternatively: seed from frontend template files at deploy time (same IDs as §1
 | `testimonials` | `grid` |
 
 **Registry:** `src/landing-builder/blockRegistry.js`
+
+Backend validators must accept **`gallery`** (and all types above) as opaque JSON — store and return without stripping unknown content fields.
 
 ### 9.5 Content shapes (by type)
 
@@ -534,7 +542,7 @@ Alternatively: seed from frontend template files at deploy time (same IDs as §1
   "showSecondaryButton": true,
   "navLinks": [
     { "label": "Home", "href": "#home" },
-    { "label": "Gallery", "href": "#curriculum" },
+    { "label": "Gallery", "href": "#gallery" },
     { "label": "Reviews", "href": "#reviews" }
   ],
   "loginLabel": "Login",
@@ -544,7 +552,8 @@ Alternatively: seed from frontend template files at deploy time (same IDs as §1
 }
 ```
 
-> **Login / Enroll buttons** are stored in hero `content` — no separate API. Paths are tenant-relative (`/login`, `/enrollment/...`).
+> **Login / Enroll buttons** are stored in hero `content` — no separate API. Paths are tenant-relative (`/login`, `/enrollment/...`).  
+> **Gallery** nav targets section id `#gallery` (block type `gallery`).
 
 #### `hero` (layout `full-bleed-image` — standard)
 
@@ -627,6 +636,33 @@ For `curriculum-grid`: items use Material icon names (`diversity_3`, `science`, 
 }
 ```
 
+#### `gallery` (layout `photo-grid` — Our Gallery)
+
+Section id on public page: `#gallery`. Default layout is **3 columns × 3 rows** (9 images). `columns` may be `3` or `4`.
+
+```json
+{
+  "title": "Our Gallery",
+  "subtitle": "A glimpse into our classrooms, play areas, and happy moments.",
+  "columns": 3,
+  "images": [
+    { "id": "gal_1", "imageUrl": "https://cdn.example.com/.../campus-1.webp", "alt": "Happy children learning together" },
+    { "id": "gal_2", "imageUrl": "https://cdn.example.com/.../campus-2.webp", "alt": "Classroom" },
+    { "id": "gal_3", "imageUrl": "https://cdn.example.com/.../campus-3.webp", "alt": "" }
+  ]
+}
+```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `title` | string | Section heading |
+| `subtitle` | string | Optional |
+| `columns` | number | `3` or `4` |
+| `images` | array | Dynamic list; admin can add/remove/upload |
+| `images[].id` | string | Required |
+| `images[].imageUrl` | string \| null | CDN URL after `uploadAsset` |
+| `images[].alt` | string | Accessibility text |
+
 #### `testimonials`
 
 ```json
@@ -641,10 +677,12 @@ For `curriculum-grid`: items use Material icon names (`diversity_3`, `science`, 
 
 #### `footer` (layout `rich-contact`)
 
+Quick Links are **dynamic** (`links[]`) — labels and hrefs are edited in the builder. Laugh & Learn default:
+
 ```json
 {
   "compact": false,
-  "brandName": "...",
+  "brandName": "Laugh and Learn Academy",
   "tagline": "...",
   "address": "Frisco, TX",
   "email": "...",
@@ -652,7 +690,11 @@ For `curriculum-grid`: items use Material icon names (`diversity_3`, `science`, 
   "copyrightYear": 2024,
   "badges": ["LICENSED DAYCARE", "CPR CERTIFIED"],
   "socialLinks": [{ "icon": "face_nod", "href": "#" }],
-  "links": [{ "label": "Privacy Policy", "href": "#" }]
+  "links": [
+    { "label": "Home", "href": "#home" },
+    { "label": "Gallery", "href": "#gallery" },
+    { "label": "Curriculum", "href": "#curriculum" }
+  ]
 }
 ```
 
@@ -665,8 +707,8 @@ For `curriculum-grid`: items use Material icon names (`diversity_3`, `science`, 
 | `VALIDATION_ERROR` | 400 | Invalid block schema |
 | `INVALID_VERSION` | 400 | `version !== 2` |
 | `INVALID_ACTION` | 400 | Unknown `action` |
-| `PAYLOAD_TOO_LARGE` | 413 | JSON > 500 KB |
-| `INVALID_ASSET_URL` | 400 | Base64 in saveDraft (production) |
+| `PAYLOAD_TOO_LARGE` | 413 | JSON draft or multipart body too large |
+| `INVALID_ASSET_URL` | 400 | Invalid / missing image URL in production save |
 | `TOO_MANY_BLOCKS` | 400 | > 50 blocks |
 | `TEMPLATE_NOT_FOUND` | 404 | Bad `templateId` |
 | `FORBIDDEN` | 403 | Wrong school / role |
@@ -725,7 +767,27 @@ POST /admin/landing-page
 | `admissions-minimal` | Minimal Clean | 3 | Hero, CTA, footer |
 | `single-cta` | One Page Enroll | 2 | Hero + CTA |
 | `photo-gallery-focus` | Photo Gallery Focus | 4 | No map section |
-| `laugh-and-learn-academy` | Laugh & Learn Academy | 8 | Fixed demo brand; `theme.skin = laugh-and-learn` |
+| `laugh-and-learn-academy` | Laugh & Learn Academy | **9** | Fixed demo brand; `theme.skin = laugh-and-learn`; includes **Our Gallery** |
+
+### 12.1 Laugh & Learn Academy — 9 sections (seed order)
+
+| # | Block `type` | Layout | Section id / role |
+|---|--------------|--------|-------------------|
+| 1 | `hero` | `split-playful` | `#home` + header nav (Home, Gallery, Reviews) + Login / Enroll Now |
+| 2 | `features` | `curriculum-grid` | `#curriculum` |
+| 3 | `contentSplit` | `image-left` | Our Philosophy |
+| 4 | `bentoPair` | `default` | Vision & Mission |
+| 5 | `featurePanel` | `split-card` | Learning Environment |
+| 6 | `highlights` | `dark-grid` | What To Expect |
+| 7 | `gallery` | `photo-grid` | `#gallery` — Our Gallery (3 cols × 3 rows images) |
+| 8 | `testimonials` | `grid` | `#reviews` |
+| 9 | `footer` | `rich-contact` | Quick Links: Home, Gallery, Curriculum |
+
+**Seed rules:**
+
+- Do **not** replace brand name / demo text / images with portal school name (`preserveBrand: true`).
+- Footer Quick Links default: `Home → #home`, `Gallery → #gallery`, `Curriculum → #curriculum`.
+- `getEditor.templates[]` / `listTemplates` must report `blockCount: 9` for this template.
 
 **Frontend catalog:** `src/landing-builder/templates/index.js`  
 **Laugh & Learn full JSON:** `src/landing-builder/templates/laughAndLearn.js`
@@ -744,9 +806,11 @@ POST /admin/landing-page
 
 **No backend work needed for:**
 
-- Login button in Laugh & Learn header — part of hero block JSON (`loginLabel`, `loginHref`)
+- Login / Enroll buttons in header — hero block JSON (`loginLabel`, `loginHref`, `enrollLabel`, `enrollHref`)
+- Footer Quick Link labels — footer `links[]` JSON (editable in builder)
+- Gallery image grid UI — frontend only; backend stores `gallery` block JSON + image URLs
 - Separate public landing route — uses existing `GET /portal/config`
-- Template rendering logic — frontend only (`LandingPageRenderer.jsx`, `laughAndLearnRenderers.jsx`)
+- Template rendering / skin CSS — frontend only (`LandingPageRenderer.jsx`, `laughAndLearnRenderers.jsx`)
 
 ---
 
@@ -763,4 +827,4 @@ POST /admin/landing-page
 
 ---
 
-*Document version: 2.0 — July 2026 (aligned with frontend landing builder + Laugh & Learn template)*
+*Document version: 2.1 — July 2026 (gallery block, 9-section Laugh & Learn, footer Quick Links, uploadAsset 100 MB)*

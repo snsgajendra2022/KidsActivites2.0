@@ -162,6 +162,11 @@ async function apiLandingAction(action, payload = {}, schoolId) {
 
 /** Single entry point for all landing page builder operations. */
 export async function landingPageAction(action, payload = {}, { schoolId } = {}) {
+  // Images stay local (data URL) in the builder until multipart CDN upload is wired.
+  if (action === 'uploadAsset') {
+    return mockLandingAction(action, payload, schoolId);
+  }
+
   try {
     return await routeRequest({
       mockFn: () => mockLandingAction(action, payload, schoolId),

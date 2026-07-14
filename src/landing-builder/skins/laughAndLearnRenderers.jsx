@@ -9,6 +9,7 @@ export const LAL_LAYOUTS = {
   [BLOCK_TYPES.BENTO_PAIR]: ['default'],
   [BLOCK_TYPES.FEATURE_PANEL]: ['split-card'],
   [BLOCK_TYPES.HIGHLIGHTS]: ['dark-grid'],
+  [BLOCK_TYPES.GALLERY]: ['photo-grid'],
   [BLOCK_TYPES.TESTIMONIALS]: ['grid'],
   [BLOCK_TYPES.FOOTER]: ['rich-contact'],
 };
@@ -285,6 +286,33 @@ function LalReviews({ block }) {
   );
 }
 
+function LalGallery({ block }) {
+  const c = block.content || {};
+  const images = (c.images || []).filter((img) => img?.imageUrl);
+  const columns = Math.min(4, Math.max(3, Number(c.columns) || 3));
+
+  return (
+    <section className="lal-gallery" id="gallery" style={{ background: block.style?.backgroundColor }}>
+      <div className="lal-container">
+        <div className="lal-section-head">
+          {c.title && <h2>{c.title}</h2>}
+          {c.subtitle && <p className="lal-section-subtitle">{c.subtitle}</p>}
+        </div>
+        <div
+          className="lal-gallery__grid"
+          style={{ '--lal-gallery-cols': columns }}
+        >
+          {images.map((img) => (
+            <figure key={img.id} className="lal-gallery__item">
+              <img src={img.imageUrl} alt={img.alt || ''} loading="lazy" />
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function LalFooter({ block }) {
   const c = block.content || {};
   const name = c.brandName || 'Laugh and Learn Academy';
@@ -361,6 +389,8 @@ export function renderLaughAndLearnBlock(block, { tenantPath, includeHeader = fa
       return <LalEnvironment block={block} />;
     case BLOCK_TYPES.HIGHLIGHTS:
       return <LalExpectations block={block} />;
+    case BLOCK_TYPES.GALLERY:
+      return <LalGallery block={block} />;
     case BLOCK_TYPES.TESTIMONIALS:
       return <LalReviews block={block} />;
     case BLOCK_TYPES.FOOTER:

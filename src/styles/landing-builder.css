@@ -130,7 +130,7 @@
 
 .landing-builder__workspace {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) 1fr;
+  grid-template-columns: minmax(220px, 329px) 1fr;
   gap: 1rem;
   align-items: start;
 }

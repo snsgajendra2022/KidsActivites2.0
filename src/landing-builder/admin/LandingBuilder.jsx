@@ -220,10 +220,13 @@ export default function LandingBuilder({
     if (!window.confirm('Replace current draft with this template? Unsaved changes will be lost.')) return;
     try {
       const result = await landingPageAction('applyTemplate', { templateId }, { schoolId });
-      setDraft(result.draft);
+      const nextDraft = result.draft;
+      setDraft(nextDraft);
       setDirty(true);
-      setSelectedId(result.draft?.blocks?.[0]?.id || null);
-      toast('Template applied to draft.', 'success');
+      const galleryBlock = nextDraft?.blocks?.find((b) => b.type === 'gallery');
+      setSelectedId(galleryBlock?.id || nextDraft?.blocks?.[0]?.id || null);
+      const count = nextDraft?.blocks?.length || 0;
+      toast(`Template applied — ${count} sections${galleryBlock ? ' (includes Our Gallery)' : ''}.`, 'success');
     } catch (err) {
       toast(actionErrorMessage(err, 'Failed to apply template.'), 'error');
     }
@@ -350,7 +353,10 @@ export default function LandingBuilder({
               <TemplateThumb src={tpl.thumbnailUrl} alt={tpl.name} />
               <p className="landing-builder__template-name">{tpl.name}</p>
               <p className="landing-builder__template-desc">{tpl.description}</p>
-              <span className="landing-builder__template-meta">{tpl.blockCount} sections</span>
+              <span className="landing-builder__template-meta">
+                {tpl.blockCount} sections
+                {tpl.id === 'laugh-and-learn-academy' ? ' · includes Our Gallery' : ''}
+              </span>
             </button>
           ))}
         </div>

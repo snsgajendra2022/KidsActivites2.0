@@ -97,7 +97,7 @@ export function createLaughAndLearnPage() {
           showSecondaryButton: true,
           navLinks: [
             { label: 'Home', href: '#home' },
-            { label: 'Gallery', href: '#curriculum' },
+            { label: 'Gallery', href: '#gallery' },
             { label: 'Reviews', href: '#reviews' },
           ],
           loginLabel: 'Login',
@@ -190,6 +190,29 @@ export function createLaughAndLearnPage() {
         },
       },
       {
+        id: id('gallery'),
+        type: BLOCK_TYPES.GALLERY,
+        layout: 'photo-grid',
+        visible: true,
+        style: { backgroundColor: '#f6f9ff', paddingY: 'xl' },
+        content: {
+          title: 'Our Gallery',
+          subtitle: 'A glimpse into our classrooms, play areas, and happy moments.',
+          columns: 3,
+          images: [
+            { id: id('gal'), imageUrl: IMAGES.hero, alt: 'Happy children learning together' },
+            { id: id('gal'), imageUrl: IMAGES.philosophy, alt: 'Classroom philosophy moment' },
+            { id: id('gal'), imageUrl: IMAGES.vision, alt: 'Vision in action' },
+            { id: id('gal'), imageUrl: IMAGES.mission, alt: 'Mission activities' },
+            { id: id('gal'), imageUrl: IMAGES.environment, alt: 'Learning environment' },
+            { id: id('gal'), imageUrl: IMAGES.logo, alt: 'Academy campus' },
+            { id: id('gal'), imageUrl: IMAGES.hero, alt: 'Play and discovery' },
+            { id: id('gal'), imageUrl: IMAGES.philosophy, alt: 'Guided learning' },
+            { id: id('gal'), imageUrl: IMAGES.environment, alt: 'Outdoor and indoor spaces' },
+          ],
+        },
+      },
+      {
         id: id('reviews'),
         type: BLOCK_TYPES.TESTIMONIALS,
         layout: 'grid',
@@ -221,8 +244,8 @@ export function createLaughAndLearnPage() {
             { icon: 'camera_indoor', href: '#' },
           ],
           links: [
-            { label: 'Privacy Policy', href: '#' },
-            { label: 'Terms of Service', href: '#' },
+            { label: 'Home', href: '#home' },
+            { label: 'Gallery', href: '#gallery' },
             { label: 'Curriculum', href: '#curriculum' },
           ],
         },
@@ -234,7 +257,9 @@ export function createLaughAndLearnPage() {
 export const LAUGH_AND_LEARN_TEMPLATE_META = {
   id: 'laugh-and-learn-academy',
   name: 'Laugh & Learn Academy',
-  description: 'Exact preschool demo — same images, text, and layout as Laugh and Learn Academy',
+  description:
+    'Exact preschool demo — 9 sections: hero, curriculum, philosophy, vision & mission, environment, expectations, Our Gallery, reviews, footer',
   thumbnailUrl: IMAGES.hero,
   category: 'preschool',
+  blockCount: 9,
 };

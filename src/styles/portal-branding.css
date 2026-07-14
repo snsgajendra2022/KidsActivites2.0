@@ -4,6 +4,14 @@
   max-width: 72rem;
 }
 
+/* Full width only while Landing Page tab is active */
+.portal-settings_landing {
+  max-width: min(100%, 96rem);
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
 /* School context banner */
 .portal-settings__banner {
   display: flex;

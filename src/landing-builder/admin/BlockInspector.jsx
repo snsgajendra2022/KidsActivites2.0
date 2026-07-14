@@ -14,9 +14,12 @@ function blockLabel(type) {
     featurePanel: 'Feature panel',
     highlights: 'Highlights grid',
     testimonials: 'Testimonials',
+    gallery: 'Our Gallery',
   };
   return BLOCK_PALETTE.find((b) => b.type === type)?.label || labels[type] || type;
 }
+
+const LANDING_IMAGE_MAX_BYTES = 100 * 1024 * 1024;
 
 function ImageField({ label, value, onChange, schoolId }) {
   const [uploading, setUploading] = useState(false);
@@ -24,7 +27,7 @@ function ImageField({ label, value, onChange, schoolId }) {
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || file.size > LANDING_IMAGE_MAX_BYTES) return;
     setUploading(true);
     try {
       const dataUrl = await readFileAsDataUrl(file);
@@ -36,9 +39,7 @@ function ImageField({ label, value, onChange, schoolId }) {
           dataUrl,
         }, { schoolId });
         onChange(result.url || dataUrl);
-      } catch (err) {
-        console.error('[LandingBuilder] image upload failed', err);
-        // Keep local preview; saveDraft/publish will upload base64 on the server.
+      } catch {
         onChange(dataUrl);
       }
     } finally {
@@ -186,6 +187,12 @@ function CtaInspector({ block, onContent, onStyle, schoolId }) {
 function FooterInspector({ block, onContent }) {
   const c = block.content || {};
   const isRich = block.layout === 'rich-contact';
+  const links = c.links || [];
+
+  const patchLink = (index, patch) => {
+    onContent({ links: links.map((link, i) => (i === index ? { ...link, ...patch } : link)) });
+  };
+
   if (isRich) {
     return (
       <div className="landing-builder__inspector-fields">
@@ -194,6 +201,30 @@ function FooterInspector({ block, onContent }) {
         <Input label="Address" value={c.address || ''} onChange={(e) => onContent({ address: e.target.value })} variant="enrollment" />
         <Input label="Email" value={c.email || ''} onChange={(e) => onContent({ email: e.target.value })} variant="enrollment" />
         <Input label="Phone" value={c.phone || ''} onChange={(e) => onContent({ phone: e.target.value })} variant="enrollment" />
+        <p className="landing-builder__field-label">Quick Links</p>
+        {links.map((link, index) => (
+          <div key={`footer-link-${index}`} className="landing-builder__feature-item">
+            <Input
+              label={`Link ${index + 1} label`}
+              value={link.label || ''}
+              onChange={(e) => patchLink(index, { label: e.target.value })}
+              variant="enrollment"
+            />
+            <Input
+              label="Href"
+              value={link.href || ''}
+              onChange={(e) => patchLink(index, { href: e.target.value })}
+              variant="enrollment"
+            />
+          </div>
+        ))}
+        <button
+          type="button"
+          className="premium-btn premium-btn-secondary premium-btn-sm"
+          onClick={() => onContent({ links: [...links, { label: 'New link', href: '#' }] })}
+        >
+          Add quick link
+        </button>
       </div>
     );
   }
@@ -203,6 +234,67 @@ function FooterInspector({ block, onContent }) {
       onChange={(v) => onContent({ compact: v })}
       label="Compact footer"
     />
+  );
+}
+
+function GalleryInspector({ block, onContent, schoolId }) {
+  const c = block.content || {};
+  const images = c.images || [];
+
+  const patchImage = (index, patch) => {
+    onContent({ images: images.map((img, i) => (i === index ? { ...img, ...patch } : img)) });
+  };
+
+  const addImage = () => {
+    onContent({
+      images: [
+        ...images,
+        { id: `gal_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, imageUrl: null, alt: '' },
+      ],
+    });
+  };
+
+  const removeImage = (index) => {
+    onContent({ images: images.filter((_, i) => i !== index) });
+  };
+
+  return (
+    <div className="landing-builder__inspector-fields">
+      <Input label="Section title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
+      <Input label="Subtitle" value={c.subtitle || ''} onChange={(e) => onContent({ subtitle: e.target.value })} variant="enrollment" />
+      <Input
+        label="Columns (3 or 4)"
+        type="number"
+        value={c.columns ?? 3}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          onContent({ columns: Number.isFinite(n) ? Math.min(4, Math.max(3, n)) : 3 });
+        }}
+        variant="enrollment"
+      />
+      {images.map((img, index) => (
+        <div key={img.id || index} className="landing-builder__feature-item">
+          <ImageField
+            label={`Image ${index + 1}`}
+            value={img.imageUrl}
+            onChange={(url) => patchImage(index, { imageUrl: url })}
+            schoolId={schoolId}
+          />
+          <Input
+            label="Alt text"
+            value={img.alt || ''}
+            onChange={(e) => patchImage(index, { alt: e.target.value })}
+            variant="enrollment"
+          />
+          <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={() => removeImage(index)}>
+            Remove image
+          </button>
+        </div>
+      ))}
+      <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={addImage}>
+        Add image
+      </button>
+    </div>
   );
 }
 
@@ -327,6 +419,7 @@ export default function BlockInspector({ block, draft, onDraftChange, schoolName
       {block.type === BLOCK_TYPES.MAP && <MapInspector block={block} onContent={onContent} schoolId={schoolId} />}
       {block.type === BLOCK_TYPES.CTA && <CtaInspector block={block} onContent={onContent} onStyle={onStyle} schoolId={schoolId} />}
       {block.type === BLOCK_TYPES.FOOTER && <FooterInspector block={block} onContent={onContent} />}
+      {block.type === BLOCK_TYPES.GALLERY && <GalleryInspector block={block} onContent={onContent} schoolId={schoolId} />}
       {block.type === BLOCK_TYPES.CONTENT_SPLIT && <ContentSplitInspector block={block} onContent={onContent} schoolId={schoolId} />}
       {block.type === BLOCK_TYPES.TESTIMONIALS && <TestimonialsInspector block={block} onContent={onContent} schoolId={schoolId} />}
       {block.type === BLOCK_TYPES.FEATURE_PANEL && (

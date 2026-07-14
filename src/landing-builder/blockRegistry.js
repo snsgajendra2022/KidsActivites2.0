@@ -13,12 +13,14 @@ export const BLOCK_TYPES = {
   FEATURE_PANEL: 'featurePanel',
   HIGHLIGHTS: 'highlights',
   TESTIMONIALS: 'testimonials',
+  GALLERY: 'gallery',
 };
 
 export const BLOCK_PALETTE = [
   { type: BLOCK_TYPES.HERO, label: 'Hero Banner', desc: 'Top headline with buttons', defaultLayout: 'full-bleed-image' },
   { type: BLOCK_TYPES.FEATURES, label: 'Features', desc: 'Timeline or grid highlights', defaultLayout: 'timeline' },
   { type: BLOCK_TYPES.IMAGE_BANNER, label: 'Image Banner', desc: 'Wide campus or promo image', defaultLayout: 'wide' },
+  { type: BLOCK_TYPES.GALLERY, label: 'Our Gallery', desc: 'Photo grid — 3 columns, multiple rows', defaultLayout: 'photo-grid' },
   { type: BLOCK_TYPES.MAP, label: 'Campus Map', desc: 'Location and address', defaultLayout: 'embed' },
   { type: BLOCK_TYPES.CTA, label: 'Call to Action', desc: 'Bottom enrollment banner', defaultLayout: 'image-bg' },
   { type: BLOCK_TYPES.FOOTER, label: 'Footer', desc: 'Contact and links', defaultLayout: 'default' },
@@ -39,6 +41,9 @@ export const LAYOUT_OPTIONS = {
   [BLOCK_TYPES.IMAGE_BANNER]: [
     { id: 'wide', label: 'Wide banner' },
     { id: 'contained', label: 'Contained' },
+  ],
+  [BLOCK_TYPES.GALLERY]: [
+    { id: 'photo-grid', label: 'Photo grid (3 cols)' },
   ],
   [BLOCK_TYPES.MAP]: [
     { id: 'embed', label: 'Map embed' },
@@ -129,6 +134,20 @@ export function createDefaultBlock(type, { schoolName = 'our school', portalName
           title: 'Experience Our Campus',
           subtitle: 'Explore our facilities',
           imageUrl: null,
+        },
+      };
+    case BLOCK_TYPES.GALLERY:
+      return {
+        id: newId(),
+        type,
+        layout: 'photo-grid',
+        visible: true,
+        style: { paddingY: 'xl', backgroundColor: '#ffffff' },
+        content: {
+          title: 'Our Gallery',
+          subtitle: 'Moments from our classrooms, play spaces, and campus life.',
+          columns: 3,
+          images: Array.from({ length: 9 }, () => ({ id: newId('gal'), imageUrl: null, alt: '' })),
         },
       };
     case BLOCK_TYPES.MAP:
