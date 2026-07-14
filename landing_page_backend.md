@@ -1,36 +1,68 @@
-# Landing Page Builder — Backend API
+# Landing Page Builder — Backend API (v2)
 
 **Product:** Kids Activities (multi-tenant)  
-**Public page:** `http://localhost:3000/{slug}` (e.g. `/shri`)  
+**Public page:** `https://{host}/{slug}` (e.g. `/shri`)  
 **Admin builder:** `/{slug}/admin/portal-settings` → **Landing Page** tab  
 
-**Related:** `LANDING-PAGE-BUILDER-PLAN.md`, `SCHOOL-LANDING-PAGE-GUIDE.md`, `backend.md` (portal config only — not duplicated here)
+**Frontend (already implemented):**
+
+| Area | Path |
+|------|------|
+| API client | `src/services/landingPageApi.js` |
+| Block registry | `src/landing-builder/blockRegistry.js` |
+| Templates (5) | `src/landing-builder/templates/index.js` |
+| Laugh & Learn template | `src/landing-builder/templates/laughAndLearn.js` |
+| Renderer | `src/landing-builder/LandingPageRenderer.jsx` |
+| Admin UI | `src/landing-builder/admin/LandingBuilder.jsx` |
+| Public page | `src/pages/public/Landing.jsx` |
+| v1 → v2 migration | `src/landing-builder/migrateV1ToV2.js` |
+
+**Related docs:** `LANDING-PAGE-BUILDER-PLAN.md`, `SCHOOL-LANDING-PAGE-GUIDE.md`  
+**Not in `backend.md`** — portal branding/settings stay separate from landing v2.
 
 ---
 
-## 1. Design — one admin endpoint
+## 1. Current status
 
-All builder operations use **one RPC-style route**. Do **not** add separate REST paths such as `/landing/publish`, `/landing/draft`, or `/landing/templates`.
+| Layer | Status |
+|-------|--------|
+| Frontend builder + renderer | **Done** |
+| Backend `POST /admin/landing-page` | **Not deployed** — frontend falls back to localStorage mock on 404/401 |
+| `GET /portal/config` → `landingPagePublished` | **Not deployed** — public page uses mock/local data |
+| Image CDN upload for builder | **Not deployed** — mock accepts data URLs in dev |
+
+**When backend is live:** remove mock fallback in production; drafts/published persist per school in DB and sync across devices.
+
+---
+
+## 2. API design — one admin endpoint
+
+All builder operations use **one RPC-style route**. Do **not** add separate REST paths (`/landing/publish`, `/landing/draft`, etc.).
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| **`POST`** | **`/admin/landing-page`** | All builder actions (`action` field) |
-| `GET` | `/portal/config` | Public read — **published** landing only (extend existing) |
+| **`POST`** | **`/api/v1/admin/landing-page`** | All builder actions (`action` field) |
+| `GET` | `/api/v1/portal/config` | Public read — **published** landing only (extend existing) |
 
-**Frontend mock / client:** `src/services/landingPageApi.js` → `landingPageAction(action, payload, { schoolId })`
+**Frontend entry point:**
+
+```js
+landingPageAction(action, payload, { schoolId })
+// → POST /admin/landing-page
+```
 
 ---
 
-## 2. Auth & headers
+## 3. Auth & headers
 
 | Header | Required | Description |
 |--------|----------|-------------|
 | `Authorization` | Admin actions | `Bearer {accessToken}` |
 | `X-Tenant-Slug` | Yes | School workspace slug, e.g. `shri` |
-| `Content-Type` | POST | `application/json` (multipart for `uploadAsset` — see §7) |
+| `Content-Type` | POST | `application/json` (multipart for `uploadAsset` — see §8) |
 
 **Roles:** `SCHOOL_ADMIN`, `SUPER_ADMIN` with `manage_portal_settings`  
-**Tenant isolation:** School admin uses JWT `schoolId`. Super admin passes `schoolId` in the request body.
+**Tenant isolation:** School admin uses JWT `schoolId`. Super admin passes `schoolId` in request body.
 
 **Response envelope:**
 
@@ -55,7 +87,7 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
 
 ---
 
-## 3. `POST /admin/landing-page`
+## 4. `POST /admin/landing-page`
 
 ### Request (all actions)
 
@@ -69,8 +101,8 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `action` | string | Yes | See §4 |
-| `schoolId` | string | Super admin | Target school. Omit for school admin. |
+| `action` | string | Yes | See §5 |
+| `schoolId` | string | Super admin only | Target school. Omit for school admin. |
 | `payload` | object | Per action | Action-specific data |
 
 ### Actions summary
@@ -87,26 +119,21 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
 | `uploadAsset` | Upload section image; return CDN URL |
 | `migrateFromV1` | Convert legacy `landingPage` v1 → v2 draft |
 
-**Mock function:** `landingPageAction(action, payload, schoolId)` in `src/services/landingPageApi.js`
-
 ---
 
-## 4. Action details
+## 5. Action details
 
-### 4.1 `getEditor`
+### 5.1 `getEditor`
 
 **When:** Admin opens **Landing Page** in Portal Settings.
 
 **Request:**
 
 ```json
-{
-  "action": "getEditor",
-  "payload": {}
-}
+{ "action": "getEditor", "payload": {} }
 ```
 
-**Response `200` `data`:**
+**Response `data`:**
 
 ```json
 {
@@ -116,36 +143,15 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
   "previewUrl": "/shri?preview=1",
   "version": 2,
   "hasV1Legacy": true,
-  "draft": {
-    "version": 2,
-    "updatedAt": "2026-07-13T11:30:00Z",
-    "theme": {
-      "primaryColor": "#5B4BDB",
-      "secondaryColor": "#F59E0B",
-      "backgroundColor": "#FFFFFF",
-      "textColor": "#1E293B",
-      "fontFamily": "system",
-      "borderRadius": "lg"
-    },
-    "seo": {
-      "title": "Shri School — Admissions",
-      "description": "Enroll online today."
-    },
-    "blocks": []
-  },
-  "published": {
-    "version": 2,
-    "publishedAt": "2026-07-12T09:00:00Z",
-    "theme": {},
-    "blocks": []
-  },
+  "draft": { "version": 2, "updatedAt": "...", "theme": {}, "seo": {}, "blocks": [] },
+  "published": { "version": 2, "publishedAt": "...", "theme": {}, "seo": {}, "blocks": [] },
   "isDraftDirty": true,
   "templates": [
     {
       "id": "admissions-classic",
       "name": "Admissions Classic",
-      "description": "Hero + features + map + CTA",
-      "thumbnailUrl": "/assets/templates/admissions-classic.png",
+      "description": "Hero, features, map, CTA, and footer",
+      "thumbnailUrl": "/assets/kidsactivites-hero-placeholder.svg",
       "category": "school",
       "blockCount": 5
     }
@@ -157,10 +163,11 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
 
 - If no draft exists, return published copy or auto-migrate from v1 `landingPage`.
 - Include `templates` in this response so the builder needs one call on load.
+- Frontend also calls `listTemplateSummaries()` client-side; server templates should match IDs in §12.
 
 ---
 
-### 4.2 `saveDraft`
+### 5.2 `saveDraft`
 
 **Request:**
 
@@ -170,43 +177,21 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
   "payload": {
     "landingPage": {
       "version": 2,
-      "theme": { "primaryColor": "#5B4BDB" },
+      "theme": { "primaryColor": "#5B4BDB", "skin": "laugh-and-learn" },
       "seo": { "title": "Welcome", "description": "..." },
-      "blocks": [
-        {
-          "id": "blk_hero_1",
-          "type": "hero",
-          "layout": "full-bleed-image",
-          "visible": true,
-          "style": {
-            "backgroundImageUrl": "https://cdn.example.com/hero.jpg",
-            "backgroundOverlay": "rgba(0,0,0,0.45)",
-            "paddingY": "xl",
-            "textAlign": "center"
-          },
-          "content": {
-            "badge": "Admissions Open",
-            "title": "Welcome to Shri School",
-            "subtitle": "Enroll online in minutes.",
-            "primaryButton": { "label": "Start Enrollment", "href": "/enrollment/kidzee-print-form" },
-            "secondaryButton": { "label": "Parent Login", "href": "/login" },
-            "showPrimaryButton": true,
-            "showSecondaryButton": true
-          }
-        }
-      ]
+      "blocks": []
     }
   }
 }
 ```
 
-**Response `200` `data`:**
+**Response `data`:**
 
 ```json
 {
   "saved": true,
   "updatedAt": "2026-07-13T11:35:00Z",
-  "draft": { }
+  "draft": {}
 }
 ```
 
@@ -216,22 +201,16 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
 |------|------------|
 | `landingPage.version` must be `2` | `INVALID_VERSION` |
 | Max JSON size ~500 KB | `PAYLOAD_TOO_LARGE` |
-| Each block must have `id`, `type`, `layout` | `VALIDATION_ERROR` |
-| Image fields must be URLs (not base64) | `INVALID_ASSET_URL` |
+| Each block must have `id`, `type`, `layout`, `visible` | `VALIDATION_ERROR` |
+| Image fields must be URLs (not base64) in production | `INVALID_ASSET_URL` |
 | Max 50 blocks per page | `TOO_MANY_BLOCKS` |
+| Unknown `type`/`layout` — **warn only**, store JSON as-is (forward compatible) | — |
 
 ---
 
-### 4.3 `publish`
+### 5.3 `publish`
 
-**Request:**
-
-```json
-{
-  "action": "publish",
-  "payload": {}
-}
-```
+**Request:** `{ "action": "publish", "payload": {} }`
 
 **Behavior:**
 
@@ -240,35 +219,28 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
 3. Set `publishedAt = now()`, `publishedBy = userId`.
 4. Invalidate CDN/cache for public config if used.
 
-**Response `200` `data`:**
+**Response `data`:**
 
 ```json
 {
   "published": true,
   "publishedAt": "2026-07-13T11:40:00Z",
   "publicUrl": "/shri",
-  "published": { }
+  "published": {}
 }
 ```
 
 ---
 
-### 4.4 `discardDraft`
+### 5.4 `discardDraft`
 
-**Request:**
-
-```json
-{
-  "action": "discardDraft",
-  "payload": {}
-}
-```
+**Request:** `{ "action": "discardDraft", "payload": {} }`
 
 **Response:** Draft reset to last `published` snapshot.
 
 ---
 
-### 4.5 `applyTemplate`
+### 5.5 `applyTemplate`
 
 **Request:**
 
@@ -276,31 +248,34 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
 {
   "action": "applyTemplate",
   "payload": {
-    "templateId": "admissions-classic",
+    "templateId": "laugh-and-learn-academy",
     "replaceTheme": true
   }
 }
 ```
 
-**Response `200` `data`:**
+**Response `data`:**
 
 ```json
 {
   "applied": true,
-  "templateId": "admissions-classic",
-  "draft": {
-    "version": 2,
-    "theme": {},
-    "blocks": []
-  }
+  "templateId": "laugh-and-learn-academy",
+  "draft": { "version": 2, "theme": {}, "seo": {}, "blocks": [] }
 }
 ```
 
-**Server:** Load template from DB or static catalog. Merge school name into hero title. Do **not** publish until admin clicks Publish.
+**Server template rules:**
+
+| Template ID | Behavior |
+|-------------|----------|
+| `laugh-and-learn-academy` | Return **fixed demo content** — do **not** replace brand name, text, or images with portal school name |
+| All other templates | Merge `schoolName` into hero title and CTA title; regenerate block IDs; set SEO title from school name |
+
+Do **not** publish until admin clicks Publish.
 
 ---
 
-### 4.6 `listTemplates` / `getTemplate`
+### 5.6 `listTemplates` / `getTemplate`
 
 **`listTemplates` response:**
 
@@ -308,44 +283,39 @@ All builder operations use **one RPC-style route**. Do **not** add separate REST
 {
   "items": [
     {
-      "id": "admissions-classic",
-      "name": "Admissions Classic",
-      "description": "Hero + features + map + CTA",
-      "thumbnailUrl": "/assets/templates/admissions-classic.png",
-      "category": "school",
-      "blockCount": 5
+      "id": "laugh-and-learn-academy",
+      "name": "Laugh & Learn Academy",
+      "description": "Exact preschool demo — same images, text, and layout",
+      "thumbnailUrl": "https://...",
+      "category": "preschool",
+      "blockCount": 8
     }
   ]
 }
 ```
 
 **`getTemplate` payload:** `{ "templateId": "admissions-classic" }`  
-**Response:** Full `{ theme, blocks }` for preview.
+**Response:** Full `{ theme, seo, blocks }` for preview.
 
 ---
 
-### 4.7 `migrateFromV1`
+### 5.7 `migrateFromV1`
 
 **When:** School has legacy `landingPage` (v1 sections) and no v2 draft.
 
-**Request:**
+**Request:** `{ "action": "migrateFromV1", "payload": {} }`
 
-```json
-{
-  "action": "migrateFromV1",
-  "payload": {}
-}
-```
-
-**Response:** `draft` with blocks converted from v1 hero, timeline, map, finalCta, footer.
+**Response:** `draft` with blocks converted from v1 hero, campusBanner, timeline, map, finalCta, footer.
 
 **Idempotent:** If v2 draft already exists, return existing draft.
 
+**Reference:** `src/landing-builder/migrateV1ToV2.js`
+
 ---
 
-### 4.8 `uploadAsset`
+### 5.8 `uploadAsset`
 
-**Option A — multipart (recommended):**
+**Option A — multipart (recommended for production):**
 
 ```
 POST /admin/landing-page
@@ -358,14 +328,14 @@ field=style.backgroundImageUrl
 file=<binary>
 ```
 
-**Option B — JSON base64 (dev / small images only, &lt; 500 KB):**
+**Option B — JSON base64 (dev / small images only, < 500 KB):**
 
 ```json
 {
   "action": "uploadAsset",
   "payload": {
     "blockId": "blk_hero_1",
-    "field": "content.items[0].imageUrl",
+    "field": "content.heroImageUrl",
     "fileName": "campus.jpg",
     "mimeType": "image/jpeg",
     "dataUrl": "data:image/jpeg;base64,..."
@@ -373,16 +343,13 @@ file=<binary>
 }
 ```
 
-**Response:**
+**Response `data`:**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "url": "https://cdn.example.com/tenants/shri/landing/hero-abc123.webp",
-    "width": 1920,
-    "height": 1080
-  }
+  "url": "https://cdn.example.com/tenants/shri/landing/hero-abc123.webp",
+  "width": 1920,
+  "height": 1080
 }
 ```
 
@@ -390,7 +357,7 @@ file=<binary>
 
 ---
 
-## 5. Public read — extend `GET /portal/config`
+## 6. Public read — extend `GET /portal/config`
 
 Do **not** create a separate public landing endpoint. Extend the existing portal config response.
 
@@ -414,27 +381,29 @@ Do **not** create a separate public landing endpoint. Extend the existing portal
 | `landingPage` | Legacy v1 | Backward compatibility |
 | `landingPagePublished` | v2 published only | **Never expose draft** on public GET |
 
-**Frontend (`Landing.jsx`):**
+**Frontend render order (`Landing.jsx`):**
 
-1. If `landingPagePublished?.version === 2` with blocks → `LandingPageRenderer`
-2. Else if `landingPage` v1 → legacy section renderer
-3. Else → defaults
+1. `landingPagePublished.version === 2` with blocks → `LandingPageRenderer`
+2. Else legacy `landingPage` v1 → section renderer
+3. Else → platform defaults
+
+**Theme `skin`:** When `theme.skin === 'laugh-and-learn'`, frontend uses Laugh & Learn skin renderers for matching block layouts.
 
 ---
 
-## 6. Preview before publish
+## 7. Preview before publish
 
 **URL:** `GET /{slug}?preview=1`
 
-| Approach | Description |
-|----------|-------------|
-| **Admin session** | Authenticated admin on public route reads draft (recommended for mock) |
-| **Signed token** | `getEditor` returns short-lived JWT; public route accepts draft when token valid |
-| **Client sessionStorage** | Current mock: builder stashes draft before opening preview tab |
+| Approach | Phase | Description |
+|----------|-------|-------------|
+| Client sessionStorage | **Current (mock)** | Builder stashes draft key before opening preview tab |
+| Admin session | v1 backend | Authenticated admin on public route reads draft |
+| Signed token | v2 optional | `getEditor` returns short-lived JWT; public route accepts draft when token valid |
 
 ---
 
-## 7. Data model
+## 8. Data model
 
 Store on **`portal_configs`** (or JSON column per school):
 
@@ -443,11 +412,11 @@ Store on **`portal_configs`** (or JSON column per school):
 | `landing_page_v1` | JSONB | Legacy format (optional) |
 | `landing_page_draft` | JSONB | Builder draft (v2) |
 | `landing_page_published` | JSONB | Live on `/{slug}` |
-| `landing_draft_updated_at` | TIMESTAMP | |
-| `landing_published_at` | TIMESTAMP | |
+| `landing_draft_updated_at` | TIMESTAMPTZ | |
+| `landing_published_at` | TIMESTAMPTZ | |
 | `landing_published_by` | UUID | User id |
 
-**System templates** — table or static JSON:
+**System templates** — table or static JSON files:
 
 ```sql
 CREATE TABLE landing_page_templates (
@@ -464,20 +433,241 @@ CREATE TABLE landing_page_templates (
 );
 ```
 
-**Block types:** `hero`, `features`, `imageBanner`, `map`, `cta`, `footer`  
-**Frontend registry:** `src/landing-builder/blockRegistry.js`
+Alternatively: seed from frontend template files at deploy time (same IDs as §12).
 
 ---
 
-## 8. Error codes
+## 9. v2 JSON schema
+
+### 9.1 Page root
+
+```json
+{
+  "version": 2,
+  "updatedAt": "2026-07-13T11:30:00Z",
+  "publishedAt": "2026-07-13T11:40:00Z",
+  "theme": {},
+  "seo": { "title": "...", "description": "..." },
+  "blocks": []
+}
+```
+
+### 9.2 Theme
+
+```json
+{
+  "primaryColor": "#5B4BDB",
+  "secondaryColor": "#F59E0B",
+  "accentColor": "#feb700",
+  "tertiaryColor": "#a7391e",
+  "backgroundColor": "#FFFFFF",
+  "textColor": "#1E293B",
+  "fontFamily": "system",
+  "borderRadius": "lg",
+  "skin": "laugh-and-learn",
+  "preserveBrand": true
+}
+```
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `primaryColor`, `secondaryColor`, `backgroundColor`, `textColor` | Yes | Hex colors |
+| `fontFamily` | No | `system` or `plus-jakarta` |
+| `borderRadius` | No | `sm`, `md`, `lg` |
+| `skin` | No | `laugh-and-learn` activates preschool skin |
+| `preserveBrand` | No | When true, template brand text is not auto-replaced |
+
+### 9.3 Block shell (all types)
+
+```json
+{
+  "id": "blk_hero_1",
+  "type": "hero",
+  "layout": "split-playful",
+  "visible": true,
+  "style": {
+    "backgroundColor": "#ebf5ff",
+    "backgroundImageUrl": null,
+    "backgroundOverlay": "rgba(0,0,0,0.45)",
+    "paddingY": "xl",
+    "textAlign": "center"
+  },
+  "content": {}
+}
+```
+
+### 9.4 Block types & layouts
+
+| `type` | Allowed `layout` values |
+|--------|-------------------------|
+| `hero` | `full-bleed-image`, `minimal`, `split-playful` |
+| `features` | `timeline`, `grid-3`, `circular-icons`, `curriculum-grid` |
+| `imageBanner` | `wide`, `contained` |
+| `map` | `embed` |
+| `cta` | `image-bg`, `solid-color` |
+| `footer` | `default`, `rich-contact` |
+| `contentSplit` | `image-left`, `image-right` |
+| `bentoPair` | `default` |
+| `featurePanel` | `split-card` |
+| `highlights` | `dark-grid` |
+| `testimonials` | `grid` |
+
+**Registry:** `src/landing-builder/blockRegistry.js`
+
+### 9.5 Content shapes (by type)
+
+#### `hero` (layout `split-playful` — Laugh & Learn header + hero)
+
+```json
+{
+  "brandName": "Laugh and Learn Academy",
+  "badge": "LAUGH AND LEARN ACADEMY",
+  "title": "Learn skills and be confident while",
+  "titleHighlight": "sharing a laugh",
+  "titleSuffix": "with friends!",
+  "subtitle": "...",
+  "logoUrl": "https://...",
+  "heroImageUrl": "https://...",
+  "primaryButton": { "label": "Schedule a Visit", "href": "/enrollment/kidzee-print-form" },
+  "secondaryButton": { "label": "Explore Programs", "href": "#curriculum" },
+  "showPrimaryButton": true,
+  "showSecondaryButton": true,
+  "navLinks": [
+    { "label": "Home", "href": "#home" },
+    { "label": "Gallery", "href": "#curriculum" },
+    { "label": "Reviews", "href": "#reviews" }
+  ],
+  "loginLabel": "Login",
+  "loginHref": "/login",
+  "enrollLabel": "Enroll Now",
+  "enrollHref": "/enrollment/kidzee-print-form"
+}
+```
+
+> **Login / Enroll buttons** are stored in hero `content` — no separate API. Paths are tenant-relative (`/login`, `/enrollment/...`).
+
+#### `hero` (layout `full-bleed-image` — standard)
+
+```json
+{
+  "badge": "Admissions Open",
+  "title": "School Name",
+  "subtitle": "...",
+  "primaryButton": { "label": "Start Enrollment", "href": "/enrollment/kidzee-print-form" },
+  "secondaryButton": { "label": "Parent Login", "href": "/login" },
+  "showPrimaryButton": true,
+  "showSecondaryButton": true
+}
+```
+
+#### `features`
+
+```json
+{
+  "title": "...",
+  "subtitle": "...",
+  "items": [
+    { "id": "...", "title": "...", "description": "...", "imageUrl": "...", "icon": "shield" }
+  ]
+}
+```
+
+For `curriculum-grid`: items use Material icon names (`diversity_3`, `science`, etc.).
+
+#### `contentSplit`
+
+```json
+{
+  "title": "Our Philosophy",
+  "body": ["paragraph 1", "paragraph 2"],
+  "quote": "Optional pull quote",
+  "imageUrl": "https://..."
+}
+```
+
+#### `bentoPair`
+
+```json
+{
+  "cards": [
+    {
+      "id": "...",
+      "icon": "visibility",
+      "title": "Our Vision",
+      "description": "...",
+      "imageUrl": "https://...",
+      "variant": "primary"
+    }
+  ]
+}
+```
+
+#### `featurePanel`
+
+```json
+{
+  "title": "The Learning Environment",
+  "description": "...",
+  "imageUrl": "https://...",
+  "highlights": [
+    { "icon": "deck", "title": "Indoor Spaces", "description": "..." }
+  ]
+}
+```
+
+#### `highlights`
+
+```json
+{
+  "title": "What To Expect From Us",
+  "subtitle": "...",
+  "items": [
+    { "id": "...", "icon": "favorite", "title": "...", "description": "..." }
+  ]
+}
+```
+
+#### `testimonials`
+
+```json
+{
+  "title": "What Our Parents Say",
+  "rating": 5,
+  "items": [
+    { "id": "...", "quote": "...", "name": "...", "role": "Happy Parent", "avatar": "https://..." }
+  ]
+}
+```
+
+#### `footer` (layout `rich-contact`)
+
+```json
+{
+  "compact": false,
+  "brandName": "...",
+  "tagline": "...",
+  "address": "Frisco, TX",
+  "email": "...",
+  "phone": "...",
+  "copyrightYear": 2024,
+  "badges": ["LICENSED DAYCARE", "CPR CERTIFIED"],
+  "socialLinks": [{ "icon": "face_nod", "href": "#" }],
+  "links": [{ "label": "Privacy Policy", "href": "#" }]
+}
+```
+
+---
+
+## 10. Error codes
 
 | Code | HTTP | When |
 |------|------|------|
 | `VALIDATION_ERROR` | 400 | Invalid block schema |
+| `INVALID_VERSION` | 400 | `version !== 2` |
 | `INVALID_ACTION` | 400 | Unknown `action` |
-| `PAYLOAD_TOO_LARGE` | 413 | JSON &gt; 500 KB |
-| `INVALID_ASSET_URL` | 400 | Base64 in saveDraft |
-| `TOO_MANY_BLOCKS` | 400 | &gt; 50 blocks |
+| `PAYLOAD_TOO_LARGE` | 413 | JSON > 500 KB |
+| `INVALID_ASSET_URL` | 400 | Base64 in saveDraft (production) |
+| `TOO_MANY_BLOCKS` | 400 | > 50 blocks |
 | `TEMPLATE_NOT_FOUND` | 404 | Bad `templateId` |
 | `FORBIDDEN` | 403 | Wrong school / role |
 | `NO_DRAFT` | 404 | publish with empty draft |
@@ -485,7 +675,7 @@ CREATE TABLE landing_page_templates (
 
 ---
 
-## 9. Backend implementation
+## 11. Backend implementation checklist
 
 ### Controller
 
@@ -496,9 +686,9 @@ POST /admin/landing-page
     saveDraft      → LandingPageService.saveDraft(schoolId, payload)
     publish        → LandingPageService.publish(schoolId, user)
     discardDraft   → LandingPageService.discardDraft(schoolId)
-    applyTemplate  → LandingPageService.applyTemplate(schoolId, templateId)
+    applyTemplate  → LandingPageService.applyTemplate(schoolId, templateId, options)
     listTemplates  → LandingPageService.listTemplates()
-    getTemplate    → LandingPageService.getTemplate(templateId)
+    getTemplate    → LandingPageService.getTemplate(templateId, schoolContext)
     uploadAsset    → LandingPageService.uploadAsset(schoolId, file, meta)
     migrateFromV1  → LandingPageService.migrateFromV1(schoolId)
 ```
@@ -508,39 +698,59 @@ POST /admin/landing-page
 | Layer | Responsibility |
 |-------|----------------|
 | `LandingPageService` | Draft / publish business logic |
-| `LandingPageValidator` | JSON schema / block validation |
-| `LandingPageMigrationService` | v1 → v2 conversion |
-| `LandingTemplateCatalog` | Predefined templates |
-| `PortalConfigService` | Extend public `GET /portal/config` |
+| `LandingPageValidator` | JSON schema / block validation (flexible on unknown fields) |
+| `LandingPageMigrationService` | v1 → v2 conversion (mirror `migrateV1ToV2.js`) |
+| `LandingTemplateCatalog` | Predefined templates (§12) |
+| `PortalConfigService` | Extend public `GET /portal/config` with `landingPagePublished` |
+
+### Recommended build order
+
+```
+1. DB columns (draft + published)
+2. GET /portal/config → add landingPagePublished
+3. POST /admin/landing-page → getEditor, saveDraft, publish
+4. uploadAsset (reuse portal-settings asset storage)
+5. applyTemplate + listTemplates (seed §12)
+6. migrateFromV1 (schools with legacy landingPage)
+7. Preview token (optional)
+```
 
 ---
 
-## 10. Relationship to other APIs
+## 12. Predefined templates (seed)
 
-| Existing | Change |
-|----------|--------|
-| `GET /portal/config` | Add `landingPagePublished` |
+| ID | Name | Blocks | Notes |
+|----|------|--------|-------|
+| `admissions-classic` | Admissions Classic | 5 | Hero, features, map, CTA, footer |
+| `admissions-minimal` | Minimal Clean | 3 | Hero, CTA, footer |
+| `single-cta` | One Page Enroll | 2 | Hero + CTA |
+| `photo-gallery-focus` | Photo Gallery Focus | 4 | No map section |
+| `laugh-and-learn-academy` | Laugh & Learn Academy | 8 | Fixed demo brand; `theme.skin = laugh-and-learn` |
+
+**Frontend catalog:** `src/landing-builder/templates/index.js`  
+**Laugh & Learn full JSON:** `src/landing-builder/templates/laughAndLearn.js`
+
+---
+
+## 13. Relationship to other APIs
+
+| Existing API | Change |
+|--------------|--------|
+| `GET /portal/config` | Add `landingPagePublished` (required) |
+| `POST /admin/landing-page` | **New** — all builder actions |
 | `PUT /admin/portal-settings` | Branding, menus, enrollment — **not** landing v2 |
 | `POST /admin/portal-settings/assets` | Reuse storage for `uploadAsset` |
 | `landingPage` in PUT (v1) | Deprecated; use `migrateFromV1` once |
 
----
+**No backend work needed for:**
 
-## 11. Predefined templates (seed)
-
-| ID | Name |
-|----|------|
-| `admissions-classic` | Admissions Classic |
-| `admissions-minimal` | Minimal Clean |
-| `single-cta` | One Page Enroll |
-| `photo-gallery-focus` | Photo Gallery Focus |
-| `laugh-and-learn-academy` | Laugh & Learn Academy (preschool / daycare) |
-
-**Frontend catalog:** `src/landing-builder/templates/index.js`
+- Login button in Laugh & Learn header — part of hero block JSON (`loginLabel`, `loginHref`)
+- Separate public landing route — uses existing `GET /portal/config`
+- Template rendering logic — frontend only (`LandingPageRenderer.jsx`, `laughAndLearnRenderers.jsx`)
 
 ---
 
-## 12. Admin UI → API flow
+## 14. Admin UI → API flow
 
 ```
 1. Open Landing Page tab     → POST { action: "getEditor" }
@@ -548,9 +758,9 @@ POST /admin/landing-page
 3. Save draft                → POST { action: "saveDraft", payload: { landingPage } }
 4. Preview                   → /{slug}?preview=1
 5. Publish                   → POST { action: "publish" }
-   → Live at http://localhost:3000/{slug}/
+   → Live at /{slug} via GET /portal/config → landingPagePublished
 ```
 
 ---
 
-*Document version: 1.0 — July 2026*
+*Document version: 2.0 — July 2026 (aligned with frontend landing builder + Laugh & Learn template)*

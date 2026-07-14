@@ -93,7 +93,7 @@ export function AuthProvider({ children }) {
       disconnectChatRealtime();
       disconnectNotificationRealtime();
       logoutSession().finally(() => {
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(USER_STORAGE_KEY);
         setUser(null);
       });
     };

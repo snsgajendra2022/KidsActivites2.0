@@ -156,7 +156,8 @@ async function mockLandingAction(action, payload = {}, schoolId) {
 async function apiLandingAction(action, payload = {}, schoolId) {
   const body = { action, payload };
   if (schoolId) body.schoolId = schoolId;
-  return api.post('/admin/landing-page', body);
+  // Endpoint may not exist on server yet — avoid logging the user out on 401.
+  return api.post('/admin/landing-page', body, { preserveSessionOn401: true });
 }
 
 /** Single entry point for all landing page builder operations. */
@@ -168,7 +169,8 @@ export async function landingPageAction(action, payload = {}, { schoolId } = {})
     });
   } catch (err) {
     const notFound = err?.code === 'NOT_FOUND' || err?.status === 404;
-    if (notFound) {
+    const endpointUnavailable = notFound || err?.status === 401;
+    if (endpointUnavailable) {
       console.warn('[LandingPage] /admin/landing-page not on server yet — using local builder storage.');
       return mockLandingAction(action, payload, schoolId);
     }

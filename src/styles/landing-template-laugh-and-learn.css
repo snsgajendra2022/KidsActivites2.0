@@ -158,6 +158,29 @@
   padding-bottom: 2px;
 }
 
+.lal-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+.lal-header__login {
+  color: var(--lal-primary);
+  padding: 0.625rem 1.25rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+  border: 2px solid var(--lal-primary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.lal-header__login:hover {
+  background: var(--lal-primary);
+  color: #fff;
+}
+
 .lal-header__cta {
   background: var(--lal-secondary-container);
   color: var(--lal-on-secondary-container);

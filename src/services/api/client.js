@@ -225,7 +225,9 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
         'SERVER_UNAVAILABLE',
       );
     }
-    notifySessionExpired();
+    if (!options.preserveSessionOn401) {
+      notifySessionExpired();
+    }
     throw new ApiError('Session expired. Please sign in again.', 401, 'SESSION_EXPIRED');
   }
 

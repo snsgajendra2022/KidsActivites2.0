@@ -100,6 +100,10 @@ export function createLaughAndLearnPage() {
             { label: 'Gallery', href: '#curriculum' },
             { label: 'Reviews', href: '#reviews' },
           ],
+          loginLabel: 'Login',
+          loginHref: '/login',
+          enrollLabel: 'Enroll Now',
+          enrollHref: '/enrollment/kidzee-print-form',
         },
       },
       {

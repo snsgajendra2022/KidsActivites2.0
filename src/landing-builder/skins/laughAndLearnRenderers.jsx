@@ -61,9 +61,14 @@ export function LalHeader({ block, tenantPath }) {
               {link.label}
             </a>
           ))}
-          <Link to={resolveHref('/enrollment/kidzee-print-form', tenantPath)} className="lal-header__cta">
-            Enroll Now
-          </Link>
+          <div className="lal-header__actions">
+            <Link to={resolveHref(c.loginHref || '/login', tenantPath)} className="lal-header__login">
+              {c.loginLabel || 'Login'}
+            </Link>
+            <Link to={resolveHref(c.enrollHref || '/enrollment/kidzee-print-form', tenantPath)} className="lal-header__cta">
+              {c.enrollLabel || 'Enroll Now'}
+            </Link>
+          </div>
         </nav>
         <button type="button" className="lal-header__menu" aria-label="Menu">
           <MaterialIcon name="menu" />
