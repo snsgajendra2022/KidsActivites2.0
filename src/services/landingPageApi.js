@@ -95,7 +95,7 @@ async function mockLandingAction(action, payload = {}, schoolId) {
         landingPagePublished: published,
       });
       return {
-        published: true,
+        ok: true,
         publishedAt: published.publishedAt,
         publicUrl: slug ? `/${slug}` : '/',
         published,
@@ -117,9 +117,6 @@ async function mockLandingAction(action, payload = {}, schoolId) {
       const templateId = payload.templateId;
       const page = applyTemplate(templateId, { schoolName, portalName });
       if (!page) throw new Error('Template not found');
-      if (payload.replaceTheme !== false) {
-        // theme already on page
-      }
       writeLandingPage(id, 'draft', page);
       persistSchoolConfigForLanding(id, { landingPageDraft: page });
       return { applied: true, templateId, draft: page };
@@ -142,9 +139,19 @@ async function mockLandingAction(action, payload = {}, schoolId) {
     }
 
     case 'uploadAsset': {
-      // Mock: return data URL as-is for dev; production uses multipart on same route
       const url = payload.dataUrl || payload.url;
-      if (!url) throw new Error('No image provided');
+      if (!url && !(payload.file instanceof File)) {
+        throw new Error('No image provided');
+      }
+      if (payload.file instanceof File) {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(payload.file);
+        });
+        return { url: dataUrl, width: null, height: null };
+      }
       return { url, width: null, height: null };
     }
 
@@ -154,33 +161,28 @@ async function mockLandingAction(action, payload = {}, schoolId) {
 }
 
 async function apiLandingAction(action, payload = {}, schoolId) {
+  // Prefer multipart when a File is present (production CDN upload, up to 100 MB).
+  if (action === 'uploadAsset' && payload?.file instanceof File) {
+    const form = new FormData();
+    form.append('action', 'uploadAsset');
+    if (schoolId) form.append('schoolId', schoolId);
+    if (payload.blockId) form.append('blockId', payload.blockId);
+    if (payload.field) form.append('field', payload.field);
+    form.append('file', payload.file, payload.fileName || payload.file.name);
+    return api.post('/admin/landing-page', form);
+  }
+
   const body = { action, payload };
   if (schoolId) body.schoolId = schoolId;
-  // Endpoint may not exist on server yet — avoid logging the user out on 401.
-  return api.post('/admin/landing-page', body, { preserveSessionOn401: true });
+  return api.post('/admin/landing-page', body);
 }
 
 /** Single entry point for all landing page builder operations. */
 export async function landingPageAction(action, payload = {}, { schoolId } = {}) {
-  // Images stay local (data URL) in the builder until multipart CDN upload is wired.
-  if (action === 'uploadAsset') {
-    return mockLandingAction(action, payload, schoolId);
-  }
-
-  try {
-    return await routeRequest({
-      mockFn: () => mockLandingAction(action, payload, schoolId),
-      apiFn: () => apiLandingAction(action, payload, schoolId),
-    });
-  } catch (err) {
-    const notFound = err?.code === 'NOT_FOUND' || err?.status === 404;
-    const endpointUnavailable = notFound || err?.status === 401;
-    if (endpointUnavailable) {
-      console.warn('[LandingPage] /admin/landing-page not on server yet — using local builder storage.');
-      return mockLandingAction(action, payload, schoolId);
-    }
-    throw err;
-  }
+  return routeRequest({
+    mockFn: () => mockLandingAction(action, payload, schoolId),
+    apiFn: () => apiLandingAction(action, payload, schoolId),
+  });
 }
 
 export function getPublishedLandingFromConfig(config, schoolId) {

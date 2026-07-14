@@ -28,11 +28,12 @@
 |-------|--------|
 | Frontend builder + renderer | **Done** (12 block types incl. `gallery`) |
 | Laugh & Learn template | **Done** — **9 sections** incl. Our Gallery |
-| Backend `POST /admin/landing-page` | **Not deployed** — frontend falls back to localStorage mock on 404/401 |
-| `GET /portal/config` → `landingPagePublished` | **Not deployed** — public page uses mock/local data |
-| Image CDN upload for builder | **Not deployed** — local data URLs in builder; production needs multipart up to **100 MB** |
+| Backend `POST /admin/landing-page` | **Done** — JSON actions + multipart `uploadAsset` (≤ 100 MB) |
+| `GET /portal/config` → `landingPagePublished` | **Done** — draft stripped from public response |
+| Image CDN upload for builder | **Done** — multipart preferred; data URL materialized on save |
+| Templates catalog | **Done** — includes `laugh-and-learn-academy` (`preserveBrand`) |
 
-**When backend is live:** remove mock fallback in production; drafts/published persist per school in DB and sync across devices.
+**Production:** live API via `VITE_API_URL`. Mock only when `VITE_FORCE_MOCK`, no API URL, or `VITE_API_FALLBACK_MOCK`. No silent 404/401 → localStorage fallback.
 
 ---
 
@@ -827,4 +828,4 @@ POST /admin/landing-page
 
 ---
 
-*Document version: 2.1 — July 2026 (gallery block, 9-section Laugh & Learn, footer Quick Links, uploadAsset 100 MB)*
+*Document version: 2.2 — July 2026 (backend implemented: Laugh & Learn seed, multipart uploadAsset 100 MB, landingPagePublished on public config)*

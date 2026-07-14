@@ -2,7 +2,6 @@ import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Plus, Trash2 } from 
 import { useState } from 'react';
 import Input from '../../components/ui/Input.jsx';
 import ToggleSwitch from '../../components/ui/ToggleSwitch.jsx';
-import { readFileAsDataUrl } from '../../services/portalConfigService.js';
 import { landingPageAction } from '../../services/landingPageApi.js';
 import { BLOCK_PALETTE, BLOCK_TYPES, LAYOUT_OPTIONS, createDefaultBlock } from '../blockRegistry.js';
 import { cloneBlock, moveBlock, removeBlockAt, updateBlockAt, updateBlockContent, updateBlockStyle } from '../blockUtils.js';
@@ -27,21 +26,25 @@ function ImageField({ label, value, onChange, schoolId }) {
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file || file.size > LANDING_IMAGE_MAX_BYTES) return;
+    if (!file) return;
+    if (file.size > LANDING_IMAGE_MAX_BYTES) {
+      window.alert('Image must be 100 MB or smaller.');
+      return;
+    }
     setUploading(true);
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      try {
-        const result = await landingPageAction('uploadAsset', {
-          field: label,
-          fileName: file.name,
-          mimeType: file.type || 'image/png',
-          dataUrl,
-        }, { schoolId });
-        onChange(result.url || dataUrl);
-      } catch {
-        onChange(dataUrl);
-      }
+      // Multipart CDN upload (File). Do not persist huge data URLs in drafts.
+      const result = await landingPageAction('uploadAsset', {
+        field: label,
+        fileName: file.name,
+        mimeType: file.type || 'image/png',
+        file,
+      }, { schoolId });
+      if (!result?.url) throw new Error('Upload returned no URL');
+      onChange(result.url);
+    } catch (err) {
+      console.error('[LandingBuilder] uploadAsset failed:', err);
+      window.alert(err?.message || 'Image upload failed. Please try again.');
     } finally {
       setUploading(false);
     }

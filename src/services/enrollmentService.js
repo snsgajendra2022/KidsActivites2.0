@@ -383,7 +383,25 @@ export async function confirmAdmission(id) {
 
 export async function createAccount(id) {
   return routeRequest({
-    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.ACCOUNT_CREATED, 'Parent account created and invitation sent'),
+    mockFn: async () => {
+      const apps = getAll();
+      const app = apps.find((a) => a.id === id);
+      if (!app) throw Object.assign(new Error('Application not found'), { status: 404, code: 'NOT_FOUND' });
+      const parent = app.parent || {};
+      const formData = app.formData || {};
+      const fatherEmail = formData.fatherGuardian?.email || parent.fatherEmail || '';
+      const motherEmail = formData.motherGuardian?.email || parent.motherEmail || '';
+      const email = [fatherEmail, motherEmail, parent.email]
+        .map((v) => (typeof v === 'string' ? v.trim() : ''))
+        .find(Boolean);
+      if (!email) {
+        throw Object.assign(
+          new Error('Mother or Father email is required to create a parent account. Please add at least one parent email on the application first.'),
+          { status: 400, code: 'VALIDATION_ERROR' },
+        );
+      }
+      return mockUpdateStatus(id, ENROLLMENT_STATUSES.ACCOUNT_CREATED, 'Parent account created and invitation sent');
+    },
     apiFn: () => api.post(`/admin/applications/${id}/create-account`),
   });
 }
