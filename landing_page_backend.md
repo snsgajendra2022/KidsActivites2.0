@@ -63,8 +63,8 @@ landingPageAction(action, payload, { schoolId })
 | `X-Tenant-Slug` | Yes | School workspace slug, e.g. `shri` |
 | `Content-Type` | POST | `application/json` (multipart for `uploadAsset` — see §8) |
 
-**Roles:** `SCHOOL_ADMIN`, `SUPER_ADMIN` with `manage_portal_settings`  
-**Tenant isolation:** School admin uses JWT `schoolId`. Super admin passes `schoolId` in request body.
+**Roles:** `SCHOOL_ADMIN`, `SUPER_ADMIN` (`@PreAuthorize`)  
+**Tenant isolation:** Target school is resolved from **`X-Tenant-Slug`** / tenant context (not from body `schoolId` today). Optional `schoolId` in JSON/multipart is accepted for forward compatibility but currently unused.
 
 **Response envelope:**
 
@@ -104,7 +104,7 @@ landingPageAction(action, payload, { schoolId })
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `action` | string | Yes | See §5 |
-| `schoolId` | string | Super admin only | Target school. Omit for school admin. |
+| `schoolId` | string | No | Reserved / forward-compat; tenant comes from `X-Tenant-Slug` |
 | `payload` | object | Per action | Action-specific data |
 
 ### Actions summary
@@ -217,20 +217,28 @@ landingPageAction(action, payload, { schoolId })
 **Behavior:**
 
 1. Validate current draft (same rules as `saveDraft`).
-2. Copy `landing_page_draft` → `landing_page_published`.
-3. Set `publishedAt = now()`, `publishedBy = userId`.
+2. Copy `landingPageDraft` → `landingPagePublished` in portal config JSON.
+3. Set `publishedAt = now()`, `publishedBy = userId` on the published page object.
 4. Invalidate CDN/cache for public config if used.
 
 **Response `data`:**
 
 ```json
 {
-  "published": true,
+  "ok": true,
   "publishedAt": "2026-07-13T11:40:00Z",
   "publicUrl": "/shri",
-  "published": {}
+  "published": {
+    "version": 2,
+    "publishedAt": "2026-07-13T11:40:00Z",
+    "theme": {},
+    "seo": {},
+    "blocks": []
+  }
 }
 ```
+
+Frontend treats `data.published` as the **page object** (not a boolean). Use `ok` (or `publishedAt`) to confirm success.
 
 ---
 
@@ -273,7 +281,7 @@ landingPageAction(action, payload, { schoolId })
 | `laugh-and-learn-academy` | Return **fixed demo content** — do **not** replace brand name, text, or images with portal school name |
 | All other templates | Merge `schoolName` into hero title and CTA title; regenerate block IDs; set SEO title from school name |
 
-Do **not** publish until admin clicks Publish.
+`replaceTheme` in the payload is accepted but unused today (theme always comes from the template). Do **not** publish until admin clicks Publish.
 
 ---
 
@@ -287,10 +295,10 @@ Do **not** publish until admin clicks Publish.
     {
       "id": "laugh-and-learn-academy",
       "name": "Laugh & Learn Academy",
-      "description": "Exact preschool demo — same images, text, and layout",
+      "description": "Exact preschool demo — 9 sections incl. Our Gallery",
       "thumbnailUrl": "https://...",
       "category": "preschool",
-      "blockCount": 8
+      "blockCount": 9
     }
   ]
 }
@@ -355,13 +363,15 @@ Frontend may send a data URL while CDN upload is unavailable; production `saveDr
 
 ```json
 {
-  "url": "https://cdn.example.com/tenants/shri/landing/hero-abc123.webp",
-  "width": 1920,
-  "height": 1080
+  "url": "https://kidsbackend.example.com/api/v1/public/assets/landing/shri/uuid-hero.webp",
+  "width": null,
+  "height": null
 }
 ```
 
-**Reuse:** Same storage pipeline as `POST /admin/portal-settings/assets` (branding uploads).
+S3 object keys use `landing/{tenantSlug}/{uuid}-{fileName}`. `width` / `height` may be `null` today (optional; frontend §9.6 validates pixel size before upload).
+
+**Storage:** Same S3 bucket / public-asset proxy pattern as branding uploads (`StorageUrlResolver` + `landing/` public prefix), not a shared `portal-settings/assets` controller.
 
 ---
 
@@ -405,43 +415,26 @@ Do **not** create a separate public landing endpoint. Extend the existing portal
 
 | Approach | Phase | Description |
 |----------|-------|-------------|
-| Client sessionStorage | **Current (mock)** | Builder stashes draft key before opening preview tab |
-| Admin session | v1 backend | Authenticated admin on public route reads draft |
-| Signed token | v2 optional | `getEditor` returns short-lived JWT; public route accepts draft when token valid |
+| In-builder overlay | **Current** | Admin Preview opens full-screen draft via `LandingPageRenderer` (no new tab required) |
+| Authenticated public preview | **Current** | On `?preview=1`, logged-in admin can load draft via `getEditor` (plus local stash keys as fallback) |
+| Client session/localStorage stash | Fallback | Builder stashes draft before opening public URL |
+| Signed token | Optional later | Short-lived JWT in `getEditor` for draft preview without admin session |
 
 ---
 
 ## 8. Data model
 
-Store on **`portal_configs`** (or JSON column per school):
+**Current (production):** landing v2 lives as JSON keys inside **`portal_config.config_json`** (not separate SQL columns):
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `landing_page_v1` | JSONB | Legacy format (optional) |
-| `landing_page_draft` | JSONB | Builder draft (v2) |
-| `landing_page_published` | JSONB | Live on `/{slug}` |
-| `landing_draft_updated_at` | TIMESTAMPTZ | |
-| `landing_published_at` | TIMESTAMPTZ | |
-| `landing_published_by` | UUID | User id |
+| JSON key | Description |
+|----------|-------------|
+| `landingPage` | Legacy v1 (optional) |
+| `landingPageDraft` | Builder draft (v2) |
+| `landingPagePublished` | Live on `/{slug}` |
 
-**System templates** — table or static JSON files:
+`publishedAt` / `publishedBy` are stored **on the published page object** itself.
 
-```sql
-CREATE TABLE landing_page_templates (
-  id VARCHAR(64) PRIMARY KEY,
-  name VARCHAR(128) NOT NULL,
-  description TEXT,
-  thumbnail_url TEXT,
-  category VARCHAR(32) DEFAULT 'school',
-  theme JSONB NOT NULL,
-  blocks JSONB NOT NULL,
-  sort_order INT DEFAULT 0,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-Alternatively: seed from frontend template files at deploy time (same IDs as §12).
+**Optional future:** dedicated columns or a `landing_page_templates` table. Today system templates are a **static catalog** in code (`LandingTemplateCatalog` + `LaughAndLearnTemplate`), mirrored by frontend `src/landing-builder/templates/`.
 
 ---
 
@@ -740,7 +733,7 @@ Quick Links are **dynamic** (`links[]`) — labels and hrefs are edited in the b
 | `phoneNational` | string | National digits only (no country code) |
 | `phone` | string | Display string composed as `+{dialCode} {national}` — keep for public render / legacy |
 
-**Backend must:** accept and persist `phoneDialCode` + `phoneNational` (do not strip). Public page may render `phone` or compose from dial + national.
+**Backend must:** accept and persist `phoneDialCode` + `phoneNational` (do not strip). Public page may render `phone` or compose from dial + national. Laugh & Learn seed currently ships a single `phone` display string; dial/national fields are populated when edited in the builder.
 
 ---
 
@@ -824,13 +817,13 @@ POST /admin/landing-page
 ### Recommended build order
 
 ```
-1. DB columns (draft + published)
-2. GET /portal/config → add landingPagePublished
-3. POST /admin/landing-page → getEditor, saveDraft, publish
-4. uploadAsset (reuse portal-settings asset storage)
-5. applyTemplate + listTemplates (seed §12)
-6. migrateFromV1 (schools with legacy landingPage)
-7. Preview token (optional)
+1. portal_config JSON keys (landingPageDraft + landingPagePublished)     ✅
+2. GET /portal/config → expose landingPagePublished, strip draft        ✅
+3. POST /admin/landing-page → getEditor, saveDraft, publish             ✅
+4. uploadAsset (multipart + dataUrl → S3 landing/{tenant}/…)            ✅
+5. applyTemplate + listTemplates (seed §12, incl. Laugh & Learn)       ✅
+6. migrateFromV1 (schools with legacy landingPage)                     ✅
+7. Preview token (optional)                                            — later
 ```
 
 ---
@@ -842,7 +835,7 @@ POST /admin/landing-page
 | `admissions-classic` | Admissions Classic | 5 | Hero, features, map, CTA, footer |
 | `admissions-minimal` | Minimal Clean | 3 | Hero, CTA, footer |
 | `single-cta` | One Page Enroll | 2 | Hero + CTA |
-| `photo-gallery-focus` | Photo Gallery Focus | 4 | No map section |
+| `photo-gallery-focus` | Photo Gallery Focus | **5** (API) | Backend: hero, image banner, features, CTA, footer (no map). Frontend seed may omit banner → 4 until aligned |
 | `laugh-and-learn-academy` | Laugh & Learn Academy | **9** | Fixed demo brand; `theme.skin = laugh-and-learn`; includes **Our Gallery** |
 
 ### 12.1 Laugh & Learn Academy — 9 sections (seed order)
