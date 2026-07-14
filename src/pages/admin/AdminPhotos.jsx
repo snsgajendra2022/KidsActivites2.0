@@ -961,6 +961,8 @@ export default function AdminPhotos() {
 
       <PhotoLightbox
         photo={lightboxPhoto}
+        photos={lightboxPhotos}
+        currentIndex={lightboxIndex}
         onClose={() => setLightboxIndex(-1)}
         onPrev={() => setLightboxIndex((i) => (i > 0 ? i - 1 : i))}
         onNext={() => setLightboxIndex((i) => (i < lightboxPhotos.length - 1 ? i + 1 : i))}

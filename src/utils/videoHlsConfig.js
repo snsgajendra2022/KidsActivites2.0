@@ -5,33 +5,28 @@ import {
   normalizeQualityLabel,
 } from './videoMediaNormalize.js';
 
-/** Minimum time each rendition stays visible during progressive ramp (ms). */
-export const PROGRESSIVE_STEP_MIN_MS = 700;
-
-/** Fallback max wait before forcing step-up to next rendition (ms). */
-export const PROGRESSIVE_STEP_MAX_MS = 2200;
-
 /**
- * Production-oriented hls.js settings: start at lowest level, adaptive upgrade.
+ * Reliable HLS: start lowest (index 0 / ramp), then ABR upgrades silently.
  */
 export function createProductionHlsConfig() {
   const connection = typeof navigator !== 'undefined' ? navigator.connection : null;
   const saveData = connection?.saveData === true;
   const effectiveType = connection?.effectiveType;
-  const slowLink = saveData || effectiveType === 'slow-2g' || effectiveType === '2g';
+  const slowLink = saveData || effectiveType === 'slow-2g' || effectiveType === '2g' || effectiveType === '3g';
 
   return {
     enableWorker: true,
     lowLatencyMode: false,
     startLevel: 0,
-    capLevelToPlayerSize: false,
-    maxMaxBufferLength: 60,
+    autoStartLoad: true,
+    capLevelToPlayerSize: true,
     maxBufferLength: slowLink ? 20 : 30,
+    maxMaxBufferLength: 60,
     maxBufferSize: 60 * 1000 * 1000,
     maxBufferHole: 0.5,
-    abrEwmaDefaultEstimate: slowLink ? 400000 : undefined,
-    abrBandWidthFactor: slowLink ? 0.75 : 0.95,
-    abrBandWidthUpFactor: slowLink ? 0.45 : 0.7,
+    abrEwmaDefaultEstimate: slowLink ? 800_000 : 2_500_000,
+    abrBandWidthFactor: 0.85,
+    abrBandWidthUpFactor: 0.5,
     startFragPrefetch: true,
     testBandwidth: true,
   };
@@ -66,33 +61,63 @@ export function findHighestHlsLevelIndex(hls) {
   return sorted.length > 0 ? sorted[sorted.length - 1] : -1;
 }
 
-/** Pick starting level index for progressive ramp based on API defaultQuality preference. */
-export function findStartLevelForRamp(hls, defaultQuality) {
+/**
+ * Progressive ramp always starts at the lowest ready level so playback begins
+ * quickly (240p → 360p → … → max), then locks on the best ready quality.
+ * `defaultQuality` is intentionally unused for start.
+ */
+export function findStartLevelForRamp(hls) {
+  const sorted = getSortedLevelIndices(hls);
+  return sorted.length > 0 ? sorted[0] : -1;
+}
+
+/**
+ * Cap progressive ramp / ABR at API maxQuality (e.g. "1080p").
+ * Returns the highest allowed hls.js level index, or -1 if uncapped.
+ */
+export function findMaxLevelForCap(hls, maxQuality) {
   const sorted = getSortedLevelIndices(hls);
   if (sorted.length === 0) return -1;
-  if (!defaultQuality) return sorted[0];
+  if (!maxQuality) return sorted[sorted.length - 1];
 
-  const targetKey = normalizeQualityKey(defaultQuality);
+  const targetKey = normalizeQualityKey(maxQuality);
+  if (targetKey === 'source') return sorted[sorted.length - 1];
+
+  const targetNum = parseInt(targetKey, 10);
+  if (Number.isNaN(targetNum)) return sorted[sorted.length - 1];
+
   let bestIdx = sorted[0];
   let bestHeight = -1;
-
   sorted.forEach((levelIndex) => {
     const level = hls.levels[levelIndex];
-    const key = normalizeQualityKey(level.name || (level.height ? `${level.height}p` : ''));
     const height = level.height || 0;
-    if (key === targetKey) {
-      bestIdx = levelIndex;
-      bestHeight = height;
-      return;
-    }
-    const targetNum = parseInt(targetKey, 10);
-    if (!Number.isNaN(targetNum) && height <= targetNum && height >= bestHeight) {
+    const isSource = normalizeQualityLabel(level.name) === 'source';
+    if (isSource) return;
+    if (height <= targetNum && height >= bestHeight) {
       bestIdx = levelIndex;
       bestHeight = height;
     }
   });
-
   return bestIdx;
+}
+
+/** Level indices from lowest → highest, capped at maxQuality when provided. */
+export function getRampLevelIndices(hls, maxQuality) {
+  const sorted = getSortedLevelIndices(hls);
+  if (sorted.length === 0) return [];
+  const maxIdx = findMaxLevelForCap(hls, maxQuality);
+  if (maxIdx < 0) return sorted;
+  const maxPos = sorted.indexOf(maxIdx);
+  if (maxPos < 0) return sorted;
+  return sorted.slice(0, maxPos + 1);
+}
+
+/** Apply hls.js autoLevelCapping so ABR never exceeds maxQuality. */
+export function applyMaxQualityCap(hls, maxQuality) {
+  if (!hls?.levels?.length) return;
+  const maxIdx = findMaxLevelForCap(hls, maxQuality);
+  if (maxIdx < 0) return;
+  hls.autoLevelCapping = maxIdx;
 }
 
 /** Human-readable label for API rendition or manifest NAME (e.g. "source" → "Source"). */
@@ -212,11 +237,21 @@ export function findHlsLevelForLabel(hls, label) {
 /**
  * Build quality options from API renditions enriched with manifest level indices.
  * When manifest is parsed, only expose renditions that exist in the playlist.
+ * Optionally hide qualities above maxQuality.
  */
-export function buildQualityOptions(hlsLevels = [], apiRenditions = []) {
+export function buildQualityOptions(hlsLevels = [], apiRenditions = [], { maxQuality } = {}) {
   const ready = (apiRenditions || []).filter(
     (r) => !r.status || String(r.status).toUpperCase() === 'READY' || String(r.status).toUpperCase() === 'ACTIVE',
   );
+
+  const maxKey = maxQuality ? normalizeQualityKey(maxQuality) : null;
+  const maxHeight = maxKey && maxKey !== 'source' ? parseInt(maxKey, 10) : null;
+  const withinMax = (option) => {
+    if (!maxKey || maxKey === 'source') return true;
+    if (option.isSource) return false;
+    if (Number.isNaN(maxHeight)) return true;
+    return (option.height || 0) <= maxHeight;
+  };
 
   if (ready.length > 0) {
     const hls = hlsLevels.length > 0 ? { levels: hlsLevels } : null;
@@ -236,6 +271,7 @@ export function buildQualityOptions(hlsLevels = [], apiRenditions = []) {
           isSource: r.isSource,
         };
       })
+      .filter(withinMax)
       .sort((a, b) => {
         if (a.isSource && !b.isSource) return 1;
         if (!a.isSource && b.isSource) return -1;
@@ -261,6 +297,7 @@ export function buildQualityOptions(hlsLevels = [], apiRenditions = []) {
       isSource: normalizeQualityLabel(level.name) === 'source',
     }))
     .filter((o) => o.label)
+    .filter(withinMax)
     .sort((a, b) => {
       if (a.isSource && !b.isSource) return 1;
       if (!a.isSource && b.isSource) return -1;
@@ -269,131 +306,204 @@ export function buildQualityOptions(hlsLevels = [], apiRenditions = []) {
 }
 
 /**
- * Step through renditions one-by-one (lowest → highest), then hand off to ABR.
+ * Background quality climb: 240 → 360 → 480 → 720 → 1080 → source.
+ * One rung at a time. Keep playing the current rung until the next switch
+ * is confirmed (LEVEL_SWITCHED). If the next rung is not ready, pull back
+ * and keep current — never skip intermediates.
  * @returns {{ stop: () => void }}
  */
-export function attachProgressiveQualityRamp(hls, {
+export function attachBackgroundQualityClimb(hls, {
+  maxQuality,
   onLevelLabel,
-  onComplete,
-  stepMinMs = PROGRESSIVE_STEP_MIN_MS,
-  stepMaxMs = PROGRESSIVE_STEP_MAX_MS,
-  bufferThresholdSec = 1.5,
-  startLevelIndex,
+  isManual = () => false,
+  minBufferSec = 2.5,
+  stepMs = 3500,
+  switchTimeoutMs = 12_000,
+  onStep,
 } = {}) {
-  const sorted = getSortedLevelIndices(hls);
-  if (sorted.length <= 1) {
-    if (sorted.length === 1) {
-      onLevelLabel?.(formatHlsLevelLabel(hls.levels[sorted[0]]));
-    }
-    onComplete?.();
+  const sorted = getRampLevelIndices(hls, maxQuality);
+  applyMaxQualityCap(hls, maxQuality);
+
+  if (!hls || sorted.length === 0) {
     return { stop: () => {} };
   }
 
   let rampIdx = 0;
-  if (typeof startLevelIndex === 'number' && startLevelIndex >= 0) {
-    const found = sorted.indexOf(startLevelIndex);
-    rampIdx = found >= 0 ? found : 0;
-  }
-
   let stopped = false;
-  let stepTimer = null;
-  let maxTimer = null;
-  let stepStartedAt = 0;
+  let timer = null;
+  let awaitingSwitch = false;
+  let pendingLevel = -1;
+  let switchStartedAt = 0;
 
-  const clearTimers = () => {
-    if (stepTimer) {
-      clearTimeout(stepTimer);
-      stepTimer = null;
-    }
-    if (maxTimer) {
-      clearTimeout(maxTimer);
-      maxTimer = null;
+  const clearTimer = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
     }
   };
 
-  const emitLabel = () => {
-    const level = hls.levels[sorted[rampIdx]];
-    onLevelLabel?.(formatHlsLevelLabel(level));
-  };
-
-  const finishRamp = () => {
-    if (stopped) return;
-    stopped = true;
-    clearTimers();
-    hls.off(Hls.Events.FRAG_BUFFERED, onFragBuffered);
-    hls.currentLevel = -1;
-    hls.nextLevel = -1;
-    hls.loadLevel = -1;
-    onComplete?.();
-  };
-
-  const goToLevel = (idx) => {
-    rampIdx = idx;
-    hls.currentLevel = sorted[rampIdx];
-    emitLabel();
-    stepStartedAt = Date.now();
-  };
-
-  const scheduleStepUp = (delayMs) => {
-    clearTimers();
-    if (stopped || rampIdx >= sorted.length - 1) {
-      finishRamp();
-      return;
-    }
-    stepTimer = setTimeout(tryStepUp, delayMs);
-    maxTimer = setTimeout(() => {
-      if (stopped || rampIdx >= sorted.length - 1) return;
-      goToLevel(rampIdx + 1);
-      scheduleStepUp(stepMinMs);
-    }, stepMaxMs);
-  };
-
-  const tryStepUp = () => {
-    if (stopped) return;
-    if (rampIdx >= sorted.length - 1) {
-      finishRamp();
-      return;
-    }
-    const elapsed = Date.now() - stepStartedAt;
-    if (elapsed < stepMinMs) {
-      scheduleStepUp(stepMinMs - elapsed);
-      return;
-    }
-    goToLevel(rampIdx + 1);
-    if (rampIdx >= sorted.length - 1) {
-      finishRamp();
-      return;
-    }
-    scheduleStepUp(stepMinMs);
-  };
-
-  const bufferAheadSec = () => {
+  const bufferAhead = () => {
     const video = hls.media;
     if (!video?.buffered?.length) return 0;
-    const end = video.buffered.end(video.buffered.length - 1);
-    return Math.max(0, end - video.currentTime);
+    return Math.max(0, video.buffered.end(video.buffered.length - 1) - video.currentTime);
   };
 
-  const onFragBuffered = () => {
-    if (stopped || rampIdx >= sorted.length - 1) return;
-    const elapsed = Date.now() - stepStartedAt;
-    if (elapsed >= stepMinMs && bufferAheadSec() >= bufferThresholdSec) {
-      tryStepUp();
+  const emit = (levelIndex) => {
+    const level = hls.levels[levelIndex];
+    if (level) onLevelLabel?.(formatHlsLevelLabel(level));
+  };
+
+  /** Pin playback to exactly one ladder step (blocks ABR skip). */
+  const lockTo = (levelIndex) => {
+    hls.autoLevelCapping = levelIndex;
+    hls.currentLevel = levelIndex;
+    hls.nextLevel = levelIndex;
+    hls.loadLevel = levelIndex;
+  };
+
+  const schedule = (ms) => {
+    clearTimer();
+    if (stopped) return;
+    timer = setTimeout(tryClimb, ms);
+  };
+
+  const abortPendingSwitch = (reason) => {
+    if (!awaitingSwitch) return;
+    const current = sorted[rampIdx];
+    awaitingSwitch = false;
+    pendingLevel = -1;
+    switchStartedAt = 0;
+    lockTo(current);
+    // Keep current quality playing; retry the same next rung later.
+    if (typeof console !== 'undefined' && console.debug) {
+      console.debug('[hlsClimb] next not ready — keep current', {
+        reason,
+        current: formatHlsLevelLabel(hls.levels[current]),
+      });
     }
   };
 
-  goToLevel(rampIdx);
-  hls.on(Hls.Events.FRAG_BUFFERED, onFragBuffered);
-  scheduleStepUp(stepMinMs);
+  const tryClimb = () => {
+    if (stopped || isManual()) return;
+
+    if (awaitingSwitch) {
+      // Next rung still not confirmed — do not stop current; wait or rollback.
+      if (switchStartedAt && Date.now() - switchStartedAt > switchTimeoutMs) {
+        abortPendingSwitch('switch_timeout');
+        schedule(stepMs);
+        return;
+      }
+      schedule(500);
+      return;
+    }
+
+    if (rampIdx >= sorted.length - 1) {
+      // Stay locked on top rung — do not re-enable free ABR (avoids flicker).
+      lockTo(sorted[rampIdx]);
+      applyMaxQualityCap(hls, maxQuality);
+      return;
+    }
+
+    // Current must be healthy before attempting an upgrade.
+    if (bufferAhead() < minBufferSec) {
+      schedule(400);
+      return;
+    }
+
+    const video = hls.media;
+    if (video?.ended) {
+      // Finished on current quality — do not switch upward.
+      lockTo(sorted[rampIdx]);
+      return;
+    }
+
+    const nextIdx = rampIdx + 1;
+    const nextLevel = sorted[nextIdx];
+    awaitingSwitch = true;
+    pendingLevel = nextLevel;
+    switchStartedAt = Date.now();
+    // Allow only the next rung — never uncapped ABR. Keep currentLevel pinned
+    // until LEVEL_SWITCHED confirms the upgrade; nextLevel loads at boundary.
+    hls.autoLevelCapping = nextLevel;
+    hls.nextLevel = nextLevel;
+    hls.loadLevel = nextLevel;
+    onStep?.(formatHlsLevelLabel(hls.levels[nextLevel]), nextIdx, sorted.length);
+    schedule(500);
+  };
+
+  const onLevelSwitched = (_event, data) => {
+    if (stopped) return;
+    const level = data.level;
+
+    if (awaitingSwitch && pendingLevel >= 0) {
+      if (level === pendingLevel) {
+        rampIdx = sorted.indexOf(pendingLevel);
+        if (rampIdx < 0) rampIdx = 0;
+        awaitingSwitch = false;
+        pendingLevel = -1;
+        switchStartedAt = 0;
+        lockTo(level);
+        emit(level);
+        if (!isManual() && rampIdx < sorted.length - 1) {
+          schedule(stepMs);
+        }
+        return;
+      }
+
+      // Jumped past the intended next rung — pull back to pending only.
+      const pendingHeight = hls.levels[pendingLevel]?.height || 0;
+      const actualHeight = hls.levels[level]?.height || 0;
+      if (actualHeight > pendingHeight) {
+        lockTo(pendingLevel);
+        return;
+      }
+    }
+
+    // Spontaneous switch while locked — force back to current ramp.
+    const locked = sorted[rampIdx];
+    if (!awaitingSwitch && level !== locked) {
+      lockTo(locked);
+      return;
+    }
+
+    emit(level);
+  };
+
+  const onError = (_event, data) => {
+    if (stopped || !awaitingSwitch) return;
+    // Level/fragment failure while upgrading — stay on current, retry later.
+    if (data?.details && /LEVEL|FRAG|BUFFER/i.test(String(data.details))) {
+      abortPendingSwitch(data.details);
+      schedule(stepMs);
+    }
+  };
+
+  // Start lowest and lock ABR so it cannot skip intermediates.
+  const startLevel = sorted[0];
+  hls.startLevel = startLevel;
+  lockTo(startLevel);
+  emit(startLevel);
+  onStep?.(formatHlsLevelLabel(hls.levels[startLevel]), 0, sorted.length);
+
+  hls.on(Hls.Events.LEVEL_SWITCHED, onLevelSwitched);
+  hls.on(Hls.Events.ERROR, onError);
+  schedule(stepMs);
 
   return {
     stop: () => {
-      if (stopped) return;
       stopped = true;
-      clearTimers();
-      hls.off(Hls.Events.FRAG_BUFFERED, onFragBuffered);
+      clearTimer();
+      hls.off(Hls.Events.LEVEL_SWITCHED, onLevelSwitched);
+      hls.off(Hls.Events.ERROR, onError);
     },
   };
+}
+
+/**
+ * @deprecated Use attachBackgroundQualityClimb.
+ */
+export function attachProgressiveQualityRamp(hls, options = {}) {
+  return attachBackgroundQualityClimb(hls, options);
 }
 
 /**
@@ -438,9 +548,10 @@ export function attachHlsErrorRecovery(hls, { onFatal, onRecovering } = {}) {
   });
 }
 
-/** Release hls.js to full adaptive bitrate (Auto mode). */
-export function enableAutoQuality(hls) {
+/** Auto = ABR (hls.js chooses), capped at maxQuality. */
+export function enableAutoQuality(hls, maxQuality) {
   if (!hls) return;
+  applyMaxQualityCap(hls, maxQuality);
   hls.currentLevel = -1;
   hls.nextLevel = -1;
   hls.loadLevel = -1;

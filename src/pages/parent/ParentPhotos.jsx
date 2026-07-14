@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { GraduationCap, Heart, Image, Images } from 'lucide-react';
+import { GraduationCap, Heart, Image, Images, Play } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { loadParentClassPhotos } from '../../services/parentPhotoService.js';
+import { toLightboxMedia } from '../../utils/toLightboxMedia.js';
 import '../../styles/parent-photos.css';
 
 const INITIAL_VISIBLE = 12;
@@ -37,8 +38,14 @@ function sortPhotosNewestFirst(photos) {
   return [...photos].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
 }
 
-function isImagePhoto(photo) {
-  return photo.type !== 'video' && photo.mediaType !== 'VIDEO' && Boolean(photo.imageUrl);
+function isVideoPhoto(photo) {
+  return photo?.mediaType === 'VIDEO' || photo?.type === 'video';
+}
+
+function isViewablePhoto(photo) {
+  if (!photo) return false;
+  if (isVideoPhoto(photo)) return true;
+  return Boolean(photo.imageUrl || photo.previewUrl || photo.thumbnailUrl);
 }
 
 function filterDirectByChild(photos, selectedChildId, selectedChild) {
@@ -60,7 +67,10 @@ function filterAlbumByChild(photos, selectedChildId, selectedChild) {
 }
 
 function PhotoCard({ photo, onOpen, showChildLabel }) {
-  if (!isImagePhoto(photo)) return null;
+  if (!isViewablePhoto(photo)) return null;
+
+  const video = isVideoPhoto(photo);
+  const thumb = photo.imageUrl || photo.thumbnailUrl || photo.previewUrl || '';
 
   return (
     <article className="parent-photos-card">
@@ -68,9 +78,20 @@ function PhotoCard({ photo, onOpen, showChildLabel }) {
         type="button"
         className="parent-photos-card__media"
         onClick={() => onOpen(photo)}
-        aria-label={`View: ${getPhotoTitle(photo)}`}
+        aria-label={`${video ? 'Play' : 'View'}: ${getPhotoTitle(photo)}`}
       >
-        <img src={photo.imageUrl} alt="" loading="lazy" />
+        {thumb ? (
+          <img src={thumb} alt="" loading="lazy" />
+        ) : (
+          <div className="parent-photos-card__placeholder" aria-hidden>
+            <Play size={28} />
+          </div>
+        )}
+        {video ? (
+          <span className="parent-photos-card__play" aria-hidden>
+            <Play size={18} fill="currentColor" />
+          </span>
+        ) : null}
       </button>
       <div className="parent-photos-card__body">
         {showChildLabel && photo.childNames?.length > 0 && (
@@ -113,7 +134,7 @@ function PhotoGallery({
 }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
-  const imagePhotos = useMemo(() => photos.filter(isImagePhoto), [photos]);
+  const imagePhotos = useMemo(() => photos.filter(isViewablePhoto), [photos]);
   const visiblePhotos = useMemo(
     () => imagePhotos.slice(0, visibleCount),
     [imagePhotos, visibleCount],
@@ -233,7 +254,7 @@ export default function ParentPhotos() {
   const activePhotos = activeTab === TABS.DIRECT ? filteredDirectPhotos : filteredAlbumPhotos;
 
   const lightboxPhotos = useMemo(
-    () => activePhotos.filter(isImagePhoto),
+    () => activePhotos.filter(isViewablePhoto).map((photo) => toLightboxMedia(photo)).filter(Boolean),
     [activePhotos],
   );
 
@@ -248,8 +269,8 @@ export default function ParentPhotos() {
 
   const showChildLabels = children.length > 1 && selectedChildId === ALL_CHILDREN;
 
-  const directCount = filteredDirectPhotos.filter(isImagePhoto).length;
-  const albumCount = filteredAlbumPhotos.filter(isImagePhoto).length;
+  const directCount = filteredDirectPhotos.filter(isViewablePhoto).length;
+  const albumCount = filteredAlbumPhotos.filter(isViewablePhoto).length;
 
   const openLightbox = useCallback((photo) => {
     const idx = lightboxPhotos.findIndex((p) => p.id === photo.id);
@@ -286,7 +307,7 @@ export default function ParentPhotos() {
     <DashboardLayout>
       <div className="parent-photos-page">
         <header className="parent-photos-header">
-          <h1 className="parent-photos-header__title">Photos</h1>
+          <h1 className="parent-photos-header__title">Photos & Media</h1>
           <p className="parent-photos-header__subtitle">
             {schoolName && activeClassLabel
               ? `${schoolName} · ${activeClassLabel}`
@@ -398,6 +419,8 @@ export default function ParentPhotos() {
 
       <PhotoLightbox
         photo={lightboxPhoto}
+        photos={lightboxPhotos}
+        currentIndex={lightboxIndex}
         onClose={closeLightbox}
         onPrev={showPrevPhoto}
         onNext={showNextPhoto}

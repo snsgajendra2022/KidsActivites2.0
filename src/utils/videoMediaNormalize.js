@@ -146,18 +146,22 @@ export function normalizeVideoRenditions(item) {
 
 function resolveMasterStreamUrl(item, renditions) {
   const candidates = [
+    item?.hlsUrl,
     item?.streamUrl,
     item?.playbackUrl,
     item?.previewUrl,
     item?.downloadUrl,
   ];
 
-  for (const url of candidates) {
-    if (typeof url !== 'string' || !url || isThumbnailUrl(url)) continue;
-    if (isPlayableStreamUrl(url)) {
-      return rewritePhotoStudioUrl(url);
-    }
-  }
+  // Prefer adaptive master playlists over single-ladder /720p/index.m3u8.
+  const rewritten = candidates
+    .filter((url) => typeof url === 'string' && url && !isThumbnailUrl(url) && isPlayableStreamUrl(url))
+    .map((url) => rewritePhotoStudioUrl(url));
+
+  const master = rewritten.find((url) => /\/stream\/master\.m3u8|\bmaster\.m3u8\b/i.test(url));
+  if (master) return master;
+
+  if (rewritten[0]) return rewritten[0];
 
   const firstRendition = renditions.find((r) => r.streamUrl);
   return firstRendition?.streamUrl || null;

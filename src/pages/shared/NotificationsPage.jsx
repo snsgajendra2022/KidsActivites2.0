@@ -209,19 +209,23 @@ export default function NotificationsPage({
             </div>
 
             <nav className="notif-filters" aria-label="Filter notifications">
-              {FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  className={`notif-filter-btn ${activeFilter === f.id ? 'is-active' : ''}`}
-                  onClick={() => setActiveFilter(f.id)}
-                >
-                  {f.label}
-                  {filterCounts[f.id] > 0 && (
-                    <span className="notif-filter-btn__count">{filterCounts[f.id]}</span>
-                  )}
-                </button>
-              ))}
+              <p className="notif-filters__title">Filter</p>
+              <div className="notif-filters__wrap">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className={`notif-filter-btn ${activeFilter === f.id ? 'is-active' : ''}`}
+                    onClick={() => setActiveFilter(f.id)}
+                    aria-pressed={activeFilter === f.id}
+                  >
+                    {f.label}
+                    {filterCounts[f.id] > 0 && (
+                      <span className="notif-filter-btn__count">{filterCounts[f.id]}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </nav>
 
             <div className="notif-sidebar__action">
@@ -241,7 +245,7 @@ export default function NotificationsPage({
             <div className="notif-main__toolbar">
               <div>
                 <h2>
-                  <Inbox size={16} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 6 }} />
+                  <Inbox size={16} aria-hidden />
                   {filterLabel}
                 </h2>
                 <p>
@@ -252,9 +256,8 @@ export default function NotificationsPage({
               {unread > 0 && (
                 <button
                   type="button"
-                  className="notif-mark-all md:hidden"
+                  className="notif-mark-all notif-mark-all--toolbar"
                   onClick={handleReadAll}
-                  style={{ width: 'auto', minHeight: '2.25rem', padding: '0 0.875rem' }}
                 >
                   <CheckCheck size={15} />
                   Mark all read

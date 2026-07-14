@@ -1,14 +1,21 @@
 import { useEffect, useMemo } from 'react';
 import { X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { useProgressiveImageSrc } from '../../hooks/useProgressiveImageSrc.js';
-import { isVideoPlaybackReady, resolveVideoStreamUrl } from '../../utils/photoStudioProgressive.js';
+import {
+  firstNonThumbnailUrl,
+  isVideoPlaybackReady,
+} from '../../utils/photoStudioProgressive.js';
 import { normalizeVideoMediaItem, resolveLayoutRendition } from '../../utils/videoMediaNormalize.js';
-import VideoHlsPlayer from './VideoHlsPlayer.jsx';
+import { getProgressiveVideoSources } from '../../utils/videoSourceResolver.js';
+import { preloadNextMedia } from '../../utils/preloadMedia.js';
+import WebVideoPlayer from './WebVideoPlayer.jsx';
 import '../../styles/photo-lightbox.css';
 import '../../styles/progressive-image.css';
 
 export default function PhotoLightbox({
   photo,
+  photos,
+  currentIndex,
   onClose,
   onPrev,
   onNext,
@@ -21,12 +28,13 @@ export default function PhotoLightbox({
     [photo],
   );
 
-  const studioImage = photo?.studioImage || (photo?.variants ? photo : null);
-  const streamUrl = useMemo(
-    () => normalizedVideo?.masterStreamUrl || resolveVideoStreamUrl(photo),
-    [normalizedVideo, photo],
+  const playable = useMemo(
+    () => (photo?.mediaType === 'VIDEO' ? getProgressiveVideoSources(photo) : null),
+    [photo],
   );
-  const isVideo = photo?.mediaType === 'VIDEO' && Boolean(streamUrl);
+
+  const studioImage = photo?.studioImage || (photo?.variants ? photo : null);
+  const isVideo = photo?.mediaType === 'VIDEO' && Boolean(playable?.sources?.length);
   const videoReady = isVideo && isVideoPlaybackReady(photo);
   const { src: progressiveSrc, loading, qualityLabel } = useProgressiveImageSrc(
     studioImage,
@@ -34,14 +42,18 @@ export default function PhotoLightbox({
   );
   const imgSrc = studioImage
     ? progressiveSrc
-    : (photo?.previewUrl || photo?.thumbnailUrl || photo?.imageUrl);
+    : firstNonThumbnailUrl(photo?.previewUrl, photo?.downloadUrl, photo?.imageUrl);
 
   const videoRenditions = useMemo(
     () => normalizedVideo?.renditions ?? (Array.isArray(photo?.renditions) ? photo.renditions : []),
     [normalizedVideo, photo],
   );
 
-  const defaultQuality = normalizedVideo?.defaultQuality;
+  const maxQuality = normalizedVideo?.maxQuality;
+  const posterUrl = playable?.posterUrl
+    || photo?.thumbnailUrl
+    || photo?.previewUrl
+    || undefined;
 
   const layoutRendition = useMemo(
     () => (isVideo ? resolveLayoutRendition(videoRenditions, photo) : null),
@@ -79,6 +91,22 @@ export default function PhotoLightbox({
       window.removeEventListener('keydown', onKey);
     };
   }, [photo, onClose, onPrev, onNext, hasPrev, hasNext]);
+
+  // Prepare next item (poster + video metadata) while current media is open.
+  useEffect(() => {
+    if (!Array.isArray(photos) || typeof currentIndex !== 'number') return undefined;
+    let cancelled = false;
+    preloadNextMedia(currentIndex, photos, (item) => {
+      if (String(item?.mediaType || '').toUpperCase() !== 'VIDEO') {
+        return { posterUrl: item?.thumbnailUrl || item?.previewUrl || null, sources: [], progressive: [] };
+      }
+      return getProgressiveVideoSources(item);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+      void cancelled;
+    };
+  }, [photos, currentIndex, photo?.id]);
 
   if (!photo) return null;
 
@@ -133,29 +161,30 @@ export default function PhotoLightbox({
         >
           {isVideo ? (
             videoReady ? (
-              <VideoHlsPlayer
+              <WebVideoPlayer
+                key={photo.id}
                 className="photo-lightbox__video"
-                src={streamUrl}
-                poster={photo.thumbnailUrl || photo.previewUrl || undefined}
+                media={photo}
+                poster={posterUrl}
                 renditions={videoRenditions}
-                defaultQuality={defaultQuality}
+                maxQuality={maxQuality}
               />
             ) : (
               <div className="photo-lightbox__video-processing photo-lightbox__video-shell">
+                {posterUrl ? (
+                  <img
+                    className="web-video-player__poster"
+                    src={posterUrl}
+                    alt=""
+                    aria-hidden
+                  />
+                ) : null}
                 <div className="photo-lightbox__video-processing-body">
                   <span className="photo-lightbox__processing-spinner" aria-hidden />
                   <p>Video is still processing…</p>
-                  {photo.thumbnailUrl ? (
-                    <img
-                      src={photo.thumbnailUrl}
-                      alt=""
-                      className="photo-lightbox__video-processing-thumb"
-                    />
-                  ) : (
-                    <div className="photo-lightbox__processing-placeholder" aria-hidden>
-                      <ImageIcon size={32} />
-                    </div>
-                  )}
+                  <div className="photo-lightbox__processing-placeholder" aria-hidden>
+                    <ImageIcon size={32} />
+                  </div>
                 </div>
               </div>
             )

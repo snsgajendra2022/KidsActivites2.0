@@ -100,6 +100,11 @@ function FeaturesBlock({ block }) {
     );
   }
 
+  if (layout === 'curriculum-grid') {
+    // Prefer L&L curriculum renderer (supports imageUrl + Material icon fallback).
+    return renderLaughAndLearnBlock(block, {}) || null;
+  }
+
   return (
     <EditorialTimeline
       title={content.title}

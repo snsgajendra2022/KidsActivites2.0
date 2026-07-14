@@ -1,4 +1,4 @@
-import { resolveVideoStreamUrl } from './photoStudioProgressive.js';
+import { toLightboxMedia } from './toLightboxMedia.js';
 
 export function getChildClassTargets(children = [], school = null) {
   const targets = new Map();
@@ -22,12 +22,16 @@ function isParentVisibleAlbumItem(item) {
 }
 
 export function mapAlbumMediaToParentPhoto(item, albumDetail, school = null) {
-  const isVideo = item.mediaType === 'VIDEO';
-  const imageUrl = item.thumbnailUrl || item.previewUrl || item.imageUrl || '';
-  return {
-    id: item.id,
-    teacherId: item.uploadedBy || item.teacherId,
+  const lightbox = toLightboxMedia(item, {
+    className: albumDetail?.className,
+    schoolName: school?.name || albumDetail?.schoolName,
     teacherName: item.uploadedByName || item.teacherName || 'Teacher',
+  });
+
+  return {
+    ...lightbox,
+    teacherId: item.uploadedBy || item.teacherId,
+    teacherName: lightbox.teacherName || 'Teacher',
     schoolId: school?.id || albumDetail?.schoolId || null,
     schoolName: school?.name || albumDetail?.schoolName || '',
     classId: albumDetail?.classId || null,
@@ -38,14 +42,6 @@ export function mapAlbumMediaToParentPhoto(item, albumDetail, school = null) {
     caption: item.caption || item.fileName || '',
     sentAt: item.uploadedAt || item.createdAt || item.sentAt || new Date().toISOString(),
     recipients: 'class',
-    imageUrl,
-    previewUrl: item.previewUrl || item.imageUrl,
-    thumbnailUrl: item.thumbnailUrl,
-    mediaType: item.mediaType || (isVideo ? 'VIDEO' : 'IMAGE'),
-    type: isVideo ? 'video' : undefined,
-    streamUrl: resolveVideoStreamUrl(item),
-    renditions: item.renditions,
-    processingStatus: item.processingStatus,
     source: 'class_album',
   };
 }

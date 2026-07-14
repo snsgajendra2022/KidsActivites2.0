@@ -2,8 +2,9 @@ import {
   ACCEPTED_CLASSROOM_MEDIA,
   filterAcceptedClassroomMediaFiles,
 } from '../../../utils/mediaUploadLimits.js';
-import { resolveVideoStreamUrl } from '../../../utils/photoStudioProgressive.js';
+import { firstNonThumbnailUrl, resolveVideoStreamUrl } from '../../../utils/photoStudioProgressive.js';
 import { normalizeVideoMediaItem } from '../../../utils/videoMediaNormalize.js';
+import { toLightboxMedia } from '../../../utils/toLightboxMedia.js';
 
 export const ACCEPTED_MEDIA = ACCEPTED_CLASSROOM_MEDIA;
 export const PAGE_SIZE = 20;
@@ -103,24 +104,26 @@ export function toLightboxPhoto(img) {
   const isVideo = isVideoItem(img);
   const normalized = isVideo ? normalizeVideoMediaItem(img) : null;
   const streamUrl = normalized?.masterStreamUrl || resolveVideoStreamUrl(img);
-  return {
-    id: img.id,
+  const base = toLightboxMedia({
+    ...img,
+    streamUrl: streamUrl || img.streamUrl,
     mediaType: img.mediaType || (isVideo ? 'VIDEO' : 'IMAGE'),
-    imageUrl: img.previewUrl || img.thumbnailUrl || img.downloadUrl,
-    previewUrl: img.previewUrl,
-    streamUrl,
-    thumbnailUrl: img.thumbnailUrl,
     processingStatus: normalized?.processingStatus || img.processingStatus || img.status,
-    videoId: img.videoId,
     renditions: normalized?.renditions ?? img.renditions,
+  }) || {};
+
+  return {
+    ...base,
+    imageUrl: firstNonThumbnailUrl(img.previewUrl, img.downloadUrl, img.imageUrl) || undefined,
     defaultQuality: normalized?.defaultQuality,
+    maxQuality: normalized?.maxQuality,
     aspectRatio: normalized?.aspectRatio,
+    videoId: img.videoId,
     caption: img.filename,
     teacherName: isVideo ? 'VIDEO' : img.fileType?.toUpperCase(),
     className: img.uploadTime
       ? new Date(img.uploadTime).toLocaleString('en-IN')
       : '',
-    variants: img.variants,
     studioImage: isVideo ? null : img,
   };
 }

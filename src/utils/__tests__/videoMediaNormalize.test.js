@@ -192,4 +192,51 @@ describe('videoHlsConfig helpers', () => {
     expect(options.map((o) => o.label)).toEqual(['240p', '720p']);
     expect(options.every((o) => o.hlsIndex >= 0)).toBe(true);
   });
+
+  it('buildQualityOptions respects maxQuality cap', async () => {
+    const { buildQualityOptions } = await import('../videoHlsConfig.js');
+    const hlsLevels = [
+      { height: 240, name: '240p', bitrate: 600000 },
+      { height: 480, name: '480p', bitrate: 2000000 },
+      { height: 720, name: '720p', bitrate: 4500000 },
+      { height: 1080, name: '1080p', bitrate: 8000000 },
+    ];
+    const apiRenditions = normalizeVideoRenditions({
+      renditions: hlsLevels.map((level) => ({
+        label: level.name,
+        height: level.height,
+        status: 'READY',
+        streamUrl: `https://x/${level.name}/index.m3u8`,
+      })),
+    });
+    const options = buildQualityOptions(hlsLevels, apiRenditions, { maxQuality: '720p' });
+    expect(options.map((o) => o.label)).toEqual(['240p', '480p', '720p']);
+  });
+
+  it('progressive ramp starts at lowest and caps at maxQuality', async () => {
+    const {
+      findStartLevelForRamp,
+      findMaxLevelForCap,
+      getRampLevelIndices,
+    } = await import('../videoHlsConfig.js');
+
+    const hls = {
+      levels: [
+        { height: 240, name: '240p' },
+        { height: 360, name: '360p' },
+        { height: 480, name: '480p' },
+        { height: 720, name: '720p' },
+        { height: 1080, name: '1080p' },
+      ],
+    };
+
+    expect(findStartLevelForRamp(hls, '480p')).toBe(0);
+    expect(findMaxLevelForCap(hls, '1080p')).toBe(4);
+    expect(getRampLevelIndices(hls, '1080p').map((i) => hls.levels[i].name)).toEqual([
+      '240p', '360p', '480p', '720p', '1080p',
+    ]);
+    expect(getRampLevelIndices(hls, '720p').map((i) => hls.levels[i].name)).toEqual([
+      '240p', '360p', '480p', '720p',
+    ]);
+  });
 });
