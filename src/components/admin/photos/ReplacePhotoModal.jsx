@@ -33,9 +33,9 @@ export default function ReplacePhotoModal({
           <div className="photo-replace-modal__current">
             <p className="photo-replace-modal__label">Current image</p>
             <div className="photo-replace-modal__preview">
-              {(target.thumbnailUrl || target.previewUrl) ? (
+              {(target.previewUrl || target.downloadUrl) ? (
                 <img
-                  src={target.thumbnailUrl || target.previewUrl}
+                  src={target.previewUrl || target.downloadUrl}
                   alt=""
                 />
               ) : (

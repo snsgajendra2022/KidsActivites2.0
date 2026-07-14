@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Play, MoreVertical } from 'lucide-react';
 import {
-  buildProgressiveSrcChain,
   getGalleryThumbSrc,
   imageNeedsVariantPolling,
   preloadImageSrc,
@@ -29,22 +28,39 @@ export default function MediaCard({
   const isVideo = isVideoItem(image);
   const processing = imageNeedsVariantPolling(image);
   const serverChain = useMemo(() => {
+    const urls = [];
+    const seen = new Set();
+    const add = (raw) => {
+      const url = rewritePhotoStudioUrl(typeof raw === 'string' ? raw : '');
+      if (!url || seen.has(url)) return;
+      // Never put HLS playlists into <img>
+      if (/\.m3u8(\?|$)/i.test(url)) return;
+      seen.add(url);
+      urls.push(url);
+    };
+
     if (isVideo) {
-      const url = rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '');
-      return url ? [url] : [];
+      // Video grid poster — /api/videos/{id}/thumbnail
+      add(image.thumbnailUrl);
+      add(image?.variants?.thumbnailUrl);
+      return urls;
     }
-    const chain = buildProgressiveSrcChain(image).map(rewritePhotoStudioUrl).filter(Boolean);
-    if (imageNeedsVariantPolling(image)) {
-      const direct = rewritePhotoStudioUrl(
-        image.thumbnailUrl || image.previewUrl || image.downloadUrl || image?.variants?.previewFallbackUrl || '',
-      );
-      if (direct && !chain.includes(direct)) return [direct, ...chain];
-    }
-    return chain;
+
+    // Images: working display URLs first, thumbnail last (may 404 on some assets).
+    add(image.previewUrl);
+    add(image.downloadUrl);
+    add(image.imageUrl);
+    add(image?.variants?.s01);
+    add(image?.variants?.tiers?.s01?.url);
+    add(image?.variants?.recommendedUrl);
+    add(image?.variants?.previewFallbackUrl);
+    add(image?.variants?.autoUrl);
+    add(getGalleryThumbSrc(image));
+    add(image.thumbnailUrl);
+    add(image?.variants?.thumbnailUrl);
+    return urls;
   }, [image, isVideo]);
-  const serverSrc = serverChain[0] || (isVideo
-    ? rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '')
-    : getGalleryThumbSrc(image));
+  const serverSrc = serverChain[0] || '';
   const [src, setSrc] = useState(() => localPreviewUrl || serverSrc || '');
   const [chainIndex, setChainIndex] = useState(0);
   const [serverReady, setServerReady] = useState(false);
@@ -142,7 +158,10 @@ export default function MediaCard({
     }
     if (localPreviewUrl) {
       setSrc(localPreviewUrl);
+      return;
     }
+    // Stop retrying broken /thumbnail (or other dead) URLs
+    setSrc('');
   };
 
   const showProcessing = processing && !localPreviewUrl && !serverReady;
@@ -189,7 +208,16 @@ export default function MediaCard({
             )}
           </>
         ) : (
-          <div className="photo-media-card__placeholder" aria-hidden />
+          <div className="photo-media-card__placeholder" aria-hidden>
+            {isVideo && (
+              <span className="photo-media-card__play" aria-hidden>
+                <Play size={viewMode === 'compact' ? 22 : 28} fill="currentColor" />
+              </span>
+            )}
+            {showProcessing && (
+              <span className="photo-media-card__processing">Processing…</span>
+            )}
+          </div>
         )}
       </button>
 

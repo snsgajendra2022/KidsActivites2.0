@@ -24,6 +24,17 @@ function normalizePhoto(photo) {
     mediaType,
     type: photo.type || (isVideo ? 'video' : undefined),
     streamUrl: streamUrl || photo.streamUrl || photo.playbackUrl || undefined,
+    hlsUrl: photo.hlsUrl,
+    playbackUrl: photo.playbackUrl,
+    downloadUrl: photo.downloadUrl,
+    originalUrl: photo.originalUrl || photo.sourceUrl,
+    renditions: photo.renditions,
+    variants: photo.variants,
+    videoVariants: photo.videoVariants,
+    qualities: photo.qualities,
+    sources: photo.sources,
+    processingStatus: photo.processingStatus,
+    status: photo.status,
     videoStatusUrl: photo.videoStatusUrl || photo.statusPollUrl,
   };
 }

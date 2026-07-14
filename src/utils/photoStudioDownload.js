@@ -45,7 +45,6 @@ export function resolvePhotoDownloadUrl(image) {
     image.downloadUrl,
     image.previewUrl,
     ...buildProgressiveSrcChain(image),
-    image.thumbnailUrl,
   ].filter(Boolean);
 
   const seen = new Set();

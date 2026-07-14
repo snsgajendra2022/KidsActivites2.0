@@ -43,8 +43,8 @@ export default function AddToAlbumModal({
       <div className="photo-add-album-modal">
         {image && (
           <div className="photo-add-album-modal__preview">
-            {(image.thumbnailUrl || image.previewUrl) ? (
-              <img src={image.thumbnailUrl || image.previewUrl} alt="" />
+            {(image.previewUrl || image.downloadUrl) ? (
+              <img src={image.previewUrl || image.downloadUrl} alt="" />
             ) : (
               <div className="photo-add-album-modal__placeholder" aria-hidden />
             )}

@@ -37,9 +37,9 @@ export default function DeleteMediaModal({
         </div>
         {target && (
           <div className="photo-delete-modal__preview">
-            {(target.thumbnailUrl || target.previewUrl) ? (
+            {(target.previewUrl || target.downloadUrl) ? (
               <img
-                src={target.thumbnailUrl || target.previewUrl}
+                src={target.previewUrl || target.downloadUrl}
                 alt=""
                 className="photo-delete-modal__thumb"
               />
