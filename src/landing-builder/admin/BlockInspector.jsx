@@ -1,11 +1,19 @@
 import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Input from '../../components/ui/Input.jsx';
 import ToggleSwitch from '../../components/ui/ToggleSwitch.jsx';
-import { readFileAsDataUrl } from '../../services/portalConfigService.js';
-import { landingPageAction } from '../../services/landingPageApi.js';
 import { BLOCK_PALETTE, BLOCK_TYPES, LAYOUT_OPTIONS, createDefaultBlock } from '../blockRegistry.js';
 import { cloneBlock, moveBlock, removeBlockAt, updateBlockAt, updateBlockContent, updateBlockStyle } from '../blockUtils.js';
+import {
+  formatPhoneDisplay,
+  getDialCodeOptions,
+  splitPhone,
+  validateEmail,
+  validatePhoneNational,
+  digitsOnly,
+} from '../footerContact.js';
+import { IMAGE_SPECS } from '../imageSpecs.js';
+import LandingImageField from './LandingImageField.jsx';
 
 function blockLabel(type) {
   const labels = {
@@ -19,55 +27,37 @@ function blockLabel(type) {
   return BLOCK_PALETTE.find((b) => b.type === type)?.label || labels[type] || type;
 }
 
-const LANDING_IMAGE_MAX_BYTES = 100 * 1024 * 1024;
+const ImageField = LandingImageField;
 
-function ImageField({ label, value, onChange, schoolId }) {
-  const [uploading, setUploading] = useState(false);
-
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || file.size > LANDING_IMAGE_MAX_BYTES) return;
-    setUploading(true);
-    try {
-      const dataUrl = await readFileAsDataUrl(file);
-      try {
-        const result = await landingPageAction('uploadAsset', {
-          field: label,
-          fileName: file.name,
-          mimeType: file.type || 'image/png',
-          dataUrl,
-        }, { schoolId });
-        onChange(result.url || dataUrl);
-      } catch {
-        onChange(dataUrl);
-      }
-    } finally {
-      setUploading(false);
-    }
-  };
+function PhoneField({ dialCode, national, onChange, error }) {
+  const options = useMemo(() => getDialCodeOptions(), []);
+  const code = dialCode || '91';
 
   return (
-    <div className="landing-builder__image-field">
-      <p className="landing-builder__field-label">{label}</p>
-      <div className="landing-builder__image-row">
-        {value ? (
-          <img src={value} alt="" className="landing-builder__image-thumb" />
-        ) : (
-          <div className="landing-builder__image-empty">No image</div>
-        )}
-        <div className="landing-builder__image-actions">
-          <label className={`premium-btn premium-btn-secondary premium-btn-sm${uploading ? ' is-disabled' : ''}`}>
-            {uploading ? 'Uploading…' : 'Upload'}
-            <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
-          </label>
-          {value && (
-            <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={() => onChange(null)} disabled={uploading}>
-              Remove
-            </button>
-          )}
-        </div>
+    <div className="landing-builder__phone-field">
+      <p className="landing-builder__field-label">Mobile number</p>
+      <div className={`landing-builder__phone-row${error ? ' landing-builder__phone-row--error' : ''}`}>
+        <select
+          className="landing-builder__dial-select"
+          value={code}
+          aria-label="Country code"
+          onChange={(e) => onChange({ dialCode: e.target.value, national })}
+        >
+          {options.map((opt) => (
+            <option key={opt.code} value={opt.code}>{opt.label}</option>
+          ))}
+        </select>
+        <input
+          type="tel"
+          className="landing-builder__phone-input"
+          value={national || ''}
+          placeholder="Mobile number"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          onChange={(e) => onChange({ dialCode: code, national: digitsOnly(e.target.value) })}
+        />
       </div>
+      {error && <p className="landing-builder__field-error">{error}</p>}
     </div>
   );
 }
@@ -80,8 +70,8 @@ function HeroInspector({ block, onContent, onStyle, schoolId }) {
       {isSplit && (
         <>
           <Input label="Brand / school name" value={c.brandName || ''} onChange={(e) => onContent({ brandName: e.target.value })} variant="enrollment" />
-          <ImageField label="Logo" value={c.logoUrl} onChange={(url) => onContent({ logoUrl: url })} schoolId={schoolId} />
-          <ImageField label="Hero image" value={c.heroImageUrl} onChange={(url) => onContent({ heroImageUrl: url })} schoolId={schoolId} />
+          <ImageField label="Logo" value={c.logoUrl} onChange={(url) => onContent({ logoUrl: url })} schoolId={schoolId} spec={IMAGE_SPECS.logo} />
+          <ImageField label="Hero image" value={c.heroImageUrl} onChange={(url) => onContent({ heroImageUrl: url })} schoolId={schoolId} spec={IMAGE_SPECS.hero} />
           <Input label="Title (before highlight)" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
           <Input label="Highlighted words" value={c.titleHighlight || ''} onChange={(e) => onContent({ titleHighlight: e.target.value })} variant="enrollment" />
           <Input label="Title (after highlight)" value={c.titleSuffix || ''} onChange={(e) => onContent({ titleSuffix: e.target.value })} variant="enrollment" />
@@ -101,7 +91,7 @@ function HeroInspector({ block, onContent, onStyle, schoolId }) {
         />
       </div>
       {!isSplit && (
-        <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} schoolId={schoolId} />
+        <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} schoolId={schoolId} spec={IMAGE_SPECS.heroBackground} />
       )}
       <Input label="Primary button label" value={c.primaryButton?.label || ''} onChange={(e) => onContent({ primaryButton: { ...c.primaryButton, label: e.target.value } })} variant="enrollment" />
       <Input label="Primary button link" value={c.primaryButton?.href || ''} onChange={(e) => onContent({ primaryButton: { ...c.primaryButton, href: e.target.value } })} variant="enrollment" />
@@ -116,6 +106,7 @@ function HeroInspector({ block, onContent, onStyle, schoolId }) {
 function FeaturesInspector({ block, onContent, schoolId }) {
   const c = block.content || {};
   const items = c.items || [];
+  const isCurriculum = block.layout === 'curriculum-grid';
 
   const patchItem = (index, patch) => {
     onContent({
@@ -132,7 +123,22 @@ function FeaturesInspector({ block, onContent, schoolId }) {
         <div key={item.id || index} className="landing-builder__feature-item">
           <Input label={`Item ${index + 1} title`} value={item.title || ''} onChange={(e) => patchItem(index, { title: e.target.value })} variant="enrollment" />
           <Input label="Description" value={item.description || ''} onChange={(e) => patchItem(index, { description: e.target.value })} variant="enrollment" />
-          <ImageField label="Image" value={item.imageUrl} onChange={(url) => patchItem(index, { imageUrl: url })} schoolId={schoolId} />
+          {isCurriculum && (
+            <Input
+              label="Icon name (used when no image)"
+              value={item.icon || ''}
+              onChange={(e) => patchItem(index, { icon: e.target.value })}
+              variant="enrollment"
+              helper="Material icon name, e.g. science"
+            />
+          )}
+          <ImageField
+            label={isCurriculum ? 'Card image' : 'Image'}
+            value={item.imageUrl}
+            onChange={(url) => patchItem(index, { imageUrl: url })}
+            schoolId={schoolId}
+            spec={isCurriculum ? IMAGE_SPECS.curriculum : IMAGE_SPECS.feature}
+          />
         </div>
       ))}
     </div>
@@ -145,7 +151,7 @@ function ImageBannerInspector({ block, onContent, schoolId }) {
     <div className="landing-builder__inspector-fields">
       <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
       <Input label="Subtitle" value={c.subtitle || ''} onChange={(e) => onContent({ subtitle: e.target.value })} variant="enrollment" />
-      <ImageField label="Banner image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} />
+      <ImageField label="Banner image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} spec={IMAGE_SPECS.banner} />
     </div>
   );
 }
@@ -157,7 +163,7 @@ function MapInspector({ block, onContent, schoolId }) {
       <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
       <Input label="Subtitle" value={c.subtitle || ''} onChange={(e) => onContent({ subtitle: e.target.value })} variant="enrollment" />
       <Input label="Map embed URL" value={c.embedUrl || ''} onChange={(e) => onContent({ embedUrl: e.target.value })} variant="enrollment" helper="Google Maps embed iframe src URL" />
-      <ImageField label="Fallback image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} />
+      <ImageField label="Fallback image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} spec={IMAGE_SPECS.mapFallback} />
       <ToggleSwitch checked={c.showAddress !== false} onChange={(v) => onContent({ showAddress: v })} label="Show school address" />
     </div>
   );
@@ -170,7 +176,7 @@ function CtaInspector({ block, onContent, onStyle, schoolId }) {
       <Input label="Title" value={c.title || ''} onChange={(e) => onContent({ title: e.target.value })} variant="enrollment" />
       <Input label="Subtitle" value={c.subtitle || ''} onChange={(e) => onContent({ subtitle: e.target.value })} variant="enrollment" />
       <Input label="Button label" value={c.button?.label || ''} onChange={(e) => onContent({ button: { ...c.button, label: e.target.value } })} variant="enrollment" />
-      <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} schoolId={schoolId} />
+      <ImageField label="Background image" value={block.style?.backgroundImageUrl} onChange={(url) => onStyle({ backgroundImageUrl: url })} schoolId={schoolId} spec={IMAGE_SPECS.ctaBackground} />
       <div>
         <label className="landing-builder__field-label">Background color</label>
         <input
@@ -188,9 +194,24 @@ function FooterInspector({ block, onContent }) {
   const c = block.content || {};
   const isRich = block.layout === 'rich-contact';
   const links = c.links || [];
+  const parsed = splitPhone(c.phone, c.phoneDialCode || '91');
+  const dialCode = c.phoneDialCode || parsed.dialCode;
+  const national = c.phoneNational != null ? digitsOnly(c.phoneNational) : parsed.national;
+  const emailError = validateEmail(c.email);
+  const phoneError = validatePhoneNational(national, dialCode);
 
   const patchLink = (index, patch) => {
     onContent({ links: links.map((link, i) => (i === index ? { ...link, ...patch } : link)) });
+  };
+
+  const setPhone = ({ dialCode: nextCode, national: nextNational }) => {
+    const code = nextCode || '91';
+    const num = digitsOnly(nextNational);
+    onContent({
+      phoneDialCode: code,
+      phoneNational: num,
+      phone: formatPhoneDisplay(code, num),
+    });
   };
 
   if (isRich) {
@@ -199,8 +220,20 @@ function FooterInspector({ block, onContent }) {
         <Input label="School name" value={c.brandName || ''} onChange={(e) => onContent({ brandName: e.target.value })} variant="enrollment" />
         <Input label="Tagline" value={c.tagline || ''} onChange={(e) => onContent({ tagline: e.target.value })} variant="enrollment" />
         <Input label="Address" value={c.address || ''} onChange={(e) => onContent({ address: e.target.value })} variant="enrollment" />
-        <Input label="Email" value={c.email || ''} onChange={(e) => onContent({ email: e.target.value })} variant="enrollment" />
-        <Input label="Phone" value={c.phone || ''} onChange={(e) => onContent({ phone: e.target.value })} variant="enrollment" />
+        <Input
+          label="Email"
+          type="email"
+          value={c.email || ''}
+          onChange={(e) => onContent({ email: e.target.value })}
+          variant="enrollment"
+          error={emailError || undefined}
+        />
+        <PhoneField
+          dialCode={dialCode}
+          national={national}
+          onChange={setPhone}
+          error={phoneError || undefined}
+        />
         <p className="landing-builder__field-label">Quick Links</p>
         {links.map((link, index) => (
           <div key={`footer-link-${index}`} className="landing-builder__feature-item">
@@ -279,6 +312,7 @@ function GalleryInspector({ block, onContent, schoolId }) {
             value={img.imageUrl}
             onChange={(url) => patchImage(index, { imageUrl: url })}
             schoolId={schoolId}
+            spec={IMAGE_SPECS.gallery}
           />
           <Input
             label="Alt text"
@@ -319,7 +353,7 @@ function ContentSplitInspector({ block, onContent, schoolId }) {
         </div>
       ))}
       <Input label="Quote" value={c.quote || ''} onChange={(e) => onContent({ quote: e.target.value })} variant="enrollment" />
-      <ImageField label="Image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} />
+      <ImageField label="Image" value={c.imageUrl} onChange={(url) => onContent({ imageUrl: url })} schoolId={schoolId} spec={IMAGE_SPECS.contentSplit} />
     </div>
   );
 }
@@ -337,9 +371,98 @@ function TestimonialsInspector({ block, onContent, schoolId }) {
         <div key={item.id || index} className="landing-builder__feature-item">
           <Input label={`Review ${index + 1}`} value={item.quote || ''} onChange={(e) => patchItem(index, { quote: e.target.value })} variant="enrollment" />
           <Input label="Name" value={item.name || ''} onChange={(e) => patchItem(index, { name: e.target.value })} variant="enrollment" />
-          <ImageField label="Avatar" value={item.avatar} onChange={(url) => patchItem(index, { avatar: url })} schoolId={schoolId} />
+          <ImageField label="Avatar" value={item.avatar} onChange={(url) => patchItem(index, { avatar: url })} schoolId={schoolId} spec={IMAGE_SPECS.avatar} />
         </div>
       ))}
+    </div>
+  );
+}
+
+function BentoPairInspector({ block, onContent, schoolId }) {
+  const cards = block.content?.cards || [];
+
+  const patchCard = (index, patch) => {
+    onContent({
+      cards: cards.map((card, i) => (i === index ? { ...card, ...patch } : card)),
+    });
+  };
+
+  const addCard = () => {
+    onContent({
+      cards: [
+        ...cards,
+        {
+          id: `card_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          icon: 'star',
+          title: 'New card',
+          description: '',
+          imageUrl: null,
+          variant: cards.length % 2 === 0 ? 'primary' : 'secondary',
+        },
+      ],
+    });
+  };
+
+  const removeCard = (index) => {
+    onContent({ cards: cards.filter((_, i) => i !== index) });
+  };
+
+  return (
+    <div className="landing-builder__inspector-fields">
+      <p className="landing-builder__field-label">Vision &amp; Mission cards</p>
+      {cards.length === 0 && (
+        <p className="landing-builder__inspector-note">No cards yet. Add Vision and Mission cards below.</p>
+      )}
+      {cards.map((card, index) => (
+        <div key={card.id || index} className="landing-builder__feature-item">
+          <Input
+            label={`Card ${index + 1} title`}
+            value={card.title || ''}
+            onChange={(e) => patchCard(index, { title: e.target.value })}
+            variant="enrollment"
+          />
+          <div>
+            <label className="landing-builder__field-label">Description</label>
+            <textarea
+              className="landing-builder__textarea"
+              rows={3}
+              value={card.description || ''}
+              onChange={(e) => patchCard(index, { description: e.target.value })}
+            />
+          </div>
+          <Input
+            label="Icon name"
+            value={card.icon || ''}
+            onChange={(e) => patchCard(index, { icon: e.target.value })}
+            variant="enrollment"
+            helper="Material icon, e.g. visibility or rocket_launch"
+          />
+          <ImageField
+            label="Card image"
+            value={card.imageUrl}
+            onChange={(url) => patchCard(index, { imageUrl: url })}
+            schoolId={schoolId}
+            spec={IMAGE_SPECS.bento}
+          />
+          <div>
+            <label className="landing-builder__field-label">Variant</label>
+            <select
+              className="landing-builder__select"
+              value={card.variant || 'primary'}
+              onChange={(e) => patchCard(index, { variant: e.target.value })}
+            >
+              <option value="primary">Primary (teal)</option>
+              <option value="secondary">Secondary (gold)</option>
+            </select>
+          </div>
+          <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={() => removeCard(index)}>
+            Remove card
+          </button>
+        </div>
+      ))}
+      <button type="button" className="premium-btn premium-btn-secondary premium-btn-sm" onClick={addCard}>
+        Add card
+      </button>
     </div>
   );
 }
@@ -348,9 +471,9 @@ function GenericTextInspector({ block, onContent, schoolId, fields }) {
   const c = block.content || {};
   return (
     <div className="landing-builder__inspector-fields">
-      {fields.map(({ key, label, type = 'text' }) => (
+      {fields.map(({ key, label, type = 'text', spec }) => (
         type === 'image' ? (
-          <ImageField key={key} label={label} value={c[key]} onChange={(url) => onContent({ [key]: url })} schoolId={schoolId} />
+          <ImageField key={key} label={label} value={c[key]} onChange={(url) => onContent({ [key]: url })} schoolId={schoolId} spec={spec} />
         ) : (
           <Input key={key} label={label} value={c[key] || ''} onChange={(e) => onContent({ [key]: e.target.value })} variant="enrollment" />
         )
@@ -430,7 +553,7 @@ export default function BlockInspector({ block, draft, onDraftChange, schoolName
           fields={[
             { key: 'title', label: 'Title' },
             { key: 'description', label: 'Description' },
-            { key: 'imageUrl', label: 'Image', type: 'image' },
+            { key: 'imageUrl', label: 'Image', type: 'image', spec: IMAGE_SPECS.featurePanel },
           ]}
         />
       )}
@@ -446,7 +569,7 @@ export default function BlockInspector({ block, draft, onDraftChange, schoolName
         />
       )}
       {block.type === BLOCK_TYPES.BENTO_PAIR && (
-        <p className="landing-builder__inspector-note">Edit vision &amp; mission cards in the draft JSON or re-apply the Laugh &amp; Learn template.</p>
+        <BentoPairInspector block={block} onContent={onContent} schoolId={schoolId} />
       )}
     </div>
   );
@@ -460,6 +583,7 @@ export function BlockList({
   schoolName,
   portalName,
 }) {
+  const [addOpen, setAddOpen] = useState(false);
   const blocks = draft?.blocks || [];
 
   const setBlocks = (nextBlocks) => onDraftChange({ ...draft, blocks: nextBlocks });
@@ -468,24 +592,50 @@ export function BlockList({
     const block = createDefaultBlock(type, { schoolName, portalName });
     setBlocks([...blocks, block]);
     onSelect(block.id);
+    setAddOpen(false);
   };
 
   return (
     <div className="landing-builder__blocks">
       <div className="landing-builder__blocks-head">
         <p className="landing-builder__field-label">Page sections</p>
-        <div className="landing-builder__add-menu">
-          {BLOCK_PALETTE.map(({ type, label }) => (
-            <button
-              key={type}
-              type="button"
-              className="landing-builder__add-btn"
-              title={`Add ${label}`}
-              onClick={() => addBlock(type)}
-            >
-              <Plus size={14} />
-            </button>
-          ))}
+        <div className="landing-builder__add-wrap">
+          <button
+            type="button"
+            className={`landing-builder__add-toggle${addOpen ? ' landing-builder__add-toggle--open' : ''}`}
+            aria-expanded={addOpen}
+            onClick={() => setAddOpen((v) => !v)}
+          >
+            <Plus size={14} />
+            Add section
+          </button>
+          {addOpen && (
+            <>
+              <button
+                type="button"
+                className="landing-builder__add-backdrop"
+                aria-label="Close add menu"
+                onClick={() => setAddOpen(false)}
+              />
+              <div className="landing-builder__add-panel" role="menu">
+                <p className="landing-builder__add-panel-title">Choose a section</p>
+                <div className="landing-builder__add-panel-list">
+                  {BLOCK_PALETTE.map(({ type, label, desc }) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className="landing-builder__add-item"
+                      role="menuitem"
+                      onClick={() => addBlock(type)}
+                    >
+                      <span className="landing-builder__add-item-label">{label}</span>
+                      {desc && <span className="landing-builder__add-item-desc">{desc}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

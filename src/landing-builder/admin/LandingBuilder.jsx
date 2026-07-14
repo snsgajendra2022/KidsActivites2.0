@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ExternalLink, Globe, LayoutTemplate, RefreshCw, Save, Upload, X } from 'lucide-react';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { validateLandingContacts } from '../footerContact.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { landingPageAction } from '../../services/landingPageApi.js';
 import { listTemplateSummaries } from '../templates/index.js';
@@ -159,6 +160,11 @@ export default function LandingBuilder({
 
   const handleSaveDraft = async () => {
     if (!draft) return;
+    const contactError = validateLandingContacts(draft);
+    if (contactError) {
+      toast(contactError, 'error');
+      return;
+    }
     setSaving(true);
     try {
       const result = await landingPageAction('saveDraft', { landingPage: draft }, { schoolId });
@@ -174,6 +180,11 @@ export default function LandingBuilder({
   };
 
   const handlePublish = async () => {
+    const contactError = validateLandingContacts(draft);
+    if (contactError) {
+      toast(contactError, 'error');
+      return;
+    }
     setPublishing(true);
     try {
       let page = draft;

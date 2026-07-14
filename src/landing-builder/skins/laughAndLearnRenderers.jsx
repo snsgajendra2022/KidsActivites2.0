@@ -131,8 +131,14 @@ function LalCurriculum({ block }) {
         <div className="lal-curriculum__grid">
           {items.map((item, i) => (
             <article key={item.id} className="lal-curriculum__card">
-              <div className={`lal-curriculum__icon lal-curriculum__icon--${iconVariants[i % iconVariants.length]}`}>
-                <MaterialIcon name={item.icon || 'star'} filled />
+              <div
+                className={`lal-curriculum__icon lal-curriculum__icon--${iconVariants[i % iconVariants.length]}${item.imageUrl ? ' lal-curriculum__icon--image' : ''}`}
+              >
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt="" />
+                ) : (
+                  <MaterialIcon name={item.icon || 'star'} filled />
+                )}
               </div>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
@@ -340,7 +346,15 @@ function LalFooter({ block }) {
             <ul>
               {c.address && <li><MaterialIcon name="location_on" /> Address: {c.address}</li>}
               {c.email && <li><MaterialIcon name="mail" /> {c.email}</li>}
-              {c.phone && <li><MaterialIcon name="call" /> {c.phone}</li>}
+              {(c.phone || c.phoneNational) && (
+                <li>
+                  <MaterialIcon name="call" />{' '}
+                  {c.phone
+                    || [c.phoneDialCode ? `+${String(c.phoneDialCode).replace(/\D/g, '')}` : '', c.phoneNational]
+                      .filter(Boolean)
+                      .join(' ')}
+                </li>
+              )}
             </ul>
           </div>
           <div>

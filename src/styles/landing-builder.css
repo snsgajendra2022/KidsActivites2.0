@@ -153,29 +153,116 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
 }
 
-.landing-builder__add-menu {
-  display: flex;
-  gap: 0.25rem;
+.landing-builder__blocks-head .landing-builder__field-label {
+  margin: 0;
 }
 
-.landing-builder__add-btn {
+.landing-builder__add-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.landing-builder__add-toggle {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
   border-radius: 8px;
-  border: 1px dashed rgba(0, 0, 0, 0.15);
-  background: #fafbfe;
-  color: #5b4bdb;
+  border: 1px solid rgba(91, 75, 219, 0.35);
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.landing-builder__add-toggle:hover,
+.landing-builder__add-toggle--open {
+  background: #e0e7ff;
+  border-color: #5b4bdb;
+}
+
+.landing-builder__add-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.landing-builder__add-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 50;
+  width: min(280px, 78vw);
+  max-height: 320px;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  padding: 0.5rem;
+}
+
+.landing-builder__add-panel-title {
+  margin: 0 0 0.35rem;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.landing-builder__add-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.landing-builder__add-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
   cursor: pointer;
 }
 
-.landing-builder__add-btn:hover {
+.landing-builder__add-item:hover {
   background: #eef2ff;
+}
+
+.landing-builder__add-item-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.landing-builder__add-item-desc {
+  font-size: 0.6875rem;
+  color: #6b7280;
+  line-height: 1.3;
+}
+
+.landing-builder__add-menu {
+  display: none;
+}
+
+.landing-builder__add-btn {
+  display: none;
 }
 
 .landing-builder__block-list {
@@ -302,6 +389,15 @@
   resize: vertical;
 }
 
+.landing-builder__select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fafbfe;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
 .landing-builder__layout-options {
   display: flex;
   flex-wrap: wrap;
@@ -372,6 +468,100 @@
   margin-top: 0.25rem;
 }
 
+.landing-builder__image-field--error .landing-builder__field-label,
+.landing-builder__field-label--error {
+  color: #be123c !important;
+}
+
+.landing-builder__image-req {
+  margin: 0 0 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #dbe3f0;
+  background: #eef4ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  line-height: 1.35;
+}
+
+.landing-builder__image-req--error {
+  border-color: #fda4af;
+  background: #fff1f2;
+  color: #be123c !important;
+}
+
+.landing-builder__image-hint {
+  margin: 0 0 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.landing-builder__image-hint--error {
+  color: #be123c !important;
+}
+
+.landing-builder__image-drop {
+  border: 1.5px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  padding: 0.65rem;
+  background: #fafbfe;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.landing-builder__image-drop--active {
+  border-color: #0058be;
+  background: rgba(0, 88, 190, 0.06);
+}
+
+.landing-builder__image-drop--error {
+  border: 2px solid #e11d48 !important;
+  background: #fff1f2 !important;
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+}
+
+.landing-builder__image-drop-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.6875rem;
+  color: #9ca3af;
+}
+
+.landing-builder__image-drop-hint--error {
+  color: #be123c !important;
+  font-weight: 700;
+}
+
+.landing-builder__image-error-box {
+  margin-top: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  border: 1.5px solid #fda4af;
+  background: #fff1f2;
+}
+
+.landing-builder__field-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #be123c !important;
+  line-height: 1.4;
+}
+
+.landing-builder__image-error-required {
+  margin: 0.4rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #9f1239 !important;
+  line-height: 1.4;
+}
+
+.landing-builder__image-error-required strong {
+  color: #be123c !important;
+  font-weight: 800;
+}
+
 .landing-builder__image-row {
   display: flex;
   gap: 0.75rem;
@@ -398,10 +588,65 @@
   color: #9ca3af;
 }
 
+.landing-builder__image-empty--error {
+  background: #ffe4e6 !important;
+  color: #be123c !important;
+  border: 1px solid #fda4af;
+  font-weight: 700;
+}
+
 .landing-builder__image-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+}
+
+.landing-builder__upload-btn--error {
+  border-color: #fda4af !important;
+  color: #be123c !important;
+}
+
+.landing-builder__phone-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.landing-builder__phone-row {
+  display: flex;
+  align-items: stretch;
+  border-radius: 10px;
+  border: 1px solid #c5c6cd;
+  background: #f8f9ff;
+  overflow: hidden;
+}
+
+.landing-builder__phone-row--error {
+  border-color: #e11d48;
+}
+
+.landing-builder__dial-select {
+  width: 5.25rem;
+  flex-shrink: 0;
+  border: none;
+  border-right: 1px solid #c5c6cd;
+  background: #eef1f8;
+  padding: 0 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0b1c30;
+  outline: none;
+  cursor: pointer;
+}
+
+.landing-builder__phone-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.875rem;
+  outline: none;
 }
 
 .landing-builder__feature-item {

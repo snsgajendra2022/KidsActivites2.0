@@ -329,7 +329,9 @@ field=content.images[0].imageUrl
 file=<binary>
 ```
 
-**Limits (production multipart):** max **100 MB** per image file. Allowed MIME: `image/jpeg`, `image/png`, `image/webp`, `image/gif`.
+**Limits (production multipart):** max **100 MB** absolute server cap. Frontend builder enforces tighter per-field limits and **pixel dimensions** (see §9.6). Allowed MIME: `image/jpeg`, `image/png`, `image/webp`, `image/gif`.
+
+When rejecting a bad upload, the admin UI shows the **required size** (e.g. `Upload 1920×1080px`) and the **actual** dimensions of the selected file.
 
 **Option B — JSON data URL (dev / local builder only):**
 
@@ -581,7 +583,8 @@ Backend validators must accept **`gallery`** (and all types above) as opaque JSO
 }
 ```
 
-For `curriculum-grid`: items use Material icon names (`diversity_3`, `science`, etc.).
+For `curriculum-grid`: items use Material icon names (`diversity_3`, `science`, etc.) as fallback.
+When `imageUrl` is set (after `uploadAsset`), the public page must render that image instead of the icon.
 
 #### `contentSplit`
 
@@ -594,23 +597,52 @@ For `curriculum-grid`: items use Material icon names (`diversity_3`, `science`, 
 }
 ```
 
-#### `bentoPair`
+#### `bentoPair` (layout `default` — Vision & Mission)
+
+Section label in admin: **Vision & mission**. Seeded as block #4 in Laugh & Learn.
+
+Public page renders two (or more) cards from `content.cards[]`. Each card may use a Material icon and/or a photo (`imageUrl` from `uploadAsset`).
 
 ```json
 {
   "cards": [
     {
-      "id": "...",
+      "id": "vision_1",
       "icon": "visibility",
       "title": "Our Vision",
-      "description": "...",
-      "imageUrl": "https://...",
+      "description": "To empower children to think, explore, and discover their unique talents in a world of endless possibilities.",
+      "imageUrl": "https://cdn.example.com/.../vision.webp",
       "variant": "primary"
+    },
+    {
+      "id": "mission_1",
+      "icon": "rocket_launch",
+      "title": "Our Mission",
+      "description": "Providing a nurturing early learning experience that builds a strong academic and social foundation.",
+      "imageUrl": "https://cdn.example.com/.../mission.webp",
+      "variant": "secondary"
     }
   ]
 }
 ```
 
+| Field | Type | Notes |
+|-------|------|-------|
+| `cards` | array | Required. Admin can add/remove cards in the builder. |
+| `cards[].id` | string | Required unique id |
+| `cards[].title` | string | Card heading (e.g. Our Vision) |
+| `cards[].description` | string | Body text |
+| `cards[].icon` | string | Material Symbols name; shown above title |
+| `cards[].imageUrl` | string \| null | CDN URL after `uploadAsset`; shown below description |
+| `cards[].variant` | `"primary"` \| `"secondary"` | Card color: teal vs gold |
+
+**Backend must:**
+
+- Persist the full `cards[]` array on `saveDraft` / `publish` (do not strip `imageUrl`, `icon`, or `variant`).
+- Accept `bentoPair` when validating block `type`.
+- Return cards unchanged from `getEditor` / `GET /portal/config` → `landingPagePublished`.
+
+**Frontend:** `BentoPairInspector` in `BlockInspector.jsx` edits all card fields; `LalBento` in `laughAndLearnRenderers.jsx` renders the section.
 #### `featurePanel`
 
 ```json
@@ -685,8 +717,10 @@ Quick Links are **dynamic** (`links[]`) — labels and hrefs are edited in the b
   "brandName": "Laugh and Learn Academy",
   "tagline": "...",
   "address": "Frisco, TX",
-  "email": "...",
-  "phone": "...",
+  "email": "laughlearnacademy@gmail.com",
+  "phoneDialCode": "1",
+  "phoneNational": "4692472706",
+  "phone": "+1 4692472706",
   "copyrightYear": 2024,
   "badges": ["LICENSED DAYCARE", "CPR CERTIFIED"],
   "socialLinks": [{ "icon": "face_nod", "href": "#" }],
@@ -697,6 +731,47 @@ Quick Links are **dynamic** (`links[]`) — labels and hrefs are edited in the b
   ]
 }
 ```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `email` | string | Validated as email in builder; required format `name@domain.tld` |
+| `phoneDialCode` | string | Digits only (e.g. `"91"`, `"1"`). UI selector shows **codes only** (`+91`, `+1`) — no country name |
+| `phoneNational` | string | National digits only (no country code) |
+| `phone` | string | Display string composed as `+{dialCode} {national}` — keep for public render / legacy |
+
+**Backend must:** accept and persist `phoneDialCode` + `phoneNational` (do not strip). Public page may render `phone` or compose from dial + national.
+
+---
+
+### 9.6 Landing image size specs (builder validation)
+
+Frontend source of truth: `src/landing-builder/imageSpecs.js`.
+
+**Strict rules (upload is blocked on fail):**
+
+1. Width ≥ required width **and** height ≥ required height  
+2. Aspect ratio within **12%** of the required shape  
+3. File size under the max for that field  
+
+On failure the UI turns **red**, shows **Required vs Yours**, a toast error, and **does not** save the image.
+
+| Field / role | Required size | Max file |
+|--------------|---------------|----------|
+| Logo | 512×512 | 2 MB |
+| Hero (split) | 1200×1200 | 8 MB |
+| Hero background | 1920×1080 | 10 MB |
+| Curriculum card | 512×512 | 2 MB |
+| Feature image | 800×600 | 5 MB |
+| Philosophy / contentSplit | 1000×1200 | 8 MB |
+| Vision & mission card | 800×480 | 5 MB |
+| Feature panel | 1200×900 | 8 MB |
+| Gallery photo | 1200×900 | 8 MB |
+| Review avatar | 400×400 | 2 MB |
+| Banner | 1920×800 | 8 MB |
+| Map fallback | 1200×800 | 5 MB |
+| CTA background | 1920×1080 | 10 MB |
+
+Server `uploadAsset` should still return `{ url, width, height }`. Optional: reject below required size for the given `field` role.
 
 ---
 
@@ -776,7 +851,7 @@ POST /admin/landing-page
 | 1 | `hero` | `split-playful` | `#home` + header nav (Home, Gallery, Reviews) + Login / Enroll Now |
 | 2 | `features` | `curriculum-grid` | `#curriculum` |
 | 3 | `contentSplit` | `image-left` | Our Philosophy |
-| 4 | `bentoPair` | `default` | Vision & Mission |
+| 4 | `bentoPair` | `default` | **Vision & Mission** — `content.cards[]` (title, description, icon, imageUrl, variant) |
 | 5 | `featurePanel` | `split-card` | Learning Environment |
 | 6 | `highlights` | `dark-grid` | What To Expect |
 | 7 | `gallery` | `photo-grid` | `#gallery` — Our Gallery (3 cols × 3 rows images) |
@@ -809,6 +884,7 @@ POST /admin/landing-page
 - Login / Enroll buttons in header — hero block JSON (`loginLabel`, `loginHref`, `enrollLabel`, `enrollHref`)
 - Footer Quick Link labels — footer `links[]` JSON (editable in builder)
 - Gallery image grid UI — frontend only; backend stores `gallery` block JSON + image URLs
+- Vision & Mission UI — frontend only; backend stores `bentoPair.content.cards[]` + image URLs
 - Separate public landing route — uses existing `GET /portal/config`
 - Template rendering / skin CSS — frontend only (`LandingPageRenderer.jsx`, `laughAndLearnRenderers.jsx`)
 
@@ -825,6 +901,8 @@ POST /admin/landing-page
    → Live at /{slug} via GET /portal/config → landingPagePublished
 ```
 
+**Vision & Mission edit path:** select `bentoPair` block → edit `cards[]` (title / description / icon / image / variant) → `uploadAsset` for card images → `saveDraft` → `publish`.
+
 ---
 
-*Document version: 2.1 — July 2026 (gallery block, 9-section Laugh & Learn, footer Quick Links, uploadAsset 100 MB)*
+*Document version: 2.3 — July 2026 (image size validation, footer email/phone + dial code selector, Vision & Mission, curriculum imageUrl)*

@@ -19,8 +19,13 @@ export const BLOCK_TYPES = {
 export const BLOCK_PALETTE = [
   { type: BLOCK_TYPES.HERO, label: 'Hero Banner', desc: 'Top headline with buttons', defaultLayout: 'full-bleed-image' },
   { type: BLOCK_TYPES.FEATURES, label: 'Features', desc: 'Timeline or grid highlights', defaultLayout: 'timeline' },
+  { type: BLOCK_TYPES.CONTENT_SPLIT, label: 'Split content', desc: 'Image + philosophy text', defaultLayout: 'image-left' },
+  { type: BLOCK_TYPES.BENTO_PAIR, label: 'Vision & mission', desc: 'Two highlight cards', defaultLayout: 'default' },
+  { type: BLOCK_TYPES.FEATURE_PANEL, label: 'Feature panel', desc: 'Learning environment split', defaultLayout: 'split-card' },
+  { type: BLOCK_TYPES.HIGHLIGHTS, label: 'Highlights', desc: 'Icon expectation grid', defaultLayout: 'dark-grid' },
   { type: BLOCK_TYPES.IMAGE_BANNER, label: 'Image Banner', desc: 'Wide campus or promo image', defaultLayout: 'wide' },
   { type: BLOCK_TYPES.GALLERY, label: 'Our Gallery', desc: 'Photo grid — 3 columns, multiple rows', defaultLayout: 'photo-grid' },
+  { type: BLOCK_TYPES.TESTIMONIALS, label: 'Testimonials', desc: 'Parent reviews', defaultLayout: 'grid' },
   { type: BLOCK_TYPES.MAP, label: 'Campus Map', desc: 'Location and address', defaultLayout: 'embed' },
   { type: BLOCK_TYPES.CTA, label: 'Call to Action', desc: 'Bottom enrollment banner', defaultLayout: 'image-bg' },
   { type: BLOCK_TYPES.FOOTER, label: 'Footer', desc: 'Contact and links', defaultLayout: 'default' },
@@ -190,6 +195,95 @@ export function createDefaultBlock(type, { schoolName = 'our school', portalName
         visible: true,
         style: {},
         content: { compact: true },
+      };
+    case BLOCK_TYPES.CONTENT_SPLIT:
+      return {
+        id: newId(),
+        type,
+        layout: 'image-left',
+        visible: true,
+        style: { paddingY: 'xl' },
+        content: {
+          title: 'Our Philosophy',
+          body: ['Share what makes your school unique.', 'Add a second paragraph about your approach.'],
+          quote: '',
+          imageUrl: null,
+        },
+      };
+    case BLOCK_TYPES.BENTO_PAIR:
+      return {
+        id: newId(),
+        type,
+        layout: 'default',
+        visible: true,
+        style: { backgroundColor: '#e6eff9', paddingY: 'xl' },
+        content: {
+          cards: [
+            {
+              id: newId('vision'),
+              icon: 'visibility',
+              title: 'Our Vision',
+              description: 'To empower children to think, explore, and discover their unique talents.',
+              imageUrl: null,
+              variant: 'primary',
+            },
+            {
+              id: newId('mission'),
+              icon: 'rocket_launch',
+              title: 'Our Mission',
+              description: 'Providing a nurturing early learning experience for every student.',
+              imageUrl: null,
+              variant: 'secondary',
+            },
+          ],
+        },
+      };
+    case BLOCK_TYPES.FEATURE_PANEL:
+      return {
+        id: newId(),
+        type,
+        layout: 'split-card',
+        visible: true,
+        style: { paddingY: 'xl' },
+        content: {
+          title: 'The Learning Environment',
+          description: 'Describe your classrooms, play spaces, and daily rhythm.',
+          imageUrl: null,
+          highlights: [],
+        },
+      };
+    case BLOCK_TYPES.HIGHLIGHTS:
+      return {
+        id: newId(),
+        type,
+        layout: 'dark-grid',
+        visible: true,
+        style: { paddingY: 'xl' },
+        content: {
+          title: 'What To Expect From Us',
+          subtitle: '',
+          items: [
+            { id: newId('hl'), icon: 'favorite', title: 'Caring staff', description: '' },
+            { id: newId('hl'), icon: 'restaurant', title: 'Healthy meals', description: '' },
+            { id: newId('hl'), icon: 'smoke_free', title: 'Safe campus', description: '' },
+            { id: newId('hl'), icon: 'add_reaction', title: 'Happy kids', description: '' },
+          ],
+        },
+      };
+    case BLOCK_TYPES.TESTIMONIALS:
+      return {
+        id: newId(),
+        type,
+        layout: 'grid',
+        visible: true,
+        style: { paddingY: 'xl' },
+        content: {
+          title: 'What Our Parents Say',
+          rating: 5,
+          items: [
+            { id: newId('rev'), quote: 'A wonderful place for our child to grow.', name: 'Happy Parent', role: 'Parent', avatar: null },
+          ],
+        },
       };
     default:
       return {
