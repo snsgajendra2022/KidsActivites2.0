@@ -25,13 +25,13 @@ export default function EditorialTimeline({
         </div>
 
         {/* IMAGE COLUMN */}
-        <div className={`w-full flex-1 md:w-1/2 ${isEven ? 'md:pl-16 lg:pl-24' : 'md:pr-16 lg:pr-24'}`}>
-          <div className="relative overflow-hidden rounded-2xl shadow-xl group">
+        <div className={`w-full flex-1 md:w-1/2 flex justify-center ${isEven ? 'md:pl-16 lg:pl-24' : 'md:pr-16 lg:pr-24'}`}>
+          <div className="feature-image-card relative group">
             <img 
               src={step.imageUrl || DEFAULT_MEDIA} 
               alt={step.title} 
               loading="lazy" 
-              className="h-64 w-full object-cover transition-transform duration-700 group-hover:scale-105 md:h-80" 
+              className="transition-transform duration-700 group-hover:scale-105" 
             />
             {step.showPlay && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/10">

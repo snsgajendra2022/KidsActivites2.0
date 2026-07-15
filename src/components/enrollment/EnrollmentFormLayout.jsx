@@ -25,10 +25,6 @@ export function EnrollmentFormHeader({ portalName, school }) {
 
         <div className="enrollment-form-header__brand">
           <div className="enrollment-form-header__brand-row">
-            <div className="enrollment-form-header__brand-text">
-              <h2 className="enrollment-form-header__school">{portalName}</h2>
-              <p className="enrollment-form-header__tag">Admissions Portal</p>
-            </div>
             <div className="enrollment-form-header__logo">
               <PortalLogo size="lg" />
             </div>

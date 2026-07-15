@@ -25,7 +25,7 @@ export default function EditorialFooter({ compact = false }) {
         <div className="sb-editorial-footer__grid">
           <div className="flex flex-col items-start gap-4">
             <FooterPortalLogo size="sm" />
-            <p className="sb-editorial-footer__tagline">{tagline}</p>
+            <p className="sb-editorial-footer__tagline">Activity enrollment and parent communication platform.</p>
             {!compact && contactLine && (
               <p className="sb-editorial-footer__tagline mt-4">{contactLine}</p>
             )}
@@ -36,6 +36,17 @@ export default function EditorialFooter({ compact = false }) {
             <ul className="sb-editorial-footer__links">
               <li><Link to={enrollPath}>Start Enrollment</Link></li>
               <li><Link to={loginPath}>Login</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="sb-editorial-footer__heading">Features</p>
+            <ul className="sb-editorial-footer__links">
+              <li><Link to="/">Digital Admissions</Link></li>
+              <li><Link to="/">Photo Albums</Link></li>
+              <li><Link to="/">Fee Management</Link></li>
+              <li><Link to="/">Documents</Link></li>
+              <li><Link to="/">Parent Portal</Link></li>
             </ul>
           </div>
 
