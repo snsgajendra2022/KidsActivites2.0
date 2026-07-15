@@ -95,6 +95,19 @@ export async function getFeeByApplication(applicationId) {
   });
 }
 
+/** Parent-safe fee lookup for the logged-in parent's application. */
+export async function getMyFee(applicationId, user) {
+  return routeRequest({
+    user,
+    mockFn: async () => {
+      await delay();
+      const fee = getAll().find((f) => f.applicationId === applicationId) || null;
+      return normalizeFee(fee);
+    },
+    apiFn: async () => normalizeFee(await api.get('/fees/my-fee', { applicationId })),
+  });
+}
+
 export async function assignFee(applicationId, applicationNo, studentName, classApplying, breakdown) {
   return routeRequest({
     mockFn: async () => {
@@ -207,4 +220,4 @@ export async function rejectPayment(feeId, reason) {
   });
 }
 
-export { calculateTotal };
+export { calculateTotal, normalizeFee };

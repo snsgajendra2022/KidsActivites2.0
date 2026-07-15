@@ -178,7 +178,12 @@
 /* Public footer */
 .public-footer {
   background-color: var(--sb-navy);
-  border-top-color: color-mix(in srgb, var(--sb-gold) 20%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--sb-gold) 20%, transparent);
+}
+
+.public-footer.sb-tenant-footer {
+  background: var(--tenant-footer-bg);
+  border-top: 3px solid var(--tenant-footer-accent, #0058be);
 }
 
 .public-footer-link {
@@ -211,6 +216,22 @@
   overflow: hidden;
 }
 
+.auth-split__hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  z-index: 0;
+}
+
+.auth-split__hero-img--loaded {
+  opacity: 1;
+}
+
 .auth-split__visual::before {
   content: '';
   position: absolute;
@@ -222,11 +243,21 @@
     color-mix(in srgb, var(--sb-gold) 25%, var(--sb-deep-blue)) 100%
   );
   opacity: 0.95;
+  z-index: 1;
+}
+
+.auth-split__visual--has-image::before {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--sb-navy) 88%, transparent) 0%,
+    color-mix(in srgb, var(--sb-deep-blue) 82%, transparent) 50%,
+    color-mix(in srgb, var(--sb-gold) 20%, var(--sb-deep-blue) 70%) 100%
+  );
 }
 
 .auth-split__visual-content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 28rem;
 }
 
@@ -575,23 +606,30 @@
   border-bottom-color: color-mix(in srgb, white 12%, var(--admin-purple-deep)) !important;
 }
 
-.portal-shell .app-sidebar .sidebar-logo-wrap {
+.portal-shell .app-sidebar .sidebar-logo-wrap,
+.portal-shell .app-sidebar .portal-logo-sidebar-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  padding: 0.25rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  max-width: 9rem;
+  padding: 0.35rem 0.5rem;
   border-radius: 0.75rem;
-  background: #fff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
-.portal-shell .app-sidebar .sidebar-logo-wrap img {
+.portal-shell .app-sidebar .sidebar-logo-wrap img,
+.portal-shell .app-sidebar .portal-logo-sidebar-img {
   display: block;
   max-height: 2rem;
-  max-width: 8.5rem;
+  max-width: 8rem;
   width: auto;
+  height: auto;
   object-fit: contain;
 }
 
@@ -608,8 +646,110 @@
   padding: 0.875rem 0.5rem 0.625rem;
 }
 
+.portal-shell .app-sidebar .sidebar-top-collapsed-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  background: linear-gradient(
+    135deg,
+    var(--sb-gold) 0%,
+    color-mix(in srgb, var(--sb-gold) 82%, white) 100%
+  );
+  box-shadow:
+    0 2px 12px color-mix(in srgb, var(--sb-gold) 38%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 16px color-mix(in srgb, var(--sb-gold) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn__label {
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--admin-purple-deep, #1a0f2e);
+}
+
+.portal-shell .app-sidebar .sidebar-expand-btn,
+.portal-shell .app-sidebar .sidebar-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.portal-shell .app-sidebar .sidebar-expand-btn:hover,
+.portal-shell .app-sidebar .sidebar-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: var(--sb-gold);
+}
+
+.portal-shell .app-sidebar .sidebar-mobile-close-btn {
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.portal-shell .app-sidebar .sidebar-mobile-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 .portal-shell .app-sidebar .sidebar-logo-link--collapsed {
   justify-content: center;
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn .portal-logo-sidebar-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn .portal-logo-compact-img {
+  width: 1.75rem;
+  height: 1.75rem;
+  max-width: 1.75rem;
+  max-height: 1.75rem;
+  object-fit: contain;
+}
+
+.portal-shell .app-sidebar .sidebar-brand-initials-btn .portal-logo-name--compact {
+  width: 2.5rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  max-width: 2.5rem;
+  font-size: 0.5625rem;
 }
 
 .portal-shell .app-sidebar .portal-logo-initials--compact,
@@ -635,18 +775,33 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+.portal-shell .app-sidebar .portal-logo-sidebar-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+}
+
 .portal-shell .app-sidebar .portal-logo-name--compact {
   font-size: 0.5625rem;
 }
 
 .portal-shell .app-sidebar .portal-logo-compact-img {
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0.3rem;
-  border-radius: 0.75rem;
-  background: #fff;
+  width: 100%;
+  height: 100%;
+  padding: 0.35rem;
+  border-radius: 0;
+  background: transparent;
   object-fit: contain;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+  box-shadow: none;
 }
 
 .portal-shell .app-sidebar .sidebar-collapse-wrap--collapsed {
@@ -656,22 +811,9 @@
 }
 
 .portal-shell .app-sidebar.app-sidebar--collapsed .sidebar-collapse-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.portal-shell .app-sidebar.app-sidebar--collapsed .sidebar-collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: var(--sb-gold);
-  border-color: rgba(255, 255, 255, 0.22);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
 }
 
 .portal-shell .app-sidebar .sidebar-nav--collapsed {

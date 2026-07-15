@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, Shield, Smartphone, Eye, EyeOff, QrCode } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import AuthSplitLayout from '../../components/layout/AuthSplitLayout.jsx';
+import LoadingState from '../../components/ui/LoadingState.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import '../../styles/login-portal.css';
 import QrLoginPanel from '../../components/auth/QrLoginPanel.jsx';
@@ -130,7 +131,17 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, requestOtp, requestEmailOtp, loginWithOtp, loginWithEmailOtp, loginWithQr } = useAuth();
+  const {
+    login,
+    requestOtp,
+    requestEmailOtp,
+    loginWithOtp,
+    loginWithEmailOtp,
+    loginWithQr,
+    isAuthenticated,
+    user,
+    bootstrapping,
+  } = useAuth();
   const navigate = useNavigate();
   const { tenantSlug } = useTenant();
   const { roleDashboard, tenantPath } = useTenantPath();
@@ -414,8 +425,18 @@ export default function Login() {
     </div>
   ) : null;
 
+  if (bootstrapping) {
+    return <LoadingState message="Loading your session…" />;
+  }
+
+  if (isAuthenticated && user?.role) {
+    return <Navigate to={roleDashboard(user.role) || tenantPath('/')} replace />;
+  }
+
   return (
     <AuthSplitLayout
+      showHeader={false}
+      showFooter={false}
       className="login-portal"
       title="Sign In"
       visualTitle={`Welcome to ${portalName}`}

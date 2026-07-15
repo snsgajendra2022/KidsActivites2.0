@@ -1,21 +1,40 @@
 import { useEffect, useMemo } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { useProgressiveImageSrc } from '../../hooks/useProgressiveImageSrc.js';
-import { isVideoPlaybackReady } from '../../utils/photoStudioProgressive.js';
-import VideoHlsPlayer from './VideoHlsPlayer.jsx';
+import {
+  firstNonThumbnailUrl,
+  isVideoPlaybackReady,
+} from '../../utils/photoStudioProgressive.js';
+import { normalizeVideoMediaItem, resolveLayoutRendition } from '../../utils/videoMediaNormalize.js';
+import { getProgressiveVideoSources } from '../../utils/videoSourceResolver.js';
+import { preloadNextMedia } from '../../utils/preloadMedia.js';
+import WebVideoPlayer from './WebVideoPlayer.jsx';
 import '../../styles/photo-lightbox.css';
 import '../../styles/progressive-image.css';
 
 export default function PhotoLightbox({
   photo,
+  photos,
+  currentIndex,
   onClose,
   onPrev,
   onNext,
   hasPrev,
   hasNext,
+  positionLabel,
 }) {
+  const normalizedVideo = useMemo(
+    () => (photo?.mediaType === 'VIDEO' ? normalizeVideoMediaItem(photo) : null),
+    [photo],
+  );
+
+  const playable = useMemo(
+    () => (photo?.mediaType === 'VIDEO' ? getProgressiveVideoSources(photo) : null),
+    [photo],
+  );
+
   const studioImage = photo?.studioImage || (photo?.variants ? photo : null);
-  const isVideo = photo?.mediaType === 'VIDEO' && photo?.streamUrl;
+  const isVideo = photo?.mediaType === 'VIDEO' && Boolean(playable?.sources?.length);
   const videoReady = isVideo && isVideoPlaybackReady(photo);
   const { src: progressiveSrc, loading, qualityLabel } = useProgressiveImageSrc(
     studioImage,
@@ -23,11 +42,35 @@ export default function PhotoLightbox({
   );
   const imgSrc = studioImage
     ? progressiveSrc
-    : (photo?.previewUrl || photo?.thumbnailUrl || photo?.imageUrl);
+    : firstNonThumbnailUrl(photo?.previewUrl, photo?.downloadUrl, photo?.imageUrl);
 
   const videoRenditions = useMemo(
-    () => (Array.isArray(photo?.renditions) ? photo.renditions : []),
-    [photo?.renditions],
+    () => normalizedVideo?.renditions ?? (Array.isArray(photo?.renditions) ? photo.renditions : []),
+    [normalizedVideo, photo],
+  );
+
+  const maxQuality = normalizedVideo?.maxQuality;
+  const posterUrl = playable?.posterUrl
+    || photo?.thumbnailUrl
+    || photo?.previewUrl
+    || undefined;
+
+  const layoutRendition = useMemo(
+    () => (isVideo ? resolveLayoutRendition(videoRenditions, photo) : null),
+    [isVideo, videoRenditions, photo],
+  );
+
+  const videoLayoutStyle = useMemo(() => {
+    if (!layoutRendition?.width || !layoutRendition?.height) return undefined;
+    return {
+      '--video-aspect-ratio': `${layoutRendition.width} / ${layoutRendition.height}`,
+      '--video-ar-w': layoutRendition.width,
+      '--video-ar-h': layoutRendition.height,
+    };
+  }, [layoutRendition]);
+
+  const isPortraitVideo = Boolean(
+    layoutRendition?.width && layoutRendition?.height && layoutRendition.height > layoutRendition.width,
   );
 
   useEffect(() => {
@@ -49,6 +92,22 @@ export default function PhotoLightbox({
     };
   }, [photo, onClose, onPrev, onNext, hasPrev, hasNext]);
 
+  // Prepare next item (poster + video metadata) while current media is open.
+  useEffect(() => {
+    if (!Array.isArray(photos) || typeof currentIndex !== 'number') return undefined;
+    let cancelled = false;
+    preloadNextMedia(currentIndex, photos, (item) => {
+      if (String(item?.mediaType || '').toUpperCase() !== 'VIDEO') {
+        return { posterUrl: item?.thumbnailUrl || item?.previewUrl || null, sources: [], progressive: [] };
+      }
+      return getProgressiveVideoSources(item);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+      void cancelled;
+    };
+  }, [photos, currentIndex, photo?.id]);
+
   if (!photo) return null;
 
   return (
@@ -57,16 +116,28 @@ export default function PhotoLightbox({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Photo preview"
+      aria-label="Media preview"
     >
-      <button
-        type="button"
-        className="photo-lightbox__close"
-        onClick={onClose}
-        aria-label="Close preview"
-      >
-        <X size={22} />
-      </button>
+      <div className="photo-lightbox__topbar" onClick={(e) => e.stopPropagation()}>
+        <div className="photo-lightbox__topbar-info">
+          {positionLabel && (
+            <span className="photo-lightbox__position" aria-live="polite">{positionLabel}</span>
+          )}
+          {photo.caption && (
+            <span className="photo-lightbox__topbar-caption" title={photo.caption}>
+              {photo.caption}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          className="photo-lightbox__close"
+          onClick={onClose}
+          aria-label="Close preview"
+        >
+          <X size={22} />
+        </button>
+      </div>
 
       {hasPrev && (
         <button
@@ -80,44 +151,62 @@ export default function PhotoLightbox({
       )}
 
       <div className="photo-lightbox__content" onClick={(e) => e.stopPropagation()}>
-        <div className="photo-lightbox__image-wrap">
+        <div
+          className={`photo-lightbox__media-stage${
+            isVideo
+              ? ` photo-lightbox__media-stage--video${isPortraitVideo ? ' is-portrait' : ' is-landscape'}`
+              : ''
+          }`}
+          style={isVideo ? videoLayoutStyle : undefined}
+        >
           {isVideo ? (
             videoReady ? (
-              <VideoHlsPlayer
-                className="photo-lightbox__image photo-lightbox__video"
-                src={photo.streamUrl}
-                poster={photo.thumbnailUrl || photo.previewUrl || undefined}
+              <WebVideoPlayer
+                key={photo.id}
+                className="photo-lightbox__video"
+                media={photo}
+                poster={posterUrl}
                 renditions={videoRenditions}
+                maxQuality={maxQuality}
               />
             ) : (
-              <div className="photo-lightbox__video-processing">
-                <p>Video is still processing…</p>
-                {photo.thumbnailUrl ? (
+              <div className="photo-lightbox__video-processing photo-lightbox__video-shell">
+                {posterUrl ? (
                   <img
-                    src={photo.thumbnailUrl}
+                    className="web-video-player__poster"
+                    src={posterUrl}
                     alt=""
-                    className="photo-lightbox__image"
+                    aria-hidden
                   />
                 ) : null}
+                <div className="photo-lightbox__video-processing-body">
+                  <span className="photo-lightbox__processing-spinner" aria-hidden />
+                  <p>Video is still processing…</p>
+                  <div className="photo-lightbox__processing-placeholder" aria-hidden>
+                    <ImageIcon size={32} />
+                  </div>
+                </div>
               </div>
             )
           ) : (
-            <img
-              src={imgSrc}
-              alt={photo.caption || 'Classroom photo'}
-              className={`photo-lightbox__image progressive-image ${loading ? 'is-upgrading' : 'is-ready'}`}
-            />
+            <div className="photo-lightbox__image-wrap">
+              <img
+                src={imgSrc}
+                alt={photo.caption || 'Classroom photo'}
+                className={`photo-lightbox__image progressive-image ${loading ? 'is-upgrading' : 'is-ready'}`}
+              />
+              {studioImage && loading && qualityLabel ? (
+                <span className="photo-lightbox__quality">{qualityLabel}</span>
+              ) : null}
+            </div>
           )}
-          {studioImage && loading && qualityLabel ? (
-            <span className="photo-lightbox__quality">{qualityLabel}</span>
-          ) : null}
         </div>
         <div className="photo-lightbox__info">
           {photo.caption ? (
             <p className="photo-lightbox__caption">{photo.caption}</p>
           ) : null}
           <p className="photo-lightbox__meta">
-            {[photo.teacherName, photo.className].filter(Boolean).join(' · ')}
+            {[photo.schoolName, photo.className, photo.teacherName].filter(Boolean).join(' · ')}
           </p>
         </div>
       </div>

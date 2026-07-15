@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import KidzeePrintableForm from './KidzeePrintableForm.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -29,6 +28,31 @@ export default function KidzeePrintableFormPage() {
   const [searchParams] = useSearchParams();
   const applicationId = searchParams.get('applicationId') || searchParams.get('id');
   const isAdmin = Boolean(user && ADMIN_ROLES.has(user.role));
+
+  const backTarget = useMemo(() => {
+    if (applicationId && isAdmin) {
+      return {
+        href: tenantPath(`/admin/applications/${applicationId}`),
+        label: 'Back to Application',
+      };
+    }
+    if (user?.role === ROLES.PARENT || user?.role === ROLES.STUDENT) {
+      return {
+        href: tenantPath('/parent/enrollment'),
+        label: 'Back to Enrollment',
+      };
+    }
+    if (isAdmin) {
+      return {
+        href: tenantPath('/admin/applications'),
+        label: 'Back to Applications',
+      };
+    }
+    return {
+      href: tenantPath('/'),
+      label: 'Back',
+    };
+  }, [applicationId, isAdmin, user?.role, tenantPath]);
 
   const branding = useMemo(() => ({
     ...KIDZEE_BRANDING,
@@ -98,12 +122,6 @@ export default function KidzeePrintableFormPage() {
   return (
     <div className="kidzee-print-page">
       <NetworkBanner />
-      <div className="no-print kidzee-print-back">
-        <Link to={tenantPath('/enroll')} className="enrollment-back-link inline-flex items-center gap-1">
-          <ArrowLeft size={14} />
-          Back to Enrollment
-        </Link>
-      </div>
       {loadState.loadError && (
         <p className="no-print" style={{ padding: '0 1rem 1rem', color: '#b45309' }}>
           {loadState.loadError}
@@ -118,6 +136,8 @@ export default function KidzeePrintableFormPage() {
         applicationId={loadState.resolvedAppId}
         parentId={user?.role === ROLES.PARENT ? user.id : null}
         schoolId={activeSchoolId || user?.schoolId || null}
+        backHref={backTarget.href}
+        backLabel={backTarget.label}
       />
     </div>
   );

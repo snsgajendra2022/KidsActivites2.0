@@ -21,11 +21,35 @@ export default function KidzeePage1({
   isAdmin = false,
   branding,
   showGrid,
+  fieldErrors = {},
 }) {
   const set = (path, value) => onChange(path, value);
   const child = formData.child || {};
   const formNoReadOnly = readOnly || (!isAdmin && Boolean(formData.formNo));
   const addrChain = useBoxChain(4);
+  const hasErr = (path) => Boolean(fieldErrors[path]);
+
+  /** Keep only one key true in a boolean option map (radio-like checkboxes). */
+  const selectOne = (keys, selectedKey, checked) =>
+    Object.fromEntries(keys.map((k) => [k, checked && k === selectedKey]));
+
+  const setClass = (key, checked) =>
+    set("class", selectOne(CLASS_OPTIONS.map((o) => o.key), key, checked));
+
+  const setUniformRegular = (size, checked) =>
+    set("child.uniformRegular", selectOne(UNIFORM_SIZES, size, checked));
+
+  const setUniformWinter = (size, checked) =>
+    set("child.uniformWinter", selectOne(UNIFORM_SIZES, size, checked));
+
+  const setStaysWith = (key, checked) =>
+    set("child.staysWith", {
+      ...selectOne(["mother", "father", "both", "others"], key, checked),
+      othersText: child.staysWith?.othersText || "",
+    });
+
+  const setGender = (key, checked) =>
+    set("child.gender", selectOne(["male", "female"], key, checked));
 
   const classRow1 = CLASS_OPTIONS.slice(0, 6);
   const classRow2 = CLASS_OPTIONS.slice(6);
@@ -67,15 +91,21 @@ export default function KidzeePage1({
       <SectionBar>CHILD REGISTRATION FORM</SectionBar>
 
       {/* Class row 1 — 6 checkboxes */}
-      <div className="kz-p1-row kz-p1-row--class">
-        <span className="kz-field-label kz-p1-class__label">Class enrolled for:</span>
+      <div
+        className={`kz-p1-row kz-p1-row--class ${hasErr("class") ? "kz-field--error" : ""}`.trim()}
+        data-field-path="class"
+      >
+        <span className="kz-field-label kz-p1-class__label">
+          Class enrolled for:
+          <span className="kz-required-mark" aria-hidden>*</span>
+        </span>
         <div className="kz-p1-class__checks">
           {classRow1.map(({ key, label }) => (
             <PaperCheckbox
               key={key}
               label={label}
               checked={formData.class?.[key]}
-              onChange={(v) => set(`class.${key}`, v)}
+              onChange={(v) => setClass(key, v)}
               readOnly={readOnly}
             />
           ))}
@@ -89,7 +119,7 @@ export default function KidzeePage1({
             key={key}
             label={label}
             checked={formData.class?.[key]}
-            onChange={(v) => set(`class.${key}`, v)}
+            onChange={(v) => setClass(key, v)}
             readOnly={readOnly}
           />
         ))}
@@ -121,6 +151,9 @@ export default function KidzeePage1({
             value={formData.photos?.child}
             onChange={(v) => set("photos.child", v)}
             readOnly={readOnly}
+            required
+            error={hasErr("photos.child")}
+            fieldPath="photos.child"
           />
           <PhotoBox
             label="Father's / Guardian's Photo"
@@ -146,6 +179,9 @@ export default function KidzeePage1({
           value={child.fullName}
           onChange={(v) => set("child.fullName", v)}
           readOnly={readOnly}
+          required
+          error={hasErr("child.fullName")}
+          fieldPath="child.fullName"
         />
         <div className="kz-p1-name-hints">
           <span>(Surname)</span>
@@ -155,18 +191,24 @@ export default function KidzeePage1({
       </div>
 
       {/* Gender — own row */}
-      <div className="kz-p1-row kz-p1-row--gender">
-        <span className="kz-field-label kz-p1-field-label--wide">Gender:</span>
+      <div
+        className={`kz-p1-row kz-p1-row--gender ${hasErr("child.gender") ? "kz-field--error" : ""}`.trim()}
+        data-field-path="child.gender"
+      >
+        <span className="kz-field-label kz-p1-field-label--wide">
+          Gender:
+          <span className="kz-required-mark" aria-hidden>*</span>
+        </span>
         <PaperCheckbox
           label="Male"
           checked={child.gender?.male}
-          onChange={(v) => set("child.gender.male", v)}
+          onChange={(v) => setGender("male", v)}
           readOnly={readOnly}
         />
         <PaperCheckbox
           label="Female"
           checked={child.gender?.female}
-          onChange={(v) => set("child.gender.female", v)}
+          onChange={(v) => setGender("female", v)}
           readOnly={readOnly}
         />
       </div>
@@ -179,6 +221,9 @@ export default function KidzeePage1({
           onChange={(v) => set("child.dateOfBirth", v)}
           readOnly={readOnly}
           inline
+          required
+          error={hasErr("child.dateOfBirth")}
+          fieldPath="child.dateOfBirth"
         />
         <CharBoxInput
           label="Place of birth:"
@@ -191,11 +236,11 @@ export default function KidzeePage1({
         />
       </div>
 
-      {/* Height 15 | Weight 7 */}
+      {/* Height | Weight */}
       <div className="kz-p1-row kz-p1-row--height-weight">
         <CharBoxInput
           label="Height:"
-          boxes={15}
+          boxes={5}
           value={child.height}
           onChange={(v) => set("child.height", v)}
           readOnly={readOnly}
@@ -203,7 +248,7 @@ export default function KidzeePage1({
         />
         <CharBoxInput
           label="Weight:"
-          boxes={7}
+          boxes={4}
           value={child.weight}
           onChange={(v) => set("child.weight", v)}
           readOnly={readOnly}
@@ -233,7 +278,7 @@ export default function KidzeePage1({
             key={`reg-${size}`}
             label={size}
             checked={child.uniformRegular?.[size]}
-            onChange={(v) => set(`child.uniformRegular.${size}`, v)}
+            onChange={(v) => setUniformRegular(size, v)}
             readOnly={readOnly}
           />
         ))}
@@ -245,7 +290,7 @@ export default function KidzeePage1({
             key={`win-${size}`}
             label={size}
             checked={child.uniformWinter?.[size]}
-            onChange={(v) => set(`child.uniformWinter.${size}`, v)}
+            onChange={(v) => setUniformWinter(size, v)}
             readOnly={readOnly}
           />
         ))}
@@ -272,6 +317,9 @@ export default function KidzeePage1({
           value={child.addressLine1}
           onChange={(v) => set("child.addressLine1", v)}
           readOnly={readOnly}
+          required
+          error={hasErr("child.addressLine1")}
+          fieldPath="child.addressLine1"
         />
         <div className="kz-p1-address-line2">
           <CharBoxInput
@@ -303,6 +351,9 @@ export default function KidzeePage1({
             onChange={(v) => set("child.pin", v)}
             readOnly={readOnly}
             inline
+            required
+            error={hasErr("child.pin")}
+            fieldPath="child.pin"
           />
         </div>
       </div>
@@ -316,6 +367,9 @@ export default function KidzeePage1({
           value={child.contactNo}
           onChange={(v) => set("child.contactNo", v)}
           readOnly={readOnly}
+          required
+          error={hasErr("child.contactNo")}
+          fieldPath="child.contactNo"
         />
       </div>
 
@@ -327,7 +381,7 @@ export default function KidzeePage1({
             key={key}
             label={label}
             checked={child.staysWith?.[key]}
-            onChange={(v) => set(`child.staysWith.${key}`, v)}
+            onChange={(v) => setStaysWith(key, v)}
             readOnly={readOnly}
           />
         ))}
@@ -337,7 +391,7 @@ export default function KidzeePage1({
         <PaperCheckbox
           label="Others (Please specify):"
           checked={child.staysWith?.others}
-          onChange={(v) => set("child.staysWith.others", v)}
+          onChange={(v) => setStaysWith("others", v)}
           readOnly={readOnly}
         />
         <CharBoxInput

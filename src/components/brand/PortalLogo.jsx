@@ -1,6 +1,8 @@
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { useTenant } from '../../context/TenantContext.jsx';
 import defaultLogo from '../../assets/kids_activities_logo.png';
 import footerDefaultLogo from '../../assets/kids_activities_logo_white.png';
+import { sanitizeBrandingValue } from '../../utils/brandingUrlUtils.js';
 
 const SIZES = {
   icon: {
@@ -29,21 +31,33 @@ const SIZES = {
   },
 };
 
-function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
+function LogoMark({ portalName, sizeClass, imageUrl, className, compact, sidebar, priority = false }) {
   if (imageUrl) {
-    return (
+    const img = (
       <img
         src={imageUrl}
         alt={`${portalName} logo`}
         className={[
           'block shrink-0',
           compact ? 'portal-logo-compact-img' : sizeClass.img,
+          sidebar && !compact ? 'portal-logo-sidebar-img' : '',
           className,
         ].filter(Boolean).join(' ')}
-        loading="lazy"
+        loading={priority ? 'eager' : 'lazy'}
         decoding="async"
+        fetchPriority={priority ? 'high' : 'auto'}
       />
     );
+
+    if (sidebar) {
+      return (
+        <span className={compact ? 'portal-logo-sidebar-mark' : 'portal-logo-sidebar-wrap'}>
+          {img}
+        </span>
+      );
+    }
+
+    return img;
   }
 
   const initials = portalName.slice(0, 2).toUpperCase();
@@ -55,17 +69,19 @@ function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
       : name.split(/\s+/).map((w) => w[0]).join('').slice(0, 3).toUpperCase() || initials;
 
     return (
-      <div
-        className={['portal-logo-name--compact', className].filter(Boolean).join(' ')}
-        title={portalName}
-        aria-label={portalName}
-      >
-        {shortLabel}
-      </div>
+      <span className={sidebar ? 'portal-logo-sidebar-mark' : undefined}>
+        <div
+          className={['portal-logo-name--compact', className].filter(Boolean).join(' ')}
+          title={portalName}
+          aria-label={portalName}
+        >
+          {shortLabel}
+        </div>
+      </span>
     );
   }
 
-  return (
+  const fallback = (
     <div
       className={`${sizeClass.box} flex shrink-0 items-center justify-center font-bold text-white border border-white/10 ${className}`}
       style={{ background: 'var(--sb-primary)' }}
@@ -73,6 +89,12 @@ function LogoMark({ portalName, sizeClass, imageUrl, className, compact }) {
       {initials}
     </div>
   );
+
+  if (sidebar) {
+    return <span className="portal-logo-sidebar-wrap">{fallback}</span>;
+  }
+
+  return fallback;
 }
 
 export default function PortalLogo({
@@ -81,15 +103,25 @@ export default function PortalLogo({
   compact = false,
   inverse = false,
   markOnly = false,
+  sidebar = false,
+  priority = false,
 }) {
   const { portalName, branding } = usePortalConfig();
+  const { isTenantRoute, isTenantSubdomain } = useTenant();
   const sizeClass = compact ? SIZES.icon : (SIZES[size] || SIZES.md);
-  const baseLogo = inverse ? footerDefaultLogo : defaultLogo;
+  const isTenantBranding = isTenantRoute || isTenantSubdomain;
+  const platformLogo = isTenantBranding
+    ? null
+    : (inverse ? footerDefaultLogo : defaultLogo);
+  const logoUrl = sanitizeBrandingValue(branding?.logoUrl);
+  const logoIconUrl = sanitizeBrandingValue(branding?.logoIconUrl);
   const imageUrl = markOnly
-    ? (branding?.logoIconUrl || baseLogo)
+    ? (logoIconUrl || platformLogo)
     : compact
-      ? (branding?.logoIconUrl || branding?.logoUrl || null)
-      : (branding?.logoIconUrl || branding?.logoUrl || baseLogo);
+      ? (logoIconUrl || logoUrl || null)
+      : sidebar
+        ? (logoUrl || logoIconUrl || platformLogo)
+        : (logoIconUrl || logoUrl || platformLogo);
 
   return (
     <LogoMark
@@ -98,14 +130,20 @@ export default function PortalLogo({
       imageUrl={imageUrl}
       className={className}
       compact={compact}
+      sidebar={sidebar}
+      priority={priority}
     />
   );
 }
 
 export function FooterPortalLogo({ size = 'lg', className = '' }) {
   const { portalName, branding } = usePortalConfig();
+  const { isTenantRoute, isTenantSubdomain } = useTenant();
   const sizeClass = SIZES[size] || SIZES.lg;
-  const imageUrl = branding?.logoIconUrl || branding?.logoUrl || footerDefaultLogo;
+  const platformLogo = (isTenantRoute || isTenantSubdomain) ? null : footerDefaultLogo;
+  const imageUrl = sanitizeBrandingValue(branding?.logoIconUrl)
+    || sanitizeBrandingValue(branding?.logoUrl)
+    || platformLogo;
 
   return (
     <LogoMark

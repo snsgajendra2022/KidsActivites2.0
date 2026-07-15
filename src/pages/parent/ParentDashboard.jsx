@@ -1,49 +1,156 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FileText, CreditCard, FolderOpen, Image, MessageCircle, Bell, ArrowRight,
-  AlertTriangle, User, Building2, GraduationCap, Plus, Mail, Phone,
+  AlertCircle, GraduationCap, Plus, Users, Clock, CheckCircle,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
+import { WelcomeBanner } from '../../components/dashboard/ChartCards.jsx';
+import {
+  ResponsiveDataTablePanel,
+  DataTableToolbar,
+  TableActionLink,
+} from '../../components/ui/DataTable.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import LoadingState from '../../components/ui/LoadingState.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getParentDashboard } from '../../services/parentService.js';
-import { getFeeByApplication } from '../../services/feeService.js';
 import { ENROLLMENT_STATUSES } from '../../constants/enrollmentStatuses.js';
+import '../../styles/parent-dashboard.css';
 
-function statusBadgeVariant(status) {
-  if (status === ENROLLMENT_STATUSES.ADMISSION_CONFIRMED || status === ENROLLMENT_STATUSES.ACCOUNT_CREATED) return 'success';
-  if (status === ENROLLMENT_STATUSES.REJECTED || status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED) return 'danger';
-  if (status === ENROLLMENT_STATUSES.FEE_PENDING) return 'warning';
-  return 'info';
+function countDocsPending(documents) {
+  const entries = documents ? Object.values(documents) : [];
+  return entries.filter((d) => d?.status !== 'verified').length;
 }
+
+function buildPendingActions(children, tenantPath) {
+  const actions = [];
+  children?.forEach((child) => {
+    const name = child.student?.fullName || child.studentName || 'Student';
+    if (child.status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED) {
+      actions.push({
+        id: `correction-${child.applicationId}`,
+        label: `Update application for ${name}`,
+        hint: 'Correction requested by the school',
+        to: tenantPath(`/parent/enrollment?child=${child.applicationId}`),
+      });
+    }
+    if (child.status === ENROLLMENT_STATUSES.FEE_PENDING) {
+      actions.push({
+        id: `fee-${child.applicationId}`,
+        label: `Complete fee payment for ${name}`,
+        hint: 'Payment required to proceed',
+        to: tenantPath('/parent/fees'),
+      });
+    }
+    if (child.status === ENROLLMENT_STATUSES.DOCUMENTS_PENDING) {
+      actions.push({
+        id: `docs-${child.applicationId}`,
+        label: `Upload documents for ${name}`,
+        hint: 'Required documents are missing',
+        to: tenantPath('/parent/documents'),
+      });
+    }
+  });
+  return actions;
+}
+
+function computeStats(children, summary) {
+  const list = children || [];
+  const feeDue = list.filter(
+    (c) => c.status === ENROLLMENT_STATUSES.FEE_PENDING
+      || c.feeSummary?.status === ENROLLMENT_STATUSES.FEE_PENDING,
+  ).length;
+  const docsPending = list.reduce((acc, c) => acc + countDocsPending(c.documents), 0);
+
+  return {
+    totalChildren: summary?.totalChildren ?? list.length,
+    activeApplications: summary?.activeApplications
+      ?? list.filter((c) => c.status !== ENROLLMENT_STATUSES.REJECTED).length,
+    pendingActions: summary?.pendingActions
+      ?? list.filter((c) => [
+        ENROLLMENT_STATUSES.CORRECTION_REQUIRED,
+        ENROLLMENT_STATUSES.FEE_PENDING,
+        ENROLLMENT_STATUSES.DOCUMENTS_PENDING,
+      ].includes(c.status)).length,
+    feeDue,
+    docsPending,
+  };
+}
+
+const QUICK_LINKS = [
+  { key: 'enrollment', icon: FileText, label: 'Enrollment', path: '/parent/enrollment' },
+  { key: 'fees', icon: CreditCard, label: 'Fees', path: '/parent/fees' },
+  { key: 'documents', icon: FolderOpen, label: 'Documents', path: '/parent/documents' },
+  { key: 'photos', icon: Image, label: 'Photos', path: '/parent/photos' },
+  { key: 'messages', icon: MessageCircle, label: 'Messages', path: '/parent/messages' },
+  { key: 'notifications', icon: Bell, label: 'Alerts', path: '/parent/notifications' },
+];
+
+const CHILDREN_COLUMNS = [
+  {
+    label: 'Student Name',
+    primary: true,
+    render: (child) => child.student?.fullName || child.studentName || '—',
+  },
+  { key: 'applicationNo', label: 'Application No.' },
+  {
+    label: 'Class',
+    render: (child) => child.className || child.student?.classApplying?.toUpperCase() || '—',
+  },
+  {
+    label: 'Status',
+    badge: true,
+    render: (child) => <StatusBadge status={child.status} />,
+  },
+  {
+    label: 'Fee',
+    render: (child) => {
+      const fee = child.feeSummary;
+      if (!fee?.total && !fee?.status) return '—';
+      return (
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          {fee.total != null && (
+            <span>₹{Number(fee.total).toLocaleString('en-IN')}</span>
+          )}
+          {fee.status && <StatusBadge status={fee.status} />}
+        </span>
+      );
+    },
+  },
+  {
+    label: 'Documents',
+    muted: true,
+    render: (child) => {
+      const pending = countDocsPending(child.documents);
+      const total = child.documents ? Object.keys(child.documents).length : 0;
+      if (!total) return '—';
+      if (pending === 0) return 'All verified';
+      return `${pending} pending`;
+    },
+  },
+];
 
 export default function ParentDashboard() {
   const { user } = useAuth();
   const { tenantPath } = useTenantPath();
   const [data, setData] = useState(null);
-  const [fees, setFees] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user?.id) return;
     getParentDashboard(user.id, user.schoolId, user)
-      .then(async (dashboard) => {
-        setData(dashboard);
-        const feeMap = {};
-        await Promise.all(
-          dashboard.children.map(async (child) => {
-            const fee = await getFeeByApplication(child.applicationId);
-            if (fee) feeMap[child.applicationId] = fee;
-          }),
-        );
-        setFees(feeMap);
-      })
+      .then(setData)
       .finally(() => setLoading(false));
   }, [user]);
+
+  const quickLinks = useMemo(
+    () => QUICK_LINKS.map((link) => ({ ...link, to: tenantPath(link.path) })),
+    [tenantPath],
+  );
 
   if (loading) {
     return (
@@ -53,33 +160,10 @@ export default function ParentDashboard() {
     );
   }
 
-  const { parent, school, children, summary, enrollPath } = data || {};
-  const pendingActions = [];
-  children?.forEach((child) => {
-    if (child.status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED) {
-      pendingActions.push({
-        label: `Correction required — ${child.student?.fullName}`,
-        to: tenantPath(`/parent/enrollment?child=${child.applicationId}`),
-        urgent: true,
-      });
-    }
-    if (child.status === ENROLLMENT_STATUSES.FEE_PENDING) {
-      pendingActions.push({
-        label: `Fee payment pending — ${child.student?.fullName}`,
-        to: tenantPath('/parent/fees'),
-        urgent: true,
-      });
-    }
-  });
-
-  const quickLinks = [
-    { to: tenantPath('/parent/enrollment'), icon: FileText, label: 'Enrollment Status', desc: `${children?.length || 0} child(ren)`, color: 'bg-[#dce9ff] text-[#0058be]' },
-    { to: tenantPath('/parent/fees'), icon: CreditCard, label: 'Fees', desc: 'Payments & receipts', color: 'bg-[#e8f5ef] text-[#059669]' },
-    { to: tenantPath('/parent/documents'), icon: FolderOpen, label: 'Documents', desc: 'Uploads & verification', color: 'bg-[#fff4e5] text-[#d97706]' },
-    { to: tenantPath('/parent/photos'), icon: Image, label: 'Photos', desc: 'From teachers', color: 'bg-[#f3e8ff] text-[#7c3aed]' },
-    { to: tenantPath('/parent/messages'), icon: MessageCircle, label: 'Messages', desc: 'Chat with school', color: 'bg-[#e0f2fe] text-[#0284c7]' },
-    { to: tenantPath('/parent/notifications'), icon: Bell, label: 'Notifications', desc: 'Updates & alerts', color: 'bg-[#fce7f3] text-[#db2777]' },
-  ];
+  const { parent, school, children = [], summary } = data || {};
+  const enrollmentHref = tenantPath('/enrollment/kidzee-print-form');
+  const pendingActions = buildPendingActions(children, tenantPath);
+  const stats = computeStats(children, summary);
 
   return (
     <AppLayout>
@@ -87,138 +171,205 @@ export default function ParentDashboard() {
         <div className="premium-page-header">
           <h1 className="premium-page-title">Parent Dashboard</h1>
           <p className="premium-page-subtitle">
-            Welcome back, {parent?.name}. Manage your children&apos;s admission at {school?.name}.
+            Welcome back, {parent?.name || user?.name}. Track enrollment and stay connected with {school?.name || 'your school'}.
+            {school?.academicYear && (
+              <span className="ml-2 text-xs font-medium text-[#0058be] bg-[#0058be]/10 px-2 py-0.5 rounded-full">
+                {school.academicYear}
+              </span>
+            )}
           </p>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <section className="sb-card p-5">
-            <h2 className="mb-4 flex items-center gap-2 font-display text-base font-bold text-brand">
-              <User size={18} /> Parent Information
-            </h2>
-            <dl className="grid gap-3 text-sm">
-              <div><dt className="text-xs font-semibold uppercase text-muted">Name</dt><dd className="font-medium text-brand">{parent?.name}</dd></div>
-              <div className="flex items-center gap-2"><Mail size={14} className="text-muted" /><dd>{parent?.email}</dd></div>
-              <div className="flex items-center gap-2"><Phone size={14} className="text-muted" /><dd>{parent?.mobile}</dd></div>
-            </dl>
-          </section>
+        <div className="bento-grid">
+          <WelcomeBanner
+            title="Your Family Hub"
+            subtitle={`Manage enrollments, fees, documents, and school updates for ${school?.academicYear || 'this academic year'}.`}
+            badge={school?.name ? `${school.name} · Parent Portal` : 'Parent Portal'}
+            actions={
+              children.length > 0 ? (
+                <>
+                  <Link to={tenantPath('/parent/enrollment')} className="premium-btn premium-btn-white premium-btn-sm">
+                    View Enrollment <ArrowRight size={16} />
+                  </Link>
+                  <Link to={tenantPath('/parent/photos')} className="premium-btn premium-btn-white premium-btn-sm">
+                    Class Photos
+                  </Link>
+                </>
+              ) : (
+                <Link to={enrollmentHref} className="premium-btn premium-btn-white premium-btn-sm">
+                  <Plus size={16} /> Start Enrollment
+                </Link>
+              )
+            }
+          />
 
-          <section className="sb-card p-5">
-            <h2 className="mb-4 flex items-center gap-2 font-display text-base font-bold text-brand">
-              <Building2 size={18} /> School
-            </h2>
-            <dl className="grid gap-3 text-sm">
-              <div><dt className="text-xs font-semibold uppercase text-muted">School</dt><dd className="font-medium text-brand">{school?.name}</dd></div>
-              <div><dt className="text-xs font-semibold uppercase text-muted">Academic Year</dt><dd>{school?.academicYear}</dd></div>
-              <div><dt className="text-xs font-semibold uppercase text-muted">Address</dt><dd>{school?.address}</dd></div>
-            </dl>
-          </section>
-        </div>
-
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-brand">
-            <GraduationCap size={20} /> My Children
-          </h2>
-          <Link to={enrollPath || '/enrollment'} className="premium-btn premium-btn-primary premium-btn-sm">
-            <Plus size={14} /> Enroll Another Child
-          </Link>
-        </div>
-
-        {!children?.length ? (
-          <div className="sb-card mx-auto max-w-xl p-10 text-center">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#dce9ff] text-[#0058be]">
-              <FileText size={28} />
-            </div>
-            <h3 className="mb-2 font-display text-xl font-bold text-[#091426]">No Enrollments Yet</h3>
-            <p className="mx-auto mb-6 max-w-sm text-sm leading-relaxed text-[#45474c]">
-              Start an enrollment application for your child at {school?.name}.
-            </p>
-            <Link to={enrollPath || '/enrollment'} className="premium-btn premium-btn-primary premium-btn-lg inline-flex">
-              Start Enrollment
-            </Link>
+          <div className="bento-span-3">
+            <BentoStatCard icon={Users} value={stats.totalChildren} label="My Children" variant="indigo" />
           </div>
-        ) : (
-          <>
-            <div className="bento-grid mb-6">
-              <div className="bento-span-4">
-                <BentoStatCard icon={GraduationCap} value={summary?.totalChildren ?? 0} label="Children Enrolled" variant="indigo" />
-              </div>
-              <div className="bento-span-4">
-                <BentoStatCard icon={FileText} value={summary?.activeApplications ?? 0} label="Active Applications" variant="emerald" />
-              </div>
-              <div className="bento-span-4">
-                <BentoStatCard icon={AlertTriangle} value={summary?.pendingActions ?? 0} label="Pending Actions" variant={summary?.pendingActions ? 'amber' : 'sky'} />
+          <div className="bento-span-3">
+            <BentoStatCard icon={FileText} value={stats.activeApplications} label="Active Applications" variant="emerald" />
+          </div>
+          <div className="bento-span-3">
+            <BentoStatCard icon={AlertCircle} value={stats.pendingActions} label="Pending Actions" variant="amber" />
+          </div>
+          <div className="bento-span-3">
+            <BentoStatCard
+              icon={CreditCard}
+              value={stats.feeDue || '—'}
+              label="Fee Due"
+              variant="rose"
+            />
+          </div>
+
+          {!children.length ? (
+            <div className="bento-span-12">
+              <div className="premium-card parent-dashboard-empty">
+                <div className="parent-dashboard-empty__icon" aria-hidden>
+                  <GraduationCap size={28} />
+                </div>
+                <h2 className="card-title">Start your first enrollment</h2>
+                <p className="text-muted" style={{ margin: '0 auto 1.5rem', maxWidth: 420 }}>
+                  Begin an application for your child at {school?.name || 'your school'}.
+                </p>
+                <Link to={enrollmentHref} className="premium-btn premium-btn-primary premium-btn-sm">
+                  <Plus size={16} aria-hidden />
+                  Start Enrollment
+                </Link>
               </div>
             </div>
-
-            <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {children.map((child) => {
-                const fee = fees[child.applicationId];
-                const docEntries = child.documents ? Object.values(child.documents) : [];
-                const docsVerified = docEntries.filter((d) => d?.status === 'verified').length;
-                return (
-                  <article key={child.applicationId} className="sb-card p-5">
-                    <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+          ) : (
+            <>
+              {pendingActions.length > 0 && (
+                <div className="bento-span-12">
+                  <div className="premium-card parent-dashboard-pending">
+                    <div className="parent-dashboard-pending__head">
+                      <AlertCircle size={20} aria-hidden />
                       <div>
-                        <h3 className="font-display text-lg font-bold text-brand">{child.student?.fullName || 'Student'}</h3>
-                        <p className="text-xs text-muted">
-                          {child.applicationNo || 'Draft'} · Class {child.student?.classApplying?.toUpperCase() || '—'}
+                        <h3 className="card-title" style={{ margin: 0 }}>Needs your attention</h3>
+                        <p className="text-muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+                          {pendingActions.length} {pendingActions.length === 1 ? 'item' : 'items'} waiting on you
                         </p>
                       </div>
-                      <StatusBadge variant={statusBadgeVariant(child.status)}>{child.statusLabel}</StatusBadge>
                     </div>
-                    <dl className="mb-4 grid grid-cols-2 gap-3 text-sm">
-                      <div><dt className="text-xs text-muted">Date of Birth</dt><dd>{child.student?.dateOfBirth || '—'}</dd></div>
-                      <div><dt className="text-xs text-muted">Gender</dt><dd className="capitalize">{child.student?.gender || '—'}</dd></div>
-                      <div><dt className="text-xs text-muted">Blood Group</dt><dd>{child.student?.bloodGroup || '—'}</dd></div>
-                      <div><dt className="text-xs text-muted">Fee</dt><dd>{fee ? `₹${fee.total?.toLocaleString()}` : '—'}</dd></div>
-                      <div><dt className="text-xs text-muted">Documents</dt><dd>{docsVerified}/{docEntries.length} verified</dd></div>
-                      <div><dt className="text-xs text-muted">Submitted</dt><dd>{child.submittedAt ? new Date(child.submittedAt).toLocaleDateString() : '—'}</dd></div>
-                    </dl>
-                    <Link
-                      to={tenantPath(`/parent/enrollment?child=${child.applicationId}`)}
-                      className="premium-btn premium-btn-secondary premium-btn-sm"
-                    >
-                      View Details <ArrowRight size={14} />
-                    </Link>
-                  </article>
-                );
-              })}
-            </div>
+                    <ul className="parent-dashboard-pending__list">
+                      {pendingActions.map((action) => (
+                        <li key={action.id}>
+                          <Link to={action.to} className="parent-dashboard-pending__item">
+                            <span className="parent-dashboard-pending__item-text">
+                              <strong>{action.label}</strong>
+                              <span>{action.hint}</span>
+                            </span>
+                            <ArrowRight size={16} aria-hidden />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
 
-            {pendingActions.length > 0 && (
-              <div className="mb-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm">
-                <h3 className="mb-3 flex items-center gap-2 text-base font-bold text-[#091426]">
-                  <AlertTriangle size={18} className="text-amber-600" />
-                  Pending Actions
-                </h3>
-                <div className="space-y-2">
-                  {pendingActions.map((action) => (
-                    <div key={action.label} className="flex flex-col gap-3 rounded-xl border border-amber-100 bg-white/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="text-sm font-medium text-[#091426]">{action.label}</span>
-                      <Link to={action.to} className="premium-btn premium-btn-primary premium-btn-sm shrink-0">Take Action</Link>
-                    </div>
-                  ))}
+              <div className="bento-span-12">
+                <ResponsiveDataTablePanel
+                  minWidth={880}
+                  columns={CHILDREN_COLUMNS}
+                  data={children}
+                  keyExtractor={(child) => child.applicationId}
+                  toolbar={(
+                    <DataTableToolbar
+                      title="My Children"
+                      subtitle="Enrollment status, fees, and documents at a glance"
+                      actions={(
+                        <>
+                          <Link to={enrollmentHref} className="table-action-btn table-action-btn-outline">
+                            <Plus size={14} /> Enroll Another
+                          </Link>
+                          <Link to={tenantPath('/parent/enrollment')} className="table-action-btn table-action-btn-outline">
+                            View All
+                          </Link>
+                        </>
+                      )}
+                    />
+                  )}
+                  renderActions={(child) => (
+                    <TableActionLink to={`/parent/enrollment?child=${child.applicationId}`}>
+                      View
+                    </TableActionLink>
+                  )}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="bento-span-12">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 className="card-title" style={{ margin: 0 }}>Quick Access</h3>
+            </div>
+            <div className="parent-dashboard-quicklinks">
+              {quickLinks.map(({ key, to, icon: Icon, label }) => (
+                <Link key={key} to={to} className="parent-dashboard-quicklink">
+                  <span className="parent-dashboard-quicklink__icon" aria-hidden>
+                    <Icon size={20} />
+                  </span>
+                  <span className="parent-dashboard-quicklink__label">{label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {children.length > 0 && stats.docsPending > 0 && (
+            <div className="bento-span-6">
+              <div className="premium-card">
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div className="premium-feature-icon" style={{ width: 40, height: 40, margin: 0 }}>
+                    <FolderOpen size={20} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: 'var(--navy)' }}>
+                      Documents Pending
+                    </h4>
+                    <p className="text-muted" style={{ margin: 0, fontSize: 13 }}>
+                      {stats.docsPending} document{stats.docsPending === 1 ? '' : 's'} still need verification or upload.
+                    </p>
+                    <Link to={tenantPath('/parent/documents')} className="premium-btn premium-btn-secondary premium-btn-sm" style={{ marginTop: 12 }}>
+                      Manage Documents <ArrowRight size={14} />
+                    </Link>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            <div>
-              <h3 className="mb-3 font-display text-base font-bold text-[#091426]">Quick Access</h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {quickLinks.map(({ to, icon: Icon, label, desc, color }) => (
-                  <Link key={to} to={to} className="sb-card group block p-4 transition-all hover:-translate-y-0.5 hover:shadow-md">
-                    <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
-                      <Icon size={20} />
+          {children.length > 0 && (
+            <div className={stats.docsPending > 0 ? 'bento-span-6' : 'bento-span-12'}>
+              <div className="premium-card">
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div className="premium-feature-icon" style={{ width: 40, height: 40, margin: 0 }}>
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: 'var(--navy)' }}>
+                      Stay Connected
+                    </h4>
+                    <p className="text-muted" style={{ margin: 0, fontSize: 13 }}>
+                      View class photos, messages, and school notifications for enrolled children.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                      <Link to={tenantPath('/parent/photos')} className="premium-btn premium-btn-secondary premium-btn-sm">
+                        Photos
+                      </Link>
+                      <Link to={tenantPath('/parent/messages')} className="premium-btn premium-btn-secondary premium-btn-sm">
+                        Messages
+                      </Link>
+                      <Link to={tenantPath('/parent/notifications')} className="premium-btn premium-btn-primary premium-btn-sm">
+                        Notifications <CheckCircle size={14} />
+                      </Link>
                     </div>
-                    <div className="text-sm font-semibold text-[#091426] group-hover:text-[#0058be]">{label}</div>
-                    <div className="mt-1 text-xs text-[#45474c]">{desc}</div>
-                  </Link>
-                ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </PageTransition>
     </AppLayout>
   );

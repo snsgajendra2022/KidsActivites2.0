@@ -10,24 +10,26 @@ import {
 } from '../services/authService.js';
 import { isDemoUser } from '../services/api/demoMode.js';
 import { clearMockStorage } from '../services/api/clearMockStorage.js';
+import { AUTH_SESSION_EXPIRED_EVENT, isTransientApiError } from '../services/api/client.js';
 import { getAccessToken } from '../services/api/tokenStorage.js';
 import { isApiEnabled } from '../services/api/config.js';
 import { disconnectChatRealtime } from '../services/chatRealtime.js';
+import { disconnectNotificationRealtime } from '../services/notificationRealtime.js';
+import { USER_STORAGE_KEY, AUTH_SESSION_CLEARED_EVENT, resetLoginRedirectGuard } from '../services/api/authSession.js';
 import { getCurrentUser } from '../services/userService.js';
 import { ROLE_DASHBOARD } from '../constants/roles.js';
 import { updateUserProfile, changeUserPassword } from '../services/userService.js';
 
 const AuthContext = createContext(null);
-const STORAGE_KEY = 'kidsactivites_user';
 
 function persistUser(user) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(USER_STORAGE_KEY);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -36,6 +38,12 @@ export function AuthProvider({ children }) {
   const [bootstrapping, setBootstrapping] = useState(() => (
     Boolean(getAccessToken()) && isApiEnabled()
   ));
+
+  useEffect(() => {
+    const onSessionCleared = () => setUser(null);
+    window.addEventListener(AUTH_SESSION_CLEARED_EVENT, onSessionCleared);
+    return () => window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, onSessionCleared);
+  }, []);
 
   useEffect(() => {
     if (!isApiEnabled()) {
@@ -47,6 +55,14 @@ export function AuthProvider({ children }) {
 
     if (!getAccessToken()) {
       setBootstrapping(false);
+      try {
+        if (localStorage.getItem(USER_STORAGE_KEY)) {
+          localStorage.removeItem(USER_STORAGE_KEY);
+          setUser(null);
+        }
+      } catch {
+        setUser(null);
+      }
       return;
     }
 
@@ -58,10 +74,10 @@ export function AuthProvider({ children }) {
           persistUser({ ...profile, isDemoSession: false });
           setUser({ ...profile, isDemoSession: false });
         }
-      } catch {
-        if (!cancelled) {
+      } catch (err) {
+        if (!cancelled && !isTransientApiError(err)) {
           await logoutSession();
-          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(USER_STORAGE_KEY);
           setUser(null);
         }
       } finally {
@@ -72,8 +88,23 @@ export function AuthProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    const onSessionExpired = () => {
+      disconnectChatRealtime();
+      disconnectNotificationRealtime();
+      logoutSession().finally(() => {
+        localStorage.removeItem(USER_STORAGE_KEY);
+        setUser(null);
+      });
+    };
+
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, onSessionExpired);
+    return () => window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, onSessionExpired);
+  }, []);
+
   const login = async ({ email, password }) => {
     const nextUser = await loginByEmail(email, password);
+    resetLoginRedirectGuard();
     if (isApiEnabled()) clearMockStorage();
     persistUser(nextUser);
     setUser(nextUser);
@@ -86,6 +117,7 @@ export function AuthProvider({ children }) {
 
   const loginWithOtp = async ({ mobile, otp }) => {
     const nextUser = await verifyOtp(mobile, otp);
+    resetLoginRedirectGuard();
     if (isApiEnabled()) clearMockStorage();
     persistUser(nextUser);
     setUser(nextUser);
@@ -94,6 +126,7 @@ export function AuthProvider({ children }) {
 
   const loginWithEmailOtp = async ({ email, otp }) => {
     const nextUser = await verifyOtpByChannel('email', email, otp);
+    resetLoginRedirectGuard();
     if (isApiEnabled()) clearMockStorage();
     persistUser(nextUser);
     setUser(nextUser);
@@ -102,6 +135,7 @@ export function AuthProvider({ children }) {
 
   const loginWithQr = async (tokenPayload) => {
     const nextUser = await loginWithQrTokens(tokenPayload);
+    resetLoginRedirectGuard();
     persistUser(nextUser);
     setUser(nextUser);
     return nextUser;
@@ -109,8 +143,9 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     disconnectChatRealtime();
+    disconnectNotificationRealtime();
     await logoutSession();
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
     setUser(null);
   };
 

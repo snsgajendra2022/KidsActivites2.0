@@ -56,6 +56,15 @@ export default function CinematicHero({
                   {secondaryAction.label}
                 </Link>
               )}
+              {secondaryAction?.onClick && (
+                <button
+                  type="button"
+                  onClick={secondaryAction.onClick}
+                  className={secondaryAction.className || 'sb-purple-cta sb-purple-cta--outline'}
+                >
+                  {secondaryAction.label}
+                </button>
+              )}
             </div>
           )}
           {children}

@@ -4,7 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { ROLE_DASHBOARD } from '../../constants/roles.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
-import { getNotifications, markAsRead, markAllRead } from '../../services/notificationService.js';
+import { useNotifications } from '../../hooks/useNotifications.js';
+import { markAsRead, markAllRead } from '../../services/notificationService.js';
 import { getNotificationTitle, resolveNotificationPath } from '../../utils/notificationLinks.js';
 
 const NOTIFICATIONS_PATH = {
@@ -22,29 +23,13 @@ export default function NotificationBell() {
   const { tenantPath } = useTenantPath();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    notifications,
+    unreadCount,
+    setNotifications,
+    setUnreadCount,
+  } = useNotifications({ pollIntervalMs: 20_000 });
   const ref = useRef(null);
-
-  useEffect(() => {
-    if (!user?.id) return undefined;
-
-    let cancelled = false;
-    getNotifications(user.id)
-      .then(({ notifications: items, unreadCount: count }) => {
-        if (cancelled) return;
-        setNotifications(Array.isArray(items) ? items : []);
-        setUnreadCount(Number.isFinite(count) ? count : 0);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setNotifications([]);
-          setUnreadCount(0);
-        }
-      });
-
-    return () => { cancelled = true; };
-  }, [user?.id]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -145,7 +130,7 @@ export default function NotificationBell() {
             )}
             <div className="notif-dropdown-footer">
               <Link
-                to={notificationsPath}
+                to={tenantPath(notificationsPath)}
                 className="notif-dropdown-view-all"
                 onClick={() => setOpen(false)}
               >

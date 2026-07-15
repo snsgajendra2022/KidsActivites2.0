@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { MENU_ICON_MAP, MENU_ICON_OPTIONS } from '../../constants/menuIcons.js';
+import ToggleSwitch from '../ui/ToggleSwitch.jsx';
 
 function IconPreview({ name, size = 18 }) {
   const Icon = MENU_ICON_MAP[name] || MENU_ICON_MAP.Circle;
@@ -8,22 +9,11 @@ function IconPreview({ name, size = 18 }) {
 
 function VisibilityToggle({ checked, onChange, label }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-        checked ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-          checked ? 'left-[22px]' : 'left-0.5'
-        }`}
-      />
-    </button>
+    <ToggleSwitch
+      checked={checked}
+      onChange={onChange}
+      label={label}
+    />
   );
 }
 

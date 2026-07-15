@@ -282,6 +282,9 @@ export function DateInput({
   className = '',
   labelClass = '',
   inline = false,
+  required = false,
+  error = false,
+  fieldPath,
 }) {
   const nativeRef = useRef(null);
   const display = isoToDisplayDate(value);
@@ -303,9 +306,15 @@ export function DateInput({
 
   return (
     <label
-      className={`kz-line-field kz-date-field ${inline ? 'kz-char-field--inline' : ''} ${className}`.trim()}
+      className={`kz-line-field kz-date-field ${inline ? 'kz-char-field--inline' : ''} ${error ? 'kz-field--error' : ''} ${className}`.trim()}
+      data-field-path={fieldPath || undefined}
     >
-      {label && <span className={`kz-field-label ${labelClass}`.trim()}>{label}</span>}
+      {label && (
+        <span className={`kz-field-label ${labelClass}`.trim()}>
+          {label}
+          {required && <span className="kz-required-mark" aria-hidden>*</span>}
+        </span>
+      )}
       <span
         className={`kz-date-wrap ${readOnly ? 'kz-date-wrap--ro' : ''}`.trim()}
         onClick={openPicker}
@@ -328,6 +337,8 @@ export function DateInput({
           disabled={readOnly}
           tabIndex={-1}
           aria-label={typeof label === 'string' ? label : 'date'}
+          aria-invalid={error || undefined}
+          aria-required={required || undefined}
         />
       </span>
     </label>
@@ -428,6 +439,9 @@ export const CharBoxInput = forwardRef(function CharBoxInput({
   filter,
   caseSensitive = false,
   style,
+  required = false,
+  error = false,
+  fieldPath,
 }, ref) {
   const uid = useId();
   const inputRef = useRef(null);
@@ -491,7 +505,7 @@ export const CharBoxInput = forwardRef(function CharBoxInput({
 
   const boxesEl = (
     <div
-      className={`kz-char-boxes${fluid ? ' kz-char-boxes--fluid' : ''}`}
+      className={`kz-char-boxes${fluid ? ' kz-char-boxes--fluid' : ''}${error ? ' kz-char-boxes--error' : ''}`}
       style={{ gridTemplateColumns: colTemplate, position: 'relative' }}
     >
       {Array.from({ length: boxes }, (_, i) => {
@@ -531,21 +545,36 @@ export const CharBoxInput = forwardRef(function CharBoxInput({
           }}
           style={{ zIndex: 0 }}
           aria-label={label || 'Character input'}
+          aria-invalid={error || undefined}
+          aria-required={required || undefined}
         />
       )}
     </div>
   );
 
   if (bare) {
-    return boxesEl;
+    return (
+      <div
+        className={error ? 'kz-field--error kz-field--bare-error' : undefined}
+        data-field-path={fieldPath || undefined}
+      >
+        {boxesEl}
+      </div>
+    );
   }
 
   return (
     <div
-      className={`kz-char-field ${inline ? 'kz-char-field--inline' : ''} ${fluid ? 'kz-char-field--fluid' : ''} ${className}`.trim()}
+      className={`kz-char-field ${inline ? 'kz-char-field--inline' : ''} ${fluid ? 'kz-char-field--fluid' : ''} ${error ? 'kz-field--error' : ''} ${className}`.trim()}
       style={style}
+      data-field-path={fieldPath || undefined}
     >
-      {label && <span className={`kz-field-label ${labelClass}`.trim()}>{label}</span>}
+      {label && (
+        <span className={`kz-field-label ${labelClass}`.trim()}>
+          {label}
+          {required && <span className="kz-required-mark" aria-hidden>*</span>}
+        </span>
+      )}
       {boxesEl}
       {suffix}
     </div>
@@ -698,7 +727,7 @@ export function PaperTextarea({ label, value, onChange, readOnly, rows = 3, clas
   );
 }
 
-export function PhotoBox({ label, value, onChange, readOnly, className = '' }) {
+export function PhotoBox({ label, value, onChange, readOnly, className = '', required = false, error = false, fieldPath }) {
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -709,8 +738,14 @@ export function PhotoBox({ label, value, onChange, readOnly, className = '' }) {
   };
 
   return (
-    <div className={`kz-photo ${className}`.trim()}>
-      <span className="kz-photo__label">{label}</span>
+    <div
+      className={`kz-photo ${error ? 'kz-field--error' : ''} ${className}`.trim()}
+      data-field-path={fieldPath || undefined}
+    >
+      <span className="kz-photo__label">
+        {label}
+        {required && <span className="kz-required-mark" aria-hidden>*</span>}
+      </span>
       <label className="kz-photo__frame">
         {value ? (
           <img src={value} alt={label} className="kz-photo__img" />
@@ -725,12 +760,30 @@ export function PhotoBox({ label, value, onChange, readOnly, className = '' }) {
   );
 }
 
-export function SignatureLine({ label, value, onChange, readOnly, className = '', hidePreview = false }) {
+export function SignatureLine({
+  label,
+  value,
+  onChange,
+  readOnly,
+  className = '',
+  hidePreview = false,
+  required = false,
+  error = false,
+  fieldPath,
+}) {
   const hasSignature = Boolean(value && (typeof value === 'string' ? value.trim() : value));
 
   return (
-    <div className={`kz-signature ${className}`.trim()}>
-      {label && <span className="kz-signature__label">{label}</span>}
+    <div
+      className={`kz-signature ${error ? 'kz-field--error' : ''} ${className}`.trim()}
+      data-field-path={fieldPath || undefined}
+    >
+      {label && (
+        <span className="kz-signature__label">
+          {label}
+          {required && <span className="kz-required-mark" aria-hidden>*</span>}
+        </span>
+      )}
       {readOnly ? (
         hasSignature && !hidePreview ? (
           <img src={value} alt={label || 'Signature'} className="kz-signature__img" />
@@ -780,10 +833,16 @@ function P3LabelSpacer() {
   return <div className="kz-p3-label-fixed kz-field-label" aria-hidden />;
 }
 
-function P3FieldRow({ label, boxes, value, onChange, readOnly, filter, caseSensitive }) {
+function P3FieldRow({ label, boxes, value, onChange, readOnly, filter, caseSensitive, required = false, error = false, fieldPath }) {
   return (
-    <div className="kz-p3-form-row">
-      <span className="kz-p3-label-fixed kz-field-label">{label}</span>
+    <div
+      className={`kz-p3-form-row ${error ? 'kz-field--error' : ''}`.trim()}
+      data-field-path={fieldPath || undefined}
+    >
+      <span className="kz-p3-label-fixed kz-field-label">
+        {label}
+        {required && <span className="kz-required-mark" aria-hidden>*</span>}
+      </span>
       <div className="kz-p3-grid-input-wrapper">
         <CharBoxInput
           bare
@@ -793,6 +852,7 @@ function P3FieldRow({ label, boxes, value, onChange, readOnly, filter, caseSensi
           readOnly={readOnly}
           filter={filter}
           caseSensitive={caseSensitive}
+          error={error}
         />
       </div>
     </div>
@@ -919,7 +979,7 @@ function P3MedicalBlock({ line1, line2, line3, onLineChange, readOnly }) {
 const P3_EMAIL_ROWS = [14, 14, 12];
 const P3_EMAIL_OFFSETS = [0, 14, 28];
 
-function P3EmailBlock({ value, onChange, readOnly }) {
+function P3EmailBlock({ value, onChange, readOnly, error = false, fieldPath }) {
   const emailRef0 = useRef(null);
   const emailRef1 = useRef(null);
   const emailRef2 = useRef(null);
@@ -940,7 +1000,10 @@ function P3EmailBlock({ value, onChange, readOnly }) {
 
   return (
     <>
-      <div className="kz-p3-form-row">
+      <div
+        className={`kz-p3-form-row ${error ? 'kz-field--error' : ''}`.trim()}
+        data-field-path={fieldPath || undefined}
+      >
         <span className="kz-p3-label-fixed kz-field-label">E-mail:</span>
         <div className="kz-p3-grid-input-wrapper">
           <CharBoxInput
@@ -954,11 +1017,12 @@ function P3EmailBlock({ value, onChange, readOnly }) {
             readOnly={readOnly}
             filter="email"
             caseSensitive
+            error={error}
           />
         </div>
       </div>
       {[1, 2].map((r) => (
-        <div className="kz-p3-form-row" key={r}>
+        <div className={`kz-p3-form-row ${error ? 'kz-field--error' : ''}`.trim()} key={r}>
           <P3LabelSpacer />
           <div className="kz-p3-grid-input-wrapper">
             <CharBoxInput
@@ -973,6 +1037,7 @@ function P3EmailBlock({ value, onChange, readOnly }) {
               readOnly={readOnly}
               filter="email"
               caseSensitive
+              error={error}
             />
           </div>
         </div>
@@ -981,9 +1046,10 @@ function P3EmailBlock({ value, onChange, readOnly }) {
   );
 }
 
-export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
+export function GuardianColumn({ title, prefix, data, onChange, readOnly, fieldErrors = {} }) {
   const set = (field, value) => onChange(`${prefix}.${field}`, value);
   const g = data || {};
+  const err = (field) => Boolean(fieldErrors[`${prefix}.${field}`]);
 
   return (
     <div className="kz-guardian-col">
@@ -996,6 +1062,9 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         onChange={(v) => set('name', v)}
         readOnly={readOnly}
         filter="alpha"
+        required
+        error={err('name')}
+        fieldPath={`${prefix}.name`}
       />
 
       <P3AddressBlock
@@ -1072,12 +1141,17 @@ export function GuardianColumn({ title, prefix, data, onChange, readOnly }) {
         onChange={(v) => set('mobile', v)}
         readOnly={readOnly}
         filter="numeric"
+        required
+        error={err('mobile')}
+        fieldPath={`${prefix}.mobile`}
       />
 
       <P3EmailBlock
         value={g.email}
         onChange={(v) => set('email', v)}
         readOnly={readOnly}
+        error={err('email')}
+        fieldPath={`${prefix}.email`}
       />
 
       <P3MedicalBlock

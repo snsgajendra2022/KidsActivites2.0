@@ -1,26 +1,61 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, Play, ArrowRight,
+  Camera, Send, Users, User, GraduationCap, Tv, Image as ImageIcon, ShieldAlert, ArrowRight, Upload,
+  Wifi, WifiOff,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
-import { ApiError } from '../../services/api/client.js';
 import {
   UPLOAD_TARGETS,
   getTeacherAlbumClasses,
-  uploadTeacherAlbumMedia,
 } from '../../services/classAlbumService.js';
 import { getTeacherStudents } from '../../services/teacherService.js';
+import {
+  ACCEPTED_CLASSROOM_MEDIA,
+  filterAcceptedClassroomMediaFiles,
+  getMediaUploadLimitHint,
+  isVideoQueueItem,
+  loadMediaUploadLimits,
+  resolveMediaUploadError,
+  validateMediaUploadFiles,
+  validateMediaUploadFile,
+} from '../../utils/mediaUploadLimits.js';
+import {
+  classroomUploadManager,
+  MAX_UPLOAD_QUEUE,
+  UPLOAD_ENDPOINT,
+  getBatchUploadSpeedLabel,
+  isTeacherQueueItem,
+} from '../../utils/classroomUploadQueue.js';
+import ClassroomUploadQueuePanel from '../../components/upload/ClassroomUploadQueuePanel.jsx';
+import { prepareFilesForUpload } from '../../utils/compressClassroomImage.js';
+import { getUploadTuning, probeUploadBandwidth } from '../../services/uploadBandwidthService.js';
+import { useUploadBandwidth } from '../../hooks/useUploadBandwidth.js';
 import '../../styles/send-photos.css';
 
 const UPLOAD_TARGET_OPTIONS = [
-  { value: UPLOAD_TARGETS.CLASS_ALBUM, label: 'Class Album', icon: ImageIcon },
-  { value: UPLOAD_TARGETS.PARENT_DIRECT, label: 'Parent Direct', icon: User },
-  { value: UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT, label: 'Album + Parents', icon: Tv },
+  {
+    value: UPLOAD_TARGETS.CLASS_ALBUM,
+    label: 'Class Album',
+    hint: 'TV playback and class parents',
+    icon: ImageIcon,
+  },
+  {
+    value: UPLOAD_TARGETS.PARENT_DIRECT,
+    label: 'Parent Direct',
+    hint: 'Sends privately to one parent',
+    icon: User,
+  },
+  {
+    value: UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT,
+    label: 'Album + Parents',
+    hint: 'Album and parent notification',
+    icon: Tv,
+  },
 ];
 
 const SEND_TYPES = [
@@ -29,30 +64,21 @@ const SEND_TYPES = [
   { value: 'individual', label: 'Individual', icon: User },
 ];
 
-const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,image/*,video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm,.m4v';
-
-function isAcceptedMediaFile(file) {
-  if (!file) return false;
-  if (file.type.startsWith('image/') || file.type.startsWith('video/')) return true;
-  const name = (file.name || '').toLowerCase();
-  return ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.mov', '.webm', '.m4v'].some((ext) => name.endsWith(ext));
-}
-
-function isVideoFile(file) {
-  if (!file) return false;
-  if (file.type.startsWith('video/')) return true;
-  const name = (file.name || '').toLowerCase();
-  return ['.mp4', '.mov', '.webm', '.m4v'].some((ext) => name.endsWith(ext));
-}
+const ACCEPTED_MEDIA = ACCEPTED_CLASSROOM_MEDIA;
 
 const SUCCESS_MESSAGES = {
-  [UPLOAD_TARGETS.CLASS_ALBUM]: 'Uploaded to class album successfully.',
+  [UPLOAD_TARGETS.CLASS_ALBUM]: 'Uploaded to class album and shared with class parents.',
   [UPLOAD_TARGETS.PARENT_DIRECT]: 'Media sent to parent successfully.',
   [UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT]: 'Uploaded to class album and shared with parents successfully.',
 };
 
+function isAcceptedMediaFile(file) {
+  return filterAcceptedClassroomMediaFiles([file]).length > 0;
+}
+
 export default function SendPhotos() {
   const { toast } = useToast();
+  useUploadBandwidth();
   const { user } = useAuth();
   const { tenantPath } = useTenantPath();
   const [searchParams] = useSearchParams();
@@ -64,10 +90,58 @@ export default function SendPhotos() {
     recipients: 'class',
     studentIds: [],
     caption: '',
-    files: [],
   });
+  const [queueState, setQueueState] = useState(() => classroomUploadManager.getState());
   const [showConfirm, setShowConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isAddingFiles, setIsAddingFiles] = useState(false);
+  const [uploadLimits, setUploadLimits] = useState(null);
+  const uploadLimitHint = useMemo(
+    () => getMediaUploadLimitHint(uploadLimits || {}),
+    [uploadLimits],
+  );
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
+  const teacherQueueItems = useMemo(
+    () => queueState.items.filter(isTeacherQueueItem),
+    [queueState.items],
+  );
+
+  const queueThumbKey = useMemo(
+    () => teacherQueueItems.map((i) => `${i.id}:${i.fileKey}`).join('|'),
+    [teacherQueueItems],
+  );
+
+  const queueStatusKey = useMemo(
+    () => teacherQueueItems.map((i) => `${i.id}:${i.status}`).join('|'),
+    [teacherQueueItems],
+  );
+
+  const [thumbnailUrls, setThumbnailUrls] = useState(() => new Map());
+  const queueListRef = useRef(null);
+  const prevQueueLengthRef = useRef(0);
+  const batchSuccessShownRef = useRef(false);
+
+  useEffect(() => {
+    loadMediaUploadLimits().then(setUploadLimits).catch(() => setUploadLimits(null));
+  }, []);
+
+  useEffect(() => {
+    const unsub = classroomUploadManager.subscribe(() => {
+      setQueueState(classroomUploadManager.getState());
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const onOnline = () => classroomUploadManager.setOnline(true);
+    const onOffline = () => classroomUploadManager.setOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -83,20 +157,45 @@ export default function SendPhotos() {
     getTeacherStudents(user.id).then(setAllStudents);
   }, [user?.id, searchParams]);
 
-  const [filePreviewUrls, setFilePreviewUrls] = useState(() => new Map());
+  useEffect(() => {
+    const items = teacherQueueItems;
+    const ids = new Set(items.map((i) => i.id));
+
+    setThumbnailUrls((prev) => {
+      const next = new Map(prev);
+      let changed = false;
+
+      for (const [id, url] of next) {
+        if (!ids.has(id)) {
+          URL.revokeObjectURL(url);
+          next.delete(id);
+          changed = true;
+        }
+      }
+
+      for (const item of items) {
+        if (item.file && !next.has(item.id)) {
+          next.set(item.id, URL.createObjectURL(item.file));
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [queueThumbKey, teacherQueueItems]);
 
   useEffect(() => {
-    const urls = new Map();
-    form.files.forEach((file) => {
-      if (!isVideoFile(file)) {
-        urls.set(file, URL.createObjectURL(file));
-      }
-    });
-    setFilePreviewUrls(urls);
     return () => {
-      urls.forEach((url) => URL.revokeObjectURL(url));
+      thumbnailUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [form.files]);
+  }, [thumbnailUrls]);
+
+  useEffect(() => {
+    if (teacherQueueItems.length > prevQueueLengthRef.current) {
+      queueListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    prevQueueLengthRef.current = teacherQueueItems.length;
+  }, [teacherQueueItems.length]);
 
   const activeAlbumClasses = useMemo(
     () => albumClasses.filter(
@@ -116,6 +215,36 @@ export default function SendPhotos() {
   const needsStudent = uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
     || (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT && form.recipients !== 'class');
 
+  const pendingQueueItems = useMemo(
+    () => teacherQueueItems.filter((i) => i.status === 'waiting' || i.status === 'paused'),
+    [teacherQueueItems],
+  );
+
+  const uploadingCount = useMemo(
+    () => teacherQueueItems.filter((i) => i.status === 'uploading').length,
+    [teacherQueueItems],
+  );
+
+  const completedCount = useMemo(
+    () => teacherQueueItems.filter((i) => i.status === 'completed').length,
+    [teacherQueueItems],
+  );
+
+  const failedCount = useMemo(
+    () => teacherQueueItems.filter((i) => i.status === 'failed').length,
+    [teacherQueueItems],
+  );
+
+  const isUploading = uploadingCount > 0;
+
+  const hasActiveBatch = useMemo(
+    () => teacherQueueItems.some(
+      (i) => i.status === 'uploading'
+        || ((i.status === 'waiting' || i.status === 'paused') && i.uploadParams),
+    ),
+    [teacherQueueItems],
+  );
+
   const footerHint = useMemo(() => {
     if (!form.classId && needsClass) return 'Select a class to continue';
     if (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM) {
@@ -129,13 +258,120 @@ export default function SendPhotos() {
     return `${selectedClass?.className || 'Class'} · Album + parents`;
   }, [form, needsClass, selectedAlbum, selectedClass, uploadTarget]);
 
-  const onFilesChange = (e) => {
-    const picked = Array.from(e.target.files || []).filter(isAcceptedMediaFile);
-    if (picked.length < (e.target.files?.length || 0)) {
+  const buildUploadParams = useCallback(() => {
+    const shareStudentIds = uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
+      || (uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT && form.recipients !== 'class')
+      ? form.studentIds
+      : students.map((s) => s.id);
+
+    return {
+      endpoint: UPLOAD_ENDPOINT.TEACHER,
+      uploadTarget,
+      classId: form.classId || null,
+      className: selectedClass?.className || null,
+      schoolId: user?.schoolId || null,
+      schoolName: user?.schoolName || selectedClass?.schoolName || null,
+      studentId: form.studentIds[0] || null,
+      studentIds: shareStudentIds,
+      recipients: form.recipients,
+      caption: form.caption,
+    };
+  }, [form, selectedClass, students, uploadTarget, user?.schoolId, user?.schoolName]);
+
+  const applyPickedFiles = useCallback(async (fileList) => {
+    const picked = Array.from(fileList || []).filter(isAcceptedMediaFile);
+    if (picked.length < (fileList?.length || 0)) {
       toast('Some files were skipped. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
     }
-    setForm((prev) => ({ ...prev, files: picked }));
+    const sizeCheck = validateMediaUploadFiles(picked, uploadLimits || {});
+    if (!sizeCheck.valid) {
+      toast(sizeCheck.error, 'error');
+      return;
+    }
+
+    setIsAddingFiles(true);
+    try {
+      await probeUploadBandwidth();
+      const tuning = getUploadTuning();
+      const prepared = await prepareFilesForUpload(sizeCheck.files, {
+        quality: tuning.compressionQuality,
+        maxWidth: tuning.maxWidth,
+        maxHeight: tuning.maxHeight,
+        targetMaxBytes: tuning.targetMaxBytes,
+      });
+      const compressedCount = prepared.filter((f, i) => f.size < sizeCheck.files[i].size).length;
+      const { added, skipped, skippedDueToLimit } = await classroomUploadManager.addFiles(prepared, {
+        originEndpoint: UPLOAD_ENDPOINT.TEACHER,
+      });
+      if (added) {
+        toast(
+          compressedCount
+            ? `${added} file${added === 1 ? '' : 's'} added (${compressedCount} photo${compressedCount === 1 ? '' : 's'} optimized for faster upload)`
+            : `${added} file${added === 1 ? '' : 's'} added to upload queue`,
+          'success',
+        );
+      }
+      if (skipped) toast(`${skipped} file${skipped === 1 ? '' : 's'} already in queue`, 'warning');
+      if (skippedDueToLimit) {
+        toast(`Queue limit (${MAX_UPLOAD_QUEUE}) reached — ${skippedDueToLimit} file(s) not added`, 'error');
+      }
+    } finally {
+      setIsAddingFiles(false);
+    }
+  }, [toast, uploadLimits]);
+
+  const onFilesChange = (e) => {
+    applyPickedFiles(e.target.files);
+    e.target.value = '';
   };
+
+  const onFilesDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    applyPickedFiles(e.dataTransfer.files);
+  };
+
+  const revokeThumbnail = useCallback((id) => {
+    setThumbnailUrls((prev) => {
+      const url = prev.get(id);
+      if (!url) return prev;
+      URL.revokeObjectURL(url);
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const cancelUpload = useCallback(async (id) => {
+    revokeThumbnail(id);
+    await classroomUploadManager.cancel(id);
+    toast('Upload cancelled.', 'warning');
+  }, [toast, revokeThumbnail]);
+
+  const cancelAllUploads = useCallback(async () => {
+    const activeIds = teacherQueueItems
+      .filter((i) => i.status === 'uploading' || i.status === 'waiting' || i.status === 'paused')
+      .map((i) => i.id);
+    activeIds.forEach((id) => revokeThumbnail(id));
+    await classroomUploadManager.cancelAllActive({ scopeEndpoint: UPLOAD_ENDPOINT.TEACHER });
+    toast('All uploads cancelled.', 'warning');
+  }, [toast, revokeThumbnail, teacherQueueItems]);
+
+  const removeFromQueue = useCallback(async (id) => {
+    revokeThumbnail(id);
+    await classroomUploadManager.remove(id);
+  }, [revokeThumbnail]);
+
+  const retryUpload = useCallback(async (id) => {
+    await classroomUploadManager.retry(id);
+  }, []);
+
+  const handleClearFinished = useCallback(async () => {
+    const removedIds = await classroomUploadManager.clearFinished({
+      scopeEndpoint: UPLOAD_ENDPOINT.TEACHER,
+    });
+    removedIds.forEach((id) => revokeThumbnail(id));
+  }, [revokeThumbnail]);
 
   const validate = () => {
     if (needsClass && !form.classId) {
@@ -151,48 +387,77 @@ export default function SendPhotos() {
       toast('Please select at least one student.', 'warning');
       return false;
     }
-    if (form.files.length === 0) {
+    if (pendingQueueItems.length === 0) {
       toast('Please choose at least one image or video.', 'warning');
       return false;
     }
-    if (form.files.some((f) => !isAcceptedMediaFile(f))) {
-      toast('Unsupported file type. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
-      return false;
+    for (const item of pendingQueueItems) {
+      const sizeCheck = validateMediaUploadFile(item.file, uploadLimits || {});
+      if (!sizeCheck.valid) {
+        toast(sizeCheck.error, 'error');
+        return false;
+      }
     }
     return true;
   };
 
-  const handleSend = async () => {
-    setLoading(true);
-    const uploadedClassId = form.classId;
-    try {
-      const studentId = form.studentIds[0] || null;
-      await uploadTeacherAlbumMedia({
-        uploadTarget,
-        classId: form.classId || null,
-        studentId,
-        caption: form.caption,
-        files: form.files,
-      });
+  // Show success toast when a batch finishes (all items completed, none uploading)
+  useEffect(() => {
+    const hasWaiting = teacherQueueItems.some(
+      (i) => i.status === 'waiting' || i.status === 'uploading' || i.status === 'paused',
+    );
+    const allDone = teacherQueueItems.length > 0
+      && teacherQueueItems.every((i) => i.status === 'completed' || i.status === 'failed');
+    if (hasWaiting || !allDone) {
+      batchSuccessShownRef.current = false;
+      return;
+    }
+    if (batchSuccessShownRef.current) return;
+    if (completedCount > 0 && failedCount === 0) {
+      batchSuccessShownRef.current = true;
       toast(SUCCESS_MESSAGES[uploadTarget], 'success');
-      setShowConfirm(false);
+      const uploadedClassId = form.classId;
       setForm({
         classId: uploadedClassId,
         recipients: 'class',
         studentIds: [],
         caption: '',
-        files: [],
       });
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'CLASS_INACTIVE') {
-        toast('This class is inactive. Please contact admin.', 'error');
-      } else {
-        toast(err?.message || 'Upload failed. Please try again.', 'error');
+    }
+  }, [queueStatusKey, completedCount, failedCount, form.classId, toast, uploadTarget, teacherQueueItems]);
+
+  const handleSend = async () => {
+    setShowConfirm(false);
+    batchSuccessShownRef.current = false;
+    try {
+      const uploadParams = buildUploadParams();
+      const count = await classroomUploadManager.submitPending(uploadParams, {
+        scopeEndpoint: UPLOAD_ENDPOINT.TEACHER,
+      });
+      if (count === 0) {
+        toast('No files waiting to upload.', 'warning');
       }
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      toast(resolveMediaUploadError(err, uploadLimits || {}), 'error');
     }
   };
+
+  const overallProgressPct = teacherQueueItems.length
+    ? Math.round((completedCount / teacherQueueItems.length) * 100)
+    : 0;
+
+  const queueProgressKey = useMemo(
+    () => teacherQueueItems.map((i) => `${i.id}:${i.progress}:${i.bytesLoaded ?? 0}`).join('|'),
+    [teacherQueueItems],
+  );
+
+  const batchSpeedLabel = useMemo(
+    () => getBatchUploadSpeedLabel(teacherQueueItems),
+    [teacherQueueItems, queueProgressKey],
+  );
+
+  const finishedCount = completedCount + failedCount;
+  const remainingCount = teacherQueueItems.filter((i) => i.status !== 'completed').length;
 
   return (
     <DashboardLayout>
@@ -210,26 +475,46 @@ export default function SendPhotos() {
                 <ArrowRight size={15} />
               </Link>
             </div>
+            <div className="send-photos-online-badge" aria-live="polite">
+              {queueState.isOnline ? (
+                <>
+                  <Wifi size={14} aria-hidden />
+                  <span>Online</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff size={14} aria-hidden />
+                  <span>Offline — uploads paused</span>
+                </>
+              )}
+            </div>
           </header>
 
           <div className="send-photos-card">
             <span className="send-photos-card__label">Upload target</span>
-            <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Upload target">
-              {UPLOAD_TARGET_OPTIONS.map(({ value, label, icon: Icon }) => (
+            <div className="send-photos-target-list" role="group" aria-label="Upload target">
+              {UPLOAD_TARGET_OPTIONS.map(({ value, label, hint, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
-                  className={`send-photos-target-card text-left ${uploadTarget === value ? 'send-photos-target-card--active' : ''}`}
+                  className={`send-photos-target-option${uploadTarget === value ? ' is-selected' : ''}`}
                   onClick={() => setUploadTarget(value)}
+                  aria-pressed={uploadTarget === value}
+                  disabled={isUploading}
                 >
-                  <Icon size={20} className="mb-2 text-accent" />
-                  <span className="block text-sm font-bold text-brand">{label}</span>
+                  <span className="send-photos-target-option__icon" aria-hidden>
+                    <Icon size={20} />
+                  </span>
+                  <span className="send-photos-target-option__text">
+                    <strong>{label}</strong>
+                    <span className="send-photos-target-option__hint">{hint}</span>
+                  </span>
                 </button>
               ))}
             </div>
             {(uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT || uploadTarget === UPLOAD_TARGETS.CLASS_ALBUM_AND_PARENT) && (
-              <div className="send-photos-privacy-warning mt-4">
-                <ShieldAlert size={18} className="shrink-0 text-accent" aria-hidden />
+              <div className="send-photos-privacy-warning">
+                <ShieldAlert size={18} className="send-photos-privacy-warning__icon" aria-hidden />
                 <p>
                   <strong>Privacy reminder:</strong> Parent-direct photos are visible only to authorized guardians.
                   Confirm you have consent before sharing identifiable student images.
@@ -254,6 +539,7 @@ export default function SendPhotos() {
                       type="button"
                       className={`send-photos-class-chip ${form.classId === cls.classId ? 'is-selected' : ''}`}
                       onClick={() => setForm({ ...form, classId: cls.classId, studentIds: [] })}
+                      disabled={isUploading}
                     >
                       <span className="send-photos-class-chip__name">{cls.className}</span>
                       {cls.album?.albumCode && (
@@ -277,6 +563,7 @@ export default function SendPhotos() {
                           type="button"
                           className={`send-photos-pill ${form.recipients === value ? 'is-active' : ''}`}
                           onClick={() => setForm({ ...form, recipients: value, studentIds: [] })}
+                          disabled={isUploading}
                         >
                           <Icon size={15} />
                           {label}
@@ -297,6 +584,7 @@ export default function SendPhotos() {
                           type={uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT ? 'radio' : 'checkbox'}
                           name="student"
                           checked={form.studentIds.includes(s.id)}
+                          disabled={isUploading}
                           onChange={() => setForm({
                             ...form,
                             studentIds: uploadTarget === UPLOAD_TARGETS.PARENT_DIRECT
@@ -320,32 +608,81 @@ export default function SendPhotos() {
 
           <div className="send-photos-card send-photos-upload-card send-photos-form">
             <span className="send-photos-card__label">Media &amp; caption</span>
-            <input
-              type="file"
-              accept={ACCEPTED_MEDIA}
-              multiple
-              onChange={onFilesChange}
-            />
-            {form.files.length > 0 && (
-              <div className="send-photos-file-preview">
-                {form.files.map((file) => (
-                  <div key={`${file.name}-${file.lastModified}`} className="send-photos-file-preview__item">
-                    {isVideoFile(file) ? (
-                      <div className="send-photos-file-preview__video">
-                        <Play size={20} />
-                      </div>
-                    ) : (
-                      <img
-                        src={filePreviewUrls.get(file)}
-                        alt=""
-                        className="send-photos-file-preview__thumb"
-                      />
-                    )}
-                    <span className="send-photos-file-preview__name">{file.name}</span>
-                  </div>
-                ))}
+            <div
+              className={`file-upload${dragOver ? ' dragover' : ''}${pendingQueueItems.length > 0 ? ' file-upload--has-files' : ''}`}
+              onClick={() => !isAddingFiles && fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onFilesDrop}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label="Choose photos or videos to upload"
+            >
+              <div className="file-upload-icon" aria-hidden>
+                <Upload size={28} />
+              </div>
+              <div className="file-upload-text">
+                {pendingQueueItems.length > 0
+                  ? `${pendingQueueItems.length} file${pendingQueueItems.length === 1 ? '' : 's'} in queue — tap to add more`
+                  : 'Tap to browse or drag photos & videos here'}
+              </div>
+              <div className="file-upload-hint">
+                JPG, PNG, WebP, MP4, MOV, WebM
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_MEDIA}
+                multiple
+                hidden
+                disabled={isAddingFiles}
+                onChange={onFilesChange}
+              />
+            </div>
+            {pendingQueueItems.length > 0 && (
+              <div className="send-photos-file-preview" aria-label="Files in upload queue">
+                {pendingQueueItems.map((item) => {
+                  const previewUrl = thumbnailUrls.get(item.id) ?? null;
+                  const isVideo = isVideoQueueItem(item);
+                  return (
+                    <div key={item.id} className="send-photos-file-preview__item">
+                      {previewUrl && isVideo ? (
+                        <video
+                          src={previewUrl}
+                          className="send-photos-file-preview__video"
+                          muted
+                          playsInline
+                          preload="metadata"
+                          aria-label={item.fileName}
+                        />
+                      ) : previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt=""
+                          className="send-photos-file-preview__thumb"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="send-photos-file-preview__video" aria-hidden>
+                          {isVideo ? 'Video' : 'File'}
+                        </div>
+                      )}
+                      <span className="send-photos-file-preview__name" title={item.fileName}>
+                        {item.fileName}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
+            <p className="send-photos-upload-limit-hint">{uploadLimitHint}</p>
             <div className="form-field full">
               <label className="form-label" htmlFor="photo-caption">Caption</label>
               <textarea
@@ -355,23 +692,70 @@ export default function SendPhotos() {
                 onChange={(e) => setForm({ ...form, caption: e.target.value })}
                 placeholder="What happened in class today?"
                 rows={3}
+                disabled={isUploading}
               />
             </div>
           </div>
 
+          {teacherQueueItems.length > 0 && (
+            <div ref={queueListRef}>
+              <ClassroomUploadQueuePanel
+                items={teacherQueueItems}
+                thumbnailUrls={thumbnailUrls}
+                hasActiveBatch={hasActiveBatch}
+                remainingCount={remainingCount}
+                finishedCount={finishedCount}
+                onCancel={cancelUpload}
+                onCancelAll={cancelAllUploads}
+                onRemove={removeFromQueue}
+                onRetry={retryUpload}
+                onClearFinished={() => { void handleClearFinished(); }}
+              />
+            </div>
+          )}
+
           <footer className="send-photos-footer">
-            <p className="send-photos-footer__hint">
-              Ready to share? <strong>{footerHint}</strong>
-            </p>
-            <button
-              type="button"
-              className="send-photos-submit"
-              onClick={() => { if (validate()) setShowConfirm(true); }}
-              disabled={loading}
-            >
-              <Send size={17} />
-              Preview &amp; Send
-            </button>
+            <div className="send-photos-footer__left">
+              <p className="send-photos-footer__hint">
+                Ready to share? <strong>{footerHint}</strong>
+              </p>
+              {teacherQueueItems.length > 0 && (
+                <div className="send-photos-footer__progress">
+                  <div className="send-photos-footer__progress-bar">
+                    <div
+                      className="send-photos-footer__progress-fill"
+                      style={{ width: `${overallProgressPct}%` }}
+                    />
+                  </div>
+                  <span className="send-photos-footer__progress-label">
+                    {completedCount} of {teacherQueueItems.length} uploaded
+                  </span>
+                  {batchSpeedLabel && isUploading && (
+                    <span className="send-photos-footer__speed">{batchSpeedLabel}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="send-photos-footer__actions">
+              {hasActiveBatch && (
+                <button
+                  type="button"
+                  className="send-photos-cancel"
+                  onClick={cancelAllUploads}
+                >
+                  Cancel uploads
+                </button>
+              )}
+              <button
+                type="button"
+                className="send-photos-submit"
+                onClick={() => { if (validate()) setShowConfirm(true); }}
+                disabled={isUploading || isAddingFiles || pendingQueueItems.length === 0}
+              >
+                <Send size={17} />
+                {isUploading ? 'Uploading…' : 'Preview & Send'}
+              </button>
+            </div>
           </footer>
         </div>
       </div>
@@ -381,9 +765,9 @@ export default function SendPhotos() {
         onClose={() => setShowConfirm(false)}
         onConfirm={handleSend}
         title="Upload media?"
-        message={`This will upload ${form.files.length} file(s) using the selected target.`}
+        message={`This will upload ${pendingQueueItems.length} file(s) using the selected target.`}
         confirmText="Upload"
-        loading={loading}
+        loading={false}
       />
     </DashboardLayout>
   );

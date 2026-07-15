@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -56,23 +56,43 @@ export default function ApplicationsList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
+  const pageSize = 50;
 
-  useEffect(() => {
+  const loadApplications = useCallback((nextPage = 0) => {
     let cancelled = false;
     setLoading(true);
-    const filters = statusFilter ? { status: statusFilter } : {};
+    const filters = { page: nextPage, size: pageSize };
+    if (statusFilter) filters.status = statusFilter;
+
     getApplications(filters)
-      .then((data) => {
-        if (!cancelled) setApps(Array.isArray(data) ? data : []);
+      .then((result) => {
+        if (cancelled) return;
+        setApps(Array.isArray(result?.items) ? result.items : []);
+        setPage(result?.page ?? nextPage);
+        setTotalPages(result?.totalPages ?? 0);
+        setTotal(result?.total ?? 0);
       })
       .catch(() => {
-        if (!cancelled) setApps([]);
+        if (!cancelled) {
+          setApps([]);
+          setTotalPages(0);
+          setTotal(0);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => { cancelled = true; };
   }, [statusFilter]);
+
+  useEffect(() => {
+    setPage(0);
+    return loadApplications(0);
+  }, [loadApplications]);
 
   const filtered = apps.filter((a) => {
     const studentName = a.student?.fullName || a.formData?.child?.fullName || '';
@@ -118,6 +138,32 @@ export default function ApplicationsList() {
           <TableActionLink to={`/admin/applications/${app.id}`}>View Application</TableActionLink>
         )}
       />
+
+      {!loading && totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between text-sm text-[#45474c]">
+          <span>
+            Showing page {page + 1} of {totalPages} ({total} applications)
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="premium-btn premium-btn-outline premium-btn-sm disabled:opacity-50"
+              disabled={page <= 0}
+              onClick={() => loadApplications(page - 1)}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              className="premium-btn premium-btn-outline premium-btn-sm disabled:opacity-50"
+              disabled={page + 1 >= totalPages}
+              onClick={() => loadApplications(page + 1)}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

@@ -20,7 +20,9 @@ function ExplainRows({ value, onChange, readOnly }) {
   const lines = splitExplainLines(value);
 
   return (
-    <div className="kz-p2-row kz-p2-row--explain-boxes">
+    <div
+      className={`kz-p2-row kz-p2-row--explain-boxes${readOnly ? " kz-p2-row--explain-disabled" : ""}`.trim()}
+    >
       <MultiRowBoxes
         rows={P2_EXPLAIN_ROWS}
         values={lines}
@@ -46,6 +48,11 @@ export default function KidzeePage2({
   const doctor = formData.doctor || {};
   const health = formData.health || {};
 
+  const setYesNoWithExplain = (yesNoPath, explainPath, next) => {
+    set(yesNoPath, next);
+    if (next?.no) set(explainPath, "");
+  };
+
   return (
     <PrintPage pageNumber={2} showGrid={showGrid} branding={branding}>
       <header className="kz-p2-header">
@@ -56,9 +63,6 @@ export default function KidzeePage2({
       <div className="kz-p2-section kz-p2-section--doctor">
         <div className="kz-p2-row kz-p2-row--title">
           <h2 className="kz-section-title">Family Doctor</h2>
-          <span className="kz-p2-form-no" aria-hidden>
-            2788100
-          </span>
         </div>
 
         <div className="kz-p2-row kz-p2-row--name">
@@ -145,7 +149,9 @@ export default function KidzeePage2({
           <YesNoGroup
             className="kz-p2-yesno--inline"
             value={health.allergies}
-            onChange={(v) => set("health.allergies", v)}
+            onChange={(v) =>
+              setYesNoWithExplain("health.allergies", "health.allergiesExplanation", v)
+            }
             readOnly={readOnly}
           />
         </div>
@@ -153,7 +159,7 @@ export default function KidzeePage2({
         <ExplainRows
           value={health.allergiesExplanation}
           onChange={(v) => set("health.allergiesExplanation", v)}
-          readOnly={readOnly}
+          readOnly={readOnly || !health.allergies?.yes}
         />
       </div>
 
@@ -166,7 +172,13 @@ export default function KidzeePage2({
         <div className="kz-p2-row kz-p2-row--behavioral-yesno">
           <YesNoGroup
             value={health.physicalEmotional}
-            onChange={(v) => set("health.physicalEmotional", v)}
+            onChange={(v) =>
+              setYesNoWithExplain(
+                "health.physicalEmotional",
+                "health.physicalEmotionalExplanation",
+                v
+              )
+            }
             readOnly={readOnly}
           />
         </div>
@@ -174,7 +186,7 @@ export default function KidzeePage2({
         <ExplainRows
           value={health.physicalEmotionalExplanation}
           onChange={(v) => set("health.physicalEmotionalExplanation", v)}
-          readOnly={readOnly}
+          readOnly={readOnly || !health.physicalEmotional?.yes}
         />
       </div>
 
@@ -187,7 +199,13 @@ export default function KidzeePage2({
           <YesNoGroup
             className="kz-p2-yesno--inline"
             value={health.dailyMedication}
-            onChange={(v) => set("health.dailyMedication", v)}
+            onChange={(v) =>
+              setYesNoWithExplain(
+                "health.dailyMedication",
+                "health.dailyMedicationExplanation",
+                v
+              )
+            }
             readOnly={readOnly}
           />
         </div>
@@ -198,7 +216,7 @@ export default function KidzeePage2({
         <ExplainRows
           value={health.dailyMedicationExplanation}
           onChange={(v) => set("health.dailyMedicationExplanation", v)}
-          readOnly={readOnly}
+          readOnly={readOnly || !health.dailyMedication?.yes}
         />
       </div>
 

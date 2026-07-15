@@ -46,6 +46,39 @@ export function sortNavItemsByOrder(items, orderIds = []) {
   });
 }
 
+function navPathKey(to) {
+  if (!to) return '';
+  // Ignore tenant prefix and trailing slash so /s/demo/parent/photos ≡ /parent/photos
+  return String(to).replace(/\/+$/, '').replace(/^\/[^/]+(?=\/(?:parent|teacher|admin|profile)\b)/, '');
+}
+
+/** Append built-in nav items missing from API responses (e.g. newly shipped routes). */
+export function mergeMissingBuiltinNavItems(apiItems, role, config = {}) {
+  const localItems = resolveNavItemsForRole(role, config);
+  const seenIds = new Set(apiItems.map((item) => item.id));
+  const seenPaths = new Set(
+    apiItems.map((item) => navPathKey(item.to)).filter(Boolean),
+  );
+  // Prefer API items; drop renamed-id duplicates that open the same route.
+  const dedupedApiItems = [];
+  const pathsKept = new Set();
+  for (const item of apiItems) {
+    const pathKey = navPathKey(item.to);
+    if (pathKey && pathsKept.has(pathKey)) continue;
+    if (pathKey) pathsKept.add(pathKey);
+    dedupedApiItems.push(item);
+  }
+  const missing = localItems.filter((item) => {
+    if (seenIds.has(item.id)) return false;
+    const pathKey = navPathKey(item.to);
+    if (pathKey && seenPaths.has(pathKey)) return false;
+    return true;
+  });
+  if (!missing.length) return dedupedApiItems;
+  const orderIds = resolveMenuOrderForRole(role, config.menuOrder, config.customMenuItems);
+  return sortNavItemsByOrder([...dedupedApiItems, ...missing], orderIds);
+}
+
 /**
  * Ordered editor rows for a role (built-in + custom).
  * @returns {{ id: string, kind: 'builtin' | 'custom', item: object }[]}

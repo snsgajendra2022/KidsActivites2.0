@@ -6,7 +6,7 @@ function isUploadEndpointUnavailable(err) {
   if (err instanceof TypeError) return true;
   if (err instanceof ApiError) {
     if (err.status === 0 || err.code === 'NETWORK_ERROR') return true;
-    if ([404, 405, 413, 501, 502, 503].includes(err.status)) return true;
+    if ([404, 405, 501, 502, 503].includes(err.status)) return true;
   }
   return err?.message === 'Failed to fetch';
 }
@@ -38,19 +38,38 @@ export async function getTeacherAlbumByClass(classId) {
   return api.get(`/teacher/albums/${classId}`);
 }
 
-export async function uploadTeacherAlbumMedia({
+export async function getParentAlbumByClass(classId) {
+  return api.get(`/parent/albums/${classId}`);
+}
+
+export function buildTeacherAlbumUploadFormData({
   uploadTarget,
   classId,
+  className,
+  schoolId,
+  schoolName,
   studentId,
+  studentIds,
+  recipients,
   caption,
   files,
 }) {
   const formData = new FormData();
   formData.append('uploadTarget', uploadTarget);
   if (classId) formData.append('classId', classId);
+  if (className) formData.append('className', className);
+  if (schoolId) formData.append('schoolId', schoolId);
+  if (schoolName) formData.append('schoolName', schoolName);
   if (studentId) formData.append('studentId', studentId);
+  if (recipients) formData.append('recipients', recipients);
+  (studentIds || []).forEach((id) => formData.append('studentIds', id));
   if (caption) formData.append('caption', caption);
-  files.forEach((file) => formData.append('files', file));
+  (files || []).forEach((file) => formData.append('files', file));
+  return formData;
+}
+
+export async function uploadTeacherAlbumMedia(params) {
+  const formData = buildTeacherAlbumUploadFormData(params);
   return api.post('/teacher/albums/upload', formData);
 }
 
@@ -97,11 +116,48 @@ export async function linkExistingToAlbum({ albumId, externalAssetIds, caption }
   });
 }
 
-export async function uploadAdminAlbumMedia({ albumId, caption, files }) {
+export function buildAdminAlbumUploadFormData({
+  albumId,
+  classId,
+  className,
+  schoolId,
+  schoolName,
+  uploadTarget,
+  caption,
+  files,
+}) {
   const formData = new FormData();
   formData.append('albumId', albumId);
+  if (classId) formData.append('classId', classId);
+  if (className) formData.append('className', className);
+  if (schoolId) formData.append('schoolId', schoolId);
+  if (schoolName) formData.append('schoolName', schoolName);
+  if (uploadTarget) formData.append('uploadTarget', uploadTarget);
   if (caption) formData.append('caption', caption);
-  files.forEach((file) => formData.append('files', file));
+  (files || []).forEach((file) => formData.append('files', file));
+  return formData;
+}
+
+export async function uploadAdminAlbumMedia({
+  albumId,
+  classId,
+  className,
+  schoolId,
+  schoolName,
+  uploadTarget,
+  caption,
+  files,
+}) {
+  const formData = buildAdminAlbumUploadFormData({
+    albumId,
+    classId,
+    className,
+    schoolId,
+    schoolName,
+    uploadTarget,
+    caption,
+    files,
+  });
 
   try {
     return await api.post('/admin/albums/upload', formData);

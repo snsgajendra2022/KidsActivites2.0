@@ -2,6 +2,7 @@ import { delay, getStore, setStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
 import { isApiEnabled, resolveTenantSlug } from './api/config.js';
+import { fetchPortalConfigRaw } from './portalConfigApi.js';
 import { MOCK_SCHOOLS } from '../data/mockSchools.js';
 
 const SCHOOLS_KEY = 'sb_schools';
@@ -81,7 +82,7 @@ export async function getSchoolBySlugApi(slug) {
       if (!tenantSlug || normalized !== tenantSlug.toLowerCase()) {
         throw new Error('School not found');
       }
-      const config = await api.get('/portal/config', undefined, { auth: false });
+      const config = await fetchPortalConfigRaw();
       const school = config?.school;
       if (!school?.id) throw new Error('School not found');
       return {

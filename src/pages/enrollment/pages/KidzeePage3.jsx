@@ -14,10 +14,19 @@ export default function KidzeePage3({
   readOnly,
   branding,
   showGrid,
+  fieldErrors = {},
 }) {
   const set = (path, value) => onChange(path, value);
   const siblings = formData.siblings || [];
   const familyMembers = formData.otherFamilyMembers || [];
+
+  const setHouseholdIncome = (key, checked) =>
+    set(
+      "householdIncome",
+      Object.fromEntries(
+        HOUSEHOLD_INCOME_OPTIONS.map(({ key: k }) => [k, checked && k === key])
+      )
+    );
 
   return (
     <PrintPage pageNumber={3} showGrid={showGrid} branding={branding}>
@@ -32,6 +41,7 @@ export default function KidzeePage3({
           data={formData.motherGuardian}
           onChange={set}
           readOnly={readOnly}
+          fieldErrors={fieldErrors}
         />
         <GuardianColumn
           title="Father's/Guardian's Details:"
@@ -39,6 +49,7 @@ export default function KidzeePage3({
           data={formData.fatherGuardian}
           onChange={set}
           readOnly={readOnly}
+          fieldErrors={fieldErrors}
         />
       </div>
 
@@ -53,7 +64,7 @@ export default function KidzeePage3({
                 key={key}
                 label={label}
                 checked={formData.householdIncome?.[key]}
-                onChange={(v) => set(`householdIncome.${key}`, v)}
+                onChange={(v) => setHouseholdIncome(key, v)}
                 readOnly={readOnly}
               />
             ))}

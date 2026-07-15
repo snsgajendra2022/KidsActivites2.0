@@ -25,7 +25,7 @@ import {
   patchConversationUnread,
 } from '../../utils/chatUnread.js';
 import {
-  Send, MessageCircle, Search, ArrowLeft, Shield, Plus, X, Check, CheckCheck,
+  Send, MessageCircle, Search, ArrowLeft, Shield, Plus, X, Check, CheckCheck, Lock,
 } from 'lucide-react';
 import '../../styles/messages.css';
 
@@ -40,6 +40,45 @@ function formatTime(iso) {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+function getMessageDateKey(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function formatMessageDateLabel(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === now.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function buildMessageTimeline(messages) {
+  const timeline = [];
+  let currentDateKey = null;
+  messages.forEach((message) => {
+    const dateKey = getMessageDateKey(message.sentAt);
+    if (dateKey !== currentDateKey) {
+      currentDateKey = dateKey;
+      timeline.push({
+        type: 'date',
+        key: `date-${dateKey}`,
+        label: formatMessageDateLabel(message.sentAt),
+      });
+    }
+    timeline.push({ type: 'message', key: message.id, message });
+  });
+  return timeline;
+}
+
+function getPageSubtitle(role) {
+  if (role === 'parent' || role === 'student') return 'Chat securely with teachers and school staff';
+  if (role === 'teacher') return 'Connect with parents and school administration';
+  return 'Secure messaging across your school community';
+}
+
 function getInitials(name = '') {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -52,6 +91,29 @@ function roleLabel(role) {
   if (role === 'admin') return 'School administration';
   if (role === 'parent') return 'Parent';
   return 'Teacher';
+}
+
+function getTeacherParticipantLabel(conv, participantId) {
+  if (!participantId) return { title: '', subtitle: '' };
+  const parentName = conv.participantNames?.[participantId] || '';
+  const studentNames = conv.participantStudentNames?.[participantId];
+  if (studentNames) {
+    return {
+      title: studentNames,
+      subtitle: parentName ? `Parent · ${parentName}` : 'Parent',
+    };
+  }
+  return { title: parentName, subtitle: roleLabel(conv.role) };
+}
+
+function getTeacherContactLabel(contact) {
+  if (contact.studentNames) {
+    return {
+      title: contact.studentNames,
+      subtitle: contact.name ? `Parent · ${contact.name}` : 'Parent',
+    };
+  }
+  return { title: contact.name || '', subtitle: roleLabel(contact.role) };
 }
 
 function applyReadReceipt(messages, readerId, readAt, currentUserId) {
@@ -81,6 +143,11 @@ export default function ChatPage() {
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+  const sendButtonRef = useRef(null);
+  const sendLockRef = useRef(false);
+  const inputValueRef = useRef('');
+  const lastSendFingerprintRef = useRef({ key: '', at: 0 });
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedConvId = searchParams.get('c');
 
@@ -246,14 +313,17 @@ export default function ChatPage() {
       .finally(() => setContactsLoading(false));
   };
 
+  const isTeacher = user?.role === 'teacher';
+
   const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return conversations;
     return conversations.filter((c) => {
       const otherId = getOtherParticipant(c, user?.id);
       const name = c.participantNames[otherId]?.toLowerCase() || '';
+      const studentNames = c.participantStudentNames?.[otherId]?.toLowerCase() || '';
       const preview = c.lastMessage?.toLowerCase() || '';
-      return name.includes(q) || preview.includes(q);
+      return name.includes(q) || studentNames.includes(q) || preview.includes(q);
     });
   }, [conversations, search, user?.id]);
 
@@ -261,13 +331,30 @@ export default function ChatPage() {
     const q = contactSearch.trim().toLowerCase();
     if (!q) return contacts;
     return contacts.filter((c) =>
-      c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q));
+      c.name?.toLowerCase().includes(q)
+      || c.email?.toLowerCase().includes(q)
+      || c.studentNames?.toLowerCase().includes(q));
   }, [contacts, contactSearch]);
 
   const activeConv = conversations.find((c) => c.id === active);
   const otherId = activeConv ? getOtherParticipant(activeConv, user?.id) : null;
-  const otherName = otherId ? activeConv.participantNames[otherId] : '';
+  const otherParticipantLabel = isTeacher && activeConv
+    ? getTeacherParticipantLabel(activeConv, otherId)
+    : { title: otherId ? activeConv.participantNames[otherId] : '', subtitle: '' };
+  const otherName = otherParticipantLabel.title;
+  const otherMeta = otherParticipantLabel.subtitle;
   const isAdminThread = activeConv?.role === 'admin';
+  const pageSubtitle = getPageSubtitle(user?.role);
+
+  const messageTimeline = useMemo(
+    () => buildMessageTimeline(messages),
+    [messages],
+  );
+
+  const totalUnread = useMemo(
+    () => conversations.reduce((sum, c) => sum + getConversationUnread(c, user?.id), 0),
+    [conversations, user?.id],
+  );
 
   const selectConversation = (id) => {
     setActive(id);
@@ -291,26 +378,57 @@ export default function ChatPage() {
     }
   };
 
-  const handleSend = async () => {
-    if (!text.trim() || !active || !user?.id) return;
+  const setComposeDisabled = useCallback((disabled) => {
+    if (inputRef.current) inputRef.current.disabled = disabled;
+    if (sendButtonRef.current) sendButtonRef.current.disabled = disabled;
+  }, []);
+
+  const handleSend = useCallback(async (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
+    if (sendLockRef.current) return;
+
+    const body = (inputValueRef.current || text).trim();
+    if (!body || !active || !user?.id) return;
+
+    const fingerprint = `${active}:${body}`;
+    const now = Date.now();
+    if (
+      lastSendFingerprintRef.current.key === fingerprint
+      && now - lastSendFingerprintRef.current.at < 2000
+    ) {
+      return;
+    }
+
+    sendLockRef.current = true;
+    lastSendFingerprintRef.current = { key: fingerprint, at: now };
+    inputValueRef.current = '';
+    setText('');
     setSending(true);
+    setComposeDisabled(true);
+
     try {
-      const msg = await sendMessage(active, user.id, text.trim());
+      const msg = await sendMessage(active, user.id, body);
       setMessages((prev) => (
         prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, seen: false }]
       ));
-      setText('');
       setConversations((prev) => prev.map((c) => (
         c.id === active
           ? { ...c, lastMessage: msg.text, lastMessageAt: msg.sentAt }
           : c
       )));
     } catch (err) {
+      inputValueRef.current = body;
+      setText(body);
+      lastSendFingerprintRef.current = { key: '', at: 0 };
       toast(err.message || 'Unable to send message. Please try again.', 'error');
     } finally {
+      sendLockRef.current = false;
       setSending(false);
+      setComposeDisabled(false);
     }
-  };
+  }, [active, text, user?.id, toast, setComposeDisabled]);
 
   return (
     <AppLayout>
@@ -319,17 +437,28 @@ export default function ChatPage() {
           <aside className="messages-sidebar">
             <div className="messages-sidebar__head">
               <div className="messages-sidebar__title-row">
-                <h1 className="messages-sidebar__title">Messages</h1>
+                <div className="messages-sidebar__title-wrap">
+                  <h1 className="messages-sidebar__title">Messages</h1>
+                  {totalUnread > 0 && (
+                    <span className="messages-sidebar__unread-pill" aria-label={`${totalUnread} unread`}>
+                      {totalUnread}
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
-                  className="messages-new-btn sb-button-primary"
+                  className="messages-new-btn"
                   onClick={openCompose}
                   aria-label="Start new conversation"
                 >
                   <Plus size={18} />
                 </button>
               </div>
-              <p className="messages-sidebar__subtitle">Secure chat with teachers and school staff</p>
+              <p className="messages-sidebar__subtitle">{pageSubtitle}</p>
+              <div className="messages-secure-badge">
+                <Lock size={12} aria-hidden />
+                End-to-end school secure chat
+              </div>
               <div className="messages-search">
                 <Search size={16} className="messages-search__icon" />
                 <input
@@ -347,7 +476,7 @@ export default function ChatPage() {
                 <LoadingState message="Loading conversations…" className="messages-sidebar-empty" />
               ) : filteredConversations.length === 0 ? (
                 <EmptyState
-                  className="messages-sidebar-empty !py-8"
+                  className="messages-sidebar-empty"
                   icon={MessageCircle}
                   title={conversations.length === 0 ? 'No messages yet' : 'No matches'}
                   description={
@@ -356,21 +485,26 @@ export default function ChatPage() {
                       : 'Try a different search term.'
                   }
                   action={conversations.length === 0 ? (
-                    <button type="button" className="sb-button-primary messages-new-link" onClick={openCompose}>
+                    <button type="button" className="messages-cta-btn" onClick={openCompose}>
                       Start a conversation
                     </button>
                   ) : null}
                 />
               ) : (
-                filteredConversations.map((c) => {
+                <>
+                  <p className="messages-list__label">Conversations</p>
+                  {filteredConversations.map((c) => {
                   const oid = getOtherParticipant(c, user.id);
-                  const name = c.participantNames[oid];
+                  const label = isTeacher
+                    ? getTeacherParticipantLabel(c, oid)
+                    : { title: c.participantNames[oid], subtitle: roleLabel(c.role) };
+                  const name = label.title;
                   const unread = getConversationUnread(c, user.id);
                   return (
                     <button
                       key={c.id}
                       type="button"
-                      className={`messages-conv ${active === c.id ? 'is-active' : ''}`}
+                      className={`messages-conv ${active === c.id ? 'is-active' : ''} ${unread > 0 ? 'has-unread' : ''}`}
                       onClick={() => selectConversation(c.id)}
                     >
                       <div className={`messages-conv__avatar ${c.role === 'admin' ? 'messages-conv__avatar--admin' : ''}`}>
@@ -381,6 +515,9 @@ export default function ChatPage() {
                           <p className="messages-conv__name">{name}</p>
                           <span className="messages-conv__time">{formatTime(c.lastMessageAt)}</span>
                         </div>
+                        {label.subtitle && (
+                          <p className="messages-conv__subtitle">{label.subtitle}</p>
+                        )}
                         <div className="messages-conv__row">
                           <p className="messages-conv__preview">{c.lastMessage || 'No messages yet'}</p>
                           {unread > 0 && <span className="messages-conv__badge">{unread}</span>}
@@ -388,7 +525,8 @@ export default function ChatPage() {
                       </div>
                     </button>
                   );
-                })
+                })}
+                </>
               )}
             </div>
           </aside>
@@ -405,16 +543,18 @@ export default function ChatPage() {
                   >
                     <ArrowLeft size={18} />
                   </button>
-                  <div className="messages-thread-head__avatar">
+                  <div className={`messages-thread-head__avatar ${isAdminThread ? 'messages-thread-head__avatar--admin' : ''}`}>
                     {getInitials(otherName)}
                   </div>
                   <div className="messages-thread-head__info">
                     <h2 className="messages-thread-head__name">{otherName}</h2>
-                    <p className="messages-thread-head__meta">
+                    <p className={`messages-thread-head__meta ${isAdminThread ? 'is-admin' : ''}`}>
                       {isAdminThread ? (
-                        <><Shield size={12} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />School administration</>
+                        <><Shield size={12} aria-hidden />School administration</>
+                      ) : isTeacher && otherMeta ? (
+                        otherMeta
                       ) : (
-                        `Available · ${roleLabel(activeConv.role)}`
+                        <><span className="messages-thread-head__status-dot" aria-hidden />{roleLabel(activeConv.role)}</>
                       )}
                     </p>
                   </div>
@@ -423,62 +563,75 @@ export default function ChatPage() {
                 <div className="messages-thread-body">
                   {loadingMessages ? (
                     <LoadingState message="Loading messages…" className="messages-thread-loading" />
+                  ) : messages.length === 0 ? (
+                    <div className="messages-thread-empty">
+                      <div className="messages-thread-empty__icon" aria-hidden>
+                        <MessageCircle size={28} />
+                      </div>
+                      <h3>Say hello</h3>
+                      <p>Send the first message to start this conversation.</p>
+                    </div>
                   ) : (
                     <AnimatePresence>
-                      {messages.map((m) => (
+                      {messageTimeline.map((item) => (
+                        item.type === 'date' ? (
+                          <div key={item.key} className="messages-date-divider">
+                            <span>{item.label}</span>
+                          </div>
+                        ) : (
                         <motion.div
-                          key={m.id}
+                          key={item.key}
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`messages-bubble ${m.senderId === user.id ? 'messages-bubble--sent' : 'messages-bubble--received'}`}
+                          className={`messages-bubble ${item.message.senderId === user.id ? 'messages-bubble--sent' : 'messages-bubble--received'}`}
                         >
-                          {m.text}
+                          <p className="messages-bubble__text">{item.message.text}</p>
                           <span className="messages-bubble__meta">
                             <span className="messages-bubble__time">
-                              {new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(item.message.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            {m.senderId === user.id && (
+                            {item.message.senderId === user.id && (
                               <span
-                                className={`messages-bubble__status ${m.seen ? 'messages-bubble__status--seen' : ''}`}
-                                title={m.seen ? 'Seen' : 'Delivered'}
-                                aria-label={m.seen ? 'Seen' : 'Delivered'}
+                                className={`messages-bubble__status ${item.message.seen ? 'messages-bubble__status--seen' : ''}`}
+                                title={item.message.seen ? 'Seen' : 'Delivered'}
+                                aria-label={item.message.seen ? 'Seen' : 'Delivered'}
                               >
-                                {m.seen ? <CheckCheck size={12} /> : <Check size={12} />}
+                                {item.message.seen ? <CheckCheck size={12} /> : <Check size={12} />}
                               </span>
                             )}
                           </span>
                         </motion.div>
+                        )
                       ))}
                     </AnimatePresence>
                   )}
                   <div ref={bottomRef} />
                 </div>
 
-                <div className="messages-compose">
+                <form className="messages-compose" onSubmit={handleSend} noValidate>
                   <div className="messages-compose__input-wrap">
                     <input
+                      ref={inputRef}
                       value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      placeholder="Write a message…"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
+                      onChange={(e) => {
+                        inputValueRef.current = e.target.value;
+                        setText(e.target.value);
                       }}
+                      placeholder="Write a message…"
+                      disabled={sending}
                       aria-label="Message"
                     />
                   </div>
                   <button
-                    type="button"
-                    className="messages-compose__send sb-button-primary"
-                    onClick={handleSend}
+                    ref={sendButtonRef}
+                    type="submit"
+                    className="messages-compose__send"
                     disabled={sending || !text.trim()}
                     aria-label="Send message"
                   >
                     <Send size={18} />
                   </button>
-                </div>
+                </form>
               </>
             ) : (
               <div className="messages-main__empty">
@@ -487,7 +640,7 @@ export default function ChatPage() {
                   title="Select a conversation"
                   description="Choose a chat from the sidebar or start a new one with the + button."
                   action={(
-                    <button type="button" className="sb-button-primary messages-new-link" onClick={openCompose}>
+                    <button type="button" className="messages-cta-btn" onClick={openCompose}>
                       Start a conversation
                     </button>
                   )}
@@ -502,8 +655,11 @@ export default function ChatPage() {
             <div className="messages-compose-modal__backdrop" onClick={() => setComposeOpen(false)} />
             <div className="messages-compose-modal__panel">
               <header className="messages-compose-modal__head">
-                <h2>New conversation</h2>
-                <button type="button" onClick={() => setComposeOpen(false)} aria-label="Close">
+                <div>
+                  <h2>New conversation</h2>
+                  <p>Choose someone to message</p>
+                </div>
+                <button type="button" className="messages-compose-modal__close" onClick={() => setComposeOpen(false)} aria-label="Close">
                   <X size={18} />
                 </button>
               </header>
@@ -523,7 +679,11 @@ export default function ChatPage() {
                 ) : filteredContacts.length === 0 ? (
                   <p className="messages-compose-modal__empty">No contacts available to message.</p>
                 ) : (
-                  filteredContacts.map((contact) => (
+                  filteredContacts.map((contact) => {
+                    const label = isTeacher
+                      ? getTeacherContactLabel(contact)
+                      : { title: contact.name, subtitle: roleLabel(contact.role) };
+                    return (
                     <button
                       key={contact.id}
                       type="button"
@@ -531,14 +691,15 @@ export default function ChatPage() {
                       onClick={() => handleStartConversation(contact)}
                     >
                       <div className={`messages-conv__avatar ${contact.role === 'admin' ? 'messages-conv__avatar--admin' : ''}`}>
-                        {getInitials(contact.name)}
+                        {getInitials(label.title)}
                       </div>
                       <div className="messages-compose-contact__body">
-                        <p className="messages-conv__name">{contact.name}</p>
-                        <p className="messages-compose-contact__meta">{roleLabel(contact.role)}</p>
+                        <p className="messages-conv__name">{label.title}</p>
+                        <p className="messages-compose-contact__meta">{label.subtitle}</p>
                       </div>
                     </button>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

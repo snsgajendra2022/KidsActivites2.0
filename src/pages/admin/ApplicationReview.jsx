@@ -52,6 +52,33 @@ function formatFieldValue(value) {
   return String(value);
 }
 
+function firstNonBlankEmail(...candidates) {
+  for (const value of candidates) {
+    const text = typeof value === 'string' ? value.trim() : '';
+    if (text) return text;
+  }
+  return '';
+}
+
+/** Matches backend EnrollmentParentContactHelper.resolveParentEmail */
+function resolveParentEmailFromApplication(app) {
+  if (!app) return '';
+  const formData = app.formData || {};
+  const father = formData.fatherGuardian || {};
+  const mother = formData.motherGuardian || {};
+  const fromGuardians = firstNonBlankEmail(father.email, mother.email);
+  if (fromGuardians) return fromGuardians;
+  const parent = app.parent || {};
+  return firstNonBlankEmail(parent.fatherEmail, parent.motherEmail, parent.email);
+}
+
+function actionErrorMessage(err, fallback = 'Something went wrong. Please try again.') {
+  return err?.message || err?.details?.[0]?.message || fallback;
+}
+
+const PARENT_EMAIL_REQUIRED_MESSAGE =
+  'Mother or Father email is required to create a parent account. Please add at least one parent email on the application first.';
+
 function ReviewSection({ title, data }) {
   const entries = Object.entries(data || {}).filter(
     ([key, v]) => !HIDDEN_FIELD_KEYS.has(key)
@@ -198,11 +225,19 @@ export default function ApplicationReview() {
       setModal(null);
       setReason('');
       load();
-    } catch {
-      toast('Something went wrong. Please try again.', 'error');
+    } catch (err) {
+      toast(actionErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateAccount = () => {
+    if (!resolveParentEmailFromApplication(app)) {
+      toast(PARENT_EMAIL_REQUIRED_MESSAGE, 'error');
+      return;
+    }
+    act(() => createAccount(id), 'Parent account created successfully.');
   };
 
   const documentRows = Object.entries(app?.documents || {}).map(([key, doc]) => ({ key, doc }));
@@ -265,7 +300,7 @@ export default function ApplicationReview() {
               <Button variant="danger" onClick={() => setModal('rejectPayment')}>Reject Payment</Button>
             )}
             {actions.createAccount && (
-              <Button variant="primary" onClick={() => act(() => createAccount(id), 'Parent account created successfully.')}>Create Account</Button>
+              <Button variant="primary" onClick={handleCreateAccount}>Create Account</Button>
             )}
             {actions.confirmAdmission && (
               <Button variant="success" onClick={() => act(() => confirmAdmission(id), 'Admission confirmed successfully.')}>Confirm Admission</Button>

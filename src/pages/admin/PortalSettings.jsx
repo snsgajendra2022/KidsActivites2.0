@@ -1,73 +1,181 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, KeyRound, Layout, Menu, Palette, Save, Upload, Mail, Smartphone, Shield, FileText, Globe, QrCode } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode, Home, PanelBottom } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
 import Input from '../../components/ui/Input.jsx';
-import PortalLogo from '../../components/brand/PortalLogo.jsx';
+import ToggleSwitch from '../../components/ui/ToggleSwitch.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { useTenant } from '../../context/TenantContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { readFileAsDataUrl } from '../../services/portalConfigService.js';
-import { getAllMenuItemsGrouped, buildRoleMenuEntries, resolveMenuOrderForRole } from '../../utils/navUtils.js';
-import { MenuItemRow, AddMenuButton } from '../../components/admin/PortalMenuEditor.jsx';
-import '../../styles/portal-menu-editor.css';
+import { sanitizeBrandingValue } from '../../utils/brandingUrlUtils.js';
+import '../../styles/portal-branding.css';
 import { applyPortalTheme, THEME_PRESETS } from '../../utils/themeUtils.js';
 import { DEFAULT_ENROLLMENT_THEME } from '../../constants/enrollmentTheme.js';
-import { ROLE_LABELS } from '../../constants/roles.js';
 import EnrollmentFormBuilder from './EnrollmentFormBuilder.jsx';
 import { cloneEnrollmentFormConfig, DEFAULT_ENROLLMENT_FORM } from '../../data/defaultEnrollmentFormConfig.js';
-import { FOOTER_LINKS } from '../../components/layout/PublicFooter.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
+import { mergeLandingPage } from '../../data/defaultLandingPage.js';
+import FooterSettings from '../../components/admin/FooterSettings.jsx';
+import { mergeFooterConfig } from '../../data/defaultFooterConfig.js';
+import LandingBuilder from '../../landing-builder/admin/LandingBuilder.jsx';
 
 const TABS = [
-  { id: 'identity', label: 'Portal Identity', icon: Layout },
-  { id: 'enrollment-form', label: 'Enrollment Form', icon: FileText },
-  { id: 'login', label: 'Login Access', icon: KeyRound },
-  { id: 'theme', label: 'Theme Colors', icon: Palette },
-  { id: 'school', label: 'School Details', icon: Menu },
-  { id: 'images', label: 'Logo & Images', icon: Image },
-  { id: 'menus', label: 'Side Menu', icon: Menu },
+  { id: 'identity', label: 'Portal Identity', icon: Layout, desc: 'Name & tagline' },
+  { id: 'login', label: 'Login Access', icon: KeyRound, desc: 'Sign-in methods' },
+  { id: 'email', label: 'Email Settings', icon: Mail, desc: 'School SMTP mail' },
+  // Theme Colors — hidden for now; re-enable when tenant theme customization is ready.
+  // { id: 'theme', label: 'Theme Colors', icon: Palette, desc: 'Brand & accent colors' },
+  { id: 'school', label: 'School Details', icon: Menu, desc: 'Contact information' },
+  { id: 'footer', label: 'Footer', icon: PanelBottom, desc: 'Contact, socials & links' },
+  { id: 'images', label: 'Logo & Images', icon: Image, desc: 'Logos & hero images' },
+  { id: 'landing', label: 'Landing Page', icon: Home, desc: 'Homepage sections & content' },
 ];
 
-function ImageUploadField({ label, hint, value, onChange }) {
+const TAB_META = Object.fromEntries(TABS.map((t) => [t.id, t]));
+
+function SettingsSectionHead({ title, description, className = '' }) {
+  return (
+    <div className={`portal-settings__section-head ${className}`.trim()}>
+      <h2 className="portal-settings__section-title">{title}</h2>
+      {description && <p className="portal-settings__section-desc">{description}</p>}
+    </div>
+  );
+}
+
+function LoginOptionRow({ icon: Icon, title, desc, checked, onChange, nested = false }) {
+  return (
+    <div className={`portal-settings__login-row${nested ? ' portal-settings__login-row--nested' : ''}`}>
+      <div className="portal-settings__login-info">
+        <div className={`portal-settings__login-icon${nested ? ' portal-settings__login-icon--sm' : ''}`}>
+          <Icon size={nested ? 16 : 18} />
+        </div>
+        <div>
+          <p className="portal-settings__login-title">{title}</p>
+          {desc && <p className="portal-settings__login-desc">{desc}</p>}
+        </div>
+      </div>
+      <ToggleSwitch checked={checked} onChange={onChange} label={title} />
+    </div>
+  );
+}
+
+function ImageUploadField({ label, hint, value, onChange, previewVariant = 'default' }) {
+  const [previewBroken, setPreviewBroken] = useState(false);
+  const displayUrl = sanitizeBrandingValue(value);
+
+  useEffect(() => {
+    setPreviewBroken(false);
+  }, [displayUrl]);
+
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const dataUrl = await readFileAsDataUrl(file);
+    setPreviewBroken(false);
     onChange(dataUrl);
   };
 
+  const previewClass = previewVariant === 'icon'
+    ? 'branding-upload-preview branding-upload-preview--icon'
+    : previewVariant === 'wide'
+      ? 'branding-upload-preview branding-upload-preview--wide'
+      : 'branding-upload-preview';
+
   return (
-    <div className="rounded-xl border border-black/5 bg-[#f8f9ff] p-4">
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <div className="branding-upload-card">
+      <div className="branding-upload-card__header">
         <div>
-          <p className="text-sm font-semibold text-brand">{label}</p>
-          {hint && <p className="mt-1 text-xs text-[#45474c]">{hint}</p>}
+          <p className="branding-upload-card__title">{label}</p>
+          {hint && <p className="branding-upload-card__hint">{hint}</p>}
         </div>
-        {value && (
+        {displayUrl && (
           <button
             type="button"
-            onClick={() => onChange(null)}
-            className="text-xs font-medium text-rose-600 hover:underline"
+            onClick={() => {
+              setPreviewBroken(false);
+              onChange(null);
+            }}
+            className="branding-upload-card__remove"
           >
             Remove
           </button>
         )}
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-black/5 bg-white">
-          {value ? (
-            <img src={value} alt={label} className="h-full w-full object-cover" />
+      <div className="branding-upload-card__body">
+        <div className={previewClass}>
+          {displayUrl && !previewBroken ? (
+            <img
+              src={displayUrl}
+              alt={label}
+              className="branding-upload-preview__img"
+              onError={() => setPreviewBroken(true)}
+            />
           ) : (
-            <Upload size={20} className="text-[#6b7a8c]" />
+            <div className="branding-upload-preview__empty">
+              <Upload size={22} />
+              <span>{previewBroken ? 'Image failed to load — upload again' : 'No image'}</span>
+            </div>
           )}
         </div>
-        <label className="premium-btn premium-btn-secondary premium-btn-sm inline-flex cursor-pointer">
+        <label className="premium-btn premium-btn-secondary premium-btn-sm branding-upload-card__btn">
           <Upload size={14} />
-          Upload Image
+          {displayUrl ? 'Replace image' : 'Upload image'}
           <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
         </label>
+      </div>
+    </div>
+  );
+}
+
+function getPortalShortLabel(name) {
+  const trimmed = (name || 'KA').trim();
+  if (!trimmed) return 'KA';
+  if (trimmed.length <= 4) return trimmed.toUpperCase();
+  return trimmed.split(/\s+/).map((word) => word[0]).join('').slice(0, 3).toUpperCase();
+}
+
+function BrandingSidebarPreview({ portalName, schoolName, iconUrl, logoUrl }) {
+  const expandedLogo = sanitizeBrandingValue(logoUrl) || sanitizeBrandingValue(iconUrl);
+
+  return (
+    <div className="branding-sidebar-preview">
+      <p className="branding-sidebar-preview__title">Sidebar preview</p>
+      <div className="branding-sidebar-preview__grid">
+        <div className="branding-sidebar-preview__panel branding-sidebar-preview__panel--collapsed">
+          <p className="branding-sidebar-preview__label">Collapsed</p>
+          <div className="branding-sidebar-preview__rail">
+            {iconUrl ? (
+              <span className="portal-logo-sidebar-mark branding-sidebar-preview__initials">
+                <img src={iconUrl} alt="" className="portal-logo-compact-img" />
+              </span>
+            ) : (
+              <span className="sidebar-brand-initials-btn branding-sidebar-preview__initials">
+                <span className="sidebar-brand-initials-btn__label">
+                  {getPortalShortLabel(portalName)}
+                </span>
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="branding-sidebar-preview__panel">
+          <p className="branding-sidebar-preview__label">Expanded</p>
+          <div className="branding-sidebar-preview__expanded">
+            <span className="portal-logo-sidebar-wrap branding-sidebar-preview__wrap">
+              {expandedLogo ? (
+                <img src={expandedLogo} alt="" className="portal-logo-sidebar-img" />
+              ) : (
+                <span className="portal-logo-name--compact">{(portalName || 'KA').slice(0, 2).toUpperCase()}</span>
+              )}
+            </span>
+            <div className="branding-sidebar-preview__text">
+              <p className="branding-sidebar-preview__name">{portalName || 'Portal Name'}</p>
+              <p className="branding-sidebar-preview__school">{schoolName || 'School name'}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -77,9 +185,8 @@ function EnrollmentSchoolDetailsSection({ school, onSchoolChange, hint }) {
   const patch = (field, value) => onSchoolChange({ ...school, [field]: value });
 
   return (
-    <div className="sb-card grid max-w-3xl gap-4 p-6">
-      <h3 className="font-display text-base font-bold text-brand">Enrollment School Details</h3>
-      {hint && <p className="text-sm text-muted">{hint}</p>}
+    <div className="grid gap-4">
+      {hint && <p className="portal-settings__section-desc">{hint}</p>}
       <Input
         label="School Name"
         value={school?.name || ''}
@@ -127,6 +234,7 @@ export default function PortalSettings() {
     platform,
     schools,
   } = usePortalConfig();
+  const { tenantSlug } = useTenant();
   const { toast } = useToast();
   const [editTarget, setEditTarget] = useState('school');
   const [tab, setTab] = useState('identity');
@@ -134,7 +242,10 @@ export default function PortalSettings() {
   const [form, setForm] = useState(null);
   const [platformForm, setPlatformForm] = useState(null);
 
-  const activeSchoolMeta = schools.find((s) => s.id === activeSchoolId);
+  const activeSchoolMeta = schools.find((s) => s.id === activeSchoolId)
+    || (tenantSlug && form?.school
+      ? { id: activeSchoolId, name: form.school.name, slug: tenantSlug }
+      : null);
 
   useEffect(() => {
     if (platform) {
@@ -173,9 +284,29 @@ export default function PortalSettings() {
         menuCustomization: { ...(config.menuCustomization || {}) },
         customMenuItems: [...(config.customMenuItems || [])],
         menuOrder: JSON.parse(JSON.stringify(config.menuOrder || {})),
+        emailSettings: {
+          ...DEFAULT_PORTAL_CONFIG.emailSettings,
+          ...(config.emailSettings || {}),
+          password: '',
+        },
+        landingPage: mergeLandingPage(
+          config.landingPage,
+          config.portalName,
+          config.school?.name,
+        ),
+        footer: mergeFooterConfig(
+          config.footer,
+          config.school?.name,
+          config.footerText,
+        ),
       });
     }
   }, [config, activeSchoolId]);
+
+  useEffect(() => {
+    const main = document.querySelector('.portal-shell main');
+    main?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [tab]);
 
   useEffect(() => {
     if (tab === 'theme' && form?.theme) {
@@ -288,12 +419,13 @@ export default function PortalSettings() {
       );
       await updateConfig({
         ...form,
+        footerText: form.footer?.copyright?.trim() || form.footerText,
         menuCustomization,
         customMenuItems: (form.customMenuItems || []).filter((i) => i.label?.trim() && i.to?.trim()),
         menuOrder: form.menuOrder || {},
         menuVisibility: form.menuVisibility || {},
       });
-      toast('Portal settings saved. Changes are live across the app.', 'success');
+      toast('Portal settings saved. Logo and branding updates are live.', 'success');
     } catch {
       toast('Failed to save portal settings.', 'error');
     } finally {
@@ -301,102 +433,16 @@ export default function PortalSettings() {
     }
   };
 
-  const menuGroups = getAllMenuItemsGrouped();
-
-  const patchMenuCustomization = (menuId, patch) => {
-    setForm((f) => {
-      const current = { ...(f.menuCustomization[menuId] || {}), ...patch };
-      Object.keys(current).forEach((key) => {
-        if (current[key] === undefined || current[key] === '') delete current[key];
-      });
-      const menuCustomization = { ...f.menuCustomization };
-      if (Object.keys(current).length === 0) delete menuCustomization[menuId];
-      else menuCustomization[menuId] = current;
-      return { ...f, menuCustomization };
-    });
-  };
-
-  const setMenuVisible = (role, menuId, visible) => {
-    setForm((f) => ({
-      ...f,
-      menuVisibility: {
-        ...f.menuVisibility,
-        [role]: { ...f.menuVisibility[role], [menuId]: visible },
-      },
-    }));
-  };
-
-  const addCustomMenuItem = (role) => {
-    const item = {
-      id: `custom_${Date.now()}`,
-      label: 'New Menu Item',
-      icon: 'Link',
-      to: '/support',
-      roles: [role],
-    };
-    setForm((f) => {
-      const customMenuItems = [...(f.customMenuItems || []), item];
-      const currentOrder = resolveMenuOrderForRole(role, f.menuOrder, customMenuItems);
-      return {
-        ...f,
-        customMenuItems,
-        menuVisibility: {
-          ...f.menuVisibility,
-          [role]: { ...(f.menuVisibility[role] || {}), [item.id]: true },
-        },
-        menuOrder: {
-          ...f.menuOrder,
-          [role]: [...currentOrder, item.id],
-        },
-      };
-    });
-  };
-
-  const updateCustomMenuItem = (id, patch) => {
-    setForm((f) => ({
-      ...f,
-      customMenuItems: f.customMenuItems.map((item) => (
-        item.id === id ? { ...item, ...patch } : item
-      )),
-    }));
-  };
-
-  const removeCustomMenuItem = (id) => {
-    setForm((f) => {
-      const customMenuItems = f.customMenuItems.filter((item) => item.id !== id);
-      const menuOrder = { ...f.menuOrder };
-      Object.keys(menuOrder).forEach((role) => {
-        menuOrder[role] = (menuOrder[role] || []).filter((menuId) => menuId !== id);
-      });
-      return { ...f, customMenuItems, menuOrder };
-    });
-  };
-
-  const moveMenuItem = (role, menuId, direction) => {
-    setForm((f) => {
-      const order = resolveMenuOrderForRole(role, f.menuOrder, f.customMenuItems);
-      const index = order.indexOf(menuId);
-      if (index < 0) return f;
-      const swapIndex = direction === 'up' ? index - 1 : index + 1;
-      if (swapIndex < 0 || swapIndex >= order.length) return f;
-      const nextOrder = [...order];
-      [nextOrder[index], nextOrder[swapIndex]] = [nextOrder[swapIndex], nextOrder[index]];
-      return {
-        ...f,
-        menuOrder: { ...f.menuOrder, [role]: nextOrder },
-      };
-    });
-  };
-
   return (
     <AppLayout>
       <PageTransition>
+        <div className={tab === 'landing' ? 'portal-settings_landing' : 'portal-settings'}>
         <PageHeader
           title="Portal Branding & Configuration"
           subtitle={
             editTarget === 'platform' && isPlatformAdmin
               ? 'Manage the main homepage (/) and enrollment form (/enrollment).'
-              : 'Manage portal name, school branding, images, and side menu visibility for all roles.'
+              : 'Customize your school portal — branding, login, email, and theme.'
           }
           actions={(
             <button
@@ -412,13 +458,11 @@ export default function PortalSettings() {
         />
 
         {isPlatformAdmin && (
-          <div className="mb-6 inline-flex rounded-full border border-black/5 bg-white p-1">
+          <div className="portal-settings__target">
             <button
               type="button"
               onClick={() => setEditTarget('platform')}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                editTarget === 'platform' ? 'sb-tab-active' : 'text-muted hover:text-brand'
-              }`}
+              className={`portal-settings__target-btn${editTarget === 'platform' ? ' portal-settings__target-btn--active' : ''}`}
             >
               <Globe size={16} />
               Main Portal (/)
@@ -426,9 +470,7 @@ export default function PortalSettings() {
             <button
               type="button"
               onClick={() => setEditTarget('school')}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                editTarget === 'school' ? 'sb-tab-active' : 'text-muted hover:text-brand'
-              }`}
+              className={`portal-settings__target-btn${editTarget === 'school' ? ' portal-settings__target-btn--active' : ''}`}
             >
               <Layout size={16} />
               School Portal
@@ -513,220 +555,152 @@ export default function PortalSettings() {
         )}
 
         {editTarget === 'school' && !form && isPlatformAdmin && (
-          <div className="sb-card max-w-2xl p-6 text-sm text-muted">
+          <div className="portal-settings__empty">
             Select a school from <strong>Admin → Schools</strong>, then return here to edit that school&apos;s portal branding.
           </div>
         )}
 
         {editTarget === 'school' && form && (
           <>
-        <div className="mb-6 flex flex-wrap gap-2">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                tab === id
-                  ? 'sb-tab-active'
-                  : 'border border-black/5 bg-white text-muted hover:bg-[#f8f9ff]'
-              }`}
-            >
-              <Icon size={16} />
-              {label}
-            </button>
-          ))}
-        </div>
+            {activeSchoolMeta && (
+              <div className="portal-settings__banner">
+                <div>
+                  <p className="portal-settings__banner-title">{activeSchoolMeta.name}</p>
+                  <p className="portal-settings__banner-meta">
+                    Editing portal branding for this school. Changes apply to login, sidebar, and public pages.
+                  </p>
+                </div>
+                {activeSchoolMeta.slug && (
+                  <span className="portal-settings__banner-url">/{activeSchoolMeta.slug}</span>
+                )}
+              </div>
+            )}
+
+            <div className="portal-settings__layout">
+              <nav className="portal-settings__nav" aria-label="Portal settings sections">
+                {TABS.map(({ id, label, icon: Icon, desc }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTab(id)}
+                    className={`portal-settings__nav-btn${tab === id ? ' portal-settings__nav-btn--active' : ''}`}
+                  >
+                    <span className="portal-settings__nav-icon">
+                      <Icon size={16} />
+                    </span>
+                    <span className="portal-settings__nav-text">
+                      <span className="portal-settings__nav-label">{label}</span>
+                      <span className="portal-settings__nav-desc">{desc}</span>
+                    </span>
+                  </button>
+                ))}
+              </nav>
+
+              <div className="portal-settings__content">
+                <div className="portal-settings__panel portal-settings__panel--tab">
+                  <SettingsSectionHead
+                    className="portal-settings__section-head--mobile"
+                    title={TAB_META[tab]?.label}
+                    description={TAB_META[tab]?.desc}
+                  />
 
         {tab === 'identity' && (
-          <div className="sb-card grid max-w-3xl gap-4 p-6">
-            <div className="mb-2 flex items-center gap-3">
-              <PortalLogo size="lg" />
-              <div>
-                <p className="text-sm font-semibold text-brand">Live preview</p>
-                <p className="text-xs text-[#45474c]">Sidebar & header branding</p>
-              </div>
+          <div className="grid gap-5">
+            <BrandingSidebarPreview
+              portalName={form.portalName}
+              schoolName={form.school?.name}
+              iconUrl={form.branding.logoIconUrl}
+              logoUrl={form.branding.logoUrl}
+            />
+            <div className="grid gap-4">
+              <Input
+                label="Portal Name"
+                value={form.portalName}
+                onChange={(e) => setForm((f) => ({ ...f, portalName: e.target.value }))}
+                variant="enrollment"
+                helper="Shown in header, sidebar, login, and browser title."
+              />
+              <Input
+                label="Portal Tagline"
+                value={form.tagline}
+                onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+                variant="enrollment"
+              />
             </div>
-            <Input
-              label="Portal Name"
-              value={form.portalName}
-              onChange={(e) => setForm((f) => ({ ...f, portalName: e.target.value }))}
-              variant="enrollment"
-              helper="Shown in header, sidebar, login, and browser title."
-            />
-            <Input
-              label="Portal Tagline"
-              value={form.tagline}
-              onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
-              variant="enrollment"
-            />
-            <Input
-              label="Footer Text"
-              value={form.footerText}
-              onChange={(e) => setForm((f) => ({ ...f, footerText: e.target.value }))}
-              variant="enrollment"
-            />
-          </div>
-        )}
-
-        {tab === 'enrollment-form' && form?.enrollmentForm && (
-          <div className="space-y-6">
-            <EnrollmentSchoolDetailsSection
-              school={form.school}
-              onSchoolChange={(school) => setForm((f) => ({ ...f, school }))}
-              hint={
-                activeSchoolMeta?.slug ? (
-                  <>
-                    Shown on this school&apos;s enrollment form at{' '}
-                    <strong>/{activeSchoolMeta.slug}/enroll</strong>.
-                  </>
-                ) : (
-                  <>Shown on the school enrollment form.</>
-                )
-              }
-            />
-            <EnrollmentFormBuilder
-              value={form.enrollmentForm}
-              onChange={(enrollmentForm) => setForm((f) => ({ ...f, enrollmentForm }))}
-            />
           </div>
         )}
 
         {tab === 'login' && (
-          <div className="sb-card max-w-3xl p-6">
-            <p className="mb-5 text-sm text-muted">
-              Control which sign-in options parents and staff see on the login page. At least one method must stay enabled.
-            </p>
-
-            <div className="divide-y divide-black/5 rounded-xl border border-black/5">
-              <div className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-[#fafbfe]">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-muted text-accent">
-                    <Mail size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-brand">Email Login</p>
-                    <p className="text-xs text-muted">School-registered email + password</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={form.loginMethods.emailLogin !== false}
-                  onClick={() => setLoginMethod('emailLogin', form.loginMethods.emailLogin === false)}
-                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                    form.loginMethods.emailLogin !== false ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      form.loginMethods.emailLogin !== false ? 'left-[22px]' : 'left-0.5'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-[#fafbfe]">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-muted text-accent">
-                    <QrCode size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-brand">QR Login</p>
-                    <p className="text-xs text-muted">Sign in on web by scanning with the Kids Activities mobile app</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={form.loginMethods.qrLogin !== false}
-                  onClick={() => setLoginMethod('qrLogin', form.loginMethods.qrLogin === false)}
-                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                    form.loginMethods.qrLogin !== false ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      form.loginMethods.qrLogin !== false ? 'left-[22px]' : 'left-0.5'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="px-5 py-4">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-muted text-accent">
+          <div>
+            <div className="portal-settings__login-list">
+              <LoginOptionRow
+                icon={Mail}
+                title="Email Login"
+                desc="School-registered email + password"
+                checked={form.loginMethods.emailLogin !== false}
+                onChange={(enabled) => setLoginMethod('emailLogin', enabled)}
+              />
+              <LoginOptionRow
+                icon={QrCode}
+                title="QR Login"
+                desc="Sign in on web by scanning with the Kids Activities mobile app"
+                checked={form.loginMethods.qrLogin !== false}
+                onChange={(enabled) => setLoginMethod('qrLogin', enabled)}
+              />
+              <div className="portal-settings__login-row portal-settings__otp-group">
+                <div className="portal-settings__login-info">
+                  <div className="portal-settings__login-icon">
                     <Shield size={18} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-brand">OTP Login</p>
-                    <p className="text-xs text-muted">Single OTP sign-in — users choose mobile or email on the login page</p>
+                    <p className="portal-settings__login-title">OTP Login</p>
+                    <p className="portal-settings__login-desc">
+                      Single OTP sign-in — users choose mobile or email on the login page
+                    </p>
                   </div>
                 </div>
-
-                <div className="ml-2 space-y-3 border-l-2 border-black/5 pl-5">
-                  {[
-                    {
-                      key: 'mobileOtp',
-                      icon: Smartphone,
-                      title: 'Mobile OTP',
-                      desc: 'Allow OTP via registered mobile number',
-                    },
-                    {
-                      key: 'emailOtp',
-                      icon: Mail,
-                      title: 'Email OTP',
-                      desc: 'Allow OTP via registered email address',
-                    },
-                  ].map(({ key, icon: Icon, title, desc }) => {
-                    const enabled = form.loginMethods[key] !== false;
-                    return (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#fafbfe] px-4 py-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-accent">
-                            <Icon size={16} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-brand">{title}</p>
-                            <p className="text-xs text-muted">{desc}</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={enabled}
-                          onClick={() => setLoginMethod(key, !enabled)}
-                          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                            enabled ? 'sb-toggle-on' : 'bg-[#c5c6cd]'
-                          }`}
-                        >
-                          <span
-                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                              enabled ? 'left-[22px]' : 'left-0.5'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+              </div>
+              <div className="portal-settings__otp-nested">
+                {[
+                  {
+                    key: 'mobileOtp',
+                    icon: Smartphone,
+                    title: 'Mobile OTP',
+                    desc: 'Allow OTP via registered mobile number',
+                  },
+                  {
+                    key: 'emailOtp',
+                    icon: Mail,
+                    title: 'Email OTP',
+                    desc: 'Allow OTP via registered email address',
+                  },
+                ].map(({ key, icon, title, desc }) => (
+                  <LoginOptionRow
+                    key={key}
+                    icon={icon}
+                    title={title}
+                    desc={desc}
+                    nested
+                    checked={form.loginMethods[key] !== false}
+                    onChange={(next) => setLoginMethod(key, next)}
+                  />
+                ))}
               </div>
             </div>
 
-            <p className="mt-4 text-xs text-muted">
+            <p className="portal-settings__field-note">
               OTP login appears as one option on the login page. Enable mobile, email, or both channels inside OTP login.
             </p>
 
-            <div className="mt-8 border-t border-black/5 pt-6">
-              <p className="mb-2 text-sm font-semibold text-brand">Login Header Scroll Text</p>
-              <p className="mb-3 text-xs text-muted">
+            <hr className="portal-settings__divider" />
+
+            <div>
+              <p className="portal-settings__login-title">Login Header Scroll Text</p>
+              <p className="portal-settings__login-desc mb-3">
                 One announcement per line. They scroll right to left in a single line on the login header.
               </p>
               <textarea
-                className="w-full rounded-xl border border-black/10 bg-[#fafbfe] px-4 py-3 text-sm text-brand outline-none focus:border-[var(--sb-secondary)] focus:ring-2 focus:ring-[var(--sb-secondary)]/15"
+                className="portal-settings__textarea"
                 rows={5}
                 value={(form.loginScrollLines || []).join('\n')}
                 onChange={(e) => {
@@ -742,9 +716,105 @@ export default function PortalSettings() {
           </div>
         )}
 
+        {tab === 'email' && (
+          <div className="grid gap-4">
+            <div className="portal-settings__login-row">
+              <div>
+                <p className="portal-settings__login-title">Use school email for outgoing mail</p>
+                <p className="portal-settings__login-desc">
+                  Requires valid SMTP credentials (e.g. Gmail app password, school mail server)
+                </p>
+              </div>
+              <ToggleSwitch
+                checked={form.emailSettings?.useSchoolSmtp === true}
+                onChange={(enabled) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, useSchoolSmtp: enabled },
+                }))}
+                label="Use school email for outgoing mail"
+              />
+            </div>
+
+            <div className="portal-settings__grid-2">
+              <Input
+                label="SMTP Host"
+                value={form.emailSettings?.smtpHost || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, smtpHost: e.target.value },
+                }))}
+                variant="enrollment"
+                placeholder="smtp.gmail.com"
+              />
+              <Input
+                label="SMTP Port"
+                type="number"
+                value={form.emailSettings?.smtpPort ?? 587}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, smtpPort: Number(e.target.value) || 587 },
+                }))}
+                variant="enrollment"
+              />
+            </div>
+
+            <Input
+              label="SMTP Username / Email"
+              type="email"
+              value={form.emailSettings?.username || ''}
+              onChange={(e) => setForm((f) => ({
+                ...f,
+                emailSettings: { ...f.emailSettings, username: e.target.value },
+              }))}
+              variant="enrollment"
+              helper="Usually the full email address used to authenticate with your mail server."
+            />
+
+            <Input
+              label="SMTP Password"
+              type="password"
+              value={form.emailSettings?.password || ''}
+              onChange={(e) => setForm((f) => ({
+                ...f,
+                emailSettings: { ...f.emailSettings, password: e.target.value },
+              }))}
+              variant="enrollment"
+              placeholder={form.emailSettings?.passwordConfigured ? 'Leave blank to keep current password' : 'Enter SMTP password or app password'}
+            />
+
+            <div className="portal-settings__grid-2">
+              <Input
+                label="From Email"
+                type="email"
+                value={form.emailSettings?.fromEmail || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, fromEmail: e.target.value },
+                }))}
+                variant="enrollment"
+                helper="Defaults to SMTP username if empty."
+              />
+              <Input
+                label="From Name"
+                value={form.emailSettings?.fromName || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  emailSettings: { ...f.emailSettings, fromName: e.target.value },
+                }))}
+                variant="enrollment"
+                helper={`Defaults to ${form.school?.name || 'school name'} if empty.`}
+              />
+            </div>
+
+            <p className="portal-settings__field-note">
+              Parent notification emails mention your school name only. Login links are included only when the parent already has a portal account; correction requests use a secure no-login link.
+            </p>
+          </div>
+        )}
+
         {tab === 'theme' && (
-          <div className="space-y-6 max-w-3xl">
-            <div className="sb-card p-6">
+          <div className="space-y-5">
+            <div className="rounded-xl border border-black/5 bg-[#fafbfe] p-5">
               <p className="mb-5 text-sm text-muted">
                 Brand and accent colors apply across login, dashboard, footer, links, notifications, and enrollment headers.
               </p>
@@ -791,12 +861,7 @@ export default function PortalSettings() {
               <div className="mb-6 rounded-xl border border-black/5 p-4" style={{ background: form.theme.brandColor }}>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-on-primary-muted">Footer preview</p>
                 <p className="text-sm font-semibold text-on-primary">{form.portalName}</p>
-                <p className="mt-1 text-xs text-on-primary-subtle">{form.footerText}</p>
-                <div className="mt-3 flex flex-wrap gap-4">
-                  {FOOTER_LINKS.map(({ label, to }) => (
-                    <Link key={to} to={to} className="public-footer-link">{label}</Link>
-                  ))}
-                </div>
+                <p className="mt-1 text-xs text-on-primary-subtle">{form.footer?.copyright || form.footerText}</p>
               </div>
 
               <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">Color Presets</p>
@@ -818,7 +883,7 @@ export default function PortalSettings() {
               </div>
             </div>
 
-            <div className="sb-card p-6">
+            <div className="rounded-xl border border-black/5 bg-[#fafbfe] p-5">
               <p className="mb-1 text-sm font-semibold text-brand">Enrollment Form Colors</p>
               <p className="mb-5 text-sm text-muted">
                 Navy &amp; red sync with app brand color. Adjust form background and borders below.
@@ -895,149 +960,110 @@ export default function PortalSettings() {
         )}
 
         {tab === 'school' && (
-          <div className="space-y-4">
-            <EnrollmentSchoolDetailsSection
-              school={form.school}
-              onSchoolChange={(school) => setForm((f) => ({ ...f, school }))}
-              hint={
-                activeSchoolMeta?.slug ? (
-                  <>
-                    Used on the public landing page and enrollment header for{' '}
-                    <strong>/{activeSchoolMeta.slug}</strong>.
-                  </>
-                ) : (
-                  <>School contact details shown on the public school portal.</>
-                )
-              }
-            />
-          </div>
+          <EnrollmentSchoolDetailsSection
+            school={form.school}
+            onSchoolChange={(school) => setForm((f) => ({ ...f, school }))}
+            hint={
+              activeSchoolMeta?.slug || tenantSlug ? (
+                <>
+                  Used on the public landing page, login page, and enrollment header for{' '}
+                  <strong>/{activeSchoolMeta?.slug || tenantSlug}</strong>.
+                  Footer contact fields can also be edited under <strong>Footer</strong>.
+                </>
+              ) : (
+                <>School contact details shown on the public school portal and login page.</>
+              )
+            }
+          />
+        )}
+
+        {tab === 'footer' && (
+          <FooterSettings
+            footer={form.footer}
+            school={form.school}
+            onFooterChange={(footer) => setForm((f) => ({ ...f, footer }))}
+            onSchoolChange={(school) => setForm((f) => ({ ...f, school }))}
+          />
         )}
 
         {tab === 'images' && (
-          <div className="grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
-            <ImageUploadField
-              label="Sidebar / Header Logo"
-              hint="Square image recommended. Used in sidebar and public header."
-              value={form.branding.logoIconUrl || form.branding.logoUrl}
-              onChange={(url) => setForm((f) => ({
-                ...f,
-                branding: { ...f.branding, logoIconUrl: url, logoUrl: url },
-              }))}
+          <div className="grid gap-5">
+            <BrandingSidebarPreview
+              portalName={form.portalName}
+              schoolName={form.school?.name}
+              iconUrl={form.branding.logoIconUrl}
+              logoUrl={form.branding.logoUrl}
             />
-            <ImageUploadField
-              label="Favicon"
-              hint="Browser tab icon (.png or .svg)."
-              value={form.branding.faviconUrl}
-              onChange={(url) => setForm((f) => ({
-                ...f,
-                branding: { ...f.branding, faviconUrl: url },
-              }))}
-            />
-            <ImageUploadField
-              label="Landing Hero Image"
-              hint="Full-width background on home page."
-              value={form.branding.heroImageUrl}
-              onChange={(url) => setForm((f) => ({
-                ...f,
-                branding: { ...f.branding, heroImageUrl: url },
-              }))}
-            />
-            <ImageUploadField
-              label="Login Page Hero"
-              hint="Background image on login page."
-              value={form.branding.loginHeroUrl}
-              onChange={(url) => setForm((f) => ({
-                ...f,
-                branding: { ...f.branding, loginHeroUrl: url },
-              }))}
-            />
+            <div className="portal-settings__images-grid">
+              <ImageUploadField
+                label="Sidebar Icon"
+                hint="Square mark for the collapsed sidebar rail. PNG or SVG, 128×128 px recommended."
+                value={form.branding.logoIconUrl}
+                previewVariant="icon"
+                onChange={(url) => setForm((f) => ({
+                  ...f,
+                  branding: { ...f.branding, logoIconUrl: url },
+                }))}
+              />
+              <ImageUploadField
+                label="Header Logo"
+                hint="Wider logo for expanded sidebar and public header."
+                value={form.branding.logoUrl}
+                previewVariant="wide"
+                onChange={(url) => setForm((f) => ({
+                  ...f,
+                  branding: { ...f.branding, logoUrl: url },
+                }))}
+              />
+              <ImageUploadField
+                label="Favicon"
+                hint="Browser tab icon (.png or .svg)."
+                value={form.branding.faviconUrl}
+                previewVariant="icon"
+                onChange={(url) => setForm((f) => ({
+                  ...f,
+                  branding: { ...f.branding, faviconUrl: url },
+                }))}
+              />
+              <ImageUploadField
+                label="Landing Hero Image"
+                hint="Full-width background on home page."
+                value={form.branding.heroImageUrl}
+                previewVariant="wide"
+                onChange={(url) => setForm((f) => ({
+                  ...f,
+                  branding: { ...f.branding, heroImageUrl: url },
+                }))}
+              />
+              <ImageUploadField
+                label="Login Page Hero"
+                hint="Background image on login page."
+                value={form.branding.loginHeroUrl}
+                previewVariant="wide"
+                onChange={(url) => setForm((f) => ({
+                  ...f,
+                  branding: { ...f.branding, loginHeroUrl: url },
+                }))}
+              />
+            </div>
           </div>
         )}
 
-        {tab === 'menus' && (
-          <div className="space-y-4">
-            <p className="portal-menu-hint">
-              Customize sidebar labels, icons, order, and visibility per role. Use the arrows to move items up or down.
-              Add new menu links for internal routes. Click <strong>Save Changes</strong> to apply.
-            </p>
-            {Object.entries(menuGroups).map(([role]) => {
-              const entries = buildRoleMenuEntries(role, form.customMenuItems || [], form.menuOrder || {});
-              return (
-                <div key={role} className="sb-card overflow-hidden">
-                  <div className="border-b border-black/5 bg-[#f8f9ff] px-5 py-3">
-                    <h3 className="font-display text-sm font-bold text-brand">
-                      {ROLE_LABELS[role] || role}
-                    </h3>
-                  </div>
-                  <div className="portal-menu-col-headers">
-                    <span>Order</span>
-                    <span>Icon</span>
-                    <span>Label &amp; Path</span>
-                    <span>Visible</span>
-                  </div>
-                  <div>
-                    {entries.map((entry, index) => {
-                      const { item, kind } = entry;
-                      const visible = form.menuVisibility?.[role]?.[item.id] !== false;
-                      const canMoveUp = index > 0;
-                      const canMoveDown = index < entries.length - 1;
+        {tab === 'landing' && (
+          <LandingBuilder
+            schoolId={activeSchoolId}
+            schoolName={form.school?.name}
+            portalName={form.portalName}
+            tenantSlug={activeSchoolMeta?.slug || tenantSlug}
+          />
+        )}
 
-                      if (kind === 'builtin') {
-                        const custom = form.menuCustomization[item.id] || {};
-                        const label = custom.label ?? item.label;
-                        const icon = custom.icon ?? item.iconName ?? 'Circle';
-                        return (
-                          <MenuItemRow
-                            key={`${role}-${item.id}`}
-                            item={item}
-                            label={label}
-                            icon={icon}
-                            path={item.to}
-                            visible={visible}
-                            builtin
-                            canMoveUp={canMoveUp}
-                            canMoveDown={canMoveDown}
-                            onMoveUp={() => moveMenuItem(role, item.id, 'up')}
-                            onMoveDown={() => moveMenuItem(role, item.id, 'down')}
-                            onLabelChange={(value) => patchMenuCustomization(item.id, {
-                              label: value === item.label ? undefined : value,
-                            })}
-                            onIconChange={(value) => patchMenuCustomization(item.id, { icon: value })}
-                            onVisibleChange={(v) => setMenuVisible(role, item.id, v)}
-                          />
-                        );
-                      }
-
-                      return (
-                        <MenuItemRow
-                          key={`${role}-custom-${item.id}`}
-                          item={item}
-                          label={item.label}
-                          icon={item.icon || 'Link'}
-                          path={item.to}
-                          visible={visible}
-                          builtin={false}
-                          canMoveUp={canMoveUp}
-                          canMoveDown={canMoveDown}
-                          onMoveUp={() => moveMenuItem(role, item.id, 'up')}
-                          onMoveDown={() => moveMenuItem(role, item.id, 'down')}
-                          onLabelChange={(value) => updateCustomMenuItem(item.id, { label: value })}
-                          onIconChange={(value) => updateCustomMenuItem(item.id, { icon: value })}
-                          onPathChange={(value) => updateCustomMenuItem(item.id, { to: value })}
-                          onVisibleChange={(v) => setMenuVisible(role, item.id, v)}
-                          onRemove={() => removeCustomMenuItem(item.id)}
-                        />
-                      );
-                    })}
-                  </div>
-                  <AddMenuButton onClick={() => addCustomMenuItem(role)} />
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+            </div>
           </>
         )}
+        </div>
       </PageTransition>
     </AppLayout>
   );

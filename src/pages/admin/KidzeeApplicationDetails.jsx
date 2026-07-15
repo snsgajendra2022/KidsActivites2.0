@@ -104,12 +104,12 @@ function isSignatureDataUrl(value) {
   return typeof value === 'string' && value.startsWith('data:image/');
 }
 
-function PermissionSignatures({ permissions, officeUse }) {
+function PermissionSignatures({ permissions, officeUse, includeOfficeUse = true }) {
   const entries = [
     { label: 'Emergency Treatment', signature: permissions?.emergency?.signature },
     { label: 'Field Trip', signature: permissions?.fieldTrip?.signature },
     { label: 'Verification', signature: permissions?.verification?.signature },
-    { label: 'Office Use', signature: officeUse?.signature },
+    ...(includeOfficeUse ? [{ label: 'Office Use', signature: officeUse?.signature }] : []),
   ].filter(({ signature }) => isSignatureDataUrl(signature));
 
   if (!entries.length) return null;
@@ -150,7 +150,7 @@ function DetailSection({ title, fields }) {
   );
 }
 
-export default function KidzeeApplicationDetails({ app }) {
+export default function KidzeeApplicationDetails({ app, includeOfficeUse = true }) {
   const data = mapApplicationToKidzeeForm(app);
   const child = data.child || {};
   const health = data.health || {};
@@ -280,7 +280,11 @@ export default function KidzeeApplicationDetails({ app }) {
         <DetailSection title="Kidzee — Permissions & Signatures" fields={permissionFields} />
       )}
 
-      <PermissionSignatures permissions={data.permissions} officeUse={data.officeUse} />
+      <PermissionSignatures
+        permissions={data.permissions}
+        officeUse={data.officeUse}
+        includeOfficeUse={includeOfficeUse}
+      />
     </>
   );
 }

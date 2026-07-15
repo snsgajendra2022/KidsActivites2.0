@@ -1,4 +1,6 @@
 import { rewritePhotoStudioUrl } from './photoStudioUrls.js';
+import { normalizeVideoMediaItem } from './videoMediaNormalize.js';
+import { getBestPlayableVideoSources } from './videoSourceResolver.js';
 
 /** Progressive quality tiers — s01 (lowest) → s10 (highest). */
 export const PHOTO_STUDIO_TIERS = [
@@ -22,29 +24,51 @@ export function buildPhotoStudioVariantUrl(image, tier, templateUrl) {
   }
 }
 
+export function isThumbnailUrl(url) {
+  return typeof url === 'string' && /\/thumbnail(\?|$)/i.test(url);
+}
+
+/** First usable display URL — never /thumbnail (those often 404). */
+export function firstNonThumbnailUrl(...candidates) {
+  for (const url of candidates) {
+    if (typeof url !== 'string' || !url) continue;
+    if (isThumbnailUrl(url)) continue;
+    return url;
+  }
+  return '';
+}
+
 function pickTemplateUrl(image) {
   const v = image?.variants || {};
   const tierS01 = v.tiers?.s01?.url;
-  return (
-    (typeof v.s01 === 'string' ? v.s01 : null)
-    || (typeof tierS01 === 'string' ? tierS01 : null)
-    || (typeof v.thumbnailUrl === 'string' ? v.thumbnailUrl : null)
-    || v.autoUrl
-    || v.recommendedUrl
-    || v.previewFallbackUrl
-    || image?.thumbnailUrl
-    || image?.previewUrl
-    || image?.downloadUrl
-    || null
-  );
-}
-
-function isThumbnailUrl(url) {
-  return typeof url === 'string' && /\/thumbnail(\?|$)/.test(url);
+  // Never seed variants from /thumbnail — those endpoints commonly 404.
+  return firstNonThumbnailUrl(
+    typeof v.s01 === 'string' ? v.s01 : null,
+    typeof tierS01 === 'string' ? tierS01 : null,
+    v.autoUrl,
+    v.recommendedUrl,
+    v.previewFallbackUrl,
+    image?.previewUrl,
+    image?.downloadUrl,
+    image?.imageUrl,
+  ) || null;
 }
 
 /**
- * Lowest-quality variant (s01) for gallery grid cards — not thumbnail, not full preview.
+ * Best playback URL for videos: adaptive HLS master preferred — never thumbnail.
+ */
+export function resolveVideoStreamUrl(image) {
+  if (!image || image.mediaType !== 'VIDEO') return null;
+  const fromResolver = getBestPlayableVideoSources(image).sources[0]?.url;
+  if (fromResolver) return fromResolver;
+  const normalized = normalizeVideoMediaItem(image);
+  return normalized?.masterStreamUrl || null;
+}
+
+/**
+ * Gallery card image URL.
+ * Prefer preview / variants / download; use thumbnail only as last resort
+ * (videos often only have /api/videos/{id}/thumbnail — that must show).
  */
 export function getGalleryThumbSrc(image) {
   if (!image) return '';
@@ -52,34 +76,41 @@ export function getGalleryThumbSrc(image) {
   const variants = image.variants || {};
   const template = pickTemplateUrl(image);
 
-  if (imageNeedsVariantPolling(image)) {
-    const direct = rewritePhotoStudioUrl(
-      image.thumbnailUrl || image.previewUrl || image.downloadUrl || variants.previewFallbackUrl || '',
-    );
-    if (direct) return direct;
-  }
-
-  if (typeof variants.s01 === 'string') {
-    return rewritePhotoStudioUrl(variants.s01);
-  }
-  const tierS01 = variants.tiers?.s01?.url;
-  if (typeof tierS01 === 'string') {
-    return rewritePhotoStudioUrl(tierS01);
-  }
+  const preferred = firstNonThumbnailUrl(
+    typeof variants.s01 === 'string' ? variants.s01 : null,
+    typeof variants.tiers?.s01?.url === 'string' ? variants.tiers.s01.url : null,
+    variants.recommendedUrl,
+    variants.previewFallbackUrl,
+    variants.autoUrl,
+    image.previewUrl,
+    image.downloadUrl,
+    image.imageUrl,
+  );
+  if (preferred) return rewritePhotoStudioUrl(preferred);
 
   if (template) {
     const s01 = buildPhotoStudioVariantUrl(image, 's01', template);
-    if (s01) return rewritePhotoStudioUrl(s01);
+    if (s01 && !isThumbnailUrl(s01)) return rewritePhotoStudioUrl(s01);
   }
 
-  return rewritePhotoStudioUrl(
-    image.thumbnailUrl || image.previewUrl || image.downloadUrl || '',
+  // Last resort so cards are not blank (image 404s handled by onError).
+  const thumb = firstUrl(
+    image.thumbnailUrl,
+    variants.thumbnailUrl,
   );
+  return thumb ? rewritePhotoStudioUrl(thumb) : '';
+}
+
+function firstUrl(...candidates) {
+  for (const url of candidates) {
+    if (typeof url === 'string' && url) return url;
+  }
+  return '';
 }
 
 /**
- * Full quality chain for lightbox only: s01 → s10 → preview → download.
- * Thumbnail URLs are never included.
+ * Full quality chain for lightbox: s01 → s10 → preview → download.
+ * Thumbnail URLs are excluded from the progressive upgrade chain.
  */
 export function buildProgressiveSrcChain(image) {
   if (!image) return [];
@@ -95,12 +126,10 @@ export function buildProgressiveSrcChain(image) {
   const variants = image.variants || {};
   const template = pickTemplateUrl(image);
 
-  // Direct string URLs on variants (when API embeds them)
   PHOTO_STUDIO_TIERS.forEach((tier) => {
     if (typeof variants[tier] === 'string') add(variants[tier]);
   });
 
-  // Build tier URLs only when the API marks them ready
   if (template) {
     PHOTO_STUDIO_TIERS.forEach((tier) => {
       if (typeof variants[tier] === 'string') return;
@@ -112,19 +141,28 @@ export function buildProgressiveSrcChain(image) {
 
   add(variants.recommendedUrl);
   add(variants.previewFallbackUrl);
+  add(variants.autoUrl);
   add(image.previewUrl);
   add(image.downloadUrl);
+  add(image.imageUrl);
+
+  // Gallery/lightbox fallback: include thumbnail last if nothing else exists.
+  if (urls.length === 0) {
+    const thumb = firstUrl(image.thumbnailUrl, variants.thumbnailUrl);
+    if (thumb) urls.push(thumb);
+  }
 
   return urls.filter(Boolean);
 }
 
-/** True when an HLS stream is ready to play (at least one rendition or master playlist). */
+/** True when at least one playable source exists (HLS or ready MP4 ladder). */
 export function isVideoPlaybackReady(image) {
   if (image?.mediaType !== 'VIDEO') return false;
+  if (getBestPlayableVideoSources(image).sources.length > 0) return true;
   const status = image.processingStatus || image.status;
-  if (status === 'READY' || status === 'ACTIVE') return true;
-  if (status === 'PROCESSING') return false;
-  return Boolean(image.streamUrl);
+  if (status === 'READY' || status === 'ACTIVE') return Boolean(resolveVideoStreamUrl(image));
+  if (status === 'PROCESSING' || status === 'PENDING') return false;
+  return Boolean(resolveVideoStreamUrl(image));
 }
 
 export function imageNeedsVariantPolling(image) {

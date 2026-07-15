@@ -22,6 +22,7 @@ const INITIAL_FORM = {
   slug: '',
   adminName: '',
   adminEmail: '',
+  adminPhone: '',
 };
 
 const ALL_FIELDS = Object.keys(INITIAL_FORM);
@@ -261,6 +262,19 @@ export default function WorkspaceNew() {
             error={touched.adminEmail ? fieldErrors.adminEmail : undefined}
             placeholder="admin@school.edu"
             helper={touched.adminEmail && fieldErrors.adminEmail ? undefined : "We'll send the confirmation link to this address"}
+          />
+
+          <FormInput
+            label={WORKSPACE_FIELD_LABELS.adminPhone}
+            name="adminPhone"
+            type="tel"
+            required
+            value={form.adminPhone}
+            onChange={(e) => updateField('adminPhone', e.target.value)}
+            onBlur={() => handleBlur('adminPhone')}
+            error={touched.adminPhone ? fieldErrors.adminPhone : undefined}
+            placeholder="9876543210"
+            helper={touched.adminPhone && fieldErrors.adminPhone ? undefined : '10-digit mobile number starting with 6–9'}
           />
 
           <Button

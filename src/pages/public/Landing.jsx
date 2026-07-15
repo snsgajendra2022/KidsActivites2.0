@@ -1,17 +1,24 @@
-import { ArrowRight, Sparkles, GraduationCap } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
 import CinematicHero from '../../components/public/CinematicHero.jsx';
-import JourneyNav from '../../components/public/JourneyNav.jsx';
 import EditorialTimeline from '../../components/public/EditorialTimeline.jsx';
 import MapFeatureSection from '../../components/public/MapFeatureSection.jsx';
 import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
 import EditorialFooter from '../../components/public/EditorialFooter.jsx';
-import Banner360 from '../../components/public/Banner360.jsx';
+import StaticCampusBanner from '../../components/public/StaticCampusBanner.jsx';
+import LandingPageRenderer from '../../landing-builder/LandingPageRenderer.jsx';
+import { readPreviewDraftFromKeys } from '../../landing-builder/blockUtils.js';
+import { landingPageAction } from '../../services/landingPageApi.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import { getAccessToken } from '../../services/api/tokenStorage.js';
+import '../../styles/landing-builder.css';
 
 import imgAdmissions from '../../assets/timeline_admissions.png';
 import imgPhotos from '../../assets/timeline_photos.png';
@@ -23,9 +30,7 @@ const DEFAULT_HERO_HEADLINE = ['Manage Kids Activities,', 'Admissions, Photos, a
 const DEFAULT_HERO_SUBTEXT =
   'Launch your activity workspace in minutes.\nManage enrollments, fees, documents, photo albums, classroom updates, and parent communication from one trusted portal.';
 
-
-
-const TIMELINE_STEPS = [
+const PLATFORM_TIMELINE_STEPS = [
   {
     title: 'Digital Admissions & Enrollment',
     description: 'Simplify student registration with online forms, parent application tracking, and secure admin review.',
@@ -54,36 +59,216 @@ function parseHeroHeadline(headline) {
   return lines.length ? lines : DEFAULT_HERO_HEADLINE;
 }
 
+function renderMultiline(text) {
+  if (!text?.trim()) return null;
+  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+  return lines.map((line, index) => (
+    <span key={`${line}-${index}`}>
+      {line}
+      {index < lines.length - 1 && <br />}
+    </span>
+  ));
+}
+
 export default function Landing() {
   const { isPlatformHome } = useTenant();
-  const { portalName, school, branding, platform } = usePortalConfig();
-  const { loginPath } = useTenantPath();
+  const { user, bootstrapping } = useAuth();
+  const { portalName, school, branding, platform, landingPage, landingPagePublished, activeSchoolId } = usePortalConfig();
+  const { loginPath, tenantPath, tenantSlug } = useTenantPath();
+  const [searchParams] = useSearchParams();
+  const isPreview = searchParams.get('preview') === '1';
   const enrollPath = useSchoolEnrollPath();
+  const enrollmentFormPath = tenantPath('/enrollment/kidzee-print-form');
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
-  const heroLines = parseHeroHeadline(platform?.heroHeadline);
-  const heroSubtext = platform?.heroSubtext?.trim() || DEFAULT_HERO_SUBTEXT;
 
-  const heroTitle = isPlatformHome ? (
-    <>
-      {heroLines.map((line, index) => (
-        <span key={line}>
-          {line}
-          {index < heroLines.length - 1 && <br />}
-        </span>
-      ))}
-    </>
-  ) : (
-    school?.name || portalName
+  const previewKeys = useMemo(
+    () => [activeSchoolId, school?.id, tenantSlug, user?.schoolId].filter(Boolean),
+    [activeSchoolId, school?.id, tenantSlug, user?.schoolId],
   );
 
-  const heroSubtitle = isPlatformHome
-    ? heroSubtext.split('\n').map((line, index, arr) => (
-        <span key={line}>
-          {line}
-          {index < arr.length - 1 && <br />}
-        </span>
-      ))
-    : `Complete your child's admission to ${school?.name || 'our school'} online. Submit documents, pay fees, and stay connected.`;
+  const [previewDraft, setPreviewDraft] = useState(null);
+  const [previewSource, setPreviewSource] = useState(null); // 'stash' | 'api' | 'published'
+  const [previewLoading, setPreviewLoading] = useState(isPreview);
+
+  useEffect(() => {
+    if (!isPreview || isPlatformHome) {
+      setPreviewDraft(null);
+      setPreviewSource(null);
+      setPreviewLoading(false);
+      return undefined;
+    }
+
+    // Wait for auth bootstrap so we can load the admin draft with the access token.
+    if (bootstrapping) {
+      setPreviewLoading(true);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setPreviewLoading(true);
+
+    const finish = (draft, source) => {
+      if (cancelled) return;
+      setPreviewDraft(draft);
+      setPreviewSource(source);
+      setPreviewLoading(false);
+    };
+
+    const stashed = readPreviewDraftFromKeys(previewKeys);
+    if (stashed) {
+      finish(stashed, 'stash');
+      return undefined;
+    }
+
+    const token = getAccessToken();
+    if (!token) {
+      finish(null, landingPagePublished?.blocks?.length ? 'published' : null);
+      return undefined;
+    }
+
+    const schoolId = activeSchoolId || school?.id || user?.schoolId || undefined;
+    landingPageAction('getEditor', {}, { schoolId })
+      .then((data) => {
+        if (data?.draft?.version === 2 && data.draft?.blocks?.length) {
+          finish(data.draft, 'api');
+          return;
+        }
+        finish(null, landingPagePublished?.blocks?.length ? 'published' : null);
+      })
+      .catch(() => {
+        finish(null, landingPagePublished?.blocks?.length ? 'published' : null);
+      });
+
+    return () => { cancelled = true; };
+  }, [
+    isPreview,
+    isPlatformHome,
+    bootstrapping,
+    previewKeys,
+    activeSchoolId,
+    school?.id,
+    user?.schoolId,
+    landingPagePublished,
+  ]);
+
+
+  if (isPlatformHome) {
+    const heroLines = parseHeroHeadline(platform?.heroHeadline);
+    const heroSubtext = platform?.heroSubtext?.trim() || DEFAULT_HERO_SUBTEXT;
+
+    return (
+      <PublicLayout hideFooter className="sb-editorial-page">
+        <CinematicHero
+          imageUrl={heroImage}
+          badge={(
+            <>
+              <Sparkles size={14} />
+              {platform?.tagline || 'KIDS ACTIVITY ENROLLMENT PLATFORM'}
+            </>
+          )}
+          title={heroLines.map((line, index) => (
+            <span key={line}>
+              {line}
+              {index < heroLines.length - 1 && <br />}
+            </span>
+          ))}
+          subtitle={renderMultiline(heroSubtext)}
+          primaryAction={{
+            to: enrollPath,
+            label: <>Start Workspace Setup <ArrowRight size={18} /></>,
+          }}
+          secondaryAction={{
+            to: '/workspace/new',
+            label: 'Enrollment',
+          }}
+        />
+
+        <EditorialTimeline
+          title={`Why Programs Choose ${portalName}`}
+          subtitle="A complete platform for enrollments, payments, documents, and parent communication."
+          steps={PLATFORM_TIMELINE_STEPS}
+        />
+
+        <MapFeatureSection
+          title="Schools Across the Region"
+          subtitle="Kids Activities connects families with programs in their community."
+        />
+
+        <FinalImageCTA
+          title={portalName}
+          subtitle="Launch enrollments, payments, schedules, and parent communication in one secure platform."
+          action={{
+            to: enrollPath,
+            label: <>Create Your Workspace <ArrowRight size={18} /></>,
+          }}
+        />
+
+        <EditorialFooter compact />
+      </PublicLayout>
+    );
+  }
+
+  if (isPreview && previewLoading) {
+    return (
+      <PublicLayout hideFooter className="sb-editorial-page">
+        <div className="landing-builder__loading">Loading landing page preview…</div>
+      </PublicLayout>
+    );
+  }
+
+  const v2Page = isPreview
+    ? (previewDraft || landingPagePublished)
+    : landingPagePublished;
+  const showingPreviewDraft = isPreview && Boolean(previewDraft);
+  const showingPublishedFallback = isPreview && !previewDraft && Boolean(landingPagePublished?.blocks?.length);
+
+  if (v2Page?.version === 2 && v2Page?.blocks?.length) {
+    const isLaughAndLearn = v2Page.theme?.skin === 'laugh-and-learn';
+    return (
+      <PublicLayout hideFooter hideHeader={isLaughAndLearn} className={isLaughAndLearn ? 'lal-public-page' : 'sb-editorial-page'}>
+        {isPreview && (
+          <div className="landing-builder__preview-banner" role="status">
+            <span>
+              {showingPreviewDraft
+                ? (previewSource === 'api'
+                  ? 'Preview mode — showing your latest saved draft (not published yet).'
+                  : 'Preview mode — this draft is not visible to the public until you publish.')
+                : showingPublishedFallback
+                  ? 'Preview mode — could not load draft, showing the published page. Click Preview again from Portal Settings while signed in.'
+                  : 'Preview mode'}
+            </span>
+            {tenantSlug && (
+              <a
+                className="landing-builder__preview-back"
+                href={`/${tenantSlug}/admin/portal-settings`}
+              >
+                Back to editor
+              </a>
+            )}
+          </div>
+        )}
+        <LandingPageRenderer
+          page={v2Page}
+          branding={branding}
+          school={school}
+          portalName={portalName}
+          tenantPath={tenantPath}
+        />
+      </PublicLayout>
+    );
+  }
+
+
+  const sections = landingPage?.sections || {};
+  const hero = landingPage?.hero || {};
+  const campusBanner = landingPage?.campusBanner || {};
+  const timeline = landingPage?.timeline || {};
+  const map = landingPage?.map || {};
+  const finalCta = landingPage?.finalCta || {};
+
+  const heroTitle = hero.title?.trim() || school?.name || portalName;
+  const heroSubtitle = hero.subtitle?.trim()
+    || `Complete your child's admission to ${school?.name || 'our school'} online. Submit documents, pay fees, and stay connected.`;
 
   return (
     <PublicLayout hideFooter className="sb-editorial-page">
@@ -109,13 +294,31 @@ export default function Landing() {
         }}
       />
 
+      {sections.campusBanner !== false && campusBanner.imageUrl && (
+        <StaticCampusBanner
+          imageUrl={campusBanner.imageUrl}
+          title={campusBanner.title}
+          subtitle={campusBanner.subtitle}
+        />
+      )}
 
+      {sections.timeline !== false && (
+        <EditorialTimeline
+          title={timeline.title || `Why Families Choose ${portalName}`}
+          subtitle={timeline.subtitle}
+          steps={timeline.steps || []}
+        />
+      )}
 
-      <Banner360 
-        imageUrl={imgPanorama}
-        title="Experience Our Campus"
-        subtitle="Explore our world-class facilities in 360°"
-      />
+      {sections.map !== false && (
+        <MapFeatureSection
+          title={map.title || 'Visit Our Campus'}
+          subtitle={map.subtitle || `Experience ${school?.name || 'our school'} in person or explore online.`}
+          address={map.showAddress !== false ? school?.address : undefined}
+          embedUrl={map.embedUrl}
+          imageUrl={map.imageUrl || undefined}
+        />
+      )}
 
       <EditorialTimeline
         title="Why Programs Choose Kids Activities"

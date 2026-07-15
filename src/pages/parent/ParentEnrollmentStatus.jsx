@@ -1,34 +1,30 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Plus, User, MapPin, GraduationCap } from 'lucide-react';
+import {
+  ArrowLeft, Plus, GraduationCap, FileText, CreditCard, FolderOpen, CheckCircle2,
+} from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
+import { PageHeader } from '../../components/ui/index.jsx';
+import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
+import LoadingState from '../../components/ui/LoadingState.jsx';
+import {
+  ApplicationOverviewSection,
+  StandardApplicationSections,
+  KidzeeApplicationSections,
+  DocumentsSection,
+  FeeSection,
+  DeclarationSection,
+  StatusTimelineSection,
+} from '../../components/parent/ParentEnrollmentSections.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
-import { getParentDashboard, getParentChild } from '../../services/parentService.js';
+import { getParentDashboard, getParentEnrollmentDetail } from '../../services/parentService.js';
 import { ENROLLMENT_STATUSES, STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
+import { feeStatusLabel, formatTimelineDate } from '../../utils/parentEnrollmentDisplay.js';
+import '../../styles/application-review.css';
 import '../../styles/parent-enrollment.css';
-
-function formatDisplayValue(value) {
-  if (value === null || value === undefined || value === '') return '—';
-  return String(value);
-}
-
-function formatGender(value) {
-  if (!value) return '—';
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function formatTimelineDate(iso) {
-  return new Date(iso).toLocaleString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
 
 function statusBadgeVariant(status) {
   if (status === ENROLLMENT_STATUSES.ADMISSION_CONFIRMED || status === ENROLLMENT_STATUSES.ACCOUNT_CREATED) return 'success';
@@ -37,13 +33,6 @@ function statusBadgeVariant(status) {
   return 'info';
 }
 
-function timelineItemTone(status) {
-  if (status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED) return 'is-warning';
-  if (status === ENROLLMENT_STATUSES.REJECTED) return 'is-danger';
-  return '';
-}
-
-/** Collapse noisy duplicate timeline entries for parent view */
 function normalizeStatusHistory(history = []) {
   const sorted = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
   const result = [];
@@ -71,17 +60,11 @@ function normalizeStatusHistory(history = []) {
   return result;
 }
 
-function InfoGrid({ items }) {
-  return (
-    <dl className="parent-enrollment-info-grid">
-      {items.map(({ label, value }) => (
-        <div key={label} className="parent-enrollment-info-item">
-          <dt>{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
+function countDocs(documents) {
+  const rows = documents ? Object.values(documents) : [];
+  const total = rows.length;
+  const verified = rows.filter((d) => d?.status === 'verified').length;
+  return { total, verified };
 }
 
 export default function ParentEnrollmentStatus() {
@@ -91,167 +74,236 @@ export default function ParentEnrollmentStatus() {
   const childId = searchParams.get('child');
   const [dashboard, setDashboard] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [fee, setFee] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getParentDashboard(user.id, user.schoolId, user)
-      .then(async (data) => {
-        setDashboard(data);
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      try {
         if (childId) {
-          const child = await getParentChild(user.id, childId, user);
-          setSelected(child);
-        } else if (data.children?.length === 1) {
-          setSelected(data.children[0]);
+          const detail = await getParentEnrollmentDetail(childId, user);
+          if (cancelled) return;
+          setDashboard({
+            children: detail.children || [],
+            school: detail.school,
+          });
+          setSelected(detail.child);
+          setFee(detail.fee);
+          return;
         }
-      })
-      .finally(() => setLoading(false));
+
+        const data = await getParentDashboard(user.id, user.schoolId, user);
+        if (cancelled) return;
+
+        if (data.children?.length === 1) {
+          const detail = await getParentEnrollmentDetail(data.children[0].applicationId, user);
+          if (cancelled) return;
+          setDashboard({
+            children: detail.children || data.children,
+            school: detail.school || data.school,
+          });
+          setSelected(detail.child);
+          setFee(detail.fee);
+          return;
+        }
+
+        setDashboard(data);
+        setSelected(null);
+        setFee(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    if (user?.id) load();
+    return () => { cancelled = true; };
   }, [user, childId]);
 
   const timeline = useMemo(
-    () => normalizeStatusHistory(selected?.statusHistory),
+    () => normalizeStatusHistory(selected?.statusHistory).map((entry) => ({
+      ...entry,
+      statusLabel: STATUS_LABELS[entry.status] || entry.status?.replace(/_/g, ' '),
+      dateFormatted: formatTimelineDate(entry.date),
+    })),
     [selected?.statusHistory],
   );
 
   if (loading) {
     return (
       <AppLayout>
-        <p className="parent-enrollment-loading">Loading enrollment details…</p>
+        <LoadingState message="Loading enrollment details…" />
       </AppLayout>
     );
   }
 
-  const { children = [], enrollPath, school } = dashboard || {};
+  const { children = [], school } = dashboard || {};
+  const enrollmentHref = tenantPath('/enrollment/kidzee-print-form');
   const child = selected || (childId ? children.find((c) => c.applicationId === childId) : null);
+  const isKidzee = child?.formType === 'kidzee_printable';
+  const documentsLink = tenantPath('/parent/documents');
+  const feesLink = tenantPath('/parent/fees');
+  const childName = child?.student?.fullName || child?.studentName || 'Student';
+  const classLabel = child?.className
+    || (child?.student?.classApplying ? String(child.student.classApplying).toUpperCase() : null);
+  const docStats = countDocs(child?.documents);
+  const docsStatValue = docStats.total
+    ? (docStats.verified === docStats.total ? 'All verified' : `${docStats.verified}/${docStats.total}`)
+    : '—';
 
   return (
     <AppLayout>
       <PageTransition>
         <div className="parent-enrollment-page">
-          <header className="parent-enrollment-header">
-            <div>
-              <Link to={tenantPath('/parent/dashboard')} className="parent-enrollment-back">
-                <ArrowLeft size={16} /> Back to Dashboard
+          <Link to={tenantPath('/parent/dashboard')} className="app-review-back">
+            <ArrowLeft size={16} aria-hidden />
+            Back to Dashboard
+          </Link>
+
+          <PageHeader
+            title="Enrollment Status"
+            subtitle={
+              child
+                ? `${childName}${school?.name ? ` · ${school.name}` : ''}`
+                : school?.name || 'Track your children\'s enrollment applications'
+            }
+            actions={(
+              <Link to={enrollmentHref} className="premium-btn premium-btn-primary premium-btn-sm">
+                <Plus size={16} aria-hidden />
+                Enroll Another Child
               </Link>
-              <h1>Enrollment Status</h1>
-              <p>{school?.name} — track each child&apos;s application</p>
-            </div>
-            <Link to={enrollPath || '/enrollment'} className="parent-enrollment-enroll-btn">
-              <Plus size={16} /> Enroll Another Child
-            </Link>
-          </header>
+            )}
+          />
 
           {children.length > 1 && (
-            <div className="parent-enrollment-tabs">
-              {children.map((c) => (
-                <Link
-                  key={c.applicationId}
-                  to={tenantPath(`/parent/enrollment?child=${c.applicationId}`)}
-                  className={`parent-enrollment-tab${child?.applicationId === c.applicationId ? ' is-active' : ''}`}
-                >
-                  {c.student?.fullName || 'Child'}
-                </Link>
-              ))}
+            <div className="parent-enrollment-tabs" role="tablist" aria-label="Select child">
+              {children.map((c) => {
+                const name = c.student?.fullName || c.studentName || 'Child';
+                const isActive = child?.applicationId === c.applicationId;
+                return (
+                  <Link
+                    key={c.applicationId}
+                    to={tenantPath(`/parent/enrollment?child=${c.applicationId}`)}
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`parent-enrollment-tab${isActive ? ' is-active' : ''}`}
+                  >
+                    <GraduationCap size={14} aria-hidden />
+                    {name}
+                    {c.className && (
+                      <span className="parent-enrollment-tab__class">{c.className}</span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           )}
 
           {!child ? (
-            <div className="parent-enrollment-empty">
-              No enrollment selected.{' '}
-              <Link to={enrollPath || '/enrollment'}>Start a new enrollment</Link>
+            <div className="sb-card parent-enrollment-empty">
+              <div className="parent-enrollment-empty__icon" aria-hidden>
+                <FileText size={28} />
+              </div>
+              {children.length > 1 ? (
+                <>
+                  <h2>Select a Child</h2>
+                  <p>Choose a child above to view their enrollment details.</p>
+                </>
+              ) : (
+                <>
+                  <h2>No Enrollment Found</h2>
+                  <p>Start a new enrollment application for your child.</p>
+                  <Link to={enrollmentHref} className="premium-btn premium-btn-primary premium-btn-sm parent-enrollment-empty__cta">
+                    <Plus size={16} aria-hidden />
+                    Start Enrollment
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <>
-              <section className="parent-enrollment-summary">
-                <div>
-                  <h2 className="parent-enrollment-summary__name">{child.student?.fullName}</h2>
-                  <p className="parent-enrollment-summary__meta">
-                    {child.applicationNo} · {child.statusLabel}
+              <div className="bento-grid parent-enrollment-stats">
+                <div className="bento-span-3">
+                  <BentoStatCard
+                    icon={FileText}
+                    value={child.statusLabel || child.status?.replace(/_/g, ' ')}
+                    label="Application Status"
+                    variant="indigo"
+                  />
+                </div>
+                <div className="bento-span-3">
+                  <BentoStatCard
+                    icon={GraduationCap}
+                    value={classLabel || '—'}
+                    label="Class"
+                    variant="emerald"
+                  />
+                </div>
+                <div className="bento-span-3">
+                  <BentoStatCard
+                    icon={CreditCard}
+                    value={fee ? feeStatusLabel(fee.status) : '—'}
+                    label="Fee Status"
+                    variant="amber"
+                  />
+                </div>
+                <div className="bento-span-3">
+                  <BentoStatCard
+                    icon={FolderOpen}
+                    value={docsStatValue}
+                    label="Documents Verified"
+                    variant="sky"
+                  />
+                </div>
+              </div>
+
+              <div className="parent-enrollment-hero sb-card">
+                <div className="parent-enrollment-hero__main">
+                  <h2 className="parent-enrollment-hero__name">{childName}</h2>
+                  <p className="parent-enrollment-hero__meta">
+                    {child.applicationNo && <span>{child.applicationNo}</span>}
+                    {classLabel && <span>Class {classLabel}</span>}
+                    {school?.academicYear && <span>{school.academicYear}</span>}
                   </p>
                 </div>
                 <StatusBadge
                   status={child.status}
                   variant={statusBadgeVariant(child.status)}
-                  className="parent-enrollment-summary__badge"
                 >
                   {child.statusLabel}
                 </StatusBadge>
-              </section>
+              </div>
 
-              <section className="parent-enrollment-section">
-                <h3 className="parent-enrollment-section__title">
-                  <GraduationCap size={20} /> Student Information
-                </h3>
-                <InfoGrid items={[
-                  { label: 'Full Name', value: formatDisplayValue(child.student?.fullName) },
-                  { label: 'Date of Birth', value: formatDisplayValue(child.student?.dateOfBirth) },
-                  { label: 'Gender', value: formatGender(child.student?.gender) },
-                  { label: 'Blood Group', value: formatDisplayValue(child.student?.bloodGroup) },
-                  { label: 'Class Applying', value: formatDisplayValue(child.student?.classApplying?.toUpperCase()) },
-                  { label: 'Previous School', value: formatDisplayValue(child.student?.previousSchool) },
-                  { label: 'Nationality', value: formatDisplayValue(child.student?.nationality) },
-                  { label: 'Allergies', value: formatDisplayValue(child.student?.allergies) },
-                  { label: 'Medical Conditions', value: formatDisplayValue(child.student?.medicalConditions) },
-                  { label: 'Emergency Contact', value: formatDisplayValue(child.student?.emergencyContactName) },
-                ]} />
-              </section>
-
-              <section className="parent-enrollment-section">
-                <h3 className="parent-enrollment-section__title">
-                  <User size={20} /> Parent / Guardian
-                </h3>
-                <InfoGrid items={[
-                  { label: 'Father', value: formatDisplayValue(child.parent?.fatherName) },
-                  { label: 'Father Mobile', value: formatDisplayValue(child.parent?.fatherMobile) },
-                  { label: 'Father Email', value: formatDisplayValue(child.parent?.fatherEmail) },
-                  { label: 'Mother', value: formatDisplayValue(child.parent?.motherName) },
-                  { label: 'Mother Mobile', value: formatDisplayValue(child.parent?.motherMobile) },
-                  { label: 'Alternate Contact', value: formatDisplayValue(child.parent?.alternateContact) },
-                ]} />
-              </section>
-
-              <section className="parent-enrollment-section">
-                <h3 className="parent-enrollment-section__title">
-                  <MapPin size={20} /> Address
-                </h3>
-                <InfoGrid items={[
-                  { label: 'Current Address', value: formatDisplayValue(child.address?.currentAddress) },
-                  { label: 'City', value: formatDisplayValue(child.address?.city) },
-                  { label: 'State', value: formatDisplayValue(child.address?.state) },
-                  { label: 'PIN / ZIP', value: formatDisplayValue(child.address?.pinCode) },
-                  { label: 'Country', value: formatDisplayValue(child.address?.country) },
-                ]} />
-              </section>
-
-              <section className="parent-enrollment-section">
-                <h3 className="parent-enrollment-section__title">Status Timeline</h3>
-                <div className="parent-enrollment-timeline">
-                  {timeline.map((entry, index) => {
-                    const isCurrent = index === timeline.length - 1;
-                    const tone = timelineItemTone(entry.status);
-                    return (
-                      <div
-                        key={`${entry.status}-${entry.date}`}
-                        className={`parent-enrollment-timeline-item${isCurrent ? ' is-current' : ''}${tone ? ` ${tone}` : ''}`}
-                      >
-                        <div className="parent-enrollment-timeline-dot">
-                          <CheckCircle2 size={14} />
-                        </div>
-                        <div>
-                          <p className="parent-enrollment-timeline-status">
-                            {STATUS_LABELS[entry.status] || entry.status.replace(/_/g, ' ')}
-                          </p>
-                          {entry.note && (
-                            <p className="parent-enrollment-timeline-note">{entry.note}</p>
-                          )}
-                          <p className="parent-enrollment-timeline-date">
-                            {formatTimelineDate(entry.date)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className="parent-enrollment-layout">
+                <div className="parent-enrollment-main">
+                  <ApplicationOverviewSection child={child} />
+                  {isKidzee ? (
+                    <KidzeeApplicationSections child={child} />
+                  ) : (
+                    <StandardApplicationSections child={child} />
+                  )}
+                  <DocumentsSection documents={child.documents} documentsLink={documentsLink} />
+                  <DeclarationSection declaration={child.declaration} signature={child.signature} />
+                  <StatusTimelineSection timeline={timeline} />
                 </div>
-              </section>
+
+                <aside className="parent-enrollment-sidebar" aria-label="Fee summary">
+                  <FeeSection fee={fee} feesLink={feesLink} />
+                  {fee?.status === 'verified' && (
+                    <div className="sb-card app-review-card parent-enrollment-sidebar-note">
+                      <div className="parent-enrollment-sidebar-note__icon" aria-hidden>
+                        <CheckCircle2 size={20} />
+                      </div>
+                      <div>
+                        <h4>Fee Verified</h4>
+                        <p>Your fee payment has been confirmed by the school.</p>
+                      </div>
+                    </div>
+                  )}
+                </aside>
+              </div>
             </>
           )}
         </div>

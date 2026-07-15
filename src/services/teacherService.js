@@ -60,7 +60,12 @@ async function mockCreateTeacher(payload) {
 async function mockUpdateTeacher(id, updates) {
   await delay(250);
   const existing = usersData.users.find((u) => u.id === id) || {};
-  return sanitizeTeacher({ ...existing, ...updates, id });
+  const merged = { ...existing, ...updates, id };
+  if (updates.active !== undefined) {
+    merged.active = updates.active;
+    merged.status = updates.active ? 'active' : 'inactive';
+  }
+  return sanitizeTeacher(merged);
 }
 
 async function mockDeactivateTeacher(id) {

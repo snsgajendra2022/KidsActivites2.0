@@ -338,6 +338,7 @@ export function validateKidzeeFormForSubmit(data) {
 
   req('child.fullName', 'Child full name');
   req('child.dateOfBirth', 'Date of birth');
+  req('photos.child', "Child's photo");
 
   const hasGender = data.child?.gender?.male || data.child?.gender?.female;
   if (!hasGender) errors['child.gender'] = 'Gender is required';

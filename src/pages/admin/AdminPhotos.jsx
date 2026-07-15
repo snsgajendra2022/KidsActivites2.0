@@ -1,462 +1,136 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Upload, Trash2, RefreshCw, Download, AlertCircle, Play, FolderPlus, Replace } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
-import { PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
-import { ConfirmModal } from '../../components/ui/Modal.jsx';
+import ClassroomUploadQueuePanel from '../../components/upload/ClassroomUploadQueuePanel.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import {
   deletePhotoStudioImage,
   getPhotoStudioConfig,
   listPhotoStudioImages,
   replacePhotoStudioImage,
 } from '../../services/photoStudioService.js';
-import { listAdminAlbums, uploadAdminAlbumMedia, linkExistingToAlbum } from '../../services/classAlbumService.js';
-import { ApiError } from '../../services/api/client.js';
-import { rewritePhotoStudioUrl } from '../../utils/photoStudioUrls.js';
-import { downloadPhotoStudioAsset, resolvePhotoDownloadUrl } from '../../utils/photoStudioDownload.js';
 import {
-  buildProgressiveSrcChain,
+  listAdminAlbums,
+  linkExistingToAlbum,
+  UPLOAD_TARGETS,
+} from '../../services/classAlbumService.js';
+import {
+  filterAcceptedClassroomMediaFiles,
+  getMediaUploadLimitHint,
+  normalizeUploadLimits,
+  resolveMediaUploadError,
+  validateMediaUploadFile,
+  validateMediaUploadFiles,
+} from '../../utils/mediaUploadLimits.js';
+import {
+  classroomUploadManager,
+  MAX_UPLOAD_QUEUE,
+  LARGE_FILE_BYTES,
+  UPLOAD_ENDPOINT,
+  isAdminQueueItem,
+} from '../../utils/classroomUploadQueue.js';
+import { prepareFilesForUpload } from '../../utils/compressClassroomImage.js';
+import { getUploadTuning, probeUploadBandwidth } from '../../services/uploadBandwidthService.js';
+import { useUploadBandwidth } from '../../hooks/useUploadBandwidth.js';
+import { rewritePhotoStudioUrl } from '../../utils/photoStudioUrls.js';
+import { downloadPhotoStudioAsset } from '../../utils/photoStudioDownload.js';
+import {
   galleryNeedsVariantPolling,
   getGalleryThumbSrc,
   imageNeedsVariantPolling,
   preloadImageSrc,
 } from '../../utils/photoStudioProgressive.js';
-import '../../styles/admin-photos.css';
+import PhotoSharingHeader from '../../components/admin/photos/PhotoSharingHeader.jsx';
+import MediaStats from '../../components/admin/photos/MediaStats.jsx';
+import MediaUploadPanel from '../../components/admin/photos/MediaUploadPanel.jsx';
+import MediaToolbar from '../../components/admin/photos/MediaToolbar.jsx';
+import MediaDateGroup from '../../components/admin/photos/MediaDateGroup.jsx';
+import MediaEmptyState, { MediaLoadingGrid } from '../../components/admin/photos/MediaEmptyState.jsx';
+import DeleteMediaModal from '../../components/admin/photos/DeleteMediaModal.jsx';
+import ReplacePhotoModal from '../../components/admin/photos/ReplacePhotoModal.jsx';
+import AddToAlbumModal from '../../components/admin/photos/AddToAlbumModal.jsx';
+import {
+  PAGE_SIZE,
+  isAcceptedMediaFile,
+  isVideoItem,
+  getLocalDateKey,
+  groupImagesByDay,
+  dedupeImages,
+  detectNewlyUploadedIds,
+  toLightboxPhoto,
+  createFilePreviewUrls,
+  assignPreviewsByIndex,
+  assignPreviewsByFilename,
+  resolveLocalPreview,
+  extractImagesFromUploadResult,
+  waitForGalleryRefresh,
+  formatAlbumLabel,
+} from '../../components/admin/photos/utils.js';
+import '../../styles/photos/photo-sharing.css';
+import '../../styles/send-photos.css';
 
-const ACCEPTED_MEDIA = 'image/*,video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm';
-
-function isVideoItem(item) {
-  return item?.mediaType === 'VIDEO';
-}
-
-function isAcceptedMediaFile(file) {
-  if (!file) return false;
-  if (file.type.startsWith('image/') || file.type.startsWith('video/')) return true;
-  const name = (file.name || '').toLowerCase();
-  return ['.mp4', '.mov', '.webm', '.m4v'].some((ext) => name.endsWith(ext));
-}
-
-const PAGE_SIZE = 20;
-
-function getLocalDateKey(dateInput) {
-  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function formatGroupDateLabel(iso) {
-  const photoDay = getLocalDateKey(iso);
+function matchesDateFilter(uploadTime, dateFilter) {
+  if (!uploadTime || dateFilter === 'all') return true;
+  const d = new Date(uploadTime);
   const now = new Date();
+  const key = getLocalDateKey(d);
   const todayKey = getLocalDateKey(now);
+
+  if (dateFilter === 'today') return key === todayKey;
+
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = getLocalDateKey(yesterday);
+  if (dateFilter === 'yesterday') return key === getLocalDateKey(yesterday);
 
-  if (photoDay === todayKey) return 'Today';
-  if (photoDay === yesterdayKey) return 'Yesterday';
-  return new Date(iso).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  if (dateFilter === 'week') {
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return d >= weekAgo;
+  }
+
+  if (dateFilter === 'month') {
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }
+
+  return true;
 }
 
-function groupImagesByDay(images) {
-  const groups = new Map();
-  images.forEach((img) => {
-    const key = getLocalDateKey(img.uploadTime);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(img);
-  });
-  return Array.from(groups.entries()).map(([dateKey, items]) => ({
-    dateKey,
-    label: formatGroupDateLabel(items[0].uploadTime),
-    images: items,
-  }));
-}
-
-function dedupeImages(images) {
-  const seen = new Set();
+function filterLoadedImages(images, { searchQuery, typeFilter, dateFilter }) {
+  const q = searchQuery.trim().toLowerCase();
   return images.filter((img) => {
-    const key = `${img.id}|${img.previewUrl}|${img.uploadTime}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    if (q && !(img.filename || '').toLowerCase().includes(q)) return false;
+    if (typeFilter === 'photos' && isVideoItem(img)) return false;
+    if (typeFilter === 'videos' && !isVideoItem(img)) return false;
+    if (typeFilter === 'processing' && !imageNeedsVariantPolling(img)) return false;
+    if (!matchesDateFilter(img.uploadTime, dateFilter)) return false;
     return true;
   });
 }
 
-function collectUploadResultIds(response) {
-  if (!response) return [];
-  const ids = [];
-  const lists = [response, response.images, response.media, response.uploaded, response.items, response.data]
-    .filter((entry) => Array.isArray(entry));
-  lists.forEach((list) => {
-    list.forEach((item) => {
-      const id = item?.id ?? item?.imageId ?? item?.externalAssetId ?? item?.assetId;
-      if (id != null) ids.push(String(id));
-    });
-  });
-  if (response.id != null) ids.push(String(response.id));
-  return [...new Set(ids)];
-}
-
-function detectNewlyUploadedIds(beforeIds, batch, uploadedFiles, uploadResult) {
-  const fromResponse = collectUploadResultIds(uploadResult);
-  if (fromResponse.length > 0) return fromResponse;
-
-  const byNewId = batch
-    .filter((img) => !beforeIds.has(String(img.id)))
-    .map((img) => String(img.id));
-  if (byNewId.length > 0) return byNewId;
-
-  const uploadedNames = new Set(uploadedFiles.map((f) => f.name.toLowerCase()));
-  const byFilename = batch
-    .filter((img) => uploadedNames.has((img.filename || '').toLowerCase()))
-    .map((img) => String(img.id));
-  if (byFilename.length > 0) return byFilename;
-
-  const sorted = [...batch].sort((a, b) => new Date(b.uploadTime) - new Date(a.uploadTime));
-  return sorted.slice(0, uploadedFiles.length).map((img) => String(img.id));
-}
-
-function toLightboxPhoto(img) {
-  const isVideo = isVideoItem(img);
-  return {
-    id: img.id,
-    mediaType: img.mediaType || (isVideo ? 'VIDEO' : 'IMAGE'),
-    imageUrl: img.previewUrl || img.thumbnailUrl || img.downloadUrl,
-    previewUrl: img.previewUrl,
-    streamUrl: img.streamUrl,
-    thumbnailUrl: img.thumbnailUrl,
-    processingStatus: img.processingStatus || img.status,
-    videoId: img.videoId,
-    renditions: img.renditions,
-    caption: img.filename,
-    teacherName: isVideo ? 'VIDEO' : img.fileType?.toUpperCase(),
-    className: img.uploadTime
-      ? new Date(img.uploadTime).toLocaleString('en-IN')
-      : '',
-    variants: img.variants,
-    studioImage: isVideo ? null : img,
-  };
-}
-
-function isImageFile(file) {
-  if (!file) return false;
-  if (file.type.startsWith('image/')) return true;
-  const name = (file.name || '').toLowerCase();
-  return ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic', '.heif'].some((ext) => name.endsWith(ext));
-}
-
-function createFilePreviewUrls(files) {
-  return files.map((file) => (isImageFile(file) ? URL.createObjectURL(file) : null));
-}
-
-function assignPreviewsByIndex(filePreviews, ids) {
-  const previews = {};
-  ids.forEach((id, index) => {
-    const preview = filePreviews[index];
-    if (id && preview) previews[String(id)] = preview;
-  });
-  return previews;
-}
-
-function assignPreviewsByFilename(files, filePreviews, batch) {
-  const previews = {};
-  const idsByFilename = new Map(
-    batch.map((img) => [(img.filename || '').toLowerCase(), String(img.id)]),
-  );
-  files.forEach((file, index) => {
-    const preview = filePreviews[index];
-    if (!preview) return;
-    const id = idsByFilename.get(file.name.toLowerCase());
-    if (id) previews[id] = preview;
-  });
-  return previews;
-}
-
-function resolveLocalPreview(image, previewsById, previewsByFilename) {
-  const byId = previewsById[String(image?.id)];
-  if (byId) return byId;
-  const name = (image?.filename || '').toLowerCase();
-  return name ? previewsByFilename[name] : undefined;
-}
-
-function extractImagesFromUploadResult(uploadResult) {
-  if (!uploadResult) return [];
-  const lists = [
-    uploadResult.images,
-    uploadResult.media,
-    uploadResult.uploaded,
-    uploadResult.items,
-    uploadResult.data,
-  ].filter((entry) => Array.isArray(entry));
-  const images = lists.flat().filter((item) => item?.id != null || item?.imageId != null);
-  if (images.length > 0) {
-    return images.map((item) => ({
-      ...item,
-      id: item.id ?? item.imageId ?? item.externalAssetId,
-    }));
-  }
-  if (uploadResult.id != null || uploadResult.imageId != null) {
-    return [{
-      ...uploadResult,
-      id: uploadResult.id ?? uploadResult.imageId,
-    }];
-  }
-  return [];
-}
-
-async function waitForGalleryRefresh(loadPage, beforeIds, uploadResult, files, { attempts = 6 } = {}) {
-  let lastData = null;
-  let lastBatch = [];
-
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    if (attempt > 0) {
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((resolve) => setTimeout(resolve, attempt < 3 ? 800 : 1500));
-    }
-    // eslint-disable-next-line no-await-in-loop
-    lastData = await loadPage(0);
-    lastBatch = lastData?.images || [];
-    const responseIds = collectUploadResultIds(uploadResult);
-    const hasResponseIds = responseIds.length > 0
-      && responseIds.every((id) => lastBatch.some((img) => String(img.id) === String(id)));
-    const hasNewIds = lastBatch.some((img) => !beforeIds.has(String(img.id)));
-    const hasFilenameMatch = files.some((file) => lastBatch.some(
-      (img) => (img.filename || '').toLowerCase() === file.name.toLowerCase(),
-    ));
-    if (hasResponseIds || hasNewIds || hasFilenameMatch) {
-      return { data: lastData, batch: lastBatch };
-    }
-  }
-
-  return { data: lastData, batch: lastBatch };
-}
-
-function GalleryCard({
-  image,
-  localPreviewUrl,
-  onOpen,
-  onDelete,
-  onDownload,
-  onReplace,
-  onAddToAlbum,
-  canAddToAlbum,
-  adding,
-  downloading,
-  replacing,
-  isHighlighted,
-}) {
-  const isVideo = isVideoItem(image);
-  const processing = imageNeedsVariantPolling(image);
-  const serverChain = useMemo(() => {
-    if (isVideo) {
-      const url = rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '');
-      return url ? [url] : [];
-    }
-    const chain = buildProgressiveSrcChain(image).map(rewritePhotoStudioUrl).filter(Boolean);
-    if (imageNeedsVariantPolling(image)) {
-      const direct = rewritePhotoStudioUrl(
-        image.thumbnailUrl || image.previewUrl || image.downloadUrl || image?.variants?.previewFallbackUrl || '',
-      );
-      if (direct && !chain.includes(direct)) return [direct, ...chain];
-    }
-    return chain;
-  }, [image, isVideo]);
-  const serverSrc = serverChain[0] || (isVideo
-    ? rewritePhotoStudioUrl(image.thumbnailUrl || image.previewUrl || '')
-    : getGalleryThumbSrc(image));
-  const [src, setSrc] = useState(() => localPreviewUrl || serverSrc || '');
-  const [chainIndex, setChainIndex] = useState(0);
-  const [serverReady, setServerReady] = useState(false);
-
-  useEffect(() => {
-    setChainIndex(0);
-    setServerReady(false);
-    if (localPreviewUrl) {
-      setSrc(localPreviewUrl);
-      return;
-    }
-    setSrc(serverSrc || '');
-  }, [
-    image.id,
-    localPreviewUrl,
-    serverSrc,
-    image.previewUrl,
-    image.thumbnailUrl,
-    image.downloadUrl,
-    image.mediaType,
-    isVideo,
-    JSON.stringify(image?.variants ?? null),
-  ]);
-
-  useEffect(() => {
-    if (!localPreviewUrl || serverChain.length === 0) return undefined;
-    let cancelled = false;
-    const tryServer = async () => {
-      for (let i = 0; i < serverChain.length; i += 1) {
-        if (cancelled) break;
-        // eslint-disable-next-line no-await-in-loop
-        const ok = await preloadImageSrc(serverChain[i]);
-        if (ok && !cancelled) {
-          setSrc(serverChain[i]);
-          setChainIndex(i);
-          setServerReady(true);
-          break;
-        }
-      }
-    };
-    tryServer();
-    return () => { cancelled = true; };
-  }, [localPreviewUrl, serverChain]);
-
-  useEffect(() => {
-    if (localPreviewUrl || !serverSrc) return undefined;
-    let cancelled = false;
-    const tryServer = async () => {
-      for (let i = 0; i < serverChain.length; i += 1) {
-        if (cancelled) break;
-        // eslint-disable-next-line no-await-in-loop
-        const ok = await preloadImageSrc(serverChain[i]);
-        if (ok && !cancelled) {
-          setSrc(serverChain[i]);
-          setChainIndex(i);
-          setServerReady(true);
-          break;
-        }
-      }
-    };
-    tryServer();
-    return () => { cancelled = true; };
-  }, [localPreviewUrl, serverSrc, serverChain]);
-
-  const handleImageError = () => {
-    if (localPreviewUrl && !serverReady) {
-      setSrc(localPreviewUrl);
-      return;
-    }
-    const nextIndex = chainIndex + 1;
-    if (nextIndex < serverChain.length) {
-      setChainIndex(nextIndex);
-      setSrc(serverChain[nextIndex]);
-      return;
-    }
-    if (localPreviewUrl) {
-      setSrc(localPreviewUrl);
-    }
-  };
-
-  const showProcessing = processing && !localPreviewUrl && !serverReady;
-  const canDownload = Boolean(resolvePhotoDownloadUrl(image) || localPreviewUrl || image?.id);
-  const canReplace = !isVideo && Boolean(onReplace);
-
-  return (
-    <article
-      className={`admin-photos-card${isHighlighted ? ' admin-photos-card--highlighted' : ''}`}
-      data-photo-id={image.id}
-    >
-      {isHighlighted && (
-        <span className="admin-photos-card__new-badge">Just uploaded</span>
-      )}
-      <button
-        type="button"
-        className="admin-photos-card__media"
-        onClick={() => onOpen(image)}
-        aria-label={`View ${image.filename}`}
-      >
-        {src ? (
-          <>
-            <img
-              src={src}
-              alt=""
-              loading={isHighlighted ? 'eager' : 'lazy'}
-              decoding="async"
-              onError={handleImageError}
-            />
-            {isVideo && (
-              <span className="admin-photos-card__play" aria-hidden>
-                <Play size={28} fill="currentColor" />
-              </span>
-            )}
-            {showProcessing && (
-              <span className="admin-photos-card__processing">Processing…</span>
-            )}
-          </>
-        ) : (
-          <div className="admin-photos-card__placeholder" aria-hidden />
-        )}
-      </button>
-        <div className="admin-photos-card__body">
-        <p className="admin-photos-card__name" title={image.filename}>{image.filename}</p>
-        <div className="media-card-toolbar admin-photos-card__actions">
-          {canAddToAlbum && (
-            <button
-              type="button"
-              className="media-card-toolbar__btn admin-photos-card__btn admin-photos-card__btn--primary"
-              disabled={adding}
-              onClick={(e) => { e.stopPropagation(); onAddToAlbum?.(image); }}
-              aria-label="Add to album"
-              title="Add to selected album"
-            >
-              <FolderPlus size={14} />
-            </button>
-          )}
-          {canDownload && (
-            <button
-              type="button"
-              className="media-card-toolbar__btn admin-photos-card__btn"
-              disabled={downloading || replacing}
-              onClick={(e) => { e.stopPropagation(); onDownload?.(image); }}
-              aria-label="Download"
-              title="Download"
-            >
-              <Download size={14} />
-            </button>
-          )}
-          {canReplace && (
-            <button
-              type="button"
-              className="media-card-toolbar__btn admin-photos-card__btn"
-              disabled={downloading || replacing}
-              onClick={(e) => { e.stopPropagation(); onReplace?.(image); }}
-              aria-label="Replace image"
-              title="Replace image"
-            >
-              <Replace size={14} />
-            </button>
-          )}
-          <button
-            type="button"
-            className="media-card-toolbar__btn admin-photos-card__btn admin-photos-card__btn--danger"
-            disabled={downloading || replacing}
-            onClick={(e) => { e.stopPropagation(); onDelete(image); }}
-            aria-label="Delete"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 export default function AdminPhotos() {
   const { toast } = useToast();
+  useUploadBandwidth();
+  const { user } = useAuth();
+  const { tenantPath } = useTenantPath();
   const fileInputRef = useRef(null);
   const replaceInputRef = useRef(null);
+  const handledUploadIdsRef = useRef(new Set());
+
   const [config, setConfig] = useState(null);
   const [images, setImages] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [queueState, setQueueState] = useState(() => classroomUploadManager.getState());
+  const [isAddingFiles, setIsAddingFiles] = useState(false);
+  const [thumbnailUrls, setThumbnailUrls] = useState(() => new Map());
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -468,9 +142,18 @@ export default function AdminPhotos() {
   const [downloadingId, setDownloadingId] = useState(null);
   const [replacingId, setReplacingId] = useState(null);
   const [replaceTarget, setReplaceTarget] = useState(null);
+  const [replaceModalOpen, setReplaceModalOpen] = useState(false);
+  const [addToAlbumTarget, setAddToAlbumTarget] = useState(null);
+  const [addToAlbumCaption, setAddToAlbumCaption] = useState('');
   const [highlightedIds, setHighlightedIds] = useState(() => new Set());
   const [localPreviews, setLocalPreviews] = useState({});
   const [localPreviewsByFilename, setLocalPreviewsByFilename] = useState({});
+  const [showUploadPanel, setShowUploadPanel] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('grid');
+
   const localPreviewsRef = useRef(localPreviews);
   const localPreviewsByFilenameRef = useRef(localPreviewsByFilename);
 
@@ -485,6 +168,7 @@ export default function AdminPhotos() {
   useEffect(() => () => {
     Object.values(localPreviewsRef.current).forEach((url) => URL.revokeObjectURL(url));
     Object.values(localPreviewsByFilenameRef.current).forEach((url) => URL.revokeObjectURL(url));
+    thumbnailUrls.forEach((url) => URL.revokeObjectURL(url));
   }, []);
 
   const revokeLocalPreview = useCallback((id, filename) => {
@@ -540,10 +224,13 @@ export default function AdminPhotos() {
   }, []);
 
   const photosReady = Boolean(config?.configured);
+  const uploadLimits = useMemo(() => normalizeUploadLimits(config), [config]);
+  const uploadLimitHint = useMemo(() => getMediaUploadLimitHint(uploadLimits), [uploadLimits]);
 
-  const refreshGallery = useCallback(async () => {
+  const refreshGallery = useCallback(async ({ silent = false } = {}) => {
     setError('');
-    setLoading(true);
+    if (silent) setRefreshing(true);
+    else setLoading(true);
     try {
       const cfg = await getPhotoStudioConfig();
       setConfig(cfg);
@@ -556,10 +243,193 @@ export default function AdminPhotos() {
       setError(err?.message || 'Failed to load photos.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [loadPage]);
 
   useEffect(() => {
+    const unsub = classroomUploadManager.subscribe(() => {
+      setQueueState(classroomUploadManager.getState());
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const onOnline = () => classroomUploadManager.setOnline(true);
+    const onOffline = () => classroomUploadManager.setOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  const adminQueueItems = useMemo(
+    () => queueState.items.filter(isAdminQueueItem),
+    [queueState.items],
+  );
+
+  const adminQueueThumbKey = useMemo(
+    () => adminQueueItems.map((i) => `${i.id}:${i.fileKey}`).join('|'),
+    [adminQueueItems],
+  );
+
+  useEffect(() => {
+    setThumbnailUrls((prev) => {
+      const next = new Map(prev);
+      let changed = false;
+      adminQueueItems.forEach((item) => {
+        if (next.has(item.id)) return;
+        if (item.file) {
+          next.set(item.id, URL.createObjectURL(item.file));
+          changed = true;
+        }
+      });
+      Array.from(next.keys()).forEach((id) => {
+        if (!adminQueueItems.some((i) => i.id === id)) {
+          URL.revokeObjectURL(next.get(id));
+          next.delete(id);
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [adminQueueThumbKey, adminQueueItems]);
+
+  const pendingQueueItems = useMemo(
+    () => adminQueueItems.filter((i) => i.status === 'waiting' || i.status === 'paused'),
+    [adminQueueItems],
+  );
+
+  const activeQueueItems = useMemo(
+    () => adminQueueItems.filter((i) =>
+      i.status === 'waiting' || i.status === 'paused' || i.status === 'uploading'),
+    [adminQueueItems],
+  );
+
+  const isUploading = useMemo(
+    () => adminQueueItems.some((i) => i.status === 'uploading'),
+    [adminQueueItems],
+  );
+
+  const hasActiveBatch = useMemo(
+    () => adminQueueItems.some((i) =>
+      i.status === 'uploading' || i.status === 'waiting' || i.status === 'paused'),
+    [adminQueueItems],
+  );
+
+  const completedCount = useMemo(
+    () => adminQueueItems.filter((i) => i.status === 'completed').length,
+    [adminQueueItems],
+  );
+
+  const failedCount = useMemo(
+    () => adminQueueItems.filter((i) => i.status === 'failed').length,
+    [adminQueueItems],
+  );
+
+  const remainingCount = useMemo(
+    () => adminQueueItems.filter((i) => i.status !== 'completed').length,
+    [adminQueueItems],
+  );
+
+  const finishedCount = completedCount + failedCount;
+
+  const overallProgressPct = adminQueueItems.length
+    ? Math.round((completedCount / adminQueueItems.length) * 100)
+    : 0;
+
+  const revokeThumbnail = useCallback((id) => {
+    setThumbnailUrls((prev) => {
+      const url = prev.get(id);
+      if (!url) return prev;
+      URL.revokeObjectURL(url);
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const applyPickedFiles = useCallback(async (fileList) => {
+    const accepted = filterAcceptedClassroomMediaFiles(fileList);
+    if (accepted.length === 0) {
+      toast('Please choose image or video files (MP4, MOV, WebM).', 'warning');
+      return;
+    }
+    if (accepted.length < Array.from(fileList || []).length) {
+      toast('Some files were skipped. Use images (JPG, PNG, WebP) or videos (MP4, MOV, WebM).', 'warning');
+    }
+    const sizeCheck = validateMediaUploadFiles(accepted, uploadLimits);
+    if (!sizeCheck.valid) {
+      toast(sizeCheck.error, 'error');
+      return;
+    }
+
+    setIsAddingFiles(true);
+    try {
+      await probeUploadBandwidth();
+      const tuning = getUploadTuning();
+      const prepared = await prepareFilesForUpload(sizeCheck.files, {
+        quality: tuning.compressionQuality,
+        maxWidth: tuning.maxWidth,
+        maxHeight: tuning.maxHeight,
+        targetMaxBytes: tuning.targetMaxBytes,
+      });
+      const { added, skipped, skippedDueToLimit } = await classroomUploadManager.addFiles(prepared, {
+        originEndpoint: UPLOAD_ENDPOINT.ADMIN,
+      });
+      if (added) {
+        toast(`${added} file${added === 1 ? '' : 's'} added to upload queue`, 'success');
+        setShowUploadPanel(true);
+      }
+      if (skipped) toast(`${skipped} file${skipped === 1 ? '' : 's'} already in queue`, 'warning');
+      if (skippedDueToLimit) {
+        toast(`Queue limit (${MAX_UPLOAD_QUEUE}) reached — ${skippedDueToLimit} file(s) not added`, 'error');
+      }
+    } finally {
+      setIsAddingFiles(false);
+    }
+  }, [toast, uploadLimits]);
+
+  const handleGalleryUploadComplete = useCallback(async (item) => {
+    const uploadResult = item.uploadResult;
+    const filePreviews = createFilePreviewUrls([item.file]);
+    const previewsByFilename = {};
+    if (filePreviews[0]) previewsByFilename[item.file.name.toLowerCase()] = filePreviews[0];
+    setLocalPreviewsByFilename((prev) => ({ ...prev, ...previewsByFilename }));
+
+    const uploadedImages = extractImagesFromUploadResult(uploadResult);
+    if (uploadedImages.length > 0) {
+      setImages((prev) => dedupeImages([...uploadedImages, ...prev]));
+    }
+
+    const beforeIds = new Set(images.map((img) => String(img.id)));
+    try {
+      const { batch } = await waitForGalleryRefresh(loadPage, beforeIds, uploadResult, [item.file]);
+      const newIds = detectNewlyUploadedIds(beforeIds, batch, [item.file], uploadResult);
+      const previewsById = {
+        ...assignPreviewsByIndex(filePreviews, newIds),
+        ...assignPreviewsByFilename([item.file], filePreviews, batch),
+      };
+      markHighlighted(newIds);
+      setLocalPreviews((prev) => ({ ...prev, ...previewsById }));
+    } catch {
+      // gallery refresh is best-effort
+    }
+  }, [images, loadPage, markHighlighted]);
+
+  useEffect(() => {
+    queueState.items.forEach((item) => {
+      if (item.status !== 'completed' || handledUploadIdsRef.current.has(item.id)) return;
+      if (item.uploadParams?.endpoint !== UPLOAD_ENDPOINT.ADMIN) return;
+      handledUploadIdsRef.current.add(item.id);
+      void handleGalleryUploadComplete(item);
+    });
+  }, [queueState.items, handleGalleryUploadComplete]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshGallery();
   }, [refreshGallery]);
 
@@ -575,11 +445,16 @@ export default function AdminPhotos() {
     [images],
   );
 
+  const filteredImages = useMemo(
+    () => filterLoadedImages(sortedImages, { searchQuery, typeFilter, dateFilter }),
+    [sortedImages, searchQuery, typeFilter, dateFilter],
+  );
+
   const needsVariantPolling = useMemo(() => {
     if (lightboxIndex < 0) return false;
-    const active = sortedImages[lightboxIndex];
+    const active = filteredImages[lightboxIndex];
     return !!active && imageNeedsVariantPolling(active);
-  }, [lightboxIndex, sortedImages]);
+  }, [lightboxIndex, filteredImages]);
 
   const galleryPollingNeeded = useMemo(
     () => galleryNeedsVariantPolling(sortedImages) || highlightedIds.size > 0,
@@ -626,7 +501,7 @@ export default function AdminPhotos() {
   useEffect(() => {
     if (!needsVariantPolling || !photosReady || lightboxIndex < 0) return undefined;
 
-    const activeId = sortedImages[lightboxIndex]?.id;
+    const activeId = filteredImages[lightboxIndex]?.id;
 
     const poll = async () => {
       try {
@@ -641,17 +516,132 @@ export default function AdminPhotos() {
 
     const timer = setInterval(poll, 4000);
     return () => clearInterval(timer);
-  }, [needsVariantPolling, photosReady, lightboxIndex, sortedImages.length, sortedImages[lightboxIndex]?.id]);
+  }, [needsVariantPolling, photosReady, lightboxIndex, filteredImages]);
 
-  const imageGroups = useMemo(() => groupImagesByDay(sortedImages), [sortedImages]);
-  const lightboxPhotos = useMemo(() => sortedImages.map(toLightboxPhoto), [sortedImages]);
+  const imageGroups = useMemo(() => groupImagesByDay(filteredImages), [filteredImages]);
+  const lightboxPhotos = useMemo(() => filteredImages.map(toLightboxPhoto), [filteredImages]);
   const lightboxPhoto = lightboxIndex >= 0 ? lightboxPhotos[lightboxIndex] : null;
   const hasMore = page + 1 < totalPages;
 
+  const photoCount = useMemo(
+    () => sortedImages.filter((img) => !isVideoItem(img)).length,
+    [sortedImages],
+  );
+  const videoCount = useMemo(
+    () => sortedImages.filter(isVideoItem).length,
+    [sortedImages],
+  );
+
+  const selectedAlbum = useMemo(
+    () => albums.find((album) => album.id === selectedAlbumId) || null,
+    [albums, selectedAlbumId],
+  );
+
+  const buildUploadParams = useCallback(() => ({
+    endpoint: UPLOAD_ENDPOINT.ADMIN,
+    albumId: selectedAlbumId,
+    classId: selectedAlbum?.classId || null,
+    className: selectedAlbum?.className || selectedAlbum?.albumName || null,
+    schoolId: user?.schoolId || null,
+    schoolName: user?.schoolName || null,
+    uploadTarget: selectedAlbum?.classId ? UPLOAD_TARGETS.CLASS_ALBUM : null,
+    caption: uploadCaption.trim() || undefined,
+  }), [selectedAlbum, selectedAlbumId, uploadCaption, user?.schoolId, user?.schoolName]);
+
+  const batchSuccessShownRef = useRef(false);
+
+  useEffect(() => {
+    const hasWaiting = adminQueueItems.some(
+      (i) => i.status === 'waiting' || i.status === 'uploading' || i.status === 'paused',
+    );
+    const allDone = adminQueueItems.length > 0
+      && adminQueueItems.every((i) => i.status === 'completed' || i.status === 'failed');
+    if (hasWaiting || !allDone) {
+      batchSuccessShownRef.current = false;
+      return;
+    }
+    if (batchSuccessShownRef.current) return;
+
+    const adminCompleted = adminQueueItems.filter((i) => i.status === 'completed').length;
+    const adminFailed = adminQueueItems.filter((i) => i.status === 'failed').length;
+
+    if (adminCompleted > 0 && adminFailed === 0) {
+      batchSuccessShownRef.current = true;
+      const albumLabel = formatAlbumLabel(selectedAlbum);
+      toast(
+        adminCompleted === 1
+          ? `Added to ${albumLabel}.`
+          : `${adminCompleted} files added to ${albumLabel}.`,
+        'success',
+      );
+    } else if (adminFailed > 0 && adminCompleted === 0) {
+      batchSuccessShownRef.current = true;
+      toast('Upload failed. Check the queue for details.', 'error');
+    }
+  }, [completedCount, failedCount, adminQueueItems, selectedAlbum, toast]);
+
+  const handleStartUpload = useCallback(async () => {
+    if (!photosReady) {
+      toast('Photo storage is not connected for this workspace yet.', 'warning');
+      return;
+    }
+    if (!selectedAlbumId) {
+      toast('Choose a class album before uploading.', 'warning');
+      return;
+    }
+    if (pendingQueueItems.length === 0) {
+      toast('Add at least one file to the queue.', 'warning');
+      return;
+    }
+
+    batchSuccessShownRef.current = false;
+    try {
+      const count = await classroomUploadManager.submitPending(buildUploadParams(), {
+        scopeEndpoint: UPLOAD_ENDPOINT.ADMIN,
+      });
+      if (count === 0) {
+        toast('No files waiting to upload.', 'warning');
+      }
+    } catch (err) {
+      toast(resolveMediaUploadError(err, uploadLimits), 'error');
+    }
+  }, [buildUploadParams, pendingQueueItems.length, photosReady, selectedAlbumId, toast, uploadLimits]);
+
+  const cancelUpload = useCallback(async (id) => {
+    revokeThumbnail(id);
+    await classroomUploadManager.cancel(id);
+    toast('Upload cancelled.', 'warning');
+  }, [revokeThumbnail, toast]);
+
+  const cancelAllUploads = useCallback(async () => {
+    const activeIds = adminQueueItems
+      .filter((i) => i.status === 'uploading' || i.status === 'waiting' || i.status === 'paused')
+      .map((i) => i.id);
+    activeIds.forEach((id) => revokeThumbnail(id));
+    await classroomUploadManager.cancelAllActive({ scopeEndpoint: UPLOAD_ENDPOINT.ADMIN });
+    toast('All uploads cancelled.', 'warning');
+  }, [adminQueueItems, revokeThumbnail, toast]);
+
+  const removeFromQueue = useCallback(async (id) => {
+    revokeThumbnail(id);
+    await classroomUploadManager.remove(id);
+  }, [revokeThumbnail]);
+
+  const retryUpload = useCallback(async (id) => {
+    await classroomUploadManager.retry(id);
+  }, []);
+
+  const handleClearFinished = useCallback(async () => {
+    const removedIds = await classroomUploadManager.clearFinished({
+      scopeEndpoint: UPLOAD_ENDPOINT.ADMIN,
+    });
+    removedIds.forEach((id) => revokeThumbnail(id));
+  }, [revokeThumbnail]);
+
   const openLightbox = useCallback((image) => {
-    const idx = sortedImages.findIndex((img) => img.id === image.id);
+    const idx = filteredImages.findIndex((img) => img.id === image.id);
     if (idx >= 0) setLightboxIndex(idx);
-  }, [sortedImages]);
+  }, [filteredImages]);
 
   const handleLoadMore = async () => {
     if (!hasMore || loadingMore) return;
@@ -665,90 +655,25 @@ export default function AdminPhotos() {
     }
   };
 
-  const selectedAlbum = useMemo(
-    () => albums.find((album) => album.id === selectedAlbumId) || null,
-    [albums, selectedAlbumId],
-  );
-
-  const handleUploadFiles = async (fileList) => {
-    if (!photosReady) {
-      toast('Photo storage is not connected for this workspace yet.', 'warning');
-      return;
-    }
-    const files = Array.from(fileList || []).filter(isAcceptedMediaFile);
-    if (files.length === 0) {
-      toast('Please choose image or video files (MP4, MOV, WebM).', 'warning');
-      return;
-    }
-    if (!selectedAlbumId) {
-      toast('Choose a class album before uploading.', 'warning');
-      return;
-    }
-
-    setUploading(true);
-    const filePreviews = createFilePreviewUrls(files);
-    const previewsByFilename = {};
-    files.forEach((file, index) => {
-      if (filePreviews[index]) previewsByFilename[file.name.toLowerCase()] = filePreviews[index];
-    });
-    setLocalPreviewsByFilename((prev) => ({ ...prev, ...previewsByFilename }));
-
-    try {
-      const beforeIds = new Set(images.map((img) => String(img.id)));
-      const uploadResult = await uploadAdminAlbumMedia({
-        albumId: selectedAlbumId,
-        caption: uploadCaption.trim() || undefined,
-        files,
-      });
-
-      const uploadedImages = extractImagesFromUploadResult(uploadResult);
-      if (uploadedImages.length > 0) {
-        setImages((prev) => dedupeImages([...uploadedImages, ...prev]));
-      }
-
-      const { batch } = await waitForGalleryRefresh(loadPage, beforeIds, uploadResult, files);
-      const newIds = detectNewlyUploadedIds(beforeIds, batch, files, uploadResult);
-      const previewsById = {
-        ...assignPreviewsByIndex(filePreviews, newIds),
-        ...assignPreviewsByFilename(files, filePreviews, batch),
-      };
-
-      markHighlighted(newIds);
-      setLocalPreviews((prev) => ({ ...prev, ...previewsById }));
-
-      const albumLabel = selectedAlbum?.className || selectedAlbum?.albumName || 'album';
-      toast(
-        files.length === 1
-          ? `Added to ${albumLabel}.`
-          : `${files.length} files added to ${albumLabel}.`,
-        'success',
-      );
-    } catch (err) {
-      const message = err instanceof ApiError
-        ? err.message
-        : (err?.message || 'Upload failed.');
-      toast(message, 'error');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const handleAddExistingToAlbum = async (image) => {
-    if (!selectedAlbumId || !image?.id) {
-      toast('Select a class album first.', 'warning');
+  const handleAddExistingToAlbum = async (image, { albumId, caption } = {}) => {
+    const targetAlbumId = albumId || selectedAlbumId;
+    if (!targetAlbumId || !image?.id) {
+      setAddToAlbumTarget(image);
+      setAddToAlbumCaption(uploadCaption.trim() || image?.filename || '');
       return;
     }
     setLinkingId(image.id);
     try {
       await linkExistingToAlbum({
-        albumId: selectedAlbumId,
+        albumId: targetAlbumId,
         externalAssetIds: [String(image.id)],
-        caption: uploadCaption.trim() || image.filename,
+        caption: caption || uploadCaption.trim() || image.filename,
       });
-      const albumLabel = selectedAlbum?.className || selectedAlbum?.albumName || 'album';
+      const album = albums.find((a) => a.id === targetAlbumId);
+      const albumLabel = formatAlbumLabel(album);
       toast(`Added to ${albumLabel}.`, 'success');
       markHighlighted([String(image.id)]);
+      setAddToAlbumTarget(null);
     } catch (err) {
       toast(err?.message || 'Could not add to album.', 'error');
     } finally {
@@ -786,6 +711,10 @@ export default function AdminPhotos() {
 
   const handleReplaceClick = (image) => {
     setReplaceTarget(image);
+    setReplaceModalOpen(true);
+  };
+
+  const handleReplaceChooseFile = () => {
     replaceInputRef.current?.click();
   };
 
@@ -794,11 +723,21 @@ export default function AdminPhotos() {
     const file = Array.from(fileList || []).find(isAcceptedMediaFile);
     if (!image?.id || !file) {
       setReplaceTarget(null);
+      setReplaceModalOpen(false);
+      return;
+    }
+    const sizeCheck = validateMediaUploadFile(file, uploadLimits);
+    if (!sizeCheck.valid) {
+      toast(sizeCheck.error, 'error');
+      setReplaceTarget(null);
+      setReplaceModalOpen(false);
+      if (replaceInputRef.current) replaceInputRef.current.value = '';
       return;
     }
     if (isVideoItem(image)) {
       toast('Replace is only available for photos.', 'warning');
       setReplaceTarget(null);
+      setReplaceModalOpen(false);
       return;
     }
 
@@ -821,10 +760,11 @@ export default function AdminPhotos() {
       markHighlighted([replacedId]);
       toast('Image replaced.', 'success');
     } catch (err) {
-      toast(err?.message || 'Replace failed.', 'error');
+      toast(resolveMediaUploadError(err, uploadLimits), 'error');
     } finally {
       setReplacingId(null);
       setReplaceTarget(null);
+      setReplaceModalOpen(false);
       if (replaceInputRef.current) replaceInputRef.current.value = '';
     }
   };
@@ -853,225 +793,218 @@ export default function AdminPhotos() {
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    handleUploadFiles(e.dataTransfer.files);
+    void applyPickedFiles(e.dataTransfer.files);
   };
+
+  const hasActiveFilters = searchQuery.trim() || typeFilter !== 'all' || dateFilter !== 'all';
+  const showEmptyLibrary = photosReady && sortedImages.length === 0 && !error && !loading;
+  const showNoResults = photosReady && sortedImages.length > 0 && filteredImages.length === 0 && !error;
+  const showGallery = photosReady && !error && filteredImages.length > 0;
 
   return (
     <DashboardLayout>
-      <div className="admin-photos-page">
-        <PageHeader
-          title="Photo Sharing"
-          subtitle="Browse your media library, pick a class album, then upload new files or add existing photos/videos with the + button on each item."
-          icon={Image}
+      <div className="photo-sharing-page admin-photos-page">
+        <PhotoSharingHeader
+          tenantPath={tenantPath}
+          photosReady={photosReady}
+          loading={loading}
+          refreshing={refreshing}
+          config={config}
+          showUploadPanel={showUploadPanel}
+          onToggleUpload={() => setShowUploadPanel((v) => !v)}
+          onRefresh={() => refreshGallery({ silent: photosReady })}
         />
 
         {photosReady && !loading && (
-          <div className="admin-media-stats">
-            <div className="admin-media-stat">
-              <span className="admin-media-stat__value">{sortedImages.length}</span>
-              <span className="admin-media-stat__label">In library</span>
-            </div>
-            <div className="admin-media-stat">
-              <span className="admin-media-stat__value">{albums.length}</span>
-              <span className="admin-media-stat__label">Class albums</span>
-            </div>
-            <div className="admin-media-stat">
-              <span className="admin-media-stat__value">
-                {sortedImages.filter(isVideoItem).length}
-              </span>
-              <span className="admin-media-stat__label">Videos</span>
-            </div>
-          </div>
-        )}
-
-        {!loading && config?.tenantConnected && (
-          <p className="admin-photos-status">
-            Cloud storage connected
-            {config.filevaultUsername ? ` (${config.filevaultUsername})` : ''}
-          </p>
-        )}
-
-        {!loading && config && !photosReady && (
-          <div className="admin-photos-alert">
-            <AlertCircle size={20} />
-            <div>
-              <strong>Photo storage not available</strong>
-              {config.connectionStatus === 'FAILED' ? (
-                <p>
-                  Cloud setup failed for this workspace
-                  {config.statusMessage ? `: ${config.statusMessage}` : '.'}
-                  {' '}Contact your administrator to retry provisioning.
-                </p>
-              ) : (
-                <p>
-                  This school workspace does not have cloud photo storage connected yet.
-                  It is created automatically when the workspace is provisioned.
-                </p>
-              )}
-            </div>
-          </div>
+          <MediaStats
+            totalLoaded={sortedImages.length}
+            albumCount={albums.length}
+            photoCount={photoCount}
+            videoCount={videoCount}
+          />
         )}
 
         {photosReady && (
-          <section
-            className={`admin-photos-upload premium-card ${dragOver ? 'is-dragover' : ''}`}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-          >
-            <div className="admin-photos-upload__options">
-              <label className="admin-photos-upload__field">
-                <span>Album</span>
-                <select
-                  value={selectedAlbumId}
-                  onChange={(e) => setSelectedAlbumId(e.target.value)}
-                  disabled={uploading || albums.length === 0}
-                >
-                  <option value="">
-                    {albums.length === 0 ? 'No albums available' : 'Select an album…'}
-                  </option>
-                  {albums.map((album) => (
-                    <option key={album.id} value={album.id}>
-                      {album.albumType === 'CUSTOM' ? album.albumName : (album.className || album.albumName)}
-                      {album.albumName && album.className && album.albumType !== 'CUSTOM'
-                        ? ` — ${album.albumName}`
-                        : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="admin-photos-upload__field">
-                <span>Caption (optional)</span>
-                <input
-                  type="text"
-                  value={uploadCaption}
-                  onChange={(e) => setUploadCaption(e.target.value)}
-                  placeholder="e.g. Sports day"
-                  maxLength={200}
-                  disabled={uploading}
-                />
-              </label>
+          <>
+            <div className="admin-photos-upload-status" aria-live="polite">
+              {queueState.isOnline ? (
+                <span className="send-photos-online-badge">
+                  <Wifi size={14} aria-hidden />
+                  Online
+                </span>
+              ) : (
+                <span className="send-photos-online-badge">
+                  <WifiOff size={14} aria-hidden />
+                  Offline — uploads paused
+                </span>
+              )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPTED_MEDIA}
-              multiple
-              className="admin-photos-upload__input"
-              onChange={(e) => handleUploadFiles(e.target.files)}
+            <MediaUploadPanel
+              visible={showUploadPanel}
+              albums={albums}
+              selectedAlbumId={selectedAlbumId}
+              onAlbumChange={setSelectedAlbumId}
+              uploadCaption={uploadCaption}
+              onCaptionChange={setUploadCaption}
+              uploadLimitHint={`${uploadLimitHint} · photos auto-compress · large videos upload at network speed`}
+              uploading={isUploading}
+              uploadProgress={overallProgressPct}
+              dragOver={dragOver}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              queueCount={activeQueueItems.length}
+              queueItems={activeQueueItems}
+              queuePreviewUrls={thumbnailUrls}
+              isAddingFiles={isAddingFiles}
+              onChooseFiles={() => fileInputRef.current?.click()}
+              onUpload={() => { void handleStartUpload(); }}
+              onFileInputChange={(e) => {
+                void applyPickedFiles(e.target.files);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }}
+              fileInputRef={fileInputRef}
+              replaceInputRef={replaceInputRef}
+              onReplaceFileChange={(e) => handleReplaceFile(e.target.files)}
             />
-            <input
-              ref={replaceInputRef}
-              type="file"
-              accept={ACCEPTED_MEDIA}
-              className="admin-photos-upload__input"
-              onChange={(e) => handleReplaceFile(e.target.files)}
+            <ClassroomUploadQueuePanel
+              items={adminQueueItems}
+              thumbnailUrls={thumbnailUrls}
+              hasActiveBatch={hasActiveBatch}
+              remainingCount={remainingCount}
+              finishedCount={finishedCount}
+              onCancel={cancelUpload}
+              onCancelAll={cancelAllUploads}
+              onRemove={removeFromQueue}
+              onRetry={retryUpload}
+                onClearFinished={() => { void handleClearFinished(); }}
+              className="send-photos-card send-photos-queue admin-photos-queue"
             />
-            <Upload size={22} className="admin-photos-upload__icon" />
-            <p>
-              {selectedAlbum
-                ? `Target: ${selectedAlbum.albumType === 'CUSTOM' ? selectedAlbum.albumName : (selectedAlbum.className || selectedAlbum.albumName)}. Upload new files or use + on items below to add existing media.`
-                : 'Select an album above, then upload or add existing items from the library.'}
-            </p>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={uploading || !selectedAlbumId}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploading ? 'Uploading…' : 'Choose files'}
-            </Button>
-          </section>
+          </>
         )}
 
         {error && (
-          <div className="admin-photos-error">
+          <div className="photo-sharing-error" role="alert">
             <p>{error}</p>
-            <Button type="button" variant="secondary" onClick={refreshGallery}>
-              <RefreshCw size={16} />
+            <Button type="button" variant="secondary" onClick={() => refreshGallery()}>
+              <RefreshCw size={16} aria-hidden />
               Retry
             </Button>
           </div>
         )}
 
-        {loading ? (
-          <div className="admin-photos-grid admin-photos-grid--loading">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="admin-photos-skeleton" />
-            ))}
-          </div>
-        ) : photosReady && sortedImages.length === 0 && !error ? (
-          <div className="admin-photos-empty">
-            <Image size={28} strokeWidth={1.75} />
-            <h2>No media yet</h2>
-            <p>Select a class album above and upload your first photos or videos.</p>
-          </div>
-        ) : (
-          photosReady && !error && (
-            <>
-              {imageGroups.map((group) => (
-                <section key={group.dateKey} className="admin-photos-group">
-                  <h3 className="admin-photos-group__title">{group.label}</h3>
-                  <div className="admin-photos-grid">
-                    {group.images.map((image) => (
-                      <GalleryCard
-                        key={image.id}
-                        image={image}
-                        localPreviewUrl={resolveLocalPreview(
-                          image,
-                          localPreviews,
-                          localPreviewsByFilename,
-                        )}
-                        onOpen={openLightbox}
-                        onDelete={setDeleteTarget}
-                        onDownload={handleDownloadImage}
-                        onReplace={handleReplaceClick}
-                        onAddToAlbum={handleAddExistingToAlbum}
-                        canAddToAlbum={Boolean(selectedAlbumId)}
-                        adding={linkingId === image.id}
-                        downloading={downloadingId === image.id}
-                        replacing={replacingId === image.id}
-                        isHighlighted={highlightedIds.has(String(image.id))}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-
-              {hasMore && (
-                <div className="admin-photos-load-more">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                  >
-                    {loadingMore ? 'Loading…' : 'Load more'}
-                  </Button>
-                </div>
-              )}
-            </>
-          )
+        {photosReady && !loading && sortedImages.length > 0 && (
+          <MediaToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            dateFilter={dateFilter}
+            onDateFilterChange={setDateFilter}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onRefresh={() => refreshGallery({ silent: true })}
+            refreshing={refreshing}
+            resultCount={filteredImages.length}
+            totalLoaded={sortedImages.length}
+            hasMore={hasMore}
+          />
         )}
+
+        {loading ? (
+          <MediaLoadingGrid count={10} viewMode={viewMode} />
+        ) : showEmptyLibrary ? (
+          <MediaEmptyState
+            variant="empty"
+            onUploadClick={() => setShowUploadPanel(true)}
+          />
+        ) : showNoResults ? (
+          <MediaEmptyState variant="no-results" hasFilters={hasActiveFilters} />
+        ) : showGallery ? (
+          <>
+            {imageGroups.map((group) => (
+              <MediaDateGroup
+                key={group.dateKey}
+                group={group}
+                viewMode={viewMode}
+                localPreviews={localPreviews}
+                localPreviewsByFilename={localPreviewsByFilename}
+                resolveLocalPreview={resolveLocalPreview}
+                onOpen={openLightbox}
+                onDelete={setDeleteTarget}
+                onDownload={handleDownloadImage}
+                onReplace={handleReplaceClick}
+                onAddToAlbum={handleAddExistingToAlbum}
+                canAddToAlbum={Boolean(selectedAlbumId)}
+                linkingId={linkingId}
+                downloadingId={downloadingId}
+                replacingId={replacingId}
+                highlightedIds={highlightedIds}
+              />
+            ))}
+
+            {hasMore && (
+              <div className="photo-sharing-load-more">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Loading…' : 'Load more'}
+                </Button>
+              </div>
+            )}
+          </>
+        ) : null}
       </div>
 
       <PhotoLightbox
         photo={lightboxPhoto}
+        photos={lightboxPhotos}
+        currentIndex={lightboxIndex}
         onClose={() => setLightboxIndex(-1)}
         onPrev={() => setLightboxIndex((i) => (i > 0 ? i - 1 : i))}
         onNext={() => setLightboxIndex((i) => (i < lightboxPhotos.length - 1 ? i + 1 : i))}
         hasPrev={lightboxIndex > 0}
         hasNext={lightboxIndex >= 0 && lightboxIndex < lightboxPhotos.length - 1}
+        positionLabel={lightboxIndex >= 0 ? `${lightboxIndex + 1} of ${lightboxPhotos.length}` : ''}
       />
 
-      <ConfirmModal
+      <DeleteMediaModal
         open={!!deleteTarget}
+        target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title={deleteTarget?.mediaType === 'VIDEO' ? 'Delete video?' : 'Delete photo?'}
-        message={deleteTarget ? `Remove "${deleteTarget.filename}"? This cannot be undone.` : ''}
-        confirmText="Delete"
         loading={deleting}
+      />
+
+      <ReplacePhotoModal
+        open={replaceModalOpen}
+        target={replaceTarget}
+        onClose={() => {
+          setReplaceModalOpen(false);
+          setReplaceTarget(null);
+        }}
+        onChooseFile={handleReplaceChooseFile}
+        loading={Boolean(replacingId)}
+        uploadLimitHint={uploadLimitHint}
+      />
+
+      <AddToAlbumModal
+        open={!!addToAlbumTarget}
+        image={addToAlbumTarget}
+        albums={albums}
+        selectedAlbumId={selectedAlbumId}
+        onAlbumChange={setSelectedAlbumId}
+        caption={addToAlbumCaption}
+        onCaptionChange={setAddToAlbumCaption}
+        onConfirm={() => handleAddExistingToAlbum(addToAlbumTarget, {
+          albumId: selectedAlbumId,
+          caption: addToAlbumCaption,
+        })}
+        loading={Boolean(linkingId)}
+        onClose={() => setAddToAlbumTarget(null)}
       />
     </DashboardLayout>
   );

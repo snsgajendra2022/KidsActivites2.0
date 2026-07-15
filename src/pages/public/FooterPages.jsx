@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, AlertTriangle, Wrench } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { getSystemStatus } from '../../services/portalConfigService.js';
@@ -22,14 +23,21 @@ function statusLabel(status) {
 }
 
 export function LegalDocumentPage({ title, subtitle, lastUpdated, intro, sections }) {
+  const { loginPath } = useTenantPath();
+
   return (
-    <PublicLayout hideFooter>
-      <div className="legal-page legal-page--doc">
-        <div className="legal-page__inner">
+    <PublicLayout hideHeader hideFooter>
+      <div className="legal-page legal-page--doc legal-page--standalone">
+        <div className="legal-page__topbar">
           <Link to="/" className="legal-page__back">
             <ArrowLeft size={16} />
             Back to Home
           </Link>
+          <Link to={loginPath} className="legal-page__login-link">
+            Sign in
+          </Link>
+        </div>
+        <div className="legal-page__inner legal-page__inner--full">
           <div className="legal-doc">
             <header className="legal-page__header legal-doc__header">
               <h1>{title}</h1>

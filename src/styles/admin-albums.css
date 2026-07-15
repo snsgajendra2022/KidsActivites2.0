@@ -1,13 +1,59 @@
 @import './admin-media-theme.css';
 
-/* Keep all album stat cards on a single row */
+/* Stats: 2-col mobile → 3-col tablet → 5-col desktop (no cramped single row) */
 .admin-albums-page .admin-media-stats {
   display: grid;
-  grid-template-columns: none;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
-  overflow-x: auto;
+  overflow-x: visible;
+}
+
+@media (min-width: 480px) {
+  .admin-albums-page .admin-media-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .admin-albums-page .admin-media-stats {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Header actions: stack full-width on phones so long labels don't squeeze */
+@media (max-width: 639px) {
+  .admin-albums-page .sb-page-header {
+    gap: 0.875rem;
+  }
+
+  .admin-albums-page .sb-page-header > div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .admin-albums-page .sb-page-header > div:last-child > * {
+    flex: none;
+    width: 100%;
+  }
+
+  .admin-albums-page .sb-page-header button {
+    width: 100%;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .admin-albums-page .admin-media-stat {
+    padding: 0.75rem 0.875rem;
+  }
+
+  .admin-albums-page .admin-media-stat__value {
+    font-size: 1.25rem;
+  }
+
+  .admin-albums-page .admin-media-stat__label {
+    line-height: 1.3;
+  }
 }
 
 .admin-albums-layout {
@@ -30,8 +76,29 @@
 /* ---- Album card gallery ---- */
 .admin-albums-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 1.125rem;
+}
+
+@media (max-width: 479px) {
+  .admin-albums-page .admin-media-stats .admin-media-stat:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .admin-albums-cards {
+    grid-template-columns: 1fr;
+    gap: 0.875rem;
+  }
+
+  .admin-albums-empty-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-albums-empty-actions button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .admin-album-card {

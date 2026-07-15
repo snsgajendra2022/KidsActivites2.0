@@ -5,7 +5,8 @@
  * Usage:
  *   node scripts/generate-kidzee-pdf.mjs --url "http://mchs2.localhost:5173/mchs2/enrollment/kidzee-print-form/print?token=..."
  *
- * Output: PDF bytes written to stdout. Timing/diagnostic logs go to stderr.
+ * Output: PDF bytes written to --output file (or PDF_OUTPUT_FILE env).
+ * Timing/diagnostic logs go to stderr.
  *
  * First-time setup (from KidsActivites2.0/):
  *   npm install
@@ -13,16 +14,19 @@
  */
 import { chromium } from 'playwright';
 import { parseArgs } from 'node:util';
+import fs from 'node:fs';
 
 const { values } = parseArgs({
   options: {
     url: { type: 'string' },
+    output: { type: 'string' },
   },
 });
 
 const url = values.url;
-if (!url) {
-  console.error('Usage: generate-kidzee-pdf.mjs --url <print-page-url>');
+const outputPath = values.output || process.env.PDF_OUTPUT_FILE;
+if (!url || !outputPath) {
+  console.error('Usage: generate-kidzee-pdf.mjs --url <print-page-url> --output <pdf-path>');
   process.exit(1);
 }
 
@@ -40,7 +44,14 @@ const log = (msg) => console.error(`[pdf] ${msg} (${elapsed()})`);
 let browser;
 try {
   log('launching chromium');
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+    ],
+  });
   const page = await browser.newPage();
 
   // Surface page-side errors to stderr for diagnosability.
@@ -56,7 +67,16 @@ try {
   log('page loaded, waiting for data-pdf-ready marker');
 
   await page.waitForSelector('[data-pdf-ready="true"]', { timeout: READY_TIMEOUT_MS });
-  log('ready marker present, settling fonts/images');
+  log('ready marker present, forcing full form paint');
+
+  // Print CSS is applied before layout checks so all five A4 pages are measured.
+  await page.emulateMedia({ media: 'print' });
+
+  await page.waitForFunction(() => {
+    const pages = document.querySelectorAll('.kidzee-print-pages .print-page');
+    if (pages.length < 5) return false;
+    return Array.from(pages).every((page) => page.getBoundingClientRect().height > 200);
+  }, { timeout: READY_TIMEOUT_MS });
 
   // Best-effort settle of fonts + images, each individually bounded so a single
   // stuck asset can't hang generation.
@@ -76,17 +96,26 @@ try {
   }, ASSET_TIMEOUT_MS);
 
   log('rendering pdf');
-  await page.emulateMedia({ media: 'print' });
   const pdf = await page.pdf({
     format: 'A4',
     printBackground: true,
     margin: { top: '0', right: '0', bottom: '0', left: '0' },
   });
-  process.stdout.write(pdf);
-  log(`done, ${pdf.length} bytes`);
+  fs.writeFileSync(outputPath, pdf);
+  log(`done, ${pdf.length} bytes written to ${outputPath}`);
+  // Skip browser.close() on success — on some Linux hosts closing Chromium
+  // SIGABRTs (exit 134) after the PDF file is already written.
+  browser = null;
+  process.exit(0);
 } catch (err) {
   console.error(`[pdf] failed: ${err?.message || String(err)} (${elapsed()})`);
   process.exit(1);
 } finally {
-  if (browser) await browser.close();
+  if (browser) {
+    try {
+      await browser.close();
+    } catch {
+      /* ignore cleanup errors on failure path */
+    }
+  }
 }

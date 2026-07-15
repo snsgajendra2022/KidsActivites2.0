@@ -1,27 +1,20 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
-import { useSchoolBasePath, useSchoolEnrollPath } from '../../hooks/useSchoolBasePath.js';
+import { useSchoolBasePath } from '../../hooks/useSchoolBasePath.js';
 import PortalLogo from '../brand/PortalLogo.jsx';
 import LoginHeaderScrollText from '../auth/LoginHeaderScrollText.jsx';
 
 export default function PublicHeader({ glass = false, compact = false, loginMobile = false }) {
-  const location = useLocation();
-  const { portalName, config } = usePortalConfig();
-  const { isTenantRoute } = useTenant();
+  const { config } = usePortalConfig();
   const { loginPath } = useTenantPath();
+  const { isPlatformHome, isLoginRoute } = useTenant();
   const basePath = useSchoolBasePath() || '/';
-  const enrollPath = useSchoolEnrollPath();
   const loginScrollLines = config?.loginScrollLines;
-
-  const navLinks = [
-    { to: enrollPath, label: 'Admissions' },
-  ];
-
-  const onLoginPage = isTenantRoute
-    ? location.pathname.endsWith('/login')
-    : location.pathname === '/login';
+  const headerCtaPath = isPlatformHome ? '/workspace/new' : loginPath;
+  const headerCtaLabel = isPlatformHome ? 'Enrollment' : 'Login';
+  const showHeaderCta = !loginMobile && !isLoginRoute;
 
   return (
     <header
@@ -55,28 +48,14 @@ export default function PublicHeader({ glass = false, compact = false, loginMobi
             </div>
           )}
 
-          {!loginMobile && (
+          {showHeaderCta && (
             <div className="flex shrink-0 items-center gap-3 md:gap-6">
-              {navLinks.map(({ to, label, hash }) => (
-                <Link
-                  key={label}
-                  to={to}
-                  className={`text-sm font-semibold transition-premium ${
-                    !hash && location.pathname === to
-                      ? 'text-brand'
-                      : 'text-muted hover:text-brand'
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-              
               <Link
-                to={loginPath}
+                to={headerCtaPath}
                 className="sb-purple-cta"
                 style={{ padding: '0.5rem 1.25rem', fontSize: '0.875rem' }}
               >
-                Login
+                {headerCtaLabel}
               </Link>
             </div>
           )}

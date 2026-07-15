@@ -1,5 +1,8 @@
 import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from './config.js';
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from './tokenStorage.js';
+import { useNetworkStore } from '../../store/networkStore.js';
+
+export const AUTH_SESSION_EXPIRED_EVENT = 'auth:session-expired';
 
 class ApiError extends Error {
   constructor(message, status, code, details) {
@@ -9,6 +12,31 @@ class ApiError extends Error {
     this.code = code;
     this.details = details;
   }
+}
+
+function isTransientHttpStatus(status) {
+  return status === 0 || status === 502 || status === 503 || status === 504;
+}
+
+export function isTransientApiError(err) {
+  if (!err) return false;
+  if (err instanceof TypeError) return true;
+  if (err instanceof ApiError) {
+    if (err.status === 0 || err.code === 'NETWORK_ERROR' || err.code === 'SERVER_UNAVAILABLE') {
+      return true;
+    }
+    if ([502, 503, 504].includes(err.status)) return true;
+  }
+  return err?.message === 'Failed to fetch';
+}
+
+function setServerReconnecting(reconnecting) {
+  useNetworkStore.getState().setServerReconnecting(reconnecting);
+}
+
+function notifySessionExpired() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT));
 }
 
 function parseJsonBody(text) {
@@ -21,6 +49,17 @@ function parseJsonBody(text) {
 }
 
 function throwApiError(res, json, text) {
+  if (res.status === 413) {
+    const err = json?.error;
+    throw new ApiError(
+      err?.message && !/entity too large|request entity too large|payload too large/i.test(err.message)
+        ? err.message
+        : 'File is too large for the server. Please choose a smaller file.',
+      413,
+      err?.code || 'FILE_TOO_LARGE',
+      err?.details,
+    );
+  }
   const err = json?.error;
   throw new ApiError(
     err?.message || text || `Request failed (${res.status})`,
@@ -84,27 +123,51 @@ function buildHeaders(extra = {}, { auth = true, skipTenantHeader = false } = {}
   return reqHeaders;
 }
 
-async function refreshAccessToken() {
+/** @returns {{ ok: true, token: string } | { ok: false, reason: 'missing' | 'expired' | 'transient' }} */
+async function refreshAccessTokenResult() {
   const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
+  if (!refreshToken) return { ok: false, reason: 'missing' };
 
-  const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: 'POST',
-    headers: buildHeaders({ 'Content-Type': 'application/json' }, { auth: false }),
-    body: JSON.stringify({ refreshToken }),
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: buildHeaders({ 'Content-Type': 'application/json' }, { auth: false }),
+      body: JSON.stringify({ refreshToken }),
+    });
+  } catch {
+    setServerReconnecting(true);
+    return { ok: false, reason: 'transient' };
+  }
 
-  if (!res.ok) {
+  if (res.ok) {
+    const data = await parseResponse(res);
+    if (data?.accessToken) {
+      setTokens(data.accessToken, data.refreshToken || refreshToken);
+      setServerReconnecting(false);
+      return { ok: true, token: data.accessToken };
+    }
+    return { ok: false, reason: 'expired' };
+  }
+
+  if (res.status === 401 || res.status === 403) {
     clearTokens();
-    return null;
+    return { ok: false, reason: 'expired' };
   }
 
-  const data = await parseResponse(res);
-  if (data?.accessToken) {
-    setTokens(data.accessToken, data.refreshToken || refreshToken);
-    return data.accessToken;
+  if (isTransientHttpStatus(res.status)) {
+    setServerReconnecting(true);
+    return { ok: false, reason: 'transient' };
   }
-  return null;
+
+  setServerReconnecting(true);
+  return { ok: false, reason: 'transient' };
+}
+
+/** Public refresh — returns access token string or null (used by upload queue). */
+export async function refreshAccessToken() {
+  const result = await refreshAccessTokenResult();
+  return result.ok ? result.token : null;
 }
 
 function buildUrl(path, params) {
@@ -143,6 +206,7 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
       body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (networkErr) {
+    setServerReconnecting(true);
     const hint = networkErr?.message === 'Failed to fetch'
       ? `Cannot reach the API at ${API_BASE_URL}. Ensure the backend is running and reachable from this device.`
       : (networkErr?.message || 'Network request failed');
@@ -150,14 +214,30 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
   }
 
   if (res.status === 401 && auth && retry) {
-    const newToken = await refreshAccessToken();
-    if (newToken) {
+    const refresh = await refreshAccessTokenResult();
+    if (refresh.ok) {
       return executeRequest(path, { ...options, retry: false }, parser);
     }
-    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      clearTokens();
-      window.location.assign('/login');
+    if (refresh.reason === 'transient') {
+      throw new ApiError(
+        'Server temporarily unavailable. Your session is preserved.',
+        503,
+        'SERVER_UNAVAILABLE',
+      );
     }
+    if (!options.preserveSessionOn401) {
+      notifySessionExpired();
+    }
+    throw new ApiError('Session expired. Please sign in again.', 401, 'SESSION_EXPIRED');
+  }
+
+  if (isTransientHttpStatus(res.status)) {
+    setServerReconnecting(true);
+    throw new ApiError(
+      'Server temporarily unavailable. Please try again shortly.',
+      res.status,
+      'SERVER_UNAVAILABLE',
+    );
   }
 
   if (res.status === 403 && typeof window !== 'undefined') {
@@ -169,7 +249,9 @@ async function executeRequest(path, options = {}, parser = parseResponse) {
     }
   }
 
-  return parser(res);
+  const result = await parser(res);
+  setServerReconnecting(false);
+  return result;
 }
 
 export async function apiRequest(path, options = {}) {

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   getPortalConfig,
+  getAdminPortalConfig,
   savePortalConfig,
   getAdminSelectedSchoolId,
   setAdminSelectedSchoolId,
@@ -10,7 +11,7 @@ import { listSchoolsAdmin } from '../services/schoolService.js';
 import { getNavigationForRole } from '../services/navigationService.js';
 import { isApiEnabled } from '../services/api/config.js';
 import { useTenant } from './TenantContext.jsx';
-import { resolveNavItemsForRole } from '../utils/navUtils.js';
+import { mergeMissingBuiltinNavItems, resolveNavItemsForRole } from '../utils/navUtils.js';
 import { prefixTenantPath } from '../utils/tenantUtils.js';
 import { applyPortalTheme } from '../utils/themeUtils.js';
 import { ROLES } from '../constants/roles.js';
@@ -137,6 +138,7 @@ export function PortalConfigProvider({ children, user = null }) {
   );
 
   const isPlatformAdmin = user?.role === ROLES.SUPER_ADMIN;
+  const isTenantContext = isTenantRoute || isTenantSubdomain;
 
   const load = useCallback(async (schoolId) => {
     if (!schoolId) {
@@ -145,7 +147,10 @@ export function PortalConfigProvider({ children, user = null }) {
       return null;
     }
     try {
-      const data = await getPortalConfig(schoolId);
+      const loader = (isAdminRoute && !isTenantContext)
+        ? getAdminPortalConfig
+        : () => getPortalConfig(schoolId);
+      const data = await loader();
       setConfig(data);
       applyDocumentBranding(data);
       setLoading(false);
@@ -155,9 +160,7 @@ export function PortalConfigProvider({ children, user = null }) {
       setLoading(false);
       throw err;
     }
-  }, []);
-
-  const isTenantContext = isTenantRoute || isTenantSubdomain;
+  }, [isAdminRoute, isTenantContext]);
 
   useEffect(() => {
     if (isTenantContext) {
@@ -296,7 +299,12 @@ export function PortalConfigProvider({ children, user = null }) {
     (role) => {
       let items;
       if (isApiEnabled() && navLoadedRoles[role] && role in apiNavByRole) {
-        items = apiNavByRole[role];
+        items = mergeMissingBuiltinNavItems(apiNavByRole[role], role, {
+          menuVisibility: config?.menuVisibility,
+          menuCustomization: config?.menuCustomization,
+          customMenuItems: config?.customMenuItems,
+          menuOrder: config?.menuOrder,
+        });
       } else {
         items = resolveNavItemsForRole(role, {
           menuVisibility: config?.menuVisibility,
@@ -329,9 +337,16 @@ export function PortalConfigProvider({ children, user = null }) {
       portalName: isPlatformPublic
         ? (platform?.platformName || 'Kids Activities')
         : (config?.portalName || 'Kids Activities'),
+      tagline: isPlatformPublic
+        ? (platform?.tagline || '')
+        : (config?.tagline || ''),
       footerText: isPlatformPublic
         ? (platform?.footerText || DEFAULT_PORTAL_CONFIG.footerText)
-        : (config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
+        : (config?.footer?.copyright || config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
+      footer: isPlatformPublic ? null : config?.footer,
+      landingPage: isPlatformPublic ? null : config?.landingPage,
+      landingPagePublished: isPlatformPublic ? null : config?.landingPagePublished,
+      landingPageDraft: isPlatformPublic ? null : config?.landingPageDraft,
       branding: isPlatformPublic
         ? { ...DEFAULT_PORTAL_CONFIG.branding, ...(platform?.branding || {}) }
         : config?.branding,

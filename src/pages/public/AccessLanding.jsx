@@ -16,10 +16,10 @@ import {
 } from 'lucide-react';
 import PublicLayout from '../../components/layout/PublicLayout.jsx';
 import CinematicHero from '../../components/public/CinematicHero.jsx';
-import JourneyNav from '../../components/public/JourneyNav.jsx';
 import EditorialTimeline from '../../components/public/EditorialTimeline.jsx';
 import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
 import EditorialFooter from '../../components/public/EditorialFooter.jsx';
+import PlatformLandingSections from '../../components/public/PlatformLandingSections.jsx';
 import FormInput from '../../components/ui/FormInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
@@ -34,8 +34,6 @@ import imgMobileMockup from '../../assets/mobile_mockup.png';
 const DEFAULT_HERO_HEADLINE = ['Manage Kids Activities,', 'Admissions, Photos, and Parents', 'in One Platform'];
 const DEFAULT_HERO_SUBTEXT =
   'Launch your activity workspace in minutes.\nManage enrollments, fees, documents, photo albums, classroom updates, and parent communication from one trusted portal.';
-
-
 
 const TIMELINE_STEPS = [
   {
@@ -108,9 +106,15 @@ export default function AccessLanding() {
           to: '/workspace/new',
           label: <>Create Your Workspace <ArrowRight size={18} /></>,
         }}
+        secondaryAction={{
+          onClick: () => {
+            document.getElementById('platform-overview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          },
+          label: 'See All Features',
+        }}
       />
 
-      <section className="sb-editorial-section sb-editorial-section--lavender">
+      <section className="sb-editorial-section sb-editorial-section--cream sb-access-section">
         <div className="sb-container sb-access-cards">
           <div className="sb-access-card">
             <div className="sb-access-card__icon">
@@ -265,6 +269,7 @@ export default function AccessLanding() {
           </div>
         </div>
       </section>
+      <PlatformLandingSections />
 
       <FinalImageCTA
         title="Launch Your Kids Activities Portal"

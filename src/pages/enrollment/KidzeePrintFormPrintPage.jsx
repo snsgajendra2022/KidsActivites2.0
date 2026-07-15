@@ -70,27 +70,45 @@ export default function KidzeePrintFormPrintPage() {
   }, [token, branding]);
 
   useEffect(() => {
-    // Signal readiness once loading has finished, whether the data resolved or
-    // errored. This guarantees the headless PDF capturer never waits forever —
-    // an error page still produces bounded output instead of hanging.
-    if (loadState.loading) return undefined;
+    if (loadState.loading || loadState.loadError || !loadState.initialData) {
+      document.body.removeAttribute('data-pdf-ready');
+      return undefined;
+    }
 
     let cancelled = false;
+    const TOTAL_PRINT_PAGES = 5;
+
     const markReady = () => {
-      if (!cancelled) document.body.setAttribute('data-pdf-ready', 'true');
+      if (cancelled) return;
+      const pages = document.querySelectorAll('.kidzee-print-pages .print-page');
+      if (pages.length < TOTAL_PRINT_PAGES) return;
+      document.body.setAttribute('data-pdf-ready', 'true');
     };
-    // Mark after paint so layout is settled...
+
+    // Force every page to paint (content-visibility:auto skips off-screen pages).
+    const forcePaintAllPages = () => {
+      document.querySelectorAll('.kidzee-print-pages .print-page').forEach((page) => {
+        page.scrollIntoView({ block: 'start' });
+      });
+      window.scrollTo(0, 0);
+    };
+
+    forcePaintAllPages();
     requestAnimationFrame(() => {
+      forcePaintAllPages();
       requestAnimationFrame(markReady);
     });
-    // ...but always mark within a bounded time even if a rAF never fires.
-    const fallback = setTimeout(markReady, 3000);
+    const fallback = setTimeout(() => {
+      forcePaintAllPages();
+      markReady();
+    }, 5000);
+
     return () => {
       cancelled = true;
       clearTimeout(fallback);
       document.body.removeAttribute('data-pdf-ready');
     };
-  }, [loadState.loading]);
+  }, [loadState.loading, loadState.loadError, loadState.initialData, loadState.applicationId]);
 
   if (loadState.loading || (!loadState.initialData && !loadState.loadError)) {
     return (

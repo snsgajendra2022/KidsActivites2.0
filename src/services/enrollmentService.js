@@ -49,11 +49,10 @@ function assignKidzeeFormNo(payload, existingApp, allApps) {
 }
 
 async function mockGetApplications(filters = {}) {
-  await delay();
   let apps = getAll();
   if (filters.status) apps = apps.filter((a) => a.status === filters.status);
   if (filters.parentId) apps = apps.filter((a) => a.parentId === filters.parentId);
-  return apps;
+  return { items: apps, page: 0, size: apps.length, total: apps.length, totalPages: 1 };
 }
 
 export async function getAdmissionsStatus() {
@@ -72,7 +71,13 @@ export async function getApplications(filters = {}) {
     mockFn: () => mockGetApplications(filters),
     apiFn: async () => {
       const data = await api.get('/admin/applications', filters);
-      return Array.isArray(data) ? data : [];
+      if (Array.isArray(data)) {
+        return { items: data, page: 0, size: data.length, total: data.length, totalPages: 1 };
+      }
+      if (data && Array.isArray(data.items)) {
+        return data;
+      }
+      return { items: [], page: 0, size: 0, total: 0, totalPages: 0 };
     },
   });
 }
@@ -378,7 +383,25 @@ export async function confirmAdmission(id) {
 
 export async function createAccount(id) {
   return routeRequest({
-    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.ACCOUNT_CREATED, 'Parent account created and invitation sent'),
+    mockFn: async () => {
+      const apps = getAll();
+      const app = apps.find((a) => a.id === id);
+      if (!app) throw Object.assign(new Error('Application not found'), { status: 404, code: 'NOT_FOUND' });
+      const parent = app.parent || {};
+      const formData = app.formData || {};
+      const fatherEmail = formData.fatherGuardian?.email || parent.fatherEmail || '';
+      const motherEmail = formData.motherGuardian?.email || parent.motherEmail || '';
+      const email = [fatherEmail, motherEmail, parent.email]
+        .map((v) => (typeof v === 'string' ? v.trim() : ''))
+        .find(Boolean);
+      if (!email) {
+        throw Object.assign(
+          new Error('Mother or Father email is required to create a parent account. Please add at least one parent email on the application first.'),
+          { status: 400, code: 'VALIDATION_ERROR' },
+        );
+      }
+      return mockUpdateStatus(id, ENROLLMENT_STATUSES.ACCOUNT_CREATED, 'Parent account created and invitation sent');
+    },
     apiFn: () => api.post(`/admin/applications/${id}/create-account`),
   });
 }
@@ -437,6 +460,41 @@ export async function getEnrolledStudents() {
   });
 }
 
+export async function updateStudentClass(studentId, classApplying) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(150);
+      const apps = getAll();
+      const idx = apps.findIndex((a) => a.id === studentId);
+      if (idx < 0) throw new Error('Student not found');
+      const app = apps[idx];
+      if (![
+        ENROLLMENT_STATUSES.ADMISSION_CONFIRMED,
+        ENROLLMENT_STATUSES.ACCOUNT_CREATED,
+      ].includes(app.status)) {
+        throw new Error('Class can only be updated for confirmed students');
+      }
+      const normalized = String(classApplying || '').trim().toLowerCase();
+      if (!normalized) throw new Error('Class is required');
+      apps[idx] = {
+        ...app,
+        student: { ...app.student, classApplying: normalized },
+      };
+      saveAll(apps);
+      return {
+        id: app.id,
+        applicationNo: app.applicationNo,
+        name: app.student?.fullName,
+        classApplying: normalized,
+        parentName: app.parent?.fatherName || app.parent?.motherName,
+        status: app.status,
+        submittedAt: app.submittedAt,
+      };
+    },
+    apiFn: () => api.patch(`/admin/students/${studentId}/class`, { classApplying }),
+  });
+}
+
 export async function getDashboardChartData() {
   const user = getStoredUser();
   return routeRequest({
@@ -451,5 +509,27 @@ export async function getDashboardChartData() {
       }));
     },
     apiFn: () => api.get('/admin/dashboard/charts'),
+  });
+}
+
+export async function getAdminDashboard(recentLimit = 5) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(100);
+      const apps = getAll();
+      return {
+        stats: computeDashboardStats(apps),
+        charts: await getDashboardChartData(),
+        recent: apps.slice(0, recentLimit),
+      };
+    },
+    apiFn: async () => {
+      const data = await api.get('/admin/dashboard', { recentLimit });
+      return {
+        stats: data?.stats && typeof data.stats === 'object' ? data.stats : {},
+        charts: Array.isArray(data?.charts) ? data.charts : [],
+        recent: Array.isArray(data?.recent) ? data.recent : [],
+      };
+    },
   });
 }

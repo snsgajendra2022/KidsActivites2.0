@@ -32,6 +32,15 @@
   max-width: min(100%, 14rem);
 }
 
+.login-portal .auth-split__card-portal-name {
+  margin: 0;
+  font-family: var(--sb-font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--sb-purple-dark);
+}
+
 .login-portal .auth-split__card-title {
   font-size: 1.5rem;
 }

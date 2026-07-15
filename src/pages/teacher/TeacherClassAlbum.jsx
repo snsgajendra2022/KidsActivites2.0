@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Tv, Play, Eye, Trash2, Upload } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
-import { PageHeader } from '../../components/ui/index.jsx';
-import Button from '../../components/ui/Button.jsx';
 import PhotoLightbox from '../../components/media/PhotoLightbox.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -16,7 +14,7 @@ import {
   updateTeacherAlbumMedia,
   deleteTeacherAlbumMedia,
 } from '../../services/classAlbumService.js';
-import '../../styles/admin-albums.css';
+import { toLightboxMedia } from '../../utils/toLightboxMedia.js';
 import '../../styles/teacher-class-album.css';
 
 function tvBlockLabel(item, albumDetail) {
@@ -40,18 +38,10 @@ function tvStatusBadge(item) {
 }
 
 function toLightboxPhoto(item, albumDetail) {
-  return {
-    id: item.id,
-    mediaType: item.mediaType,
-    caption: item.caption || item.fileName,
+  return toLightboxMedia(item, {
     className: albumDetail?.className,
-    thumbnailUrl: item.thumbnailUrl,
-    previewUrl: item.previewUrl || item.imageUrl,
-    streamUrl: item.streamUrl || item.playbackUrl,
-    renditions: item.renditions,
-    processingStatus: item.processingStatus,
-    status: item.status,
-  };
+    schoolName: albumDetail?.schoolName,
+  });
 }
 
 export default function TeacherClassAlbum() {
@@ -179,42 +169,53 @@ export default function TeacherClassAlbum() {
   return (
     <DashboardLayout>
       <div className="teacher-class-album-page">
-        <PageHeader
-          title="Class Album"
-          subtitle="Browse photos and videos you shared to the class album. Toggle TV playback or remove items."
-          actions={(
-            <Link to={uploadHref}>
-              <Button type="button" variant="primary">
-                <Upload size={16} />
-                Upload media
-              </Button>
-            </Link>
-          )}
-        />
+        <header className="teacher-class-album-header">
+          <div className="teacher-class-album-header__text">
+            <h1>Class Album</h1>
+            <p>Browse photos and videos you shared to the class album. Toggle TV playback or remove items.</p>
+          </div>
+          <Link to={uploadHref} className="teacher-class-album-upload-btn">
+            <Upload size={16} aria-hidden />
+            Upload media
+          </Link>
+        </header>
 
         {activeClasses.length === 0 && !loading ? (
           <p className="teacher-class-album-empty">No classes assigned yet.</p>
         ) : (
           <>
-            <div className="teacher-class-album-classes">
-              {activeClasses.map((cls) => (
-                <button
-                  key={cls.classId}
-                  type="button"
-                  className={`teacher-class-album-class ${classId === cls.classId ? 'is-selected' : ''}`}
-                  onClick={() => selectClass(cls.classId)}
-                >
-                  <span>{cls.className}</span>
-                  {cls.album?.albumCode && <small>{cls.album.albumCode}</small>}
-                </button>
-              ))}
-            </div>
+            <section className="teacher-class-album-panel" aria-label="Select class">
+              <span className="teacher-class-album-panel__label">Class</span>
+              <div className="teacher-class-album-classes">
+                {activeClasses.map((cls) => (
+                  <button
+                    key={cls.classId}
+                    type="button"
+                    className={`teacher-class-album-class${classId === cls.classId ? ' is-selected' : ''}`}
+                    onClick={() => selectClass(cls.classId)}
+                  >
+                    <span className="teacher-class-album-class__name">{cls.className}</span>
+                    {cls.album?.albumCode && (
+                      <span className="teacher-class-album-class__code">{cls.album.albumCode}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
 
             {albumDetail && (
-              <p className="teacher-class-album-meta">
-                {selectedClass?.className} · Album code <code>{albumDetail.albumCode}</code>
-                {' · '}TV playback {albumDetail.playbackEnabled ? 'enabled' : 'disabled'}
-              </p>
+              <section className="teacher-class-album-summary" aria-label="Album details">
+                <div className="teacher-class-album-summary__info">
+                  <strong>{selectedClass?.className}</strong>
+                  <span>
+                    Album code <code>{albumDetail.albumCode}</code>
+                  </span>
+                </div>
+                <span className={`teacher-class-album-summary__tv${albumDetail.playbackEnabled ? ' is-on' : ''}`}>
+                  <Tv size={14} aria-hidden />
+                  TV playback {albumDetail.playbackEnabled ? 'enabled' : 'disabled'}
+                </span>
+              </section>
             )}
 
             {loading ? (
@@ -227,54 +228,65 @@ export default function TeacherClassAlbum() {
                 </Link>
               </div>
             ) : (
-              <div className="admin-albums-media-grid teacher-class-album-grid">
+              <div className="teacher-class-album-grid">
                 {myUploads.map((item, index) => (
-                  <article key={item.id} className="admin-albums-media-card teacher-class-album-card">
+                  <article key={item.id} className="teacher-class-album-card">
                     <button
                       type="button"
-                      className="admin-albums-media-card__preview"
+                      className="teacher-class-album-card__preview"
                       onClick={() => setLightboxIndex(index)}
                       aria-label={`View ${item.caption || item.fileName || 'media'}`}
                     >
                       {item.thumbnailUrl ? (
                         <img src={item.thumbnailUrl} alt="" />
                       ) : (
-                        <div className="admin-albums-media-card__placeholder">
+                        <div className="teacher-class-album-card__placeholder">
                           {item.mediaType === 'VIDEO' ? <Play size={24} /> : <Eye size={24} />}
                         </div>
                       )}
                       {item.mediaType === 'VIDEO' && (
-                        <span className="admin-albums-media-card__badge" aria-hidden>
+                        <span className="teacher-class-album-card__play" aria-hidden>
                           <Play size={12} />
                         </span>
                       )}
                     </button>
-                    <p>{item.caption || item.fileName || 'Media'}</p>
-                    <span className="admin-albums-media-card__status">{tvStatusBadge(item)}</span>
-                    <div className="teacher-class-album-card__actions">
-                      <button
-                        type="button"
-                        onClick={() => toggleShowOnTv(item)}
-                        disabled={mediaActionId === item.id || (!item.showOnTv && !item.canShowOnTv)}
-                        title={!item.canShowOnTv && !item.showOnTv ? tvBlockLabel(item, albumDetail) : undefined}
+                    <div className="teacher-class-album-card__body">
+                      <p className="teacher-class-album-card__title" title={item.caption || item.fileName || 'Media'}>
+                        {item.caption || item.fileName || 'Media'}
+                      </p>
+                      <span
+                        className={`teacher-class-album-card__status${
+                          item.showOnTv && item.isReadyForTv ? ' is-on-tv' : ''
+                        }${item.approvalStatus === 'PENDING' ? ' is-pending' : ''}`}
                       >
-                        <Tv size={14} />
-                        TV: {item.showOnTv ? 'On' : 'Off'}
-                      </button>
-                      <button
-                        type="button"
-                        className="teacher-class-album-card__delete"
-                        onClick={() => setDeleteTarget(item)}
-                        disabled={mediaActionId === item.id}
-                        aria-label="Remove from album"
-                      >
-                        <Trash2 size={14} />
-                        Remove
-                      </button>
+                        {tvStatusBadge(item)}
+                      </span>
+                      <div className="teacher-class-album-card__actions">
+                        <button
+                          type="button"
+                          className={`teacher-class-album-card__tv${item.showOnTv ? ' is-on' : ''}`}
+                          onClick={() => toggleShowOnTv(item)}
+                          disabled={mediaActionId === item.id || (!item.showOnTv && !item.canShowOnTv)}
+                          title={!item.canShowOnTv && !item.showOnTv ? tvBlockLabel(item, albumDetail) : undefined}
+                        >
+                          <Tv size={14} aria-hidden />
+                          TV: {item.showOnTv ? 'On' : 'Off'}
+                        </button>
+                        <button
+                          type="button"
+                          className="teacher-class-album-card__remove"
+                          onClick={() => setDeleteTarget(item)}
+                          disabled={mediaActionId === item.id}
+                          aria-label="Remove from album"
+                        >
+                          <Trash2 size={14} aria-hidden />
+                          Remove
+                        </button>
+                      </div>
+                      {!item.canShowOnTv && !item.showOnTv && (
+                        <p className="teacher-class-album-card__hint">{tvBlockLabel(item, albumDetail)}</p>
+                      )}
                     </div>
-                    {!item.canShowOnTv && !item.showOnTv && (
-                      <p className="admin-albums-media-card__hint">{tvBlockLabel(item, albumDetail)}</p>
-                    )}
                   </article>
                 ))}
               </div>
@@ -285,6 +297,8 @@ export default function TeacherClassAlbum() {
 
       <PhotoLightbox
         photo={lightboxPhotos[lightboxIndex] || null}
+        photos={lightboxPhotos}
+        currentIndex={lightboxIndex}
         onClose={() => setLightboxIndex(-1)}
         onPrev={() => setLightboxIndex((i) => Math.max(0, i - 1))}
         onNext={() => setLightboxIndex((i) => Math.min(lightboxPhotos.length - 1, i + 1))}

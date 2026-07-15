@@ -23,7 +23,11 @@ const COLUMNS = [
   { key: 'name', label: 'Name', primary: true },
   { key: 'email', label: 'Email' },
   { key: 'mobile', label: 'Mobile' },
-  { key: 'roleLabel', label: 'Role' },
+  {
+    label: 'Role',
+    muted: true,
+    render: (row) => ROLE_LABELS[row.role] || row.roleLabel || row.role,
+  },
   {
     label: 'Status',
     badge: true,
@@ -33,13 +37,23 @@ const COLUMNS = [
       </span>
     ),
   },
-  { key: 'schoolName', label: 'School' },
 ];
 
-// Administrative roles that can be created via this page. Teachers use the Teachers page.
-const SCHOOL_ADMIN_CREATABLE = [ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER, ROLES.ACCOUNTANT];
+// All tenant account roles shown in the directory (creation still limited to admin/staff roles).
+const ALL_ACCOUNT_ROLES = [
+  ROLES.SUPER_ADMIN,
+  ROLES.SCHOOL_ADMIN,
+  ROLES.ADMISSION_OFFICER,
+  ROLES.ACCOUNTANT,
+  ROLES.TEACHER,
+  ROLES.PARENT,
+  ROLES.STUDENT,
+  ROLES.SUPPORT_STAFF,
+];
 
-const EMPTY_FORM = { name: '', email: '', mobile: '', role: ROLES.SCHOOL_ADMIN, schoolId: '' };
+const MOBILE_PATTERN = /^[6-9]\d{9}$/;
+
+const EMPTY_FORM = { name: '', email: '', mobile: '', schoolId: '' };
 
 export default function AdminUsers() {
   const { user } = useAuth();
@@ -60,11 +74,6 @@ export default function AdminUsers() {
   const canManage = isSuperAdmin || user?.role === ROLES.SCHOOL_ADMIN;
   const defaultSchoolId = isSuperAdmin ? activeSchoolId : (user?.schoolId || activeSchoolId);
 
-  const creatableRoles = useMemo(
-    () => (isSuperAdmin ? [ROLES.SUPER_ADMIN, ...SCHOOL_ADMIN_CREATABLE] : SCHOOL_ADMIN_CREATABLE),
-    [isSuperAdmin],
-  );
-
   const loadUsers = () => {
     setLoading(true);
     return listUsers({
@@ -73,6 +82,10 @@ export default function AdminUsers() {
       search,
     }, user)
       .then(setUsers)
+      .catch((err) => {
+        setUsers([]);
+        toast(err.message || 'Failed to load users.', 'error');
+      })
       .finally(() => setLoading(false));
   };
 
@@ -81,10 +94,7 @@ export default function AdminUsers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, schoolFilter, roleFilter, search]);
 
-  const roleOptions = useMemo(() => {
-    const roles = new Set(users.map((u) => u.role));
-    return [...roles].sort();
-  }, [users]);
+  const roleOptions = useMemo(() => ALL_ACCOUNT_ROLES, []);
 
   const closeModal = () => {
     setModal(null);
@@ -103,13 +113,18 @@ export default function AdminUsers() {
       toast('Name and email are required.', 'warning');
       return;
     }
+    const mobile = form.mobile.trim();
+    if (mobile && !MOBILE_PATTERN.test(mobile)) {
+      toast('Mobile must be a valid 10-digit number.', 'warning');
+      return;
+    }
     setSaving(true);
     try {
       const result = await createAdminUser({
         name: form.name.trim(),
         email: form.email.trim(),
-        mobile: form.mobile.trim() || undefined,
-        role: form.role,
+        mobile: mobile || undefined,
+        role: ROLES.SCHOOL_ADMIN,
         schoolId: form.schoolId || defaultSchoolId || undefined,
       }, user);
       setTempPassword(result.tempPassword);
@@ -142,7 +157,7 @@ export default function AdminUsers() {
       <PageTransition>
         <PageHeader
           title="All Users"
-          subtitle="Manage admin accounts for your school. Create additional admins and staff here."
+          subtitle="View every portal account in your school — admins, teachers, parents, and staff. Add new admin accounts here; teachers are managed on the Teachers page."
           actions={canManage ? (
             <Button variant="primary" onClick={openCreate}>
               <Plus size={16} className="mr-1.5" />
@@ -175,7 +190,7 @@ export default function AdminUsers() {
           >
             <option value="">All roles</option>
             {roleOptions.map((r) => (
-              <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+              <option key={r} value={r}>{ROLE_LABELS[r] || r.replace(/_/g, ' ')}</option>
             ))}
           </select>
         </div>
@@ -195,7 +210,7 @@ export default function AdminUsers() {
           <ResponsiveDataTable
             columns={COLUMNS}
             data={users}
-            minWidth={820}
+            minWidth={720}
             emptyMessage="No users match your filters."
             renderActions={canManage ? (row) => (
               row.active !== false && row.id !== user?.id ? (
@@ -242,19 +257,9 @@ export default function AdminUsers() {
               value={form.mobile}
               onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))}
               placeholder="10-digit mobile"
+              inputMode="numeric"
+              maxLength={10}
             />
-            <label className="admin-field-label">
-              Role
-              <select
-                className="admin-users-filters__select"
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              >
-                {creatableRoles.map((r) => (
-                  <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>
-                ))}
-              </select>
-            </label>
             {isSuperAdmin && schools.length > 0 ? (
               <label className="admin-field-label">
                 School

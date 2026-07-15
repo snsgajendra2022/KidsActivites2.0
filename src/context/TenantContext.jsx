@@ -11,6 +11,7 @@ import {
   isTenantSubdomainHost,
   resolveTenantSlug,
 } from '../services/api/config.js';
+import { isTransientApiError } from '../services/api/client.js';
 
 const TenantContext = createContext(null);
 
@@ -56,8 +57,8 @@ export function TenantProvider({ children }) {
       .then((resolved) => {
         if (!cancelled) setSchool(resolved);
       })
-      .catch(() => {
-        if (!cancelled) setSchool(null);
+      .catch((err) => {
+        if (!cancelled && !isTransientApiError(err)) setSchool(null);
       })
       .finally(() => {
         if (!cancelled) setSchoolResolving(false);
@@ -75,6 +76,7 @@ export function TenantProvider({ children }) {
     const isPlatformHome = routePath === '/' && !isTenantRoute && !isTenantSubdomain;
     const isPlatformEnrollment = routePath === '/enrollment' && !isTenantRoute;
     const isPlatformLogin = routePath === '/login' && !isTenantRoute;
+    const isLoginRoute = routePath === '/login';
     const isWorkspaceRoute = routePath.startsWith('/workspace');
     const isRegisterSchoolRoute = routePath === '/register-school';
 
@@ -92,6 +94,7 @@ export function TenantProvider({ children }) {
       isPlatformHome,
       isPlatformEnrollment,
       isPlatformLogin,
+      isLoginRoute,
       isWorkspaceRoute,
       isRegisterSchoolRoute,
       isPlatformPublic: isPlatformHome || isPlatformEnrollment || isPlatformLogin || isWorkspaceRoute || isRegisterSchoolRoute,

@@ -17,21 +17,14 @@ import {
   updateAlbumMedia,
 } from '../../services/classAlbumService.js';
 import defaultAlbumCover from '../../assets/default-album-cover.png';
+import { toLightboxMedia } from '../../utils/toLightboxMedia.js';
 import '../../styles/admin-albums.css';
 
 function toLightboxPhoto(item, albumDetail) {
-  return {
-    id: item.id,
-    mediaType: item.mediaType,
-    caption: item.caption || item.fileName,
+  return toLightboxMedia(item, {
     className: albumDetail?.className,
-    thumbnailUrl: item.thumbnailUrl,
-    previewUrl: item.previewUrl || item.imageUrl,
-    streamUrl: item.streamUrl || item.playbackUrl,
-    renditions: item.renditions,
-    processingStatus: item.processingStatus,
-    status: item.status,
-  };
+    schoolName: albumDetail?.schoolName,
+  });
 }
 
 function tvBlockLabel(item, albumDetail) {
@@ -487,6 +480,8 @@ export default function AdminAlbums() {
 
       <PhotoLightbox
         photo={lightboxPhoto}
+        photos={lightboxPhotos}
+        currentIndex={lightboxIndex}
         onClose={() => setLightboxIndex(-1)}
         onPrev={() => setLightboxIndex((i) => Math.max(0, i - 1))}
         onNext={() => setLightboxIndex((i) => Math.min(lightboxPhotos.length - 1, i + 1))}

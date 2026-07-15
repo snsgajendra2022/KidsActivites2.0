@@ -2,6 +2,7 @@ import { INITIAL_PHOTOS } from '../data/mockPhotos.js';
 import { delay, getStore, setStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
+import { resolveVideoStreamUrl } from '../utils/photoStudioProgressive.js';
 
 const KEY = 'sb_photos';
 
@@ -15,13 +16,25 @@ function normalizePhoto(photo) {
     || photo.thumbnailUrl
     || photo.downloadUrl
     || '';
+  const streamUrl = resolveVideoStreamUrl(photo);
   return {
     ...photo,
     imageUrl,
     sentAt: photo.sentAt || photo.createdAt || photo.uploadTime,
     mediaType,
     type: photo.type || (isVideo ? 'video' : undefined),
-    streamUrl: photo.streamUrl || (isVideo ? photo.previewUrl : undefined),
+    streamUrl: streamUrl || photo.streamUrl || photo.playbackUrl || undefined,
+    hlsUrl: photo.hlsUrl,
+    playbackUrl: photo.playbackUrl,
+    downloadUrl: photo.downloadUrl,
+    originalUrl: photo.originalUrl || photo.sourceUrl,
+    renditions: photo.renditions,
+    variants: photo.variants,
+    videoVariants: photo.videoVariants,
+    qualities: photo.qualities,
+    sources: photo.sources,
+    processingStatus: photo.processingStatus,
+    status: photo.status,
     videoStatusUrl: photo.videoStatusUrl || photo.statusPollUrl,
   };
 }
@@ -30,20 +43,38 @@ function getAll() {
   return getStore(KEY, INITIAL_PHOTOS);
 }
 
+function photoVisibleToFilter(photo, filters) {
+  const studentId = filters.studentId ? String(filters.studentId) : null;
+  const classId = filters.classId ? String(filters.classId) : null;
+
+  if (studentId) {
+    const directMatch = photo.studentIds?.some((id) => String(id) === studentId);
+    if (directMatch) return true;
+  }
+
+  if (classId && photo.classId && String(photo.classId) === classId) {
+    if (photo.recipients === 'class' || photo.recipients === 'selected') return true;
+  }
+
+  if (studentId && photo.recipients === 'class' && !photo.classId) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function getPhotos(filters = {}) {
   return routeRequest({
     mockFn: async () => {
       await delay();
       let photos = getAll();
-      if (filters.studentId) {
-        photos = photos.filter(
-          (p) => p.recipients === 'class' || p.studentIds?.includes(filters.studentId),
-        );
+      if (filters.studentId || filters.classId) {
+        photos = photos.filter((photo) => photoVisibleToFilter(photo, filters));
       }
       if (filters.teacherId) {
         photos = photos.filter((p) => p.teacherId === filters.teacherId);
       }
-      return photos;
+      return photos.map(normalizePhoto);
     },
     apiFn: async () => {
       const data = await api.get('/media/photos', filters);
@@ -91,4 +122,8 @@ export async function deletePhoto(photoId) {
     },
     apiFn: () => api.delete(`/media/photos/${photoId}`),
   });
+}
+
+export async function getMediaUploadLimits() {
+  return api.get('/media/upload-limits');
 }

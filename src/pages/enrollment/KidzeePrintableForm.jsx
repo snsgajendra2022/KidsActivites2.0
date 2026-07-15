@@ -1,5 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Download, Send } from 'lucide-react';
 import { useToast } from '../../context/ToastContext.jsx';
+import PortalLogo from '../../components/brand/PortalLogo.jsx';
+import Button from '../../components/ui/Button.jsx';
 import {
   saveDraft,
   submitApplication,
@@ -11,8 +15,6 @@ import {
   getEmptyKidzeeFormData,
   setNestedValue,
   saveKidzeeDraft,
-  loadKidzeeDraft,
-  clearKidzeeDraft,
   wrapKidzeeFormForEnrollment,
   validateKidzeeFormForSubmit,
   mergeKidzeeFormNoFromApplication,
@@ -23,6 +25,8 @@ import KidzeePage3 from './pages/KidzeePage3.jsx';
 import KidzeePage4 from './pages/KidzeePage4.jsx';
 import KidzeePage5 from './pages/KidzeePage5.jsx';
 import './KidzeePrintableForm.css';
+
+const TOTAL_PAGES = 5;
 
 export default function KidzeePrintableForm({
   initialData,
@@ -37,83 +41,122 @@ export default function KidzeePrintableForm({
   printOnly = false,
   onSaveDraft: onSaveDraftOverride = null,
   onSubmitApplication: onSubmitOverride = null,
+  backHref = null,
+  backLabel = 'Back to Enrollment',
 }) {
   const [formData, setFormData] = useState(() => initialData || getEmptyKidzeeFormData(branding));
   const [draftId, setDraftId] = useState(initialApplicationId);
-  const [loading, setLoading] = useState(false);
-  const [showGrid, setShowGrid] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const busy = submitting || downloading;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [fieldErrors, setFieldErrors] = useState({});
   const printRef = useRef(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (printOnly) return undefined;
+    const root = printRef.current;
+    if (!root) return undefined;
+
+    const pages = Array.from(root.querySelectorAll('.print-page[data-page]'));
+    if (!pages.length) return undefined;
+
+    const ratios = new Map();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const page = Number(entry.target.getAttribute('data-page'));
+          if (!page) return;
+          ratios.set(page, entry.isIntersecting ? entry.intersectionRatio : 0);
+        });
+        let bestPage = 1;
+        let bestRatio = -1;
+        ratios.forEach((ratio, page) => {
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            bestPage = page;
+          }
+        });
+        setCurrentPage(bestPage);
+      },
+      {
+        root: null,
+        threshold: [0, 0.15, 0.35, 0.5, 0.65, 0.85, 1],
+        rootMargin: '-20% 0px -35% 0px',
+      },
+    );
+
+    pages.forEach((page) => observer.observe(page));
+    return () => observer.disconnect();
+  }, [printOnly]);
+
   const handleFieldChange = useCallback((path, value) => {
     setFormData((prev) => setNestedValue(prev, path, value));
+    setFieldErrors((prev) => {
+      if (!Object.keys(prev).length) return prev;
+      const next = { ...prev };
+      delete next[path];
+      if (path === 'child.gender' || path.startsWith('child.gender.')) delete next['child.gender'];
+      if (path === 'class' || path.startsWith('class.')) delete next.class;
+      if (path === 'emergencyContacts.0.contactNo') delete next['emergencyContacts.0.mobile'];
+      if (path === 'emergencyContacts.0.mobile') delete next['emergencyContacts.0.mobile'];
+      return next;
+    });
   }, []);
 
-  const handleSaveDraft = async () => {
-    setLoading(true);
+  const scrollToFirstError = (errors) => {
+    const firstPath = Object.keys(errors)[0];
+    if (!firstPath) return;
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-field-path="${firstPath}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
+
+  const ensureDraftSaved = async () => {
+    const payload = wrapKidzeeFormForEnrollment(formData);
+    const saved = onSaveDraftOverride
+      ? await onSaveDraftOverride(payload)
+      : await saveDraft(payload, draftId, { parentId, schoolId });
+    setDraftId(saved.id);
+    const merged = mergeKidzeeFormNoFromApplication(formData, saved);
+    setFormData(merged);
+    if (!correctionToken) saveKidzeeDraft(merged);
+    return saved.id;
+  };
+
+  const handleDownloadOrPrint = async () => {
+    if (busy) return;
+    setDownloading(true);
     try {
-      const payload = wrapKidzeeFormForEnrollment(formData);
-      const saved = onSaveDraftOverride
-        ? await onSaveDraftOverride(payload)
-        : await saveDraft(payload, draftId, { parentId, schoolId });
-      setDraftId(saved.id);
-      const merged = mergeKidzeeFormNoFromApplication(formData, saved);
-      setFormData(merged);
-      if (!correctionToken) saveKidzeeDraft(merged);
-      toast('Draft saved successfully.', 'success');
-    } catch {
-      if (!correctionToken) saveKidzeeDraft(formData);
-      toast(correctionToken
-        ? 'Could not save draft. Please try again.'
-        : 'Saved locally. Server draft may be unavailable.', 'warning');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLoadDraft = () => {
-    const local = loadKidzeeDraft();
-    if (local) {
-      setFormData(local);
-      toast('Draft loaded from browser storage.', 'success');
-      return;
-    }
-    toast('No local draft found.', 'info');
-  };
-
-  const handleClearDraft = () => {
-    clearKidzeeDraft();
-    setFormData(getEmptyKidzeeFormData(branding));
-    toast('Draft cleared.', 'info');
-  };
-
-  const handlePrint = () => window.print();
-
-  const handleDownloadPdf = async () => {
-    if (!draftId) {
-      toast('Save the form first to download a PDF.', 'warning');
-      return;
-    }
-    setLoading(true);
-    try {
-      await downloadKidzeeEnrollmentPdf(draftId);
+      let appId = draftId;
+      if (!appId) {
+        appId = await ensureDraftSaved();
+      }
+      await downloadKidzeeEnrollmentPdf(appId);
       toast('PDF downloaded.', 'success');
     } catch (err) {
-      toast(err?.message || 'PDF download failed.', 'error');
+      toast(err?.message || 'PDF download failed. Opening print dialog…', 'warning');
+      window.print();
     } finally {
-      setLoading(false);
+      setDownloading(false);
     }
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
     const { success, errors } = validateKidzeeFormForSubmit(formData);
     if (!success) {
+      setFieldErrors(errors);
       const first = Object.values(errors)[0];
       toast(first || 'Please complete required fields before submitting.', 'warning');
+      scrollToFirstError(errors);
       return;
     }
 
-    setLoading(true);
+    setFieldErrors({});
+    setSubmitting(true);
     try {
       if (!correctionToken) {
         const admissions = await getAdmissionsStatus();
@@ -139,10 +182,10 @@ export default function KidzeePrintableForm({
         ? 'Corrected application resubmitted successfully.'
         : 'Enrollment form submitted successfully.', 'success');
       onSubmitted?.(result);
-    } catch {
-      toast('Submission failed. Please try again.', 'error');
+    } catch (err) {
+      toast(err?.message || 'Submission failed. Please try again.', 'error');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -151,8 +194,9 @@ export default function KidzeePrintableForm({
     onChange: handleFieldChange,
     readOnly,
     branding,
-    showGrid,
+    showGrid: false,
     isAdmin,
+    fieldErrors,
   };
 
   return (
@@ -160,38 +204,50 @@ export default function KidzeePrintableForm({
       {!printOnly && (
       <div className="print-toolbar no-print">
         <div className="print-toolbar__left">
+          {backHref && (
+            <Link to={backHref} className="print-toolbar__back">
+              <ArrowLeft size={14} aria-hidden />
+              <span>{backLabel}</span>
+            </Link>
+          )}
+          <PortalLogo size="sm" inverse className="print-toolbar__logo" />
+        </div>
+        <div className="print-toolbar__titles">
           <h1 className="print-toolbar__title">Kidzee Enrollment Form</h1>
-          <p className="print-toolbar__subtitle">CHILD REGISTRATION FORM — 5 pages</p>
+          <p className="print-toolbar__subtitle">
+            CHILD REGISTRATION FORM
+            <span className="print-toolbar__page-badge" aria-live="polite">
+              Page {currentPage} of {TOTAL_PAGES}
+            </span>
+          </p>
         </div>
         <div className="print-toolbar__actions">
+          <Button
+            type="button"
+            variant="secondary"
+            className="sb-button-secondary print-toolbar__btn"
+            onClick={handleDownloadOrPrint}
+            loading={downloading}
+            disabled={busy}
+          >
+            <Download size={16} aria-hidden />
+            {downloading ? 'Preparing…' : 'Download / Print'}
+          </Button>
           {!readOnly && (
-            <>
-              {!correctionToken && (
-                <>
-                  <button type="button" className="sb-button-secondary" onClick={handleLoadDraft} disabled={loading}>
-                    Load Draft
-                  </button>
-                  <button type="button" className="sb-button-secondary" onClick={handleClearDraft} disabled={loading}>
-                    Clear
-                  </button>
-                </>
-              )}
-              <button type="button" className="sb-button-secondary" onClick={handleSaveDraft} disabled={loading}>
-                {isAdmin && initialApplicationId ? 'Save Changes' : 'Save Draft'}
-              </button>
-              <button type="button" className="sb-button-primary" onClick={handleSubmit} disabled={loading}>
-                {correctionToken ? 'Resubmit Application' : 'Submit Application'}
-              </button>
-            </>
+            <Button
+              type="button"
+              variant="primary"
+              className="sb-button-primary print-toolbar__btn"
+              onClick={handleSubmit}
+              loading={submitting}
+              disabled={busy}
+            >
+              <Send size={16} aria-hidden />
+              {submitting
+                ? (correctionToken ? 'Resubmitting…' : 'Submitting…')
+                : (correctionToken ? 'Resubmit Application' : 'Submit Application')}
+            </Button>
           )}
-          <label className="print-toolbar__toggle">
-            <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
-            Show Alignment Grid
-          </label>
-          <button type="button" className="sb-button-secondary" onClick={handlePrint}>Print</button>
-          <button type="button" className="sb-button-secondary" onClick={handleDownloadPdf} disabled={loading || !draftId}>
-            Download PDF
-          </button>
         </div>
       </div>
       )}

@@ -1,10 +1,66 @@
+/* ─── Class Management — shared layout ─── */
+
+.class-mgmt-stats {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 900px) {
+  .class-mgmt-stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.class-mgmt-tab-panel .admin-modules-panel__head {
+  padding: 1.25rem;
+  margin-bottom: 0;
+}
+
+.class-mgmt-tab-body {
+  padding: 0 1.25rem 1.25rem;
+}
+
 .class-mgmt-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.25rem;
+}
+
+.class-mgmt-toolbar--stack {
+  align-items: stretch;
+}
+
+.class-mgmt-toolbar__intro {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.class-mgmt-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex: 1 1 16rem;
+  justify-content: flex-end;
+}
+
+.class-mgmt-class-select {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  .class-mgmt-toolbar__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .class-mgmt-toolbar__actions > button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .class-mgmt-filters {
@@ -12,75 +68,219 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.class-mgmt-search {
+.class-mgmt-panel-empty {
+  padding: 1.25rem;
+}
+
+.class-mgmt-panel-empty--compact {
+  padding: 0.5rem 1.25rem 1.5rem;
+}
+
+.class-mgmt-refresh {
+  padding: 0 0 0.75rem;
+  margin: 0;
+}
+
+/* ─── Class context banner ─── */
+
+.class-mgmt-class-banner {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--sb-border, #e2e8f0);
-  border-radius: 0.5rem;
-  min-width: 0;
-  flex: 1 1 100%;
-  width: 100%;
+  gap: 0.875rem;
+  margin: 0 1.25rem 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary, var(--sb-navy)) 5%, white);
+  border: 1px solid color-mix(in srgb, var(--primary, var(--sb-navy)) 10%, transparent);
 }
 
-@media (min-width: 480px) {
-  .class-mgmt-search {
-    flex: 1 1 12rem;
-    max-width: 100%;
+.class-mgmt-tab-body .class-mgmt-class-banner {
+  margin: 0 0 1rem;
+}
+
+.class-mgmt-class-banner--fees {
+  margin-bottom: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+
+.class-mgmt-class-banner--modal {
+  margin: 0 0 1.25rem;
+}
+
+.class-mgmt-class-banner__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--card, #fff);
+  color: var(--primary, var(--sb-navy));
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--primary, var(--sb-navy)) 10%, transparent);
+}
+
+.class-mgmt-class-banner__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.class-mgmt-class-banner__name {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--navy, var(--sb-navy));
+  line-height: 1.3;
+}
+
+.class-mgmt-class-banner__detail {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted, var(--sb-muted));
+  line-height: 1.4;
+}
+
+/* ─── Teacher assignment cards ─── */
+
+.class-mgmt-teacher-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .class-mgmt-teacher-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-.class-mgmt-search input {
-  border: none;
-  outline: none;
-  background: transparent;
-  width: 100%;
-  font: inherit;
+@media (min-width: 1100px) {
+  .class-mgmt-teacher-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
-.class-mgmt-assignment-head {
-  margin: 1rem 0;
+.class-mgmt-teacher-card {
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.06));
+  border-radius: var(--radius-xl, 16px);
+  background: var(--card, #fff);
+  box-shadow:
+    0 1px 2px rgba(27, 46, 75, 0.04),
+    0 4px 16px rgba(27, 46, 75, 0.04);
+  overflow: hidden;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
-.class-mgmt-teacher-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.class-mgmt-teacher-card:hover {
+  border-color: color-mix(in srgb, var(--primary, var(--sb-navy)) 18%, transparent);
+  box-shadow:
+    0 4px 8px rgba(27, 46, 75, 0.06),
+    0 12px 24px rgba(27, 46, 75, 0.06);
+  transform: translateY(-1px);
+}
+
+.class-mgmt-teacher-card__inner {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
+  padding: 1.125rem 1.125rem 1rem;
 }
 
-.class-mgmt-teacher-list li {
+.class-mgmt-teacher-card__head {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+
+.class-mgmt-teacher-card__avatar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--sb-border, #e2e8f0);
-  border-radius: 0.5rem;
+  justify-content: center;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--primary, var(--sb-navy)) 12%, white) 0%,
+    color-mix(in srgb, var(--primary, var(--sb-navy)) 22%, white) 100%
+  );
+  color: var(--primary, var(--sb-navy));
+  font-family: var(--font-display, inherit);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 
-.class-mgmt-teacher-list li div {
+.class-mgmt-teacher-card__meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.class-mgmt-teacher-card__name {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--navy, var(--sb-navy));
+  line-height: 1.3;
+}
+
+.class-mgmt-teacher-card__email {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted, var(--sb-muted));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.class-mgmt-teacher-card__date {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted, var(--sb-muted));
+}
+
+.class-mgmt-teacher-card__remove {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ─── Modal polish ─── */
+
+.class-mgmt-modal {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0;
 }
 
-.class-mgmt-teacher-list span,
-.class-mgmt-teacher-list small {
-  color: var(--sb-muted, #64748b);
-  font-size: 0.875rem;
+.class-mgmt-form-grid {
+  margin-bottom: 0;
 }
 
-.class-mgmt-empty {
-  color: var(--sb-muted, #64748b);
-  padding: 1.5rem 0;
+.admin-form-span-2 {
+  grid-column: 1 / -1;
 }
+
+/* ─── Settings hub (legacy) ─── */
 
 .admin-settings-hub {
   display: grid;
@@ -125,8 +325,4 @@
   color: var(--sb-primary, #4f46e5);
   text-decoration: none;
   font-size: 0.875rem;
-}
-
-.admin-form-span-2 {
-  grid-column: 1 / -1;
 }
