@@ -488,6 +488,19 @@
 }
 
 /* Tenant footer — shared landing + login */
+.sb-tenant-footer-public-footer-section{
+  --tenant-footer-accent: #7b10a9;
+  --tenant-footer-bg: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--tenant-footer-accent) 92%, #001a3d) 0%,
+    color-mix(in srgb, var(--tenant-footer-accent) 55%, #001028) 55%,
+    #001428 100%
+  );
+  background: var(--tenant-footer-bg);
+  border-top: 3px solid var(--tenant-footer-accent);
+  color: rgba(255, 255, 255, 0.88);
+  padding: clamp(2rem, 5vw, 3.25rem) 0 clamp(1.25rem, 3vw, 1.75rem);
+}
 .sb-tenant-footer {
   --tenant-footer-accent: #0058be;
   --tenant-footer-bg: linear-gradient(

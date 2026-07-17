@@ -69,6 +69,9 @@ const tileEase = [0.22, 1, 0.36, 1];
 const ROLE_ICONS = [Shield, SearchCheck, Wallet, GraduationCap, Heart, Headphones];
 const MOBILE_ICONS = [Heart, GraduationCap, Shield];
 const HOW_ICONS = [School, Palette, FileText, BadgeCheck, Camera];
+const DEFAULT_IOS_APP_URL = 'https://apps.apple.com/us/app/the-kids-activities-app/id6670396298';
+const DEFAULT_ANDROID_APP_URL =
+  'https://play.google.com/store/apps/details?id=com.snssystem.kidsactivities';
 
 function SpotlightChip({
   item,
@@ -409,7 +412,7 @@ function AppStoreButton({ label, href }) {
   }
   return (
     <span className="sb-purple-cta sb-purple-cta--disabled" aria-disabled="true">
-      {label} — Coming Soon
+      {label} 
     </span>
   );
 }
@@ -516,8 +519,12 @@ function PanelBody({
 
 export default function PlatformLandingSections() {
   const { platform } = usePortalConfig();
-  const iosUrl = platform?.mobileApp?.iosUrl || platform?.mobileApp?.appStoreUrl;
-  const androidUrl = platform?.mobileApp?.androidUrl || platform?.mobileApp?.playStoreUrl;
+  const iosUrl =
+    platform?.mobileApp?.iosUrl || platform?.mobileApp?.appStoreUrl || DEFAULT_IOS_APP_URL;
+  const androidUrl =
+    platform?.mobileApp?.androidUrl ||
+    platform?.mobileApp?.playStoreUrl ||
+    DEFAULT_ANDROID_APP_URL;
   const [activeTab, setActiveTab] = useState('features');
   const [howStep, setHowStep] = useState(0);
   const [enrollView, setEnrollView] = useState('form');

@@ -260,7 +260,7 @@ export default function RegisterSchool() {
                 required
                 value={form.ownerPhone}
                 onChange={(e) => updateField('ownerPhone', e.target.value)}
-                placeholder="9876543210"
+                placeholder="00000-00000"
                 helper="10-digit mobile number starting with 6–9"
               />
 
