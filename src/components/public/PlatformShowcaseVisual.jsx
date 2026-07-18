@@ -199,7 +199,7 @@ function FeaturesDemo({ activeIndex = 0 }) {
                   y1="66"
                   x2={[32, 168, 22, 178, 42, 158][i]}
                   y2={[24, 24, 66, 66, 108, 108][i]}
-                  stroke={lit ? 'rgba(201,162,39,0.85)' : 'rgba(255,255,255,0.18)'}
+                  stroke={lit ? 'var(--sb-plat-line-lit, rgba(201,162,39,0.85))' : 'var(--sb-plat-line, rgba(255,255,255,0.18))'}
                   strokeWidth={lit ? 2.5 : 1}
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: [0, 1, 1], opacity: [0, 0.65, lit ? 0.95 : 0.2] }}
@@ -241,9 +241,9 @@ function FeaturesDemo({ activeIndex = 0 }) {
               animate={{
                 scale: moduleIndex === -1 ? [1, 1.08, 1] : [1, 1.05, 1],
                 boxShadow: [
-                  '0 0 0 0 rgba(201,162,39,0.35)',
-                  '0 0 0 14px rgba(201,162,39,0)',
-                  '0 0 0 0 rgba(201,162,39,0)',
+                  '0 0 0 0 rgba(251,191,36,0.35)',
+                  '0 0 0 14px rgba(251,191,36,0)',
+                  '0 0 0 0 rgba(251,191,36,0)',
                 ],
               }}
               transition={{ duration: 2.8, repeat: Infinity, ease: 'easeOut' }}
@@ -316,7 +316,7 @@ const HOW_SCENES = [
           </IconWrap>
         </motion.div>
         <motion.div className="sb-plat-scene__swatches">
-          {['#6b4c9a', '#c9a227', '#e8dff5', '#3d2a66'].map((color, i) => (
+          {['#0f172a', '#fbbf24', '#e0f2fe', '#fef9c3'].map((color, i) => (
             <motion.span
               key={color}
               style={{ background: color }}
@@ -350,7 +350,7 @@ const HOW_SCENES = [
         ))}
         <motion.span
           className="sb-plat-scene__upload"
-          animate={{ y: [0, -6, 0], borderColor: ['rgba(255,255,255,0.2)', 'rgba(201,162,39,0.6)', 'rgba(255,255,255,0.2)'] }}
+          animate={{ y: [0, -6, 0], borderColor: ['rgba(15,23,42,0.12)', 'rgba(251,191,36,0.75)', 'rgba(15,23,42,0.12)'] }}
           transition={{ duration: 2.2, repeat: Infinity }}
         >
           <IconWrap size="sm" pulse>
@@ -672,7 +672,7 @@ const FEE_SCENES = [
       <div className="sb-plat-fees-scene sb-plat-fees-scene--verify">
         <motion.div
           className="sb-plat-fees__upload"
-          animate={{ borderColor: ['rgba(255,255,255,0.2)', 'rgba(201,162,39,0.7)', 'rgba(255,255,255,0.2)'] }}
+          animate={{ borderColor: ['rgba(15,23,42,0.12)', 'rgba(251,191,36,0.8)', 'rgba(15,23,42,0.12)'] }}
           transition={{ duration: 2.2, repeat: Infinity }}
         >
           <Upload size={18} />
@@ -795,7 +795,7 @@ const FEE_SCENES = [
           </IconWrap>
         </motion.div>
         <motion.div className="sb-plat-scene__swatches">
-          {['#6b4c9a', '#c9a227', '#e8dff5', '#3d2a66'].map((color, i) => (
+          {['#0f172a', '#fbbf24', '#e0f2fe', '#fef9c3'].map((color, i) => (
             <motion.span
               key={color}
               style={{ background: color }}

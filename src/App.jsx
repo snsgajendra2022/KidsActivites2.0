@@ -9,6 +9,7 @@ import { ROLES } from './constants/roles.js';
 import PlatformHomeGate from './components/routing/PlatformHomeGate.jsx';
 import PlatformLoginGate from './components/routing/PlatformLoginGate.jsx';
 import TenantHomeGate from './components/routing/TenantHomeGate.jsx';
+import KidsLandingPage from './pages/public/KidsLandingPage.jsx';
 import RegisterSchool from './pages/public/RegisterSchool.jsx';
 import WorkspaceNew from './pages/public/WorkspaceNew.jsx';
 import WorkspaceConfirm from './pages/public/WorkspaceConfirm.jsx';
@@ -99,7 +100,9 @@ export default function App() {
   return (
     <Routes>
       {/* Platform routes (no tenant prefix) */}
-      <Route path="/" element={<PlatformHomeGate />} />
+      <Route path="/" element={<KidsLandingPage />} />
+      <Route path="/kids-landing" element={<Navigate to="/" replace />} />
+      <Route path="/work-space" element={<PlatformHomeGate />} />
       <Route path="/login" element={<PlatformLoginGate />} />
       <Route path="/register-school" element={<RegisterSchool />} />
       <Route path="/workspace/new" element={<WorkspaceNew />} />

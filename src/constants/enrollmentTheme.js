@@ -9,9 +9,9 @@ export const DEFAULT_ENROLLMENT_THEME = {
 export function enrollmentThemeToCssVars(theme = {}) {
   const t = { ...DEFAULT_ENROLLMENT_THEME, ...theme };
   return {
-    '--enroll-navy': t.brandNavy,
-    '--enroll-red': t.brandRed,
+    '--enroll-navy': 'var(--sb-primary, #1B2E4B)',
+    '--enroll-red': 'var(--sb-secondary, #C81E1E)',
     '--enroll-gray-light': t.brandGrayLight,
-    '--enroll-form-bg': t.formBg,
+    '--enroll-form-bg': 'var(--sb-surface, #F3F4F6)',
   };
 }

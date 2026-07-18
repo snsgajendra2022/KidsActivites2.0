@@ -207,7 +207,7 @@ export default function WorkspaceNew() {
             onChange={(e) => updateField('workspaceName', e.target.value)}
             onBlur={() => handleBlur('workspaceName')}
             error={touched.workspaceName ? fieldErrors.workspaceName : undefined}
-            placeholder="Green Valley International School"
+            placeholder="Enter your school workspace name"
           />
 
           <div>
@@ -221,7 +221,7 @@ export default function WorkspaceNew() {
                 updateField('slug', slugifyName(e.target.value));
               }}
               onBlur={() => handleBlur('slug')}
-              placeholder="green-valley"
+              placeholder="Workspace-slug"
               helper={slugHelper}
               error={touched.slug ? slugFieldError : undefined}
             />
@@ -273,7 +273,7 @@ export default function WorkspaceNew() {
             onChange={(e) => updateField('adminPhone', e.target.value)}
             onBlur={() => handleBlur('adminPhone')}
             error={touched.adminPhone ? fieldErrors.adminPhone : undefined}
-            placeholder="9876543210"
+            placeholder="00000-00000"
             helper={touched.adminPhone && fieldErrors.adminPhone ? undefined : '10-digit mobile number starting with 6–9'}
           />
 
