@@ -100,8 +100,9 @@ export default function App() {
   return (
     <Routes>
       {/* Platform routes (no tenant prefix) */}
-      <Route path="/" element={<PlatformHomeGate />} />
-      <Route path="/kids-landing" element={<KidsLandingPage />} />
+      <Route path="/" element={<KidsLandingPage />} />
+      <Route path="/kids-landing" element={<Navigate to="/" replace />} />
+      <Route path="/work-space" element={<PlatformHomeGate />} />
       <Route path="/login" element={<PlatformLoginGate />} />
       <Route path="/register-school" element={<RegisterSchool />} />
       <Route path="/workspace/new" element={<WorkspaceNew />} />

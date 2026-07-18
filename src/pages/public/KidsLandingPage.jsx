@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   BookOpen,
+  Building2,
   Check,
   ChevronDown,
   ClipboardCheck,
@@ -11,6 +13,7 @@ import {
   Home,
   Image as ImageIcon,
   Layers,
+  LogIn,
   Mail,
   MapPin,
   MessageCircle,
@@ -23,6 +26,7 @@ import {
   WalletCards,
   Wrench,
 } from 'lucide-react';
+import PlatformLandingSections from '../../components/public/PlatformLandingSections.jsx';
 import '../../styles/kids-landing-page.css';
 
 const roleCards = [
@@ -246,6 +250,9 @@ function FeatureCard({ feature, index }) {
 }
 
 export default function KidsLandingPage() {
+  const navigate = useNavigate();
+  const [workspaceSlug, setWorkspaceSlug] = useState('');
+
   useEffect(() => {
     const revealItems = document.querySelectorAll('.kl-feature-reveal');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -271,19 +278,27 @@ export default function KidsLandingPage() {
     return () => observer.disconnect();
   }, []);
 
+  function handleSignIn(e) {
+    e.preventDefault();
+    const slug = workspaceSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!slug) return;
+    navigate(`/${slug}/login`);
+  }
+
   return (
     <div className="kids-landing" id="top">
       <header className="kl-header">
         <nav className="kl-container kl-nav" aria-label="Main navigation">
           <Brand />
           <div className="kl-nav__links">
+            <a href="#get-started">Get started</a>
             <a href="#roles">Roles</a>
             <a href="#features">Features</a>
-            <a href="#how-it-works">How it works</a>
+            <a href="#platform-overview">Overview</a>
             <a href="#faq">FAQ</a>
           </div>
-          <a className="kl-button kl-button--navy kl-button--small" href="#contact">
-            Book a demo
+          <a className="kl-button kl-button--navy kl-button--small" href="#get-started">
+            Open workspace
           </a>
         </nav>
       </header>
@@ -306,11 +321,11 @@ export default function KidsLandingPage() {
                 Android TV displays.
               </p>
               <div className="kl-actions">
-                <a className="kl-button kl-button--yellow" href="/work-space">
-                  Book a school demo <ArrowRight size={20} />
+                <a className="kl-button kl-button--yellow" href="#get-started">
+                  Start workspace setup <ArrowRight size={20} />
                 </a>
-                <a className="kl-button kl-button--outline" href="#how-it-works">
-                  <Play size={19} /> See how it works
+                <a className="kl-button kl-button--outline" href="#platform-overview">
+                  <Play size={19} /> Full platform overview
                 </a>
               </div>
               <div className="kl-checks">
@@ -368,6 +383,56 @@ export default function KidsLandingPage() {
               'Data Private by Design',
               'Web · Mobile · Android TV',
             ].map((item) => <span key={item}>{item}</span>)}
+          </div>
+        </section>
+
+        <section className="kl-section kl-section--muted" id="get-started">
+          <div className="kl-container">
+            <div className="kl-section-heading kl-section-heading--center">
+              <SectionBadge icon={Building2} theme="blue">Get started</SectionBadge>
+              <h2>Create a workspace or sign in.</h2>
+              <p>New schools request a portal. Existing schools open their workspace login with a slug.</p>
+            </div>
+            <div className="kl-access-grid">
+              <article className="kl-access-card kl-theme--yellow">
+                <div className="kl-icon-tile">
+                  <Building2 size={28} />
+                </div>
+                <h3>New to Kids Activities?</h3>
+                <p>
+                  Request a dedicated workspace for your activity program. We&apos;ll send a confirmation
+                  email and set up your portal after verification.
+                </p>
+                <Link className="kl-button kl-button--yellow" to="/workspace/new">
+                  Start Workspace Setup <ArrowRight size={18} />
+                </Link>
+              </article>
+
+              <article className="kl-access-card kl-theme--blue">
+                <div className="kl-icon-tile">
+                  <LogIn size={28} />
+                </div>
+                <h3>Sign in to your workspace</h3>
+                <p>Enter your workspace slug to open your portal login.</p>
+                <form className="kl-access-form" onSubmit={handleSignIn}>
+                  <label className="kl-access-field">
+                    <span className="kl-access-field__label">Workspace slug</span>
+                    <input
+                      name="workspaceSlug"
+                      value={workspaceSlug}
+                      onChange={(e) => setWorkspaceSlug(e.target.value)}
+                      placeholder="your-program"
+                      autoComplete="organization"
+                      required
+                    />
+                    <small>e.g. little-stars → /little-stars/login</small>
+                  </label>
+                  <button className="kl-button kl-button--navy" type="submit">
+                    Continue <ArrowRight size={18} />
+                  </button>
+                </form>
+              </article>
+            </div>
           </div>
         </section>
 
@@ -467,6 +532,10 @@ export default function KidsLandingPage() {
           </div>
         </section>
 
+        <div className="kl-platform-wrap">
+          <PlatformLandingSections />
+        </div>
+
         <section className="kl-section" id="faq">
           <div className="kl-container kl-faq">
             <div className="kl-section-heading kl-section-heading--center">
@@ -496,10 +565,10 @@ export default function KidsLandingPage() {
                 slideshow live—on your school&apos;s real workflow.
               </p>
               <div className="kl-actions">
-                <a className="kl-button kl-button--yellow" href="/work-space">
-                  Book a school demo <ArrowRight size={20} />
+                <a className="kl-button kl-button--yellow" href="#get-started">
+                  Start Workspace Setup <ArrowRight size={20} />
                 </a>
-                <a className="kl-button kl-button--dark-outline" href="#features">See features</a>
+                <a className="kl-button kl-button--dark-outline" href="#platform-overview">See features</a>
               </div>
             </div>
             <div className="kl-contact-card">
