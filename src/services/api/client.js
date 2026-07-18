@@ -108,7 +108,8 @@ async function parseResponseWithMeta(res) {
 function buildHeaders(extra = {}, { auth = true, skipTenantHeader = false } = {}) {
   const reqHeaders = { ...extra };
 
-  if (!skipTenantHeader) {
+  // Do not overwrite an explicit tenant header (e.g. resolving another workspace).
+  if (!skipTenantHeader && !reqHeaders[TENANT_HEADER]) {
     const tenantSlug = resolveTenantSlug();
     if (tenantSlug) {
       reqHeaders[TENANT_HEADER] = tenantSlug;

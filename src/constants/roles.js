@@ -21,7 +21,7 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_DASHBOARD = {
-  [ROLES.SUPER_ADMIN]: '/admin/dashboard',
+  [ROLES.SUPER_ADMIN]: '/admin/schools',
   [ROLES.SCHOOL_ADMIN]: '/admin/dashboard',
   [ROLES.ADMISSION_OFFICER]: '/admin/dashboard',
   [ROLES.ACCOUNTANT]: '/admin/fees',

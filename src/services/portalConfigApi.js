@@ -1,9 +1,9 @@
 import { api } from './api/client.js';
-import { resolveTenantSlug } from './api/config.js';
+import { resolveTenantSlug, TENANT_HEADER } from './api/config.js';
 import { preloadBrandingImages } from '../utils/brandingUrlUtils.js';
 
 const portalConfigCache = new Map();
-let pendingPortalConfigRequest = null;
+const pendingPortalConfigByTenant = new Map();
 
 export function getCachedPortalConfig(tenantSlug = resolveTenantSlug()) {
   return tenantSlug ? portalConfigCache.get(tenantSlug) ?? null : null;
@@ -16,20 +16,34 @@ export function cachePortalConfig(config, tenantSlug = resolveTenantSlug()) {
   }
 }
 
-/** Fetch portal config once per in-flight request; dedupes concurrent callers. */
-export async function fetchPortalConfigRaw() {
-  if (pendingPortalConfigRequest) {
-    return pendingPortalConfigRequest;
+/**
+ * Fetch portal config for a workspace.
+ * @param {string} [tenantSlug] - defaults to current URL tenant
+ */
+export async function fetchPortalConfigRaw(tenantSlug = resolveTenantSlug()) {
+  if (!tenantSlug) {
+    throw new Error('No workspace slug to load portal config');
   }
 
-  pendingPortalConfigRequest = api.get('/portal/config', undefined, { auth: false })
+  const cached = portalConfigCache.get(tenantSlug);
+  if (cached) return cached;
+
+  const pending = pendingPortalConfigByTenant.get(tenantSlug);
+  if (pending) return pending;
+
+  const request = api.get('/portal/config', undefined, {
+    auth: false,
+    skipTenantHeader: true,
+    headers: { [TENANT_HEADER]: tenantSlug },
+  })
     .then((data) => {
-      preloadBrandingImages(data?.branding, { priority: true });
+      cachePortalConfig(data, tenantSlug);
       return data;
     })
     .finally(() => {
-      pendingPortalConfigRequest = null;
+      pendingPortalConfigByTenant.delete(tenantSlug);
     });
 
-  return pendingPortalConfigRequest;
+  pendingPortalConfigByTenant.set(tenantSlug, request);
+  return request;
 }

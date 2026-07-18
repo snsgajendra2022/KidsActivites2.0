@@ -1,7 +1,7 @@
 import usersData from '../data/users.json';
 import { delay } from './mockApi.js';
 import { api } from './api/client.js';
-import { isApiEnabled } from './api/config.js';
+import { isApiEnabled, TENANT_HEADER } from './api/config.js';
 import { clearMockStorage } from './api/clearMockStorage.js';
 import { markDemoSession } from './api/demoMode.js';
 import { clearTokens, getRefreshToken, setTokens } from './api/tokenStorage.js';
@@ -9,6 +9,17 @@ import { clearTokens, getRefreshToken, setTokens } from './api/tokenStorage.js';
 const DEMO_OTP = '123456';
 const OTP_STORAGE_KEY = 'sb_login_otp';
 const OTP_TTL_MS = 5 * 60 * 1000;
+
+/** Force master-DB tenant header on /admin/* (never fall back to VITE_TENANT_SLUG). */
+function platformAdminRequestOpts() {
+  if (typeof window === 'undefined') return {};
+  const first = window.location.pathname.split('/').filter(Boolean)[0]?.toLowerCase();
+  if (first !== 'admin') return {};
+  return {
+    skipTenantHeader: true,
+    headers: { [TENANT_HEADER]: 'admin' },
+  };
+}
 
 function saveOtpSession(channel, target, otp) {
   const normalizedTarget = channel === 'email'
@@ -118,7 +129,10 @@ export async function loginByEmail(email, password) {
     return authenticateByEmail(email, password);
   }
 
-  const data = await api.post('/auth/login', { email, password }, { auth: false });
+  const data = await api.post('/auth/login', { email, password }, {
+    auth: false,
+    ...platformAdminRequestOpts(),
+  });
   setTokens(data.accessToken, data.refreshToken);
   return markDemoSession(
     { ...data.user, identity: email, loginMethod: 'email' },

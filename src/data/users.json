@@ -3,7 +3,7 @@
     {
       "id": "usr-super-admin",
       "name": "Rakesh Verma",
-      "email": "superadmin@kidsactivites.demo",
+      "email": "superadmin@kidsactivities.local",
       "mobile": "9000000001",
       "password": "123456",
       "role": "super_admin",

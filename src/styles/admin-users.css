@@ -113,6 +113,64 @@
   margin-top: 14px;
 }
 
+.admin-tenant-cloud {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-tenant-cloud strong {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-tenant-cloud span,
+.admin-tenant-cloud em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.admin-tenant-cloud em {
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.admin-tenant-cloud--ok {
+  background: #ecf8f0;
+  color: #1f6b3a;
+}
+
+.admin-tenant-cloud--bad {
+  background: #fdeeee;
+  color: #8b1e1e;
+}
+
+.admin-tenant-cloud--warn {
+  background: #fff7e8;
+  color: #8a5a00;
+}
+
+@keyframes admin-spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: admin-spin 0.8s linear infinite;
+}
+
 .portal-school-banner {
   display: flex;
   flex-direction: column;

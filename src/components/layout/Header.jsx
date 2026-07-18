@@ -1,13 +1,14 @@
 import { Search, Menu, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ROLE_DASHBOARD } from '../../constants/roles.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import NotificationBell from '../notifications/NotificationBell.jsx';
 import UserMenu from './UserMenu.jsx';
 
 export default function Header({ user, onMenuClick, onLogout }) {
   const { portalName, school } = usePortalConfig();
-  const homePath = ROLE_DASHBOARD[user?.role] || '/';
+  const { roleDashboard } = useTenantPath();
+  const homePath = roleDashboard(user?.role) || '/';
 
   return (
     <header className="app-header shrink-0 border-b border-black/5 bg-white/95 backdrop-blur-xl">

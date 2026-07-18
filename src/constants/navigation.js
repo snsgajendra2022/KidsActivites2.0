@@ -43,12 +43,11 @@ export const SCHOOL_ADMIN_NAV = [
   ...ADMIN_CORE_NAV,
 ];
 
+/** Platform operator only — not school day-to-day (admissions, fees, photos, etc.). */
 export const SUPER_ADMIN_NAV = [
-  ADMIN_DASHBOARD,
   { id: 'admin_schools', to: '/admin/schools', label: 'Schools', icon: GraduationCap, iconName: 'GraduationCap', section: 'Platform' },
   { id: 'admin_users', to: '/admin/users', label: 'All Users', icon: Users, iconName: 'Users', section: 'Platform' },
   PORTAL_BRANDING_NAV,
-  ...ADMIN_CORE_NAV,
 ];
 
 export const PARENT_NAV = [

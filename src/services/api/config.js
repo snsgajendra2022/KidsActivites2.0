@@ -100,10 +100,18 @@ function resolveTenantSlugFromSubdomainHost() {
 
 /**
  * Resolve tenant slug for API requests.
- * Priority: URL path `/{slug}/...` → subdomain host → VITE_TENANT_SLUG (dev fallback).
+ * Priority: platform /admin path → URL path `/{slug}/...` → subdomain → VITE_TENANT_SLUG.
  */
 export function resolveTenantSlug() {
   if (typeof window !== 'undefined') {
+    const segments = window.location.pathname.split('/').filter(Boolean);
+    const first = segments[0]?.toLowerCase();
+
+    // Platform operator login/UI must never fall back to VITE_TENANT_SLUG (e.g. sns).
+    if (first === 'admin') {
+      return 'admin';
+    }
+
     const fromPath = extractSlugSegment(window.location.pathname);
     if (fromPath) return fromPath;
 

@@ -1,6 +1,7 @@
-/** First URL segments that are NOT tenant slugs (platform routes, role prefixes at root). */
+/** First URL segments that are NOT tenant slugs (platform routes, role prefixes at root).
+ *  Note: {@code admin} is intentionally NOT reserved — it is the platform operator workspace
+ *  ({@code /admin/login}). Public signup still blocks the slug on the backend. */
 export const RESERVED_SLUGS = new Set([
-  'admin',
   'api',
   'assets',
   'enroll',

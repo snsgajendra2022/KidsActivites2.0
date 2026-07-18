@@ -32,9 +32,23 @@ export function prefixTenantPath(path, tenantSlug) {
   if (!path || !tenantSlug) return path;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  if (normalized === `/${tenantSlug}` || normalized.startsWith(`/${tenantSlug}/`)) {
-    return normalized;
+  if (normalized === `/${tenantSlug}`) return normalized;
+
+  const tenantPrefix = `/${tenantSlug}/`;
+  if (normalized.startsWith(tenantPrefix)) {
+    // Avoid false "already prefixed" when tenant slug is "admin" and path is "/admin/...".
+    // Real prefixed routes look like /{tenant}/admin/..., /{tenant}/login, etc.
+    const remainder = normalized.slice(tenantPrefix.length);
+    const firstSeg = remainder.split('/').filter(Boolean)[0];
+    const appRoots = new Set([
+      'admin', 'parent', 'teacher', 'login', 'profile', 'enroll', 'enrollment',
+      'forgot-password', 'reset-password', 'verify-email',
+    ]);
+    if (appRoots.has(firstSeg)) {
+      return normalized;
+    }
   }
+
   return `/${tenantSlug}${normalized}`;
 }
 

@@ -1,7 +1,7 @@
 import { delay, getStore, setStore } from './mockApi.js';
 import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
-import { isApiEnabled, resolveTenantSlug } from './api/config.js';
+import { isApiEnabled } from './api/config.js';
 import { fetchPortalConfigRaw } from './portalConfigApi.js';
 import { MOCK_SCHOOLS } from '../data/mockSchools.js';
 
@@ -52,7 +52,11 @@ export async function listSchoolsAdmin() {
       await delay(100);
       return [...readSchoolsStore()];
     },
-    apiFn: () => api.get('/admin/schools'),
+    // Master context so SUPER_ADMIN sees every workspace, not only the login tenant.
+    apiFn: () => api.get('/admin/schools', undefined, {
+      skipTenantHeader: true,
+      headers: { 'X-Tenant-Slug': 'admin' },
+    }),
   });
 }
 
@@ -77,17 +81,27 @@ export async function getSchoolBySlugApi(slug) {
       return school;
     },
     apiFn: async () => {
-      const tenantSlug = resolveTenantSlug();
-      const normalized = slug.toLowerCase();
-      if (!tenantSlug || normalized !== tenantSlug.toLowerCase()) {
-        throw new Error('School not found');
+      const normalized = slug?.toLowerCase();
+      if (!normalized) throw new Error('School not found');
+
+      // Platform operator workspace — master DB, not a school tenant portal.
+      if (normalized === 'admin') {
+        return {
+          id: 'platform',
+          slug: 'admin',
+          name: 'Kids Activities Platform',
+          status: 'active',
+          academicYear: '',
+        };
       }
-      const config = await fetchPortalConfigRaw();
+
+      // Always resolve against the requested slug (not whatever the current URL is).
+      const config = await fetchPortalConfigRaw(normalized);
       const school = config?.school;
       if (!school?.id) throw new Error('School not found');
       return {
         ...school,
-        slug: tenantSlug,
+        slug: normalized,
         status: school.status || 'active',
       };
     },
