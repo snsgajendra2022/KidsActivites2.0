@@ -7,12 +7,22 @@ import {
   subscribeToNotifications,
 } from '../services/notificationRealtime.js';
 import { toast } from 'sonner';
+import { claimNotificationDisplay } from '../utils/notificationDisplayDedupe.js';
+import { filterOutDismissed, dismissNotificationIds } from '../utils/notificationDismissStore.js';
 
 function sortNotifications(notifications) {
   return [...notifications].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
-export function useNotifications({ pollIntervalMs = 20_000, enabled = true } = {}) {
+/**
+ * @param {{ pollIntervalMs?: number, enabled?: boolean, showToasts?: boolean }} [options]
+ * showToasts: when false, still update bell state but never toast (e.g. NotificationsPage).
+ */
+export function useNotifications({
+  pollIntervalMs = 20_000,
+  enabled = true,
+  showToasts = true,
+} = {}) {
   const { user, bootstrapping } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -34,7 +44,7 @@ export function useNotifications({ pollIntervalMs = 20_000, enabled = true } = {
 
     try {
       const { notifications: items, unreadCount: count } = await getNotifications(user.id);
-      const list = Array.isArray(items) ? items : [];
+      const list = filterOutDismissed(Array.isArray(items) ? items : []);
       setNotifications(list);
       setUnreadCount(Number.isFinite(count) ? count : list.filter((n) => !n.read).length);
       return { notifications: list, unreadCount: count };
@@ -95,19 +105,27 @@ export function useNotifications({ pollIntervalMs = 20_000, enabled = true } = {
       if (!payload?.event) return;
 
       if (payload.event === 'notification:new') {
+        const notifId = payload.id || payload.notificationId;
         setNotifications((prev) => {
-          const exists = prev.some((n) => n.id === payload.id);
+          const exists = prev.some((n) => n.id === notifId || n.id === payload.id);
           if (exists) {
-            return prev.map((n) => (n.id === payload.id ? { ...n, ...payload } : n));
+            return prev.map((n) => (
+              n.id === notifId || n.id === payload.id ? { ...n, ...payload, id: notifId || n.id } : n
+            ));
           }
           setUnreadCount((count) => count + 1);
-          if (document.visibilityState === 'visible') {
-            toast(payload.title || 'Notification', {
-              description: payload.body || payload.message || '',
-            });
-          }
-          return sortNotifications([payload, ...prev]);
+          return sortNotifications([{ ...payload, id: notifId || payload.id }, ...prev]);
         });
+        // Focused tab: single in-app toast (deduped vs Bell/page/FCM by notification id).
+        if (
+          showToasts
+          && document.visibilityState === 'visible'
+          && claimNotificationDisplay(notifId)
+        ) {
+          toast(payload.title || 'Notification', {
+            description: payload.body || payload.message || '',
+          });
+        }
         return;
       }
 
@@ -137,7 +155,7 @@ export function useNotifications({ pollIntervalMs = 20_000, enabled = true } = {
       stopPolling();
       unsubRealtime();
     };
-  }, [user?.id, bootstrapping, enabled, pollIntervalMs]);
+  }, [user?.id, bootstrapping, enabled, pollIntervalMs, showToasts]);
 
   return {
     notifications,
@@ -147,6 +165,12 @@ export function useNotifications({ pollIntervalMs = 20_000, enabled = true } = {
     refresh,
     setNotifications,
     setUnreadCount,
+    /** Hide notifications from UI (and optionally mark read via caller). */
+    clearNotificationsFromView: (ids) => {
+      const list = Array.isArray(ids) ? ids : [];
+      dismissNotificationIds(list);
+      setNotifications((prev) => prev.filter((n) => !list.includes(n.id)));
+    },
   };
 }
 

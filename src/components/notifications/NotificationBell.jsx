@@ -28,6 +28,7 @@ export default function NotificationBell() {
     unreadCount,
     setNotifications,
     setUnreadCount,
+    clearNotificationsFromView,
   } = useNotifications({ pollIntervalMs: 20_000 });
   const ref = useRef(null);
 
@@ -68,6 +69,17 @@ export default function NotificationBell() {
     setUnreadCount(0);
   };
 
+  const handleClearAll = async () => {
+    const ids = notifications.map((n) => n.id).filter(Boolean);
+    try {
+      await markAllRead(user.id);
+    } catch {
+      // Still clear locally so the inbox empties.
+    }
+    clearNotificationsFromView(ids);
+    setUnreadCount(0);
+  };
+
   const handleOpen = (n) => {
     if (!n.read) handleRead(n.id).catch(() => {});
     const path = resolveNotificationPath(n, user?.role);
@@ -101,15 +113,26 @@ export default function NotificationBell() {
           <div className="notif-dropdown-panel" role="dialog" aria-label="Notifications">
             <div className="notif-dropdown-header">
               <strong className="notif-dropdown-title">Notifications</strong>
-              {unread > 0 && (
-                <button
-                  type="button"
-                  onClick={handleReadAll}
-                  className="notif-dropdown-mark-all"
-                >
-                  Mark all read
-                </button>
-              )}
+              <div className="notif-dropdown-header-actions">
+                {unread > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleReadAll}
+                    className="notif-dropdown-mark-all"
+                  >
+                    Mark all read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => { void handleClearAll(); }}
+                    className="notif-dropdown-clear-all"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
             </div>
             {notifications.length === 0 ? (
               <div className="notif-dropdown-empty">No notifications yet.</div>
@@ -136,6 +159,15 @@ export default function NotificationBell() {
               >
                 View all notifications
               </Link>
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  className="notif-dropdown-clear-all notif-dropdown-clear-all--footer"
+                  onClick={() => { void handleClearAll(); }}
+                >
+                  Clear all messages
+                </button>
+              )}
             </div>
           </div>
         </>

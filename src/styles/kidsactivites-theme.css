@@ -560,6 +560,36 @@ a.premium-btn-white:hover {
   text-decoration: underline;
 }
 
+.notif-dropdown-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.notif-dropdown-clear-all {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sb-on-surface-variant, #64748b);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.notif-dropdown-clear-all:hover {
+  color: var(--sb-error, #b91c1c);
+  text-decoration: underline;
+}
+
+.notif-dropdown-clear-all--footer {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+}
+
 .notif-dropdown-empty {
   padding: 2rem 1rem;
   text-align: center;

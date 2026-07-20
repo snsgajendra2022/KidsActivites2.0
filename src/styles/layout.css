@@ -561,6 +561,7 @@
 }
 
 .portal-shell .app-header .notif-dropdown-mark-all,
+.portal-shell .app-header .notif-dropdown-clear-all,
 .portal-shell .app-header .notif-dropdown-view-all {
   color: var(--admin-purple-mid) !important;
 }

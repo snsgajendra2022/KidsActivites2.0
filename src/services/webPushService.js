@@ -1,10 +1,10 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
-import { toast } from 'sonner';
 import { firebaseConfig, firebaseVapidKey, isFirebaseWebConfigured } from '../config/firebase.js';
 import { resolveTenantSlug } from './api/config.js';
 import { api } from './api/client.js';
 import { resolveNotificationPath } from '../utils/notificationLinks.js';
+import { requestNotificationsRefresh } from './notificationRealtime.js';
 
 const DEVICE_ID_KEY = 'sb_web_push_device_id';
 const TOKEN_KEY = 'sb_web_fcm_token';
@@ -40,9 +40,9 @@ async function registerServiceWorker() {
   const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
     scope: '/',
   });
-  // Pass config so the SW can init Firebase for background messages
   const ready = await navigator.serviceWorker.ready;
-  ready.active?.postMessage({ type: 'FIREBASE_CONFIG', config: firebaseConfig });
+  const target = ready.active || reg.active;
+  target?.postMessage({ type: 'FIREBASE_CONFIG', config: firebaseConfig });
   return reg;
 }
 
@@ -70,13 +70,16 @@ export async function syncWebPushToken(user) {
     });
     if (!token) return null;
 
+    bindForegroundListener();
+    bindNotificationClick(user);
+
     const last = localStorage.getItem(TOKEN_KEY);
     if (last === token) {
-      bindForegroundListener(user);
       return token;
     }
 
     const workspaceId = resolveTenantSlug();
+    // Web FCM registration tokens use provider `fcm` (same Admin SDK path as mobile).
     await api.post('/notifications/register-device', {
       platform: 'web',
       provider: 'fcm',
@@ -88,8 +91,6 @@ export async function syncWebPushToken(user) {
     });
 
     localStorage.setItem(TOKEN_KEY, token);
-    bindForegroundListener(user);
-    bindNotificationClick(user);
     return token;
   } catch (err) {
     if (import.meta.env.DEV) {
@@ -115,19 +116,15 @@ export async function unregisterWebPushToken() {
   }
 }
 
-function bindForegroundListener(user) {
+/**
+ * Foreground FCM: refresh bell only — no toast, no OS notification.
+ * When the tab is focused, STOMP owns the single in-app toast (see useNotifications).
+ * Background / other tab / closed: the service worker shows the OS notification.
+ */
+function bindForegroundListener() {
   if (foregroundUnsub || !messagingInstance) return;
-  foregroundUnsub = onMessage(messagingInstance, (payload) => {
-    const title = payload.notification?.title || payload.data?.title || 'Notification';
-    const body = payload.notification?.body || payload.data?.body || payload.data?.message || '';
-    toast(title, {
-      description: body,
-      action: {
-        label: 'Open',
-        onClick: () => navigateFromPayload(payload.data || {}, user?.role),
-      },
-    });
-    window.dispatchEvent(new CustomEvent('notifications:refresh'));
+  foregroundUnsub = onMessage(messagingInstance, () => {
+    requestNotificationsRefresh();
   });
 }
 
@@ -141,7 +138,7 @@ function bindNotificationClick(user) {
 }
 
 function navigateFromPayload(data, role) {
-  const webRoute = data.webRoute || data.link;
+  const webRoute = data.webRoute || data.link || data.actionUrl;
   if (typeof webRoute === 'string' && webRoute.startsWith('/')) {
     window.location.assign(webRoute);
     return;
@@ -157,7 +154,6 @@ function navigateFromPayload(data, role) {
     role,
   );
   if (path) {
-    // Tenant prefix may already be in webRoute; resolveNotificationPath returns app-relative.
     const slug = resolveTenantSlug();
     const full = slug && !path.startsWith(`/${slug}`) ? `/${slug}${path}` : path;
     window.location.assign(full);

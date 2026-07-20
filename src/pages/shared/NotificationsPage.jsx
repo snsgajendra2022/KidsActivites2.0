@@ -75,7 +75,8 @@ export default function NotificationsPage({
     error,
     setNotifications,
     setUnreadCount,
-  } = useNotifications({ pollIntervalMs: 15_000 });
+    clearNotificationsFromView,
+  } = useNotifications({ pollIntervalMs: 15_000, showToasts: false });
   const [activeFilter, setActiveFilter] = useState('all');
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
@@ -181,6 +182,17 @@ export default function NotificationsPage({
     setUnreadCount(0);
   };
 
+  const handleClearAll = async () => {
+    const ids = notifications.map((n) => n.id).filter(Boolean);
+    try {
+      await markAllRead(user.id);
+    } catch {
+      // Still clear the list locally.
+    }
+    clearNotificationsFromView(ids);
+    setUnreadCount(0);
+  };
+
   const filterLabel = FILTERS.find((f) => f.id === activeFilter)?.label || 'All';
 
   return (
@@ -238,6 +250,14 @@ export default function NotificationsPage({
                 <CheckCheck size={16} />
                 Mark all as read
               </button>
+              <button
+                type="button"
+                className="notif-clear-all"
+                onClick={() => { void handleClearAll(); }}
+                disabled={notifications.length === 0}
+              >
+                Clear all messages
+              </button>
             </div>
           </aside>
 
@@ -261,6 +281,15 @@ export default function NotificationsPage({
                 >
                   <CheckCheck size={15} />
                   Mark all read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  className="notif-clear-all notif-clear-all--toolbar"
+                  onClick={() => { void handleClearAll(); }}
+                >
+                  Clear all
                 </button>
               )}
             </div>
