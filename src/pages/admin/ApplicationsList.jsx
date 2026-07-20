@@ -109,7 +109,7 @@ export default function ApplicationsList() {
     <DashboardLayout>
       <PageHeader title="Enrollment Applications" subtitle="Review, approve, and manage all enrollment applications." />
 
-      <div className="mb-5 flex flex-wrap gap-3">
+      <div className="sb-filter-bar mb-5">
         <div className="relative min-w-[200px] flex-1">
           <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#45474c]" />
           <input
@@ -140,7 +140,7 @@ export default function ApplicationsList() {
       />
 
       {!loading && totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-[#45474c]">
+        <div className="sb-list-footer mt-4 flex items-center justify-between text-sm text-[#45474c]">
           <span>
             Showing page {page + 1} of {totalPages} ({total} applications)
           </span>

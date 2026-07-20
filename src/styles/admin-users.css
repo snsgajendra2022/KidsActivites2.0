@@ -113,6 +113,18 @@
   margin-top: 14px;
 }
 
+@media (max-width: 479px) {
+  .admin-school-card__actions > * {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+
+  .admin-school-card__actions > *:last-child:nth-child(odd) {
+    flex-basis: 100%;
+  }
+}
+
 .admin-tenant-cloud {
   display: flex;
   gap: 10px;

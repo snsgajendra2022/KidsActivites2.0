@@ -12,6 +12,11 @@ import {
   mapApplicationToKidzeeForm,
 } from './kidzeePrintFields.js';
 import NetworkBanner from '../../components/layout/NetworkBanner.jsx';
+import {
+  getEnrollmentDocumentFields,
+  getCorrectionRequestedDocuments,
+  getCorrectionRequestNote,
+} from '../../utils/enrollmentDocumentFields.js';
 
 const ADMIN_ROLES = new Set([
   ROLES.SUPER_ADMIN,
@@ -22,7 +27,12 @@ const ADMIN_ROLES = new Set([
 ]);
 
 export default function KidzeePrintableFormPage() {
-  const { branding: portalBranding, activeSchoolId } = usePortalConfig();
+  const { branding: portalBranding, activeSchoolId, enrollmentForm } = usePortalConfig();
+  const documentFieldLabels = useMemo(() => {
+    const map = {};
+    getEnrollmentDocumentFields(enrollmentForm).forEach((f) => { map[f.key] = f.label; });
+    return map;
+  }, [enrollmentForm]);
   const { user } = useAuth();
   const { tenantPath } = useTenantPath();
   const [searchParams] = useSearchParams();
@@ -66,6 +76,9 @@ export default function KidzeePrintableFormPage() {
     resolvedAppId: applicationId,
     readOnly: false,
     loadError: null,
+    applicationStatus: null,
+    correctionNote: '',
+    requestedDocuments: [],
   }));
 
   useEffect(() => {
@@ -83,6 +96,9 @@ export default function KidzeePrintableFormPage() {
             resolvedAppId: applicationId,
             readOnly: false,
             loadError: 'Application not found. Sign in as an admin or save a new draft.',
+            applicationStatus: null,
+            correctionNote: '',
+            requestedDocuments: [],
           });
           return;
         }
@@ -93,6 +109,9 @@ export default function KidzeePrintableFormPage() {
           resolvedAppId: app.id,
           readOnly: submitted && !isAdmin,
           loadError: null,
+          applicationStatus: app.status,
+          correctionNote: getCorrectionRequestNote(app),
+          requestedDocuments: getCorrectionRequestedDocuments(app),
         });
       } catch {
         if (!cancelled) {
@@ -102,6 +121,9 @@ export default function KidzeePrintableFormPage() {
             resolvedAppId: applicationId,
             readOnly: false,
             loadError: 'Could not load this application. Sign in as an admin to view saved signatures.',
+            applicationStatus: null,
+            correctionNote: '',
+            requestedDocuments: [],
           });
         }
       }
@@ -138,6 +160,10 @@ export default function KidzeePrintableFormPage() {
         schoolId={activeSchoolId || user?.schoolId || null}
         backHref={backTarget.href}
         backLabel={backTarget.label}
+        applicationStatus={loadState.applicationStatus}
+        correctionNote={loadState.correctionNote}
+        requestedDocuments={loadState.requestedDocuments}
+        documentFieldLabels={documentFieldLabels}
       />
     </div>
   );

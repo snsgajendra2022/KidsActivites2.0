@@ -240,8 +240,17 @@ export function DynamicDocumentStepFields({ step, form, errors, updateDoc, appli
     <div className="enrollment-documents">
       {(step.fields || []).map((field) => {
         const errorKey = `documents.${field.key}`;
+        const current = form.documents?.[field.key];
+        const rejectionReason = current?.status === 'rejected'
+          ? (current.rejectReason || 'This document was rejected. Please re-upload.')
+          : null;
+        const needsAttention = current?.status === 'rejected';
         return (
-          <div key={field.id} className="enrollment-doc-upload">
+          <div
+            key={field.id}
+            className={`enrollment-doc-upload${needsAttention ? ' enrollment-doc-upload--rejected' : ''}`}
+            id={needsAttention ? `doc-reject-${field.key}` : undefined}
+          >
             <div className="enrollment-doc-upload__head">
               <label className="enrollment-doc-upload__label" htmlFor={`upload-${field.key}`}>
                 {field.label}
@@ -249,7 +258,9 @@ export function DynamicDocumentStepFields({ step, form, errors, updateDoc, appli
                   <span className="enrollment-required" aria-hidden="true">*</span>
                 )}
               </label>
-              {field.required ? (
+              {needsAttention ? (
+                <span className="enrollment-doc-upload__badge enrollment-doc-upload__badge--rejected">Needs re-upload</span>
+              ) : field.required ? (
                 <span className="enrollment-doc-upload__badge enrollment-doc-upload__badge--required">Required</span>
               ) : (
                 <span className="enrollment-doc-upload__badge">Optional</span>
@@ -261,11 +272,15 @@ export function DynamicDocumentStepFields({ step, form, errors, updateDoc, appli
                 label=""
                 category={field.fileCategory || 'document'}
                 maxSizeMB={field.validation?.maxSizeMB}
-                required={field.required}
+                required={field.required || needsAttention}
                 value={form.documents?.[field.key]}
-                onChange={(data) => updateDoc(field.key, data)}
+                onChange={(data) => updateDoc(
+                  field.key,
+                  data ? { ...data, status: 'uploaded', rejectReason: undefined } : null,
+                )}
                 applicationId={applicationId}
                 schoolId={schoolId}
+                rejectionReason={rejectionReason}
               />
             </div>
             {errors[errorKey] && (

@@ -217,10 +217,34 @@ export async function updateApplicationStatus(id, status, note) {
   });
 }
 
-export async function requestCorrection(id, reason) {
+export async function requestCorrection(id, reason, parentEmail = null, requestedDocuments = []) {
   return routeRequest({
-    mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.CORRECTION_REQUIRED, reason),
-    apiFn: () => api.post(`/admin/applications/${id}/request-correction`, { note: reason }),
+    mockFn: async () => {
+      const apps = getAll();
+      const app = apps.find((a) => a.id === id);
+      if (app) {
+        app.correctionRequest = {
+          note: reason,
+          requestedDocuments: requestedDocuments || [],
+          requestedAt: new Date().toISOString(),
+        };
+        saveAll(apps);
+      }
+      const updated = await mockUpdateStatus(id, ENROLLMENT_STATUSES.CORRECTION_REQUIRED, reason);
+      const email = parentEmail || updated?.parent?.email || updated?.parent?.fatherEmail || null;
+      return {
+        ...updated,
+        correctionRequest: app?.correctionRequest || updated.correctionRequest,
+        correctionUrl: `http://localhost:3000/enrollment/correction/mock-token-${id}`,
+        emailSent: Boolean(email),
+        parentEmail: email || null,
+      };
+    },
+    apiFn: () => api.post(`/admin/applications/${id}/request-correction`, {
+      note: reason,
+      ...(parentEmail ? { parentEmail } : {}),
+      requestedDocuments: requestedDocuments || [],
+    }),
   });
 }
 
@@ -371,6 +395,61 @@ export async function verifyDocuments(id) {
   return routeRequest({
     mockFn: () => mockUpdateStatus(id, ENROLLMENT_STATUSES.DOCUMENTS_VERIFIED, 'All documents verified'),
     apiFn: () => api.post(`/admin/applications/${id}/verify-documents`),
+  });
+}
+
+export async function verifyDocument(id, fieldKey) {
+  return routeRequest({
+    mockFn: async () => {
+      const apps = getAll();
+      const app = apps.find((a) => a.id === id);
+      if (!app) throw Object.assign(new Error('Application not found'), { status: 404, code: 'NOT_FOUND' });
+      const docs = { ...(app.documents || {}) };
+      const existing = docs[fieldKey] || {};
+      docs[fieldKey] = { ...existing, fieldKey, status: 'verified' };
+      delete docs[fieldKey].rejectReason;
+      app.documents = docs;
+      const allVerified = Object.values(docs).every((d) => d?.status === 'verified');
+      if (allVerified) {
+        return mockUpdateStatus(id, ENROLLMENT_STATUSES.DOCUMENTS_VERIFIED, 'All required documents verified');
+      }
+      app.status = ENROLLMENT_STATUSES.DOCUMENTS_PENDING;
+      saveAll(apps);
+      return app;
+    },
+    apiFn: () => api.post(`/admin/applications/${id}/documents/${encodeURIComponent(fieldKey)}/verify`),
+  });
+}
+
+export async function rejectDocument(id, fieldKey, reason, parentEmail = null) {
+  return routeRequest({
+    mockFn: async () => {
+      const apps = getAll();
+      const app = apps.find((a) => a.id === id);
+      if (!app) throw Object.assign(new Error('Application not found'), { status: 404, code: 'NOT_FOUND' });
+      const docs = { ...(app.documents || {}) };
+      const existing = docs[fieldKey] || {};
+      docs[fieldKey] = {
+        ...existing,
+        fieldKey,
+        status: 'rejected',
+        rejectReason: reason || 'Document rejected — please re-upload.',
+      };
+      app.documents = docs;
+      saveAll(apps);
+      const updated = await mockUpdateStatus(id, ENROLLMENT_STATUSES.CORRECTION_REQUIRED, `Document rejected (${fieldKey})`);
+      const email = parentEmail || updated?.parent?.email || updated?.parent?.fatherEmail || null;
+      return {
+        ...updated,
+        correctionUrl: `http://localhost:3000/enrollment/correction/mock-token-${id}`,
+        emailSent: Boolean(email),
+        parentEmail: email || null,
+      };
+    },
+    apiFn: () => api.post(`/admin/applications/${id}/documents/${encodeURIComponent(fieldKey)}/reject`, {
+      reason,
+      ...(parentEmail ? { parentEmail } : {}),
+    }),
   });
 }
 

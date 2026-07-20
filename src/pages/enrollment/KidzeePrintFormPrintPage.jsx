@@ -8,13 +8,18 @@ import {
   getEmptyKidzeeFormData,
   mapApplicationToKidzeeForm,
 } from './kidzeePrintFields.js';
+import {
+  getEnrollmentDocumentFields,
+  getCorrectionRequestedDocuments,
+  getCorrectionRequestNote,
+} from '../../utils/enrollmentDocumentFields.js';
 
 /**
  * Read-only Kidzee form view for headless PDF capture (Playwright).
  * Loaded via short-lived print token — no nav, toolbar, or auth required.
  */
 export default function KidzeePrintFormPrintPage() {
-  const { branding: portalBranding } = usePortalConfig();
+  const { branding: portalBranding, enrollmentForm } = usePortalConfig();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
 
@@ -23,12 +28,21 @@ export default function KidzeePrintFormPrintPage() {
     logoUrl: portalBranding?.logoUrl || KIDZEE_BRANDING.logoUrl,
   }), [portalBranding?.logoUrl]);
 
+  const documentFieldLabels = useMemo(() => {
+    const map = {};
+    getEnrollmentDocumentFields(enrollmentForm).forEach((f) => { map[f.key] = f.label; });
+    return map;
+  }, [enrollmentForm]);
+
   const emptyForm = useMemo(() => getEmptyKidzeeFormData(branding), [branding]);
   const [loadState, setLoadState] = useState(() => ({
     loading: Boolean(token),
     initialData: null,
     applicationId: null,
     loadError: token ? null : 'No print token was provided.',
+    applicationStatus: null,
+    correctionNote: '',
+    requestedDocuments: [],
   }));
 
   useEffect(() => {
@@ -45,6 +59,9 @@ export default function KidzeePrintFormPrintPage() {
             initialData: null,
             applicationId: null,
             loadError: 'Application not found or print link expired.',
+            applicationStatus: null,
+            correctionNote: '',
+            requestedDocuments: [],
           });
           return;
         }
@@ -53,6 +70,9 @@ export default function KidzeePrintFormPrintPage() {
           initialData: mapApplicationToKidzeeForm(app, branding),
           applicationId: app.id,
           loadError: null,
+          applicationStatus: app.status,
+          correctionNote: getCorrectionRequestNote(app),
+          requestedDocuments: getCorrectionRequestedDocuments(app),
         });
       } catch {
         if (!cancelled) {
@@ -61,6 +81,9 @@ export default function KidzeePrintFormPrintPage() {
             initialData: null,
             applicationId: null,
             loadError: 'Could not load this form. The print link may have expired.',
+            applicationStatus: null,
+            correctionNote: '',
+            requestedDocuments: [],
           });
         }
       }
@@ -137,6 +160,10 @@ export default function KidzeePrintFormPrintPage() {
         branding={branding}
         applicationId={loadState.applicationId}
         printOnly
+        applicationStatus={loadState.applicationStatus}
+        correctionNote={loadState.correctionNote}
+        requestedDocuments={loadState.requestedDocuments}
+        documentFieldLabels={documentFieldLabels}
       />
     </div>
   );

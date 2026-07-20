@@ -31,6 +31,8 @@ const STATUS_VARIANT = {
   account_created: 'primary',
   admission_confirmed: 'success',
   verified: 'success',
+  uploaded: 'warning',
+  pending: 'warning',
   not_assigned: 'default',
   payment_submitted: 'info',
 };

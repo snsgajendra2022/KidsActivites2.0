@@ -60,6 +60,7 @@
 /* Main / School portal switch */
 .portal-settings__target {
   display: inline-flex;
+  max-width: 100%;
   margin-bottom: 1.25rem;
   padding: 0.3rem;
   border-radius: 9999px;
@@ -72,6 +73,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  flex: 0 0 auto;
+  max-width: 100%;
   padding: 0.55rem 1.1rem;
   border: none;
   border-radius: 9999px;
@@ -92,6 +95,16 @@
   background: var(--sb-primary, #1b2e4b);
   color: #fff;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--sb-primary, #1b2e4b) 35%, transparent);
+}
+
+.portal-settings__target-btn .sb-truncate {
+  max-width: 14rem;
+}
+
+@media (max-width: 479px) {
+  .portal-settings__target-btn .sb-truncate {
+    max-width: 11rem;
+  }
 }
 
 /* Sidebar + content layout */
@@ -362,6 +375,10 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.portal-settings__login-row > :last-child {
+  flex-shrink: 0;
+}
+
 .portal-settings__login-row:hover {
   border-color: color-mix(in srgb, var(--sb-secondary, #0058be) 18%, transparent);
   box-shadow: 0 4px 16px rgba(27, 46, 75, 0.04);
@@ -371,6 +388,24 @@
   margin-left: 0.75rem;
   padding: 0.85rem 1rem;
   background: #fff;
+}
+
+@media (max-width: 479px) {
+  .portal-settings__login-row {
+    align-items: flex-start;
+  }
+
+  .portal-settings__login-row--nested {
+    margin-left: 0;
+  }
+
+  .portal-settings__panel {
+    padding: 1rem;
+  }
+
+  .portal-settings__target-btn {
+    min-height: 2.75rem;
+  }
 }
 
 .portal-settings__login-icon {

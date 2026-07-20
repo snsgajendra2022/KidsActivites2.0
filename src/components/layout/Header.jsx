@@ -29,7 +29,7 @@ export default function Header({ user, onMenuClick, onLogout }) {
           {portalName}
         </Link>
 
-        <div className="relative hidden min-w-0 flex-1 md:block md:max-w-xl">
+        <div className="relative hidden min-w-0 flex-1 lg:block lg:max-w-xl">
           <Search
             size={16}
             className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7a8c]"

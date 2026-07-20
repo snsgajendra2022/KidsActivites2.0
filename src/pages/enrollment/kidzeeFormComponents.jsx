@@ -1,6 +1,58 @@
-import { createRef, forwardRef, useId, useImperativeHandle, useRef, useState } from 'react';
+import { createRef, forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from 'react';
 import { SignaturePad } from '../../components/ui/index.jsx';
 import { sanitizeInput } from './kidzeePrintFields.js';
+
+/** Resolve aria-label when `label` may be a React node (e.g. OfficeLabel). */
+function resolveAriaLabel(label, fallback = 'Character input') {
+  if (typeof label === 'string' && label.trim()) return label;
+  if (label && typeof label === 'object' && typeof label.props?.text === 'string') {
+    return label.props.text;
+  }
+  return fallback;
+}
+
+/** Prefer a blob URL for large data: URLs so the DOM is not stuck with multi‑MB data URIs. */
+function useDisplayImageSrc(value) {
+  const [src, setSrc] = useState(() => (
+    typeof value === 'string' && (!value.startsWith('data:') || value.length < 250_000) ? value : ''
+  ));
+
+  useEffect(() => {
+    if (!value || typeof value !== 'string') {
+      setSrc('');
+      return undefined;
+    }
+    if (!value.startsWith('data:') || value.length < 250_000) {
+      setSrc(value);
+      return undefined;
+    }
+
+    let cancelled = false;
+    let objectUrl;
+    (async () => {
+      try {
+        const res = await fetch(value);
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        if (cancelled) {
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+        setSrc(objectUrl);
+      } catch {
+        if (!cancelled) setSrc(value);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [value]);
+
+  return src;
+}
 
 /**
  * Builds a stable set of refs for a group of CharBoxInput rows and returns a
@@ -445,6 +497,7 @@ export const CharBoxInput = forwardRef(function CharBoxInput({
 }, ref) {
   const uid = useId();
   const inputRef = useRef(null);
+  const inputAriaLabel = resolveAriaLabel(label);
   const normalizeCase = (v) => (caseSensitive ? v : (v || '').toUpperCase());
   const display = normalizeCase(value || '').slice(0, boxes);
 
@@ -544,7 +597,7 @@ export const CharBoxInput = forwardRef(function CharBoxInput({
             setActiveCaretIndex(null);
           }}
           style={{ zIndex: 0 }}
-          aria-label={label || 'Character input'}
+          aria-label={inputAriaLabel}
           aria-invalid={error || undefined}
           aria-required={required || undefined}
         />
@@ -728,6 +781,7 @@ export function PaperTextarea({ label, value, onChange, readOnly, rows = 3, clas
 }
 
 export function PhotoBox({ label, value, onChange, readOnly, className = '', required = false, error = false, fieldPath }) {
+  const displaySrc = useDisplayImageSrc(value);
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -747,13 +801,19 @@ export function PhotoBox({ label, value, onChange, readOnly, className = '', req
         {required && <span className="kz-required-mark" aria-hidden>*</span>}
       </span>
       <label className="kz-photo__frame">
-        {value ? (
-          <img src={value} alt={label} className="kz-photo__img" />
+        {displaySrc ? (
+          <img src={displaySrc} alt={label} className="kz-photo__img" />
         ) : (
           <span className="kz-photo__placeholder">{label}</span>
         )}
         {!readOnly && (
-          <input type="file" accept="image/*" onChange={handleFile} className="kz-photo__input no-print" />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFile}
+            className="kz-photo__input no-print"
+            aria-label={typeof label === 'string' ? label : 'Photo upload'}
+          />
         )}
       </label>
     </div>

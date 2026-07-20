@@ -6,6 +6,7 @@ import {
   NOTIFICATIONS_REFRESH_EVENT,
   subscribeToNotifications,
 } from '../services/notificationRealtime.js';
+import { toast } from 'sonner';
 
 function sortNotifications(notifications) {
   return [...notifications].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -19,6 +20,7 @@ export function useNotifications({ pollIntervalMs = 20_000, enabled = true } = {
   const [error, setError] = useState(null);
   const refreshRef = useRef(null);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const refresh = useCallback(async ({ silent = false } = {}) => {
     if (bootstrapping || !user?.id || !getAccessToken() || !enabled) {
       setNotifications([]);
@@ -48,9 +50,11 @@ export function useNotifications({ pollIntervalMs = 20_000, enabled = true } = {
     }
   }, [user?.id, bootstrapping, enabled]);
 
+  // eslint-disable-next-line react-hooks/refs
   refreshRef.current = refresh;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [refresh]);
 
@@ -97,6 +101,11 @@ export function useNotifications({ pollIntervalMs = 20_000, enabled = true } = {
             return prev.map((n) => (n.id === payload.id ? { ...n, ...payload } : n));
           }
           setUnreadCount((count) => count + 1);
+          if (document.visibilityState === 'visible') {
+            toast(payload.title || 'Notification', {
+              description: payload.body || payload.message || '',
+            });
+          }
           return sortNotifications([payload, ...prev]);
         });
         return;

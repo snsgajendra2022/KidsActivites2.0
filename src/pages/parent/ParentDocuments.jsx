@@ -30,7 +30,14 @@ export default function ParentDocuments() {
     {
       label: 'Document',
       primary: true,
-      render: (row) => <span className="capitalize">{formatDocKey(row.key)}</span>,
+      render: (row) => (
+        <div>
+          <span className="capitalize">{formatDocKey(row.key)}</span>
+          {row.doc?.status === 'rejected' && row.doc?.rejectReason && (
+            <p className="mt-1 text-xs text-[#b42318]">{row.doc.rejectReason}</p>
+          )}
+        </div>
+      ),
     },
     {
       label: 'File',

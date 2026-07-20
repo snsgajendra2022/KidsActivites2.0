@@ -473,8 +473,10 @@ export default function PortalSettings() {
               className={`portal-settings__target-btn${editTarget === 'school' ? ' portal-settings__target-btn--active' : ''}`}
             >
               <Layout size={16} />
-              School Portal
-              {activeSchoolMeta ? ` — ${activeSchoolMeta.name}` : ''}
+              <span className="sb-truncate">
+                School Portal
+                {activeSchoolMeta ? ` — ${activeSchoolMeta.name}` : ''}
+              </span>
             </button>
           </div>
         )}

@@ -44,6 +44,41 @@
 .kl-nav__links { display: flex; align-items: center; gap: 32px; margin-left: auto; color: #475569; font-size: 14px; font-weight: 600; }
 .kl-nav__links a { transition: color 180ms ease; }
 .kl-nav__links a:hover { color: var(--kl-navy); }
+.kl-nav__actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+.kl-nav__toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--kl-line, #e2e8f0);
+  border-radius: 0.75rem;
+  background: #fff;
+  color: var(--kl-navy);
+  cursor: pointer;
+}
+.kl-nav__drawer {
+  display: none;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem 1rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.96);
+}
+.kl-nav__drawer a {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  color: #475569;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.kl-nav__drawer a:hover {
+  background: #f8fafc;
+  color: var(--kl-navy);
+}
 
 .kl-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 9px;
@@ -1124,8 +1159,10 @@
 
 @media (max-width: 800px) {
   .kl-container { width: min(100% - 32px, 680px); }
-  .kl-nav { height: 70px; }
+  .kl-nav { height: 70px; gap: 12px; }
   .kl-nav__links { display: none; }
+  .kl-nav__toggle { display: inline-flex; }
+  .kl-header--nav-open .kl-nav__drawer { display: flex; }
   .kl-brand { font-size: 20px; }
   .kl-brand__icon { width: 36px; height: 36px; }
   .kl-hero { padding-top: 108px; }
@@ -1159,6 +1196,20 @@
   .kl-hero__lead { font-size: 16px; }
   .kl-actions { align-items: stretch; flex-direction: column; }
   .kl-actions .kl-button { width: 100%; }
+  .kl-feature-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "admissions"
+      "structure"
+      "fees"
+      "messages"
+      "media"
+      "tv";
+  }
+  .kl-feature-card,
+  .kl-feature-card:nth-child(2),
+  .kl-feature-card:nth-child(3) { min-height: 0; }
+  .kl-nav__actions .kl-button--small { display: none; }
   .kl-checks { display: grid; gap: 13px; }
   .kl-hero-visual { width: 100%; }
   .kl-dashboard { padding: 20px; border-radius: 28px; }

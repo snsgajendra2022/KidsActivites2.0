@@ -44,13 +44,13 @@ export default function UserMenu({ user, onLogout }) {
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-[11px] font-bold text-white">
           {initials}
         </div>
-        <div className="hidden min-w-0 text-left md:block">
+        <div className="hidden min-w-0 text-left lg:block">
           <p className="max-w-[120px] truncate text-xs font-semibold text-brand">{user?.name}</p>
           <p className="max-w-[120px] truncate text-[10px] text-muted">{ROLE_LABELS[user?.role]}</p>
         </div>
         <ChevronDown
           size={14}
-          className={`hidden shrink-0 text-muted transition-transform duration-200 md:block ${open ? 'rotate-180' : ''}`}
+          className={`hidden shrink-0 text-muted transition-transform duration-200 lg:block ${open ? 'rotate-180' : ''}`}
         />
       </button>
 

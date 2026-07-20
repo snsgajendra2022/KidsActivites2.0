@@ -16,6 +16,7 @@ import {
   LogIn,
   Mail,
   MapPin,
+  Menu,
   MessageCircle,
   Phone,
   Play,
@@ -25,6 +26,7 @@ import {
   Users,
   WalletCards,
   Wrench,
+  X,
 } from 'lucide-react';
 import PlatformLandingSections from '../../components/public/PlatformLandingSections.jsx';
 import '../../styles/kids-landing-page.css';
@@ -278,6 +280,8 @@ export default function KidsLandingPage() {
     return () => observer.disconnect();
   }, []);
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   function handleSignIn(e) {
     e.preventDefault();
     const slug = workspaceSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
@@ -285,9 +289,13 @@ export default function KidsLandingPage() {
     navigate(`/${slug}/login`);
   }
 
+  function closeMobileNav() {
+    setMobileNavOpen(false);
+  }
+
   return (
     <div className="kids-landing" id="top">
-      <header className="kl-header">
+      <header className={`kl-header${mobileNavOpen ? ' kl-header--nav-open' : ''}`}>
         <nav className="kl-container kl-nav" aria-label="Main navigation">
           <Brand />
           <div className="kl-nav__links">
@@ -297,10 +305,30 @@ export default function KidsLandingPage() {
             <a href="#platform-overview">Overview</a>
             <a href="#faq">FAQ</a>
           </div>
-          <a className="kl-button kl-button--navy kl-button--small" href="#get-started">
-            Open workspace
-          </a>
+          <div className="kl-nav__actions">
+            <a className="kl-button kl-button--navy kl-button--small" href="#get-started" onClick={closeMobileNav}>
+              Open workspace
+            </a>
+            <button
+              type="button"
+              className="kl-nav__toggle"
+              aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen((open) => !open)}
+            >
+              {mobileNavOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </nav>
+        {mobileNavOpen && (
+          <div className="kl-nav__drawer" role="navigation" aria-label="Mobile sections">
+            <a href="#get-started" onClick={closeMobileNav}>Get started</a>
+            <a href="#roles" onClick={closeMobileNav}>Roles</a>
+            <a href="#features" onClick={closeMobileNav}>Features</a>
+            <a href="#platform-overview" onClick={closeMobileNav}>Overview</a>
+            <a href="#faq" onClick={closeMobileNav}>FAQ</a>
+          </div>
+        )}
       </header>
 
       <main>

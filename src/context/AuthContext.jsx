@@ -19,6 +19,7 @@ import { USER_STORAGE_KEY, AUTH_SESSION_CLEARED_EVENT, resetLoginRedirectGuard }
 import { getCurrentUser } from '../services/userService.js';
 import { ROLE_DASHBOARD } from '../constants/roles.js';
 import { updateUserProfile, changeUserPassword } from '../services/userService.js';
+import { syncWebPushToken, unregisterWebPushToken } from '../services/webPushService.js';
 
 const AuthContext = createContext(null);
 
@@ -141,9 +142,16 @@ export function AuthProvider({ children }) {
     return nextUser;
   };
 
+  // Register FCM web push token after auth (skipped when Firebase/VAPID env missing).
+  useEffect(() => {
+    if (bootstrapping || !user?.id || !getAccessToken()) return;
+    void syncWebPushToken(user);
+  }, [user?.id, bootstrapping]);
+
   const logout = async () => {
     disconnectChatRealtime();
     disconnectNotificationRealtime();
+    await unregisterWebPushToken();
     await logoutSession();
     localStorage.removeItem(USER_STORAGE_KEY);
     setUser(null);

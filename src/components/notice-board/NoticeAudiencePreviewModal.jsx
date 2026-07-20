@@ -1,5 +1,21 @@
 import { Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { ResponsiveDataTable } from '../ui/DataTable.jsx';
+
+const PREVIEW_COLUMNS = [
+  { label: 'Name', key: 'name', primary: true },
+  { label: 'Role', key: 'role' },
+  {
+    label: 'Class',
+    accessor: (r) => r.className || r.sectionName || '—',
+    muted: true,
+  },
+  {
+    label: 'Contact',
+    accessor: (r) => r.email || r.mobile || '—',
+    muted: true,
+  },
+];
 
 export default function NoticeAudiencePreviewModal({ open, preview, loading, onClose, onConfirm }) {
   const [search, setSearch] = useState('');
@@ -54,29 +70,15 @@ export default function NoticeAudiencePreviewModal({ open, preview, loading, onC
         <div className="notice-modal__list">
           {loading ? (
             <p className="notice-modal__empty">Loading preview…</p>
-          ) : filtered.length === 0 ? (
-            <p className="notice-modal__empty">No recipients match this audience.</p>
           ) : (
-            <table className="notice-recipient-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>Class</th>
-                  <th>Contact</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => (
-                  <tr key={r.userId}>
-                    <td>{r.name}</td>
-                    <td>{r.role}</td>
-                    <td>{r.className || r.sectionName || '—'}</td>
-                    <td>{r.email || r.mobile || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ResponsiveDataTable
+              nested
+              columns={PREVIEW_COLUMNS}
+              data={filtered}
+              keyExtractor={(r) => r.userId}
+              emptyMessage="No recipients match this audience."
+              minWidth={640}
+            />
           )}
         </div>
 

@@ -28,6 +28,31 @@ import './KidzeePrintableForm.css';
 
 const TOTAL_PAGES = 5;
 
+function CorrectionPrintBanner({ note, requestedDocuments = [], documentFieldLabels = {} }) {
+  const hasDocs = Array.isArray(requestedDocuments) && requestedDocuments.length > 0;
+  if (!note && !hasDocs) return null;
+  return (
+    <aside className="kidzee-correction-banner" aria-label="Correction request">
+      <h2 className="kidzee-correction-banner__title">
+        {hasDocs ? 'Correction requested — documents required' : 'Correction requested'}
+      </h2>
+      {note && (
+        <p className="kidzee-correction-banner__note">{note}</p>
+      )}
+      {hasDocs && (
+        <ul className="kidzee-correction-banner__list">
+          {requestedDocuments.map((key) => (
+            <li key={key}>
+              {documentFieldLabels[key]
+                || key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim()}
+            </li>
+          ))}
+        </ul>
+      )}
+    </aside>
+  );
+}
+
 export default function KidzeePrintableForm({
   initialData,
   readOnly = false,
@@ -43,7 +68,15 @@ export default function KidzeePrintableForm({
   onSubmitApplication: onSubmitOverride = null,
   backHref = null,
   backLabel = 'Back to Enrollment',
+  onBackClick = null,
+  applicationStatus = null,
+  correctionNote = '',
+  requestedDocuments = [],
+  documentFieldLabels = {},
 }) {
+  const showCorrectionBanner = applicationStatus === 'correction_required'
+    || Boolean(correctionToken)
+    || (requestedDocuments && requestedDocuments.length > 0);
   const [formData, setFormData] = useState(() => initialData || getEmptyKidzeeFormData(branding));
   const [draftId, setDraftId] = useState(initialApplicationId);
   const [submitting, setSubmitting] = useState(false);
@@ -200,16 +233,21 @@ export default function KidzeePrintableForm({
   };
 
   return (
-    <div className="kidzee-print-root">
+    <div className={`kidzee-print-root${correctionToken ? ' kidzee-print-root--correction' : ''}`}>
       {!printOnly && (
       <div className="print-toolbar no-print">
         <div className="print-toolbar__left">
-          {backHref && (
+          {onBackClick ? (
+            <button type="button" className="print-toolbar__back" onClick={onBackClick}>
+              <ArrowLeft size={14} aria-hidden />
+              <span>{backLabel}</span>
+            </button>
+          ) : backHref ? (
             <Link to={backHref} className="print-toolbar__back">
               <ArrowLeft size={14} aria-hidden />
               <span>{backLabel}</span>
             </Link>
-          )}
+          ) : null}
           <PortalLogo size="sm" inverse className="print-toolbar__logo" />
         </div>
         <div className="print-toolbar__titles">
@@ -253,6 +291,13 @@ export default function KidzeePrintableForm({
       )}
 
       <div className="kidzee-print-pages" ref={printRef}>
+        {showCorrectionBanner && (
+          <CorrectionPrintBanner
+            note={correctionNote}
+            requestedDocuments={requestedDocuments}
+            documentFieldLabels={documentFieldLabels}
+          />
+        )}
         <KidzeePage1 {...pageProps} />
         <KidzeePage2 {...pageProps} />
         <KidzeePage3 {...pageProps} />

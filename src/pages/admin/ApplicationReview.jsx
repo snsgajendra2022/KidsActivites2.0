@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Copy, Check } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -11,23 +11,44 @@ import {
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Textarea from '../../components/ui/Textarea.jsx';
+import Input from '../../components/ui/Input.jsx';
 import Modal, { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
   getApplication, requestCorrection, approveApplication, rejectApplication,
-  verifyDocuments, confirmAdmission, createAccount, downloadKidzeeEnrollmentPdf,
+  verifyDocuments, verifyDocument, rejectDocument, confirmAdmission, createAccount,
+  downloadKidzeeEnrollmentPdf,
 } from '../../services/enrollmentService.js';
 import { assignFee, verifyPayment, rejectPayment, getFeeByApplication } from '../../services/feeService.js';
 import { getFeeStructures, resolveFeeBreakdownForClass } from '../../services/settingsService.js';
 import { listClassFees, listClasses, resolveFeeBreakdownFromClassFees } from '../../services/classManagementService.js';
-import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
+import { STATUS_LABELS, ENROLLMENT_STATUSES } from '../../constants/enrollmentStatuses.js';
 import { getAdminActionAvailability } from '../../utils/adminApplicationActions.js';
+import { PERMISSIONS } from '../../constants/permissions.js';
+import { usePermission } from '../../hooks/usePermission.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import {
+  getEnrollmentDocumentFields,
+  formatDocumentFieldLabel,
+  getCorrectionRequestedDocuments,
+  getCorrectionRequestNote,
+} from '../../utils/enrollmentDocumentFields.js';
 import DocumentPreviewModal from '../../components/documents/DocumentPreviewModal.jsx';
 import KidzeeApplicationDetails from './KidzeeApplicationDetails.jsx';
 import '../../styles/application-review.css';
 import '../../styles/document-preview.css';
+
+function documentBadgeProps(status) {
+  if (status === 'verified') {
+    return { status: 'documents_verified', variant: 'success', label: 'verified' };
+  }
+  if (status === 'rejected') {
+    return { status: 'rejected', variant: 'danger', label: 'rejected' };
+  }
+  return { status: 'documents_pending', variant: 'warning', label: status || 'pending' };
+}
 
 const SECTION_TITLES = {
   student: 'Student Details',
@@ -162,6 +183,9 @@ export default function ApplicationReview() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { tenantPath } = useTenantPath();
+  const { enrollmentForm } = usePortalConfig();
+  const canVerifyDocuments = usePermission(PERMISSIONS.VERIFY_DOCUMENTS);
+  const canRejectDocuments = usePermission(PERMISSIONS.REJECT_DOCUMENTS);
   const [app, setApp] = useState(null);
   const [fee, setFee] = useState(null);
   const [feeStructures, setFeeStructures] = useState([]);
@@ -171,8 +195,36 @@ export default function ApplicationReview() {
   const [loadError, setLoadError] = useState(null);
   const [modal, setModal] = useState(null);
   const [reason, setReason] = useState('');
+  const [parentEmailInput, setParentEmailInput] = useState('');
+  const [selectedCorrectionDocs, setSelectedCorrectionDocs] = useState([]);
+  const [rejectDocField, setRejectDocField] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
   const [pdfDownloading, setPdfDownloading] = useState(false);
+  const [correctionDelivery, setCorrectionDelivery] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const documentFieldOptions = useMemo(
+    () => getEnrollmentDocumentFields(enrollmentForm),
+    [enrollmentForm],
+  );
+  const resolvedParentEmail = resolveParentEmailFromApplication(app);
+  const needsParentEmailInput = !resolvedParentEmail;
+  const activeCorrectionNote = getCorrectionRequestNote(app);
+  const activeCorrectionDocs = getCorrectionRequestedDocuments(app);
+
+  const toggleCorrectionDoc = (key) => {
+    setSelectedCorrectionDocs((prev) => (
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    ));
+  };
+
+  const openCorrectionModal = () => {
+    const existing = getCorrectionRequestedDocuments(app);
+    setSelectedCorrectionDocs(existing.length ? existing : documentFieldOptions.filter((f) => f.required).map((f) => f.key));
+    setReason(getCorrectionRequestNote(app) || '');
+    setParentEmailInput('');
+    setModal('correction');
+  };
 
   const handleDownloadPdf = async () => {
     if (!app?.id) return;
@@ -224,11 +276,63 @@ export default function ApplicationReview() {
       toast(successMsg, 'success');
       setModal(null);
       setReason('');
+      setParentEmailInput('');
+      setRejectDocField(null);
       load();
     } catch (err) {
       toast(actionErrorMessage(err), 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const actCorrection = async (fn) => {
+    if (needsParentEmailInput && parentEmailInput.trim()) {
+      const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmailInput.trim());
+      if (!ok) {
+        toast('Please enter a valid parent email address.', 'error');
+        return;
+      }
+    }
+    setLoading(true);
+    try {
+      const result = await fn();
+      const emailSent = Boolean(result?.emailSent);
+      const correctionUrl = result?.correctionUrl || null;
+      setCorrectionDelivery({
+        correctionUrl,
+        emailSent,
+        parentEmail: result?.parentEmail || parentEmailInput.trim() || null,
+      });
+      setLinkCopied(false);
+      setModal('correctionLink');
+      setReason('');
+      setParentEmailInput('');
+      setSelectedCorrectionDocs([]);
+      setRejectDocField(null);
+      toast(
+        emailSent
+          ? 'Correction requested. Email sent to parent.'
+          : 'Correction requested. No parent email on file — copy the link below to share manually.',
+        emailSent ? 'success' : 'warning',
+      );
+      load();
+    } catch (err) {
+      toast(actionErrorMessage(err), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyCorrectionLink = async () => {
+    const url = correctionDelivery?.correctionUrl;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      toast('Correction link copied.', 'success');
+    } catch {
+      toast('Could not copy link. Select and copy it manually.', 'error');
     }
   };
 
@@ -246,7 +350,14 @@ export default function ApplicationReview() {
     {
       label: 'Document',
       primary: true,
-      render: (row) => <span className="capitalize">{formatFieldLabel(row.key)}</span>,
+      render: (row) => (
+        <div>
+          <span className="capitalize">{formatFieldLabel(row.key)}</span>
+          {row.doc?.status === 'rejected' && row.doc?.rejectReason && (
+            <p className="mt-1 text-xs text-[#b42318]">{row.doc.rejectReason}</p>
+          )}
+        </div>
+      ),
     },
     {
       label: 'File',
@@ -255,18 +366,19 @@ export default function ApplicationReview() {
     {
       label: 'Status',
       badge: true,
-      render: (row) => (
-        <StatusBadge
-          status={row.doc?.status === 'verified' ? 'documents_verified' : 'documents_pending'}
-          variant={row.doc?.status === 'verified' ? 'success' : 'warning'}
-        >
-          {row.doc?.status || 'pending'}
-        </StatusBadge>
-      ),
+      render: (row) => {
+        const badge = documentBadgeProps(row.doc?.status);
+        return (
+          <StatusBadge status={badge.status} variant={badge.variant}>
+            {badge.label}
+          </StatusBadge>
+        );
+      },
     },
   ];
 
   const actions = app ? getAdminActionAvailability(app.status, fee) : null;
+  const showDocReviewActions = Boolean(actions?.verifyDocuments || actions?.requestCorrection);
 
   const sidebar = app ? (
     <>
@@ -279,10 +391,10 @@ export default function ApplicationReview() {
         ) : actions?.hasAnyAction ? (
           <div className="app-review-actions">
             {actions.requestCorrection && (
-              <Button variant="outline" onClick={() => setModal('correction')}>Request Correction</Button>
+              <Button variant="outline" onClick={openCorrectionModal}>Request Correction</Button>
             )}
-            {actions.verifyDocuments && (
-              <Button variant="secondary" onClick={() => act(() => verifyDocuments(id), 'Documents verified successfully.')}>Verify Documents</Button>
+            {actions.verifyDocuments && canVerifyDocuments && (
+              <Button variant="secondary" onClick={() => act(() => verifyDocuments(id), 'Documents verified successfully.')}>Verify All Documents</Button>
             )}
             {actions.approve && (
               <Button variant="primary" onClick={() => setModal('approve')}>Approve Application</Button>
@@ -422,6 +534,28 @@ export default function ApplicationReview() {
               </dl>
             </section>
 
+            {app.status === ENROLLMENT_STATUSES.CORRECTION_REQUIRED && (activeCorrectionNote || activeCorrectionDocs.length > 0) && (
+              <section className="sb-card app-review-card mb-4" style={{ borderColor: '#f59e0b', background: '#fffbeb' }}>
+                <h3 className="app-review-card-title">Active correction request</h3>
+                {activeCorrectionNote && (
+                  <p className="text-sm text-[#7c2d12] whitespace-pre-wrap mb-2">{activeCorrectionNote}</p>
+                )}
+                {activeCorrectionDocs.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#92400e] mb-1">Documents requested</p>
+                    <ul className="text-sm text-[#7c2d12] list-disc pl-5">
+                      {activeCorrectionDocs.map((key) => (
+                        <li key={key}>{formatDocumentFieldLabel(key)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <p className="mt-3 text-xs text-[#92400e]">
+                  This also appears on the Kidzee Download / Print form while correction is open.
+                </p>
+              </section>
+            )}
+
             <div className="app-review-layout">
               <div className="app-review-main">
                 {app.formType === 'kidzee_printable' ? (
@@ -447,12 +581,39 @@ export default function ApplicationReview() {
                     keyExtractor={(row) => row.key}
                     minWidth={520}
                     renderActions={(row) => (
-                      <TableActionButton
-                        variant="outline"
-                        onClick={() => setPreviewDoc({ key: row.key, doc: row.doc })}
-                      >
-                        Preview
-                      </TableActionButton>
+                      <div className="flex flex-wrap gap-2">
+                        <TableActionButton
+                          variant="outline"
+                          onClick={() => setPreviewDoc({ key: row.key, doc: row.doc })}
+                        >
+                          Preview
+                        </TableActionButton>
+                        {showDocReviewActions && canVerifyDocuments && row.doc?.status !== 'verified' && row.doc?.fileKey && (
+                          <TableActionButton
+                            variant="secondary"
+                            disabled={loading}
+                            onClick={() => act(
+                              () => verifyDocument(id, row.key),
+                              `${formatFieldLabel(row.key)} verified.`,
+                            )}
+                          >
+                            Verify
+                          </TableActionButton>
+                        )}
+                        {showDocReviewActions && canRejectDocuments && row.doc?.status !== 'rejected' && (
+                          <TableActionButton
+                            variant="danger"
+                            disabled={loading}
+                            onClick={() => {
+                              setRejectDocField(row.key);
+                              setReason('');
+                              setModal('rejectDocument');
+                            }}
+                          >
+                            Reject
+                          </TableActionButton>
+                        )}
+                      </div>
                     )}
                   />
                 </section>
@@ -480,14 +641,166 @@ export default function ApplicationReview() {
           </>
         )}
 
-        <Modal open={modal === 'correction'} onClose={() => setModal(null)} title="Request Correction?"
-          footer={<><Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button><Button variant="primary" loading={loading} onClick={() => act(() => requestCorrection(id, reason), 'Correction request sent.')}>Submit Reason</Button></>}>
-          <Textarea label="Reason for correction" required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please provide a clear reason so the parent understands what needs to be corrected." />
+        <Modal
+          open={modal === 'correction'}
+          onClose={() => { setModal(null); setParentEmailInput(''); setSelectedCorrectionDocs([]); }}
+          title="Request Correction?"
+          footer={(
+            <>
+              <Button variant="secondary" onClick={() => { setModal(null); setParentEmailInput(''); setSelectedCorrectionDocs([]); }}>Cancel</Button>
+              <Button
+                variant="primary"
+                loading={loading}
+                disabled={!reason.trim() || selectedCorrectionDocs.length === 0}
+                onClick={() => actCorrection(() => requestCorrection(
+                  id,
+                  reason,
+                  parentEmailInput.trim() || null,
+                  selectedCorrectionDocs,
+                ))}
+              >
+                Request Correction
+              </Button>
+            </>
+          )}
+        >
+          <Textarea
+            label="Reason for correction"
+            required
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Please provide a clear reason so the parent understands what needs to be corrected."
+          />
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-semibold text-[#0b1c30]">
+              Documents the parent must upload / update
+              <span className="text-[#ba1a1a]"> *</span>
+            </p>
+            <p className="mb-3 text-xs text-[#45474c]">
+              Select at least one. These appear on the parent correction link and on Download / Print while correction is open.
+            </p>
+            <div className="grid gap-2">
+              {documentFieldOptions.map((field) => (
+                <label
+                  key={field.key}
+                  className="flex items-center gap-2 rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] px-3 py-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedCorrectionDocs.includes(field.key)}
+                    onChange={() => toggleCorrectionDoc(field.key)}
+                  />
+                  <span>{field.label}{field.required ? ' (usually required)' : ''}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          {needsParentEmailInput ? (
+            <div className="mt-4">
+              <Input
+                type="email"
+                label="Parent email (to send correction link)"
+                value={parentEmailInput}
+                onChange={(e) => setParentEmailInput(e.target.value)}
+                placeholder="parent@example.com"
+                helper="No parent email on this application. Add one to email the link, or leave blank and copy the link after submitting."
+              />
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-[#45474c]">
+              Correction email will be sent to <strong>{resolvedParentEmail}</strong>.
+            </p>
+          )}
         </Modal>
 
         <Modal open={modal === 'reject'} onClose={() => setModal(null)} title="Reject Application?"
           footer={<><Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button><Button variant="danger" loading={loading} onClick={() => act(() => rejectApplication(id, reason), 'Application rejected.')}>Reject Application</Button></>}>
           <Textarea label="Reason for rejection" required value={reason} onChange={(e) => setReason(e.target.value)} />
+        </Modal>
+
+        <Modal
+          open={modal === 'rejectDocument'}
+          onClose={() => { setModal(null); setRejectDocField(null); setReason(''); setParentEmailInput(''); }}
+          title={`Reject ${rejectDocField ? formatFieldLabel(rejectDocField) : 'Document'}?`}
+          footer={(
+            <>
+              <Button variant="secondary" onClick={() => { setModal(null); setRejectDocField(null); setReason(''); setParentEmailInput(''); }}>Cancel</Button>
+              <Button
+                variant="danger"
+                loading={loading}
+                disabled={!rejectDocField || !reason.trim()}
+                onClick={() => actCorrection(() => rejectDocument(
+                  id,
+                  rejectDocField,
+                  reason,
+                  parentEmailInput.trim() || null,
+                ))}
+              >
+                Reject Document
+              </Button>
+            </>
+          )}
+        >
+          <Textarea
+            label="Reason for rejection"
+            required
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Explain what is wrong so the parent can re-upload the correct document."
+          />
+          {needsParentEmailInput ? (
+            <div className="mt-4">
+              <Input
+                type="email"
+                label="Parent email (to send correction link)"
+                value={parentEmailInput}
+                onChange={(e) => setParentEmailInput(e.target.value)}
+                placeholder="parent@example.com"
+                helper="No parent email on this application. Add one to email the link, or leave blank and copy the link after submitting."
+              />
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-[#45474c]">
+              Correction email will be sent to <strong>{resolvedParentEmail}</strong>.
+            </p>
+          )}
+        </Modal>
+
+        <Modal
+          open={modal === 'correctionLink'}
+          onClose={() => { setModal(null); setCorrectionDelivery(null); setLinkCopied(false); }}
+          title={correctionDelivery?.emailSent ? 'Correction email sent' : 'Share correction link'}
+          footer={(
+            <>
+              {correctionDelivery?.correctionUrl && (
+                <Button variant="secondary" onClick={copyCorrectionLink}>
+                  {linkCopied ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy link</>}
+                </Button>
+              )}
+              <Button variant="primary" onClick={() => { setModal(null); setCorrectionDelivery(null); setLinkCopied(false); }}>
+                Done
+              </Button>
+            </>
+          )}
+        >
+          {correctionDelivery?.emailSent ? (
+            <p className="text-sm text-[#45474c]">
+              An email with the secure correction link was sent to{' '}
+              <strong>{correctionDelivery.parentEmail}</strong>.
+              You can still copy the link below if you need to share it another way.
+            </p>
+          ) : (
+            <p className="text-sm text-[#45474c]">
+              No parent email was available, so nothing was emailed. Copy this link and share it with the parent
+              (WhatsApp, SMS, etc.). The link does not require login.
+            </p>
+          )}
+          {correctionDelivery?.correctionUrl && (
+            <div className="mt-4 rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] p-3">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#45474c]">Correction link</p>
+              <p className="break-all text-sm text-[#0058be]">{correctionDelivery.correctionUrl}</p>
+            </div>
+          )}
         </Modal>
 
         <ConfirmModal open={modal === 'approve'} onClose={() => setModal(null)} onConfirm={() => act(() => approveApplication(id), 'Application approved successfully.')} title="Approve Application?" message="This will approve the application and assign fee to the parent." confirmText="Approve Application" loading={loading} />

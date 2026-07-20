@@ -324,7 +324,7 @@ export default function ParentPhotos() {
               className={`parent-photos-child-chip${selectedChildId === ALL_CHILDREN ? ' is-active' : ''}`}
               onClick={() => setSelectedChildId(ALL_CHILDREN)}
             >
-              All children
+              <span className="parent-photos-child-chip__label">All children</span>
             </button>
             {children.map((child) => (
               <button
@@ -336,8 +336,10 @@ export default function ParentPhotos() {
                 onClick={() => setSelectedChildId(child.applicationId)}
               >
                 <GraduationCap size={14} aria-hidden />
-                {child.studentName || child.student?.fullName || 'Child'}
-                {child.className ? ` · ${child.className}` : ''}
+                <span className="parent-photos-child-chip__label">
+                  {child.studentName || child.student?.fullName || 'Child'}
+                  {child.className ? ` · ${child.className}` : ''}
+                </span>
               </button>
             ))}
           </div>

@@ -11,7 +11,7 @@ import { uploadFile } from '../../services/uploadService.js';
 import {
   validateFile, formatFileSize, FILE_RULES, UPLOAD_STATUS, UPLOAD_STATUS_LABELS,
 } from '../../utils/uploadValidation.js';
-import { canPreviewDocument } from '../../utils/documentPreview.js';
+import { canPreviewDocument, getDocumentPreviewUrl, isImageDocument } from '../../utils/documentPreview.js';
 import { cn } from '../../lib/cn.js';
 import '../../styles/document-preview.css';
 
@@ -175,6 +175,42 @@ export default function SmartFileUpload({
         </div>
       ) : (
         <div className="upload-item-card">
+          {(() => {
+            const thumbUrl = item?.previewUrl || getDocumentPreviewUrl(value);
+            const showThumb = Boolean(thumbUrl && (isImageDocument(value) || String(thumbUrl).startsWith('data:image') || String(value?.type || '').startsWith('image/')));
+            if (!showThumb) return null;
+            return (
+              <button
+                type="button"
+                className="upload-item-thumb"
+                onClick={() => setPreviewOpen(true)}
+                aria-label="Preview uploaded file"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  marginBottom: '0.65rem',
+                  padding: 0,
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  background: '#f8fafc',
+                  cursor: 'pointer',
+                }}
+              >
+                <img
+                  src={thumbUrl}
+                  alt=""
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    maxHeight: 220,
+                    objectFit: 'contain',
+                    background: '#fff',
+                  }}
+                />
+              </button>
+            );
+          })()}
           <div className="upload-item-header">
             <StatusIcon size={20} className={displayValue.status === UPLOAD_STATUS.UPLOADED ? 'text-green-600' : 'text-blue-600'} />
             <div className="upload-item-info">

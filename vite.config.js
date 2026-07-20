@@ -21,6 +21,8 @@ export default defineConfig({
     port: 3000,
     allowedHosts: [
       'kidsactivities.snssystem.com',
+      'sns.localhost',
+      'localhost',
       '161.35.132.9',
     ],
     // Dev-only: disable HMR when accessed via HTTPS reverse proxy (no WS upgrade on nginx).
@@ -31,6 +33,8 @@ export default defineConfig({
     port: 3000,
     allowedHosts: [
       'kidsactivities.snssystem.com',
+      'sns.localhost',
+      'localhost',
       '161.35.132.9',
     ],
   },

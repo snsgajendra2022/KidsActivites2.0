@@ -465,6 +465,37 @@
   min-width: 12rem;
 }
 
+@media (max-width: 479px) {
+  .photo-media-toolbar {
+    padding: 0.875rem;
+  }
+
+  .photo-media-toolbar__search {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .photo-media-toolbar__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .photo-media-toolbar__date-filter {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .photo-media-toolbar__date-filter select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .photo-media-toolbar__view-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
 .photo-media-toolbar__search-icon {
   position: absolute;
   left: 0.75rem;
