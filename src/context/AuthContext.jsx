@@ -142,7 +142,8 @@ export function AuthProvider({ children }) {
     return nextUser;
   };
 
-  // Register FCM web push token after auth (skipped when Firebase/VAPID env missing).
+  // Quiet FCM re-register after auth when permission is already granted.
+  // Permission prompt itself must come from a user click (see WebPushEnableBanner).
   useEffect(() => {
     if (bootstrapping || !user?.id || !getAccessToken()) return;
     void syncWebPushToken(user);

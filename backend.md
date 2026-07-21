@@ -1833,6 +1833,203 @@ Mark conversation read for current user.
 
 ---
 
+### Push devices (multi-device FCM / APNs) — required for web + mobile
+
+> **Do not store a single `users.fcm_token`.** One user may have Chrome, Safari, Edge, iOS, and Android tokens at the same time. Logout from Chrome must deactivate only that browser’s row.
+
+#### Table: `notification_devices` (or `user_push_devices`)
+
+```sql
+CREATE TABLE notification_devices (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  tenant_id VARCHAR(64) NULL,
+  workspace_id VARCHAR(64) NULL,
+  token TEXT NOT NULL,
+  token_hash VARCHAR(64) NOT NULL,
+  platform VARCHAR(20) NOT NULL,          -- ios | android | web
+  provider VARCHAR(20) NOT NULL,          -- fcm | apns | webpush
+  browser VARCHAR(50) NULL,               -- Chrome | Safari | Edge | Firefox | Unknown (web only)
+  device_id VARCHAR(255) NULL,
+  device_name VARCHAR(255) NULL,
+  user_agent TEXT NULL,
+  app_version VARCHAR(40) NULL,
+  permission_status VARCHAR(20) NOT NULL DEFAULT 'granted',
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  last_seen_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_token_hash (token_hash),
+  INDEX idx_user_active_tokens (user_id, is_active),
+  INDEX idx_user_device (user_id, device_id)
+);
+```
+
+- `token_hash` = SHA-256 (or similar) of the raw token for uniqueness.
+- **Never** put a UNIQUE constraint on `user_id` alone.
+- Upsert by `token_hash` (preferred) or `(user_id, device_id)`.
+
+#### `POST /notifications/register-device`
+
+**Auth:** Bearer (associate with the authenticated user only)
+
+**Body:**
+```json
+{
+  "platform": "web",
+  "provider": "fcm",
+  "token": "FCM_OR_APNS_TOKEN",
+  "deviceId": "web-uuid-per-browser-profile",
+  "browser": "Chrome",
+  "permissionStatus": "granted",
+  "appVersion": "1.0.0",
+  "workspaceId": "demo",
+  "deviceName": "Chrome · …",
+  "userAgent": "Mozilla/5.0…"
+}
+```
+
+**Behavior:**
+1. Insert a new row when `token_hash` is new.
+2. Update existing row when `token_hash` already exists (re-bind to current user if needed only when previously owned by same tenant rules allow).
+3. Set `is_active = true`, refresh `last_seen_at`, browser, platform, permission, device_id.
+4. **Must not** overwrite another browser’s different token for the same user.
+
+**Response `200`:** `{ "success": true }`
+
+#### `POST /notifications/unregister-device`
+
+**Auth:** Bearer
+
+**Body:** `{ "deviceId": "web-uuid-…" }`
+
+Deactivate (`is_active = false`) only the matching device for the authenticated user. Do **not** remove other browsers / mobile devices.
+
+#### Send path (Firebase Admin SDK)
+
+When notifying a user:
+1. Load all `is_active = true` tokens for that `user_id` (+ tenant/workspace scope).
+2. Send to every token (multicast / chunked).
+3. On `messaging/registration-token-not-registered` or `messaging/invalid-registration-token`, deactivate **that token only**.
+4. Web FCM tokens use provider `fcm` (same Admin SDK as Android). iOS may use `fcm` (RN Firebase) or `apns`.
+
+#### FCM payload (all `data` values must be strings)
+
+**Always include both `notification` and `data`.** Android may still show a data-only message via the app; iOS (background / killed) usually drops data-only unless you also set `content-available` and handle it — banners will not appear. Prefer alert-style `notification` + string `data` for mobile.
+
+```json
+{
+  "notification": { "title": "New message", "body": "You received a new message." },
+  "data": {
+    "type": "chat",
+    "notificationId": "n_123",
+    "webRoute": "/demo/parent/messages?c=7821",
+    "conversationId": "7821",
+    "url": "/demo/parent/messages?c=7821"
+  }
+}
+```
+
+Optional Admin `ApnsConfig` (recommended for iOS reliability; Android ignores it):
+
+```java
+// Java Admin SDK sketch — set on MulticastMessage / Message
+.SetApnsConfig(ApnsConfig.Builder()
+  .PutHeader("apns-priority", "10")
+  .PutHeader("apns-push-type", "alert")
+  .SetAps(Aps.Builder()
+    .SetSound("default")
+    .Build())
+  .Build())
+```
+
+Focused web tabs use STOMP (`notification:new`) for in-app toasts; FCM is for background / other browsers / closed tabs.
+
+#### iOS APNs in Firebase Console (required for TestFlight / App Store delivery)
+
+**Symptom:** Android push works via the same Firebase Admin path; iOS device shows registered (FCM token saved) but TestFlight never receives a banner.
+
+**Cause:** Registration only needs the iOS app + `GoogleService-Info.plist`. **Delivery** to Apple devices requires Firebase to call APNs. Upload an **APNs Authentication Key (.p8)** once per Firebase project (covers sandbox + production).
+
+**Verify / upload (Firebase Console):**
+
+1. Open project **`kidsactivities-25696`**.
+2. Gear → **Project settings** → **Cloud Messaging** tab.
+3. Under **Apple app configuration** for app id `1:748250115146:ios:65b622fa04b9cbfd8bcab3` (`com.snssystem.kidsactivities`):
+   - **APNs Authentication Key** must show a Key ID (not empty).
+   - If empty: Apple Developer → Certificates, Identifiers & Profiles → **Keys** → create a key with **Apple Push Notifications service (APNs)** → download `.p8` (once).
+   - In Firebase: Upload that `.p8`, enter **Key ID** and **Team ID** (`QK2X3GRMNK` for this app).
+4. Do **not** rely on an old APNs **certificate** that was sandbox-only; Auth Key replaces both sandbox and production.
+5. The APNs `.p8` stays in Firebase Console only — never put it in the Vite app or mobile repo. Backend Admin SDK does **not** need the `.p8`; Firebase bridges FCM → APNs after the key is uploaded.
+
+**Mobile side (already required for TestFlight):** Release Archive must embed `aps-environment: production` (`KidsActivities.entitlements`). Debug uses `development`. iOS registers with provider `fcm` (FCM token, not raw APNs).
+
+#### Backend Firebase setup (Spring Boot — **not** the Vite `VITE_FIREBASE_*` keys)
+
+The web `.env` `VITE_FIREBASE_*` + `VITE_FIREBASE_VAPID_KEY` values are **client-only**. The API never uses them.
+
+Backend must use a **Firebase Admin service account** for the **same** project:
+
+| Item | Value |
+|------|--------|
+| Firebase project | `kidsactivities-25696` |
+| Messaging sender | `748250115146` |
+| Web app id (client) | `1:748250115146:web:b640485f60c746098bcab3` |
+
+**1. Create / download the service account**
+
+1. Firebase Console → project `kidsactivities-25696`
+2. Project settings → **Service accounts**
+3. **Generate new private key** → download JSON (keep secret; never commit; never put in Vite env)
+
+**2. Put it on the API server** (pick one):
+
+```bash
+# Option A — path to the JSON file (recommended for local)
+export GOOGLE_APPLICATION_CREDENTIALS=/secure/path/kidsactivities-25696-firebase-adminsdk.json
+
+# Option B — raw JSON string in env (common on Docker / PaaS)
+export FCM_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"kidsactivities-25696",...}'
+```
+
+Example `application.yml` / `.env` on the **backend** (not the web repo):
+
+```properties
+# Firebase Admin (server)
+FIREBASE_PROJECT_ID=kidsactivities-25696
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/serviceAccount.json
+# OR
+# FCM_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+```
+
+**3. What the backend must do with it**
+
+- Initialize Firebase Admin SDK once at startup from that credential.
+- On `POST /api/v1/notifications/register-device` → upsert `notification_devices` (multi-device).
+- On send → `FirebaseMessaging.getInstance().sendEachForMulticast(...)` to **all** active tokens for the user.
+- Deactivate only tokens that return `registration-token-not-registered` / invalid.
+
+**4. Do not copy these into the backend**
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_VAPID_KEY` (public web push key — browser `getToken` only)
+- Any APNs `.p8` private key into the frontend
+
+**5. Client ↔ server project match**
+
+Web, Android `google-services.json`, iOS `GoogleService-Info.plist`, and the Admin service account must all be project **`kidsactivities-25696`**. Mismatched projects = tokens register but pushes never arrive.
+
+**6. Android works / iOS does not**
+
+Same Admin multicast path is fine for both when tokens are `provider=fcm`. If Android delivers and iOS does not:
+
+1. Confirm Firebase **Cloud Messaging → Apple app configuration → APNs Auth Key** (section above) — most common.
+2. Confirm send payload includes `notification` + `data` (not data-only).
+3. Confirm the iOS row is an FCM token (`provider=fcm`), not a raw APNs device token unless the server has a separate APNs sender.
+4. Optional: set Admin `ApnsConfig` headers `apns-priority=10` and `apns-push-type=alert`.
+
+---
+
 ## 9. User profile
 
 **Today:** `AuthContext.updateProfile()` updates `localStorage` only — **no API call**.

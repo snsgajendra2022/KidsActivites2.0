@@ -877,6 +877,82 @@
   }
 }
 
+.webpush-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f8fafc;
+  color: #334155;
+}
+
+.webpush-banner svg {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.webpush-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.webpush-banner__body strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 650;
+  margin-bottom: 0.15rem;
+}
+
+.webpush-banner__body p,
+.webpush-banner > p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.webpush-banner__btn {
+  flex-shrink: 0;
+  align-self: center;
+  border: none;
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  cursor: pointer;
+  color: #fff;
+  background: var(--sb-primary, #1e3a5f);
+}
+
+.webpush-banner__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.webpush-banner--ok {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.webpush-banner--ok p {
+  color: #15803d;
+}
+
+.webpush-banner--insecure,
+.webpush-banner--missing_config {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.webpush-banner--denied {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
 @media (min-width: 1024px) {
   .notif-shell {
     height: calc(100vh - var(--header-height, 64px) - 4rem);

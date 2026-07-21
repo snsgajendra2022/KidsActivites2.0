@@ -35,6 +35,17 @@ function buildNotificationOptions(payload) {
   const data = { ...(payload.data || {}) };
   if (payload.notification?.title && !data.title) data.title = payload.notification.title;
   if (body && !data.body) data.body = body;
+
+  // Normalize destination keys for notificationclick
+  const route =
+    data.webRoute
+    || data.url
+    || data.link
+    || data.actionUrl
+    || data.route
+    || '';
+  if (route && !data.webRoute) data.webRoute = route;
+
   return {
     body,
     data,
@@ -43,6 +54,25 @@ function buildNotificationOptions(payload) {
     tag: tag || undefined,
     renotify: Boolean(tag),
   };
+}
+
+/**
+ * Same-origin routes only (open-redirect safe).
+ * Relative paths stay relative; absolute URLs must match this origin.
+ */
+function resolveSafeRoute(data) {
+  const raw = data?.webRoute || data?.url || data?.link || data?.actionUrl || data?.route || '/';
+  if (typeof raw !== 'string' || !raw) return '/';
+  if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
+  try {
+    const url = new URL(raw, self.location.origin);
+    if (url.origin === self.location.origin) {
+      return `${url.pathname}${url.search}${url.hash}` || '/';
+    }
+  } catch {
+    // ignore
+  }
+  return '/';
 }
 
 function initFirebase(config) {
@@ -87,28 +117,39 @@ self.addEventListener('message', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
-  let route = data.webRoute || data.link || data.actionUrl || '/';
-  if (typeof route !== 'string' || !route) route = '/';
+  const route = resolveSafeRoute(data);
+  const absoluteUrl = new URL(route, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
-        if ('focus' in client) {
-          client.postMessage({ type: 'NOTIFICATION_CLICK', data });
-          return client.focus().then((focused) => {
-            if (focused && route.startsWith('/') && 'navigate' in focused) {
-              try {
-                return focused.navigate(route);
-              } catch {
-                return focused;
-              }
-            }
-            return focused;
-          });
+      const sameOrigin = windowClients.filter((client) => {
+        try {
+          return new URL(client.url).origin === self.location.origin;
+        } catch {
+          return false;
         }
+      });
+
+      const focusAndNavigate = (client) => {
+        client.postMessage({ type: 'NOTIFICATION_CLICK', data: { ...data, webRoute: route } });
+        return client.focus().then((focused) => {
+          const target = focused || client;
+          if (target && route.startsWith('/') && 'navigate' in target) {
+            try {
+              return target.navigate(route);
+            } catch {
+              return target;
+            }
+          }
+          return target;
+        });
+      };
+
+      if (sameOrigin.length > 0) {
+        return focusAndNavigate(sameOrigin[0]);
       }
       if (clients.openWindow) {
-        return clients.openWindow(route.startsWith('http') ? route : route);
+        return clients.openWindow(absoluteUrl);
       }
       return undefined;
     }),

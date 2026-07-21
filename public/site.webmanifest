@@ -1,0 +1,17 @@
+{
+  "name": "Kids Activities",
+  "short_name": "Kids Activities",
+  "description": "School enrollment, fees, photos, and parent communication.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a5f",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ]
+}
