@@ -26,6 +26,7 @@
 | [Multi-tenant & schools](#15-multi-tenant--schools) | `/schools/*`, `/admin/schools/*`, `/admin/users/*`, `/admin/teachers` | `src/services/schoolService.js`, `src/services/userService.js` |
 | [Teacher classes](#16-teacher-classes) | `/teacher/classes` | `src/services/teacherService.js` |
 | [Parent portal](#17-parent-portal) | `/parent/*` | `src/services/parentService.js`, `src/services/enrollmentService.js` |
+| [Student attendance](#18-student-attendance) | `/attendance/*` | `src/services/attendanceService.js` |
 
 ---
 
@@ -2806,6 +2807,44 @@ Parents use **`enrollPath`** from the dashboard (e.g. `/green-valley/enroll`). O
 
 ---
 
+## 18. Student attendance
+
+Base path: `/attendance/*` · Service: `src/services/attendanceService.js` · Web UI: `src/pages/attendance/`
+
+Tenant/workspace scoped. Teachers: assigned classes only. Parents: own children only. Admins: workspace scope.
+
+### Statuses
+
+`PRESENT` · `ABSENT` · `LATE` · `HALF_DAY` · `EXCUSED`
+
+### Session statuses
+
+`DRAFT` · `SUBMITTED` · `FINALIZED` · `REOPENED`
+
+### Endpoints
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `GET` | `/attendance/statuses` | Status catalog with labels/colors |
+| `GET` | `/attendance/classes?date=` | Classes for marking (teacher: assigned) |
+| `GET` | `/attendance/session?classId=&sectionId=&date=` | Session + summary + students (unsaved defaults if new) |
+| `PUT` | `/attendance/session` | Body: `{ classId, sectionId?, date, mode: DRAFT\|SUBMITTED, records[] }` |
+| `POST` | `/attendance/session/:id/finalize` | Body: `{ confirm, note? }` — locks session |
+| `POST` | `/attendance/session/:id/reopen` | Body: `{ reason }` — admin; reason required |
+| `GET` | `/attendance/students/:id/history?from=&to=` | Parent/teacher/admin history |
+| `GET` | `/attendance/reports/summary?...` | Admin summary + per-student rows |
+| `GET` | `/attendance/reports/export?format=csv&...` | Blob download (csv/xlsx) |
+| `GET` | `/attendance/session/:id/audit-logs` | Change history |
+
+### Web routes
+
+- Teacher: `/teacher/attendance`
+- Admin: `/admin/attendance`, `/admin/attendance/session`
+- Parent: `/parent/attendance`
+- Shared history: `/attendance/students/:studentId`
+
+---
+
 ## Backend stack (recommended)
 
 | Library | Purpose |
@@ -2832,8 +2871,8 @@ Parents use **`enrollPath`** from the dashboard (e.g. `/green-valley/enroll`). O
 | School Admin | Own school portal branding, teachers list, full school management |
 | Admission Officer | Applications, documents, approve for fee |
 | Accountant | Fees, payments, receipts |
-| Teacher | Assigned classes, photos, chat |
-| Parent | Own child application, fees, photos, chat |
+| Teacher | Assigned classes, attendance mark/finalize, photos, chat |
+| Parent | Own child application, fees, photos, chat, own-child attendance history |
 | Student | Own profile, notices |
 | Support Staff | Support tickets only |
 

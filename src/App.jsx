@@ -63,6 +63,10 @@ import TeacherStudents from './pages/teacher/TeacherStudents.jsx';
 import SendPhotos from './pages/teacher/SendPhotos.jsx';
 import TeacherClassAlbum from './pages/teacher/TeacherClassAlbum.jsx';
 
+import AttendanceSessionPage from './pages/attendance/AttendanceSessionPage.jsx';
+import AttendanceDashboard from './pages/attendance/AttendanceDashboard.jsx';
+import StudentAttendanceHistory from './pages/attendance/StudentAttendanceHistory.jsx';
+
 import NotificationsPage from './pages/shared/NotificationsPage.jsx';
 import MyNoticeBoard from './pages/shared/MyNoticeBoard.jsx';
 import MyNoticeDetail from './pages/shared/MyNoticeDetail.jsx';
@@ -82,6 +86,7 @@ const PARENT_ROLES = [ROLES.PARENT, ROLES.STUDENT];
 const TEACHER_ROLES = [ROLES.TEACHER];
 const NOTICE_BOARD_ADMIN_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
 const NOTICE_BOARD_READ_ROLES = [...PARENT_ROLES, ...TEACHER_ROLES, ...CORE_ADMIN];
+const ATTENDANCE_HISTORY_ROLES = [...PARENT_ROLES, ...TEACHER_ROLES, ...CORE_ADMIN];
 
 function TenantLayout() {
   return (
@@ -164,6 +169,8 @@ export default function App() {
         <Route path="admin/all-users" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminUsers /></ProtectedRoute>} />
         <Route path="admin/teachers" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><AdminTeachers /></ProtectedRoute>} />
         <Route path="admin/schools" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminSchools /></ProtectedRoute>} />
+        <Route path="admin/attendance" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AttendanceDashboard /></ProtectedRoute>} />
+        <Route path="admin/attendance/session" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AttendanceSessionPage /></ProtectedRoute>} />
 
         {/* Parent routes */}
         <Route path="parent" element={<Navigate to="dashboard" replace />} />
@@ -176,6 +183,7 @@ export default function App() {
         <Route path="parent/notice-board" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeBoard /></ProtectedRoute>} />
         <Route path="parent/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeDetail backPath="/parent/notice-board" /></ProtectedRoute>} />
         <Route path="parent/notifications" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><NotificationsPage title="Notifications" subtitle="Your enrollment and school notifications." /></ProtectedRoute>} />
+        <Route path="parent/attendance" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><StudentAttendanceHistory /></ProtectedRoute>} />
 
         {/* Teacher routes */}
         <Route path="teacher/dashboard" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherDashboard /></ProtectedRoute>} />
@@ -186,8 +194,10 @@ export default function App() {
         <Route path="teacher/messages" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ChatPage /></ProtectedRoute>} />
         <Route path="teacher/notice-board" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><MyNoticeBoard basePath="/teacher/notice-board" title="Notice Board" subtitle="Announcements shared with you by the school." /></ProtectedRoute>} />
         <Route path="teacher/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><MyNoticeDetail backPath="/teacher/notice-board" /></ProtectedRoute>} />
+        <Route path="teacher/attendance" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><AttendanceSessionPage /></ProtectedRoute>} />
 
         {/* Shared authenticated routes */}
+        <Route path="attendance/students/:studentId" element={<ProtectedRoute allowedRoles={ATTENDANCE_HISTORY_ROLES}><StudentAttendanceHistory /></ProtectedRoute>} />
         <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       </Route>
 
