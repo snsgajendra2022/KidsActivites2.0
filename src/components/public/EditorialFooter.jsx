@@ -72,9 +72,6 @@ export default function EditorialFooter({ compact = false }) {
           <div className="flex flex-col items-start gap-4">
             <FooterPortalLogo size="sm" />
             <p className="sb-editorial-footer__tagline">Activity enrollment and parent communication platform.</p>
-            {!compact && contactLine && (
-              <p className="sb-editorial-footer__tagline mt-4">{contactLine}</p>
-            )}
           </div>
 
           <div>

@@ -29,6 +29,7 @@ import {
   X,
 } from 'lucide-react';
 import PlatformLandingSections from '../../components/public/PlatformLandingSections.jsx';
+import kidsLogo from '../../assets/Logo/KidsLogo.png';
 import '../../styles/kids-landing-page.css';
 
 const roleCards = [
@@ -195,10 +196,14 @@ const faqs = [
 function Brand() {
   return (
     <a className="kl-brand" href="#top" aria-label="Kids Activities home">
-      <span className="kl-brand__icon">
-        <Home size={24} />
-      </span>
-      <span className='text-black'>Kids Activities</span>
+      <img
+        src={kidsLogo}
+        alt="Kids Activities"
+        className="kl-brand__logo"
+        width={220}
+        height={56}
+        decoding="async"
+      />
     </a>
   );
 }
@@ -610,11 +615,15 @@ export default function KidsLandingPage() {
             </div>
           </div>
           <div className="kl-footer__bottom">
-            <a className="kl-brand" href="#top" aria-label="Kids Activities home">
-              <span className="kl-brand__icon">
-                <Home size={24} />
-              </span>
-              <span className='text-white'>Kids Activities</span>
+            <a className="kl-brand kl-brand--footer" href="#top" aria-label="Kids Activities home">
+              <img
+                src={kidsLogo}
+                alt="Kids Activities"
+                className="kl-brand__logo"
+                width={180}
+                height={46}
+                decoding="async"
+              />
             </a>
             <p className='text-white'>© 2024 Kids Activities · Built for schools, teachers and families.</p>
             <ShieldCheck size={18} aria-label="Secure platform" className='text-white' />

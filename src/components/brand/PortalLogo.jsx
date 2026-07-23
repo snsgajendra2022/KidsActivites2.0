@@ -138,12 +138,12 @@ export default function PortalLogo({
 
 export function FooterPortalLogo({ size = 'lg', className = '' }) {
   const { portalName, branding } = usePortalConfig();
-  const { isTenantRoute, isTenantSubdomain } = useTenant();
   const sizeClass = SIZES[size] || SIZES.lg;
-  const platformLogo = (isTenantRoute || isTenantSubdomain) ? null : footerDefaultLogo;
+  // Always fall back to the platform white logo — never show bare "KI" initials
+  // when tenant branding is missing (e.g. InvalidWorkspace / inactive slug).
   const imageUrl = sanitizeBrandingValue(branding?.logoIconUrl)
     || sanitizeBrandingValue(branding?.logoUrl)
-    || platformLogo;
+    || footerDefaultLogo;
 
   return (
     <LogoMark

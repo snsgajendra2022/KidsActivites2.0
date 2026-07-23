@@ -36,7 +36,19 @@
   -webkit-backdrop-filter: blur(14px);
 }
 .kl-nav { height: 80px; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
-.kl-brand { display: inline-flex; align-items: center; gap: 9px; color: #1e3a8a; font-size: 24px; font-weight: 800; }
+.kl-brand { display: inline-flex; align-items: center; gap: 9px; color: #1e3a8a; font-size: 24px; font-weight: 800; line-height: 0;background-color: #000;border-radius: 10px;padding: 10px10px 10px 10px 10px; }
+.kl-brand__logo {
+  display: block;
+  height: clamp(2.25rem, 4.5vw, 3rem);
+  width: auto;
+  max-width: min(14rem, 55vw);
+  object-fit: contain;
+  object-position: left center;
+}
+.kl-brand--footer .kl-brand__logo {
+  height: 2.25rem;
+  max-width: 11rem;
+}
 .kl-brand__icon {
   width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
   color: #fff; background: var(--kl-yellow);

@@ -59,7 +59,7 @@ export default function KidzeePrintableFormPage() {
       };
     }
     return {
-      href: tenantPath('/'),
+      href: tenantPath('/login'),
       label: 'Back',
     };
   }, [applicationId, isAdmin, user?.role, tenantPath]);

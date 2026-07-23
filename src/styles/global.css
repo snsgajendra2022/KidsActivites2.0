@@ -484,13 +484,111 @@ img { max-width: 100%; }
 .signature-pad-wrap {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
   background: #fff;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
-.signature-canvas { display: block; width: 100%; height: 160px; cursor: crosshair; touch-action: none; }
-.signature-pad-wrap--compact .signature-canvas { height: 70px; }
-.signature-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); background: #f8fafc; }
-.signature-pad-wrap--compact .signature-actions { padding: 4px 8px; }
+.signature-canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 160px;
+  cursor: crosshair;
+  touch-action: none;
+  box-sizing: border-box;
+}
+.signature-pad-wrap--compact {
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+}
+.signature-pad-wrap--compact .signature-canvas { height: 70px; flex: 1; min-width: 0; }
+.signature-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  background: #f8fafc;
+  position: relative;
+}
+.signature-pad-wrap--compact .signature-actions {
+  flex: 0 0 auto;
+  padding: 0;
+  border-top: none;
+  border-left: 1px solid var(--line);
+  min-width: 2.25rem;
+  justify-content: center;
+}
+.signature-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0 0.35rem;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 0.35rem;
+}
+.signature-menu-btn:hover,
+.signature-menu-btn[aria-expanded="true"] {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.signature-menu {
+  position: absolute;
+  right: 0.25rem;
+  bottom: calc(100% + 0.25rem);
+  z-index: 30;
+  min-width: 9.5rem;
+  padding: 0.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+.signature-pad-wrap--compact .signature-menu {
+  right: 0;
+  top: 100%;
+  bottom: auto;
+  margin-top: 0.25rem;
+}
+.signature-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.signature-menu button:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+.signature-menu button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.signature-menu__status {
+  margin: 0.15rem 0.35rem 0.35rem;
+  font-size: 0.7rem;
+  color: var(--success, #15803d);
+}
 
 .table-action-btn-outline:hover {
   background: #eff4ff;
