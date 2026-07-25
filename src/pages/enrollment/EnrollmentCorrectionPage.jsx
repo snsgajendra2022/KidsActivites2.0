@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { CheckCircle, FileUp, FormInput } from 'lucide-react';
+import { AlertTriangle, CheckCircle, FileUp, FormInput } from 'lucide-react';
 import KidzeePrintableForm from './KidzeePrintableForm.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import {
@@ -338,22 +338,61 @@ export default function EnrollmentCorrectionPage() {
 
   if (loadState.loading) {
     return (
-      <div className="kidzee-print-page">
+      <div className="kidzee-print-page enrollment-correction-result-page">
         <NetworkBanner />
-        <p className="no-print enrollment-correction-status">
-          Loading your document correction page…
-        </p>
+        <div className="enrollment-correction-result enrollment-correction-result--loading" role="status">
+          <div className="enrollment-correction-result__spinner" aria-hidden />
+          <h1 className="enrollment-correction-result__title">Loading correction page</h1>
+          <p className="enrollment-correction-result__text">
+            Please wait while we open your enrollment correction link.
+          </p>
+        </div>
       </div>
     );
   }
 
   if (loadState.loadError) {
+    const alreadyUsed = /already been used|already used/i.test(loadState.loadError || '');
+    const expired = /expired/i.test(loadState.loadError || '');
     return (
-      <div className="kidzee-print-page">
+      <div className="kidzee-print-page enrollment-correction-result-page">
         <NetworkBanner />
-        <div className="no-print enrollment-correction-status">
-          <h2 style={{ marginBottom: '0.75rem', color: '#b45309' }}>Correction Link Unavailable</h2>
-          <p style={{ color: '#64748b', lineHeight: 1.6 }}>{loadState.loadError}</p>
+        <div
+          className={`enrollment-correction-result${alreadyUsed ? ' enrollment-correction-result--success' : ' enrollment-correction-result--warning'}`}
+          role="status"
+        >
+          <div className="enrollment-correction-result__icon" aria-hidden>
+            {alreadyUsed
+              ? <CheckCircle size={40} strokeWidth={2} />
+              : <AlertTriangle size={40} strokeWidth={2} />}
+          </div>
+          <p className="enrollment-correction-result__eyebrow">
+            {alreadyUsed ? 'Enrollment correction' : expired ? 'Link expired' : 'Link unavailable'}
+          </p>
+          <h1 className="enrollment-correction-result__title">
+            {alreadyUsed
+              ? 'Application already resubmitted'
+              : expired
+                ? 'This correction link has expired'
+                : 'Correction link unavailable'}
+          </h1>
+          <p className="enrollment-correction-result__text">
+            {alreadyUsed
+              ? 'This link was already used. Your corrected application is with the school and under review. You can safely close this page.'
+              : loadState.loadError}
+          </p>
+          {alreadyUsed && (
+            <ul className="enrollment-correction-result__steps">
+              <li>School admissions will review your updates</li>
+              <li>You will hear from the school if anything else is needed</li>
+              <li>No further action is required on this page</li>
+            </ul>
+          )}
+          {!alreadyUsed && (
+            <p className="enrollment-correction-result__footnote">
+              Contact the school admissions office if you need a new correction link.
+            </p>
+          )}
         </div>
       </div>
     );
@@ -361,14 +400,24 @@ export default function EnrollmentCorrectionPage() {
 
   if (loadState.submitted) {
     return (
-      <div className="kidzee-print-page">
+      <div className="kidzee-print-page enrollment-correction-result-page">
         <NetworkBanner />
-        <div className="no-print enrollment-correction-status">
-          <CheckCircle size={48} style={{ color: '#16a34a', marginBottom: '1rem' }} />
-          <h2 style={{ marginBottom: '0.75rem' }}>Application Resubmitted</h2>
-          <p style={{ color: '#64748b', lineHeight: 1.6 }}>
-            Thank you. Your corrected enrollment application has been resubmitted and is now under review.
-            You may close this page.
+        <div className="enrollment-correction-result enrollment-correction-result--success" role="status">
+          <div className="enrollment-correction-result__icon" aria-hidden>
+            <CheckCircle size={40} strokeWidth={2} />
+          </div>
+          <p className="enrollment-correction-result__eyebrow">Enrollment correction</p>
+          <h1 className="enrollment-correction-result__title">Application resubmitted</h1>
+          <p className="enrollment-correction-result__text">
+            Thank you. Your corrected enrollment application is now with the school and under review.
+          </p>
+          <ul className="enrollment-correction-result__steps">
+            <li>Your documents and form updates were received</li>
+            <li>Admissions will review the corrected application</li>
+            <li>You may close this page — no further action is needed</li>
+          </ul>
+          <p className="enrollment-correction-result__footnote">
+            Keep an eye on your email or phone for updates from the school.
           </p>
         </div>
       </div>

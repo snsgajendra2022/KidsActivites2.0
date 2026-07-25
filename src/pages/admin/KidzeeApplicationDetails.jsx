@@ -1,6 +1,7 @@
 import {
   CLASS_OPTIONS,
   HOUSEHOLD_INCOME_OPTIONS,
+  IMMUNIZATION_COLUMNS,
   IMMUNIZATION_ROWS,
   STAYS_WITH_OPTIONS,
   UNIFORM_SIZES,
@@ -43,6 +44,32 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function formatDoseDate(value) {
+  if (!value) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (iso) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[Number(iso[2]) - 1];
+    if (month) return `${Number(iso[3])} ${month} ${iso[1]}`;
+  }
+  return text;
+}
+
+function doseColumnLabel(label) {
+  return String(label || '').replace(' (dd/mm/yyyy)', '');
+}
+
+function immunizationHasAnyDose(immunization) {
+  if (!immunization) return false;
+  return IMMUNIZATION_ROWS.some(({ key }) => {
+    const row = immunization[key];
+    if (!row) return false;
+    return IMMUNIZATION_COLUMNS.some(({ key: col }) => Boolean(row[col]));
+  });
+}
+
 function guardianFields(guardian, prefix) {
   if (!guardian?.name) return [];
   const address = joinLines(guardian.addressLine1, guardian.addressLine2, guardian.addressLine3);
@@ -72,22 +99,6 @@ function contactFields(contact, index) {
   ];
 }
 
-function immunizationSummary(immunization) {
-  if (!immunization) return null;
-  const entries = IMMUNIZATION_ROWS
-    .map(({ key, age }) => {
-      const row = immunization[key];
-      if (!row) return null;
-      const doses = ['dose1', 'dose2', 'dose3', 'dose4', 'dose5', 'booster']
-        .map((d) => row[d])
-        .filter(Boolean);
-      if (!doses.length) return null;
-      return `${age}: ${doses.join('; ')}`;
-    })
-    .filter(Boolean);
-  return entries.length ? entries.join(' · ') : null;
-}
-
 function permissionSummary(permission, label) {
   if (!permission) return [];
   const hasContent = permission.date || permission.place || permission.signature || permission.childName;
@@ -102,6 +113,81 @@ function permissionSummary(permission, label) {
 
 function isSignatureDataUrl(value) {
   return typeof value === 'string' && value.startsWith('data:image/');
+}
+
+function ImmunizationRecord({ immunization }) {
+  if (!immunizationHasAnyDose(immunization)) return null;
+
+  return (
+    <section className="sb-card app-review-card">
+      <h3 className="app-review-card-title">Kidzee — Immunization</h3>
+      <p className="app-review-immunization-hint">Vaccination dates by age and dose</p>
+
+      <div className="app-review-immunization-scroll">
+        <table className="app-review-immunization-table">
+          <thead>
+            <tr>
+              <th scope="col">Age</th>
+              <th scope="col">Recommended</th>
+              {IMMUNIZATION_COLUMNS.map((col) => (
+                <th key={col.key} scope="col">{doseColumnLabel(col.label)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {IMMUNIZATION_ROWS.map((row) => {
+              const doses = immunization?.[row.key] || {};
+              const hasRowDose = IMMUNIZATION_COLUMNS.some(({ key }) => Boolean(doses[key]));
+              if (!hasRowDose) return null;
+              return (
+                <tr key={row.key}>
+                  <th scope="row">{row.age}</th>
+                  <td className="app-review-immunization-rec">{row.recommendation}</td>
+                  {IMMUNIZATION_COLUMNS.map((col) => {
+                    const formatted = formatDoseDate(doses[col.key]);
+                    return (
+                      <td key={col.key} className={formatted ? 'has-date' : 'empty-date'}>
+                        {formatted || '—'}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <ul className="app-review-immunization-cards" aria-label="Vaccination record">
+        {IMMUNIZATION_ROWS.map((row) => {
+          const doses = immunization?.[row.key] || {};
+          const filled = IMMUNIZATION_COLUMNS
+            .map((col) => ({
+              label: doseColumnLabel(col.label),
+              value: formatDoseDate(doses[col.key]),
+            }))
+            .filter((d) => d.value);
+          if (!filled.length) return null;
+          return (
+            <li key={row.key} className="app-review-immunization-card">
+              <div className="app-review-immunization-card__head">
+                <strong>{row.age}</strong>
+                <span>{row.recommendation}</span>
+              </div>
+              <dl>
+                {filled.map((d) => (
+                  <div key={d.label}>
+                    <dt>{d.label}</dt>
+                    <dd>{d.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 function PermissionSignatures({ permissions, officeUse, includeOfficeUse = true }) {
@@ -271,10 +357,7 @@ export default function KidzeeApplicationDetails({ app, includeOfficeUse = true 
         <DetailSection title="Kidzee — Emergency Contacts" fields={emergencyFields} />
       )}
 
-      <DetailSection
-        title="Kidzee — Immunization"
-        fields={[['Vaccination Record', immunizationSummary(data.immunization)]]}
-      />
+      <ImmunizationRecord immunization={data.immunization} />
 
       {permissionFields.length > 0 && (
         <DetailSection title="Kidzee — Permissions & Signatures" fields={permissionFields} />
