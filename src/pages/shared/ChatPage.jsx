@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../../components/layout/AppLayout.jsx';
@@ -13,19 +13,32 @@ import {
   markConversationRead,
   getChatContacts,
   createConversation,
+  uploadChatAttachment,
+  editMessage,
+  deleteMessage,
+  toggleMessageReaction,
+  getChatFeatureSupport,
+  CHAT_ATTACHMENT_ACCEPT,
 } from '../../services/chatService.js';
 import {
   publishChatUnreadSnapshot,
   clearChatUnreadSnapshot,
   requestChatUnreadRefresh,
 } from '../../hooks/useUnreadMessageCount.js';
-import { subscribeToConversation } from '../../services/chatRealtime.js';
+import {
+  subscribeToConversation,
+  publishTyping,
+  publishPresence,
+} from '../../services/chatRealtime.js';
+import { usePermission } from '../../hooks/usePermission.js';
+import { PERMISSIONS } from '../../constants/permissions.js';
 import {
   getConversationUnread,
   patchConversationUnread,
 } from '../../utils/chatUnread.js';
 import {
-  Send, MessageCircle, Search, ArrowLeft, Shield, Plus, X, Check, CheckCheck, Lock,
+  Send, MessageCircle, Search, ArrowLeft, Shield, Plus, X, Check, CheckCheck,
+  Paperclip, FileText, Pencil, Trash2, RefreshCw, LoaderCircle,
 } from 'lucide-react';
 import '../../styles/messages.css';
 
@@ -126,9 +139,22 @@ function applyReadReceipt(messages, readerId, readAt, currentUserId) {
   ));
 }
 
+const QUICK_REACTIONS = ['👍', '❤️', '🎉', '😊'];
+
+function formatFileSize(bytes = 0) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isImageAttachment(attachment) {
+  return attachment?.mimeType?.startsWith('image/');
+}
+
 export default function ChatPage() {
   const { user, bootstrapping } = useAuth();
   const { toast } = useToast();
+  const canSendMessages = usePermission(PERMISSIONS.SEND_MESSAGES);
   const [conversations, setConversations] = useState([]);
   const [active, setActive] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -142,21 +168,50 @@ export default function ChatPage() {
   const [contacts, setContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
+  const [conversationError, setConversationError] = useState('');
+  const [messageError, setMessageError] = useState('');
+  const [contactError, setContactError] = useState('');
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [olderCursor, setOlderCursor] = useState(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState([]);
+  const [deletingSelection, setDeletingSelection] = useState(false);
+  const [typingUserId, setTypingUserId] = useState(null);
+  const [participantPresence, setParticipantPresence] = useState(null);
+  const [featureSupport, setFeatureSupport] = useState(() => getChatFeatureSupport());
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const composeModalRef = useRef(null);
+  const contactSearchRef = useRef(null);
+  const composeTriggerRef = useRef(null);
+  const deleteDialogRef = useRef(null);
+  const deleteCancelRef = useRef(null);
+  const threadBodyRef = useRef(null);
+  const reactionMenuRef = useRef(null);
   const sendButtonRef = useRef(null);
   const sendLockRef = useRef(false);
   const inputValueRef = useRef('');
   const lastSendFingerprintRef = useRef({ key: '', at: 0 });
+  const typingTimerRef = useRef(null);
+  const remoteTypingTimerRef = useRef(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedConvId = searchParams.get('c');
 
   const activeRef = useRef(null);
-  activeRef.current = active;
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
 
   const loadConversations = useCallback(() => {
     if (bootstrapping || !user?.id || !getAccessToken()) return Promise.resolve();
     setLoadingConversations(true);
+    setConversationError('');
     return getConversationsForUser(user.id)
       .then((list) => {
         const items = Array.isArray(list) ? list : [];
@@ -165,8 +220,8 @@ export default function ChatPage() {
           setActive(items[0].id);
         }
       })
-      .catch(() => {
-        toast('Unable to load conversations. Please try again.', 'error');
+      .catch((error) => {
+        setConversationError(error?.message || 'Unable to load conversations.');
         setConversations([]);
       })
       .finally(() => setLoadingConversations(false));
@@ -182,62 +237,92 @@ export default function ChatPage() {
   }, [conversations, user?.id]);
 
   useEffect(() => {
-    loadConversations();
+    const timer = window.setTimeout(() => void loadConversations(), 0);
+    return () => window.clearTimeout(timer);
   }, [loadConversations]);
 
   // Deep-link: open a specific conversation when arriving from a notification.
   useEffect(() => {
     if (!requestedConvId || conversations.length === 0) return;
-    if (conversations.some((c) => c.id === requestedConvId)) {
-      setActive(requestedConvId);
-      setMobileChatOpen(true);
-    }
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete('c');
-        return next;
-      },
-      { replace: true },
-    );
+    const timer = window.setTimeout(() => {
+      if (conversations.some((c) => c.id === requestedConvId)) {
+        setActive(requestedConvId);
+        setMobileChatOpen(true);
+      }
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('c');
+          return next;
+        },
+        { replace: true },
+      );
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [requestedConvId, conversations, setSearchParams]);
+
+  const loadMessages = useCallback(async (conversationId, { older = false } = {}) => {
+    if (!conversationId) return;
+    if (older) setLoadingOlder(true);
+    else {
+      setLoadingMessages(true);
+      setMessageError('');
+    }
+    try {
+      const page = await getMessages(conversationId, {
+        limit: 30,
+        before: older ? olderCursor : undefined,
+      });
+      const items = Array.isArray(page) ? page : page.items || [];
+      setMessages((current) => {
+        if (!older) return items;
+        const existing = new Set(current.map((message) => message.id));
+        return [...items.filter((message) => !existing.has(message.id)), ...current];
+      });
+      setHasOlderMessages(Boolean(page?.hasMore));
+      setOlderCursor(page?.nextCursor || null);
+    } catch (error) {
+      setMessageError(error?.message || 'Unable to load messages.');
+      if (!older) setMessages([]);
+    } finally {
+      setLoadingMessages(false);
+      setLoadingOlder(false);
+    }
+  }, [olderCursor]);
 
   useEffect(() => {
     if (!active || !user?.id) return undefined;
+    const timer = window.setTimeout(() => {
+      setMessages([]);
+      setAttachments([]);
+      setEditingMessageId(null);
+      setSelectedIds([]);
+      setPendingDeleteIds([]);
+      setTypingUserId(null);
+      setParticipantPresence(null);
+      setOlderCursor(null);
+      setHasOlderMessages(false);
+      void loadMessages(active);
 
-    let cancelled = false;
-    setLoadingMessages(true);
-    getMessages(active)
-      .then((list) => {
-        if (!cancelled) setMessages(Array.isArray(list) ? list : []);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          toast('Unable to load messages. Please try again.', 'error');
-          setMessages([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingMessages(false);
-      });
-
-    markConversationRead(active, user.id)
-      .then(() => {
-        setConversations((prev) => prev.map((c) => (
-          c.id === active ? patchConversationUnread(c, user.id, 0) : c
-        )));
-        requestChatUnreadRefresh();
-      })
-      .catch(() => {});
+      markConversationRead(active, user.id)
+        .then(() => {
+          setConversations((prev) => prev.map((c) => (
+            c.id === active ? patchConversationUnread(c, user.id, 0) : c
+          )));
+          requestChatUnreadRefresh();
+        })
+        .catch(() => {});
+    }, 0);
 
     return () => {
-      cancelled = true;
+      window.clearTimeout(timer);
+      publishTyping(active, false);
     };
   }, [active, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const conversationIdsKey = useMemo(
     () => conversations.map((c) => c.id).sort().join(','),
-    [conversations.map((c) => c.id).sort().join(',')],
+    [conversations],
   );
 
   useEffect(() => {
@@ -278,6 +363,37 @@ export default function ChatPage() {
         return;
       }
 
+      if (['message:updated', 'message:deleted', 'message:reaction'].includes(payload?.event)) {
+        const nextMessage = payload.message;
+        if (nextMessage && activeRef.current === conversationId) {
+          setMessages((prev) => prev.map((message) => (
+            message.id === nextMessage.id ? { ...message, ...nextMessage } : message
+          )));
+        }
+        return;
+      }
+
+      if (payload?.event === 'typing' && payload.userId !== user.id) {
+        if (activeRef.current === conversationId) {
+          setTypingUserId(payload.isTyping === false ? null : payload.userId);
+          window.clearTimeout(remoteTypingTimerRef.current);
+          if (payload.isTyping !== false) {
+            remoteTypingTimerRef.current = window.setTimeout(() => setTypingUserId(null), 2500);
+          }
+        }
+        return;
+      }
+
+      if (payload?.event === 'presence:update' && payload.userId !== user.id) {
+        if (activeRef.current === conversationId) {
+          setParticipantPresence({
+            status: payload.status || 'offline',
+            lastSeenAt: payload.lastSeenAt || null,
+          });
+        }
+        return;
+      }
+
       if (payload?.event === 'conversation:read') {
         const { userId: readerId, readAt } = payload;
         if (activeRef.current === conversationId) {
@@ -301,17 +417,95 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    const publishCurrentPresence = () => {
+      publishPresence(document.visibilityState === 'visible' ? 'online' : 'away');
+    };
+    publishCurrentPresence();
+    document.addEventListener('visibilitychange', publishCurrentPresence);
+    window.addEventListener('focus', publishCurrentPresence);
+    window.addEventListener('blur', publishCurrentPresence);
+    return () => {
+      document.removeEventListener('visibilitychange', publishCurrentPresence);
+      window.removeEventListener('focus', publishCurrentPresence);
+      window.removeEventListener('blur', publishCurrentPresence);
+      publishPresence('offline');
+    };
+  }, []);
+
   const openCompose = () => {
+    if (!canSendMessages) return;
     setComposeOpen(true);
     setContactsLoading(true);
+    setContactError('');
     getChatContacts()
       .then((list) => setContacts(Array.isArray(list) ? list : []))
-      .catch(() => {
-        toast('Unable to load contacts. Please try again.', 'error');
+      .catch((error) => {
+        setContactError(error?.message || 'Unable to load contacts.');
         setContacts([]);
       })
       .finally(() => setContactsLoading(false));
   };
+
+  const closeCompose = useCallback(() => {
+    setComposeOpen(false);
+    setContactSearch('');
+    window.setTimeout(() => composeTriggerRef.current?.focus(), 0);
+  }, []);
+
+  useEffect(() => {
+    if (!composeOpen) return undefined;
+    window.setTimeout(() => contactSearchRef.current?.focus(), 0);
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeCompose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = composeModalRef.current?.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [composeOpen, closeCompose]);
+
+  useEffect(() => {
+    if (!pendingDeleteIds.length) return undefined;
+    window.setTimeout(() => deleteCancelRef.current?.focus(), 0);
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setPendingDeleteIds([]);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const buttons = deleteDialogRef.current?.querySelectorAll('button:not([disabled])');
+      if (!buttons?.length) return;
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [pendingDeleteIds]);
 
   const isTeacher = user?.role === 'teacher';
 
@@ -345,6 +539,7 @@ export default function ChatPage() {
   const otherMeta = otherParticipantLabel.subtitle;
   const isAdminThread = activeConv?.role === 'admin';
   const pageSubtitle = getPageSubtitle(user?.role);
+  const presence = participantPresence || activeConv?.participantPresence?.[otherId] || null;
 
   const messageTimeline = useMemo(
     () => buildMessageTimeline(messages),
@@ -383,14 +578,175 @@ export default function ChatPage() {
     if (sendButtonRef.current) sendButtonRef.current.disabled = disabled;
   }, []);
 
-  const handleSend = useCallback(async (event) => {
+  const handleTypingChange = (value) => {
+    inputValueRef.current = value;
+    setText(value);
+    if (!active) return;
+    publishTyping(active, Boolean(value.trim()));
+    window.clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = window.setTimeout(() => publishTyping(active, false), 1500);
+  };
+
+  const syncFeatureSupport = useCallback((error) => {
+    if (error?.code === 'CHAT_FEATURE_UNAVAILABLE' || error?.feature) {
+      setFeatureSupport(getChatFeatureSupport());
+    }
+  }, []);
+
+  const handleAttachment = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !active || !featureSupport.attachments) return;
+    setUploadingAttachment(true);
+    try {
+      const uploaded = await uploadChatAttachment(active, file);
+      setAttachments((current) => [...current, uploaded]);
+    } catch (error) {
+      syncFeatureSupport(error);
+      toast(error?.message || 'Unable to upload attachment.', 'error');
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const selectedMessages = useMemo(
+    () => messages.filter((message) => selectedIds.includes(message.id)),
+    [messages, selectedIds],
+  );
+  const selectionCount = selectedMessages.length;
+  const singleSelected = selectionCount === 1 ? selectedMessages[0] : null;
+  const canEditSelection = Boolean(
+    singleSelected
+    && featureSupport.edit
+    && singleSelected.senderId === user?.id
+    && !singleSelected.deleted,
+  );
+  const canReactSelection = Boolean(singleSelected && featureSupport.reactions && !singleSelected.deleted);
+  const canDeleteSelection = selectionCount > 0
+    && featureSupport.delete
+    && selectedMessages.every((message) => message.senderId === user?.id && !message.deleted);
+
+  const toggleMessageSelection = useCallback((messageId) => {
+    setSelectedIds((current) => (
+      current.includes(messageId)
+        ? current.filter((id) => id !== messageId)
+        : [...current, messageId]
+    ));
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds([]), []);
+
+  useLayoutEffect(() => {
+    const body = threadBodyRef.current;
+    const menu = reactionMenuRef.current;
+    if (!body || !menu) return undefined;
+
+    const position = () => {
+      const bubble = menu.parentElement;
+      if (!bubble) return;
+      const bodyRect = body.getBoundingClientRect();
+      const bubbleRect = bubble.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const center = bubbleRect.top + bubbleRect.height / 2;
+      const half = menuRect.height / 2;
+      const clamped = Math.min(
+        Math.max(center, bodyRect.top + half + 8),
+        bodyRect.bottom - half - 8,
+      );
+      menu.style.setProperty('--menu-y-shift', `${Math.round(clamped - center)}px`);
+    };
+
+    position();
+    const update = () => window.requestAnimationFrame(position);
+    body.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      body.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [canReactSelection, singleSelected?.id]);
+
+  const handleBubbleClick = useCallback((messageId) => {
+    if (window.getSelection?.()?.toString()) return;
+    toggleMessageSelection(messageId);
+  }, [toggleMessageSelection]);
+
+  useEffect(() => {
+    if (!selectionCount) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') clearSelection();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [selectionCount, clearSelection]);
+
+  const startEditingSelection = () => {
+    if (!canEditSelection) return;
+    setEditingMessageId(singleSelected.id);
+    setEditingText(singleSelected.text || '');
+    setSelectedIds([]);
+  };
+
+  const handleEditMessage = async (messageId) => {
+    try {
+      const updated = await editMessage(active, messageId, editingText);
+      setMessages((current) => current.map((message) => (
+        message.id === messageId ? { ...message, ...updated } : message
+      )));
+      setEditingMessageId(null);
+      setEditingText('');
+    } catch (error) {
+      syncFeatureSupport(error);
+      toast(error?.message || 'Unable to edit message.', 'error');
+    }
+  };
+
+  const handleDeleteMessages = async (ids) => {
+    if (!ids.length) return;
+    setDeletingSelection(true);
+    try {
+      const results = await Promise.allSettled(ids.map((id) => deleteMessage(active, id)));
+      const removedIds = ids.filter((_, index) => results[index].status === 'fulfilled');
+      if (removedIds.length) {
+        setMessages((current) => current.map((message) => (
+          removedIds.includes(message.id)
+            ? { ...message, deleted: true, text: '', attachments: [], reactions: {} }
+            : message
+        )));
+      }
+      const failure = results.find((result) => result.status === 'rejected');
+      if (failure) {
+        syncFeatureSupport(failure.reason);
+        toast(failure.reason?.message || 'Some messages could not be deleted.', 'error');
+      }
+      setPendingDeleteIds([]);
+      setSelectedIds((current) => current.filter((id) => !removedIds.includes(id)));
+    } finally {
+      setDeletingSelection(false);
+    }
+  };
+
+  const handleReaction = async (messageId, emoji) => {
+    if (!featureSupport.reactions) return;
+    try {
+      const updated = await toggleMessageReaction(active, messageId, user.id, emoji);
+      setMessages((current) => current.map((message) => (
+        message.id === messageId ? { ...message, ...updated } : message
+      )));
+    } catch (error) {
+      syncFeatureSupport(error);
+      toast(error?.message || 'Unable to update reaction.', 'error');
+    }
+  };
+
+  const handleSend = async (event) => {
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
     if (sendLockRef.current) return;
 
     const body = (inputValueRef.current || text).trim();
-    if (!body || !active || !user?.id) return;
+    if ((!body && attachments.length === 0) || !active || !user?.id || !canSendMessages) return;
 
     const fingerprint = `${active}:${body}`;
     const now = Date.now();
@@ -405,11 +761,14 @@ export default function ChatPage() {
     lastSendFingerprintRef.current = { key: fingerprint, at: now };
     inputValueRef.current = '';
     setText('');
+    const pendingAttachments = attachments;
+    setAttachments([]);
+    publishTyping(active, false);
     setSending(true);
     setComposeDisabled(true);
 
     try {
-      const msg = await sendMessage(active, user.id, body);
+      const msg = await sendMessage(active, user.id, body, pendingAttachments);
       setMessages((prev) => (
         prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, seen: false }]
       ));
@@ -421,6 +780,7 @@ export default function ChatPage() {
     } catch (err) {
       inputValueRef.current = body;
       setText(body);
+      setAttachments(pendingAttachments);
       lastSendFingerprintRef.current = { key: '', at: 0 };
       toast(err.message || 'Unable to send message. Please try again.', 'error');
     } finally {
@@ -428,7 +788,7 @@ export default function ChatPage() {
       setSending(false);
       setComposeDisabled(false);
     }
-  }, [active, text, user?.id, toast, setComposeDisabled]);
+  };
 
   return (
     <AppLayout>
@@ -445,22 +805,24 @@ export default function ChatPage() {
                     </span>
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="messages-new-btn"
-                  onClick={openCompose}
-                  aria-label="Start new conversation"
-                >
-                  <Plus size={18} />
-                </button>
+                {canSendMessages && (
+                  <button
+                    ref={composeTriggerRef}
+                    type="button"
+                    className="messages-new-btn"
+                    onClick={openCompose}
+                    aria-label="Start new conversation"
+                  >
+                    <Plus size={16} />
+                  </button>
+                )}
               </div>
-              <p className="messages-sidebar__subtitle">{pageSubtitle}</p>
-              <div className="messages-secure-badge">
-                <Lock size={12} aria-hidden />
-                End-to-end school secure chat
-              </div>
+              <p className="messages-sidebar__subtitle">
+                <Shield size={12} aria-hidden />
+                {pageSubtitle}
+              </p>
               <div className="messages-search">
-                <Search size={16} className="messages-search__icon" />
+                <Search size={15} className="messages-search__icon" />
                 <input
                   type="search"
                   placeholder="Search conversations…"
@@ -474,6 +836,15 @@ export default function ChatPage() {
             <div className="messages-list">
               {loadingConversations ? (
                 <LoadingState message="Loading conversations…" className="messages-sidebar-empty" />
+              ) : conversationError ? (
+                <div className="messages-error-state" role="alert">
+                  <MessageCircle size={24} aria-hidden />
+                  <strong>Messages could not load</strong>
+                  <p>{conversationError}</p>
+                  <button type="button" onClick={loadConversations}>
+                    <RefreshCw size={14} /> Try again
+                  </button>
+                </div>
               ) : filteredConversations.length === 0 ? (
                 <EmptyState
                   className="messages-sidebar-empty"
@@ -484,7 +855,7 @@ export default function ChatPage() {
                       ? 'Start a conversation with a teacher or parent using the + button.'
                       : 'Try a different search term.'
                   }
-                  action={conversations.length === 0 ? (
+                  action={conversations.length === 0 && canSendMessages ? (
                     <button type="button" className="messages-cta-btn" onClick={openCompose}>
                       Start a conversation
                     </button>
@@ -492,7 +863,6 @@ export default function ChatPage() {
                 />
               ) : (
                 <>
-                  <p className="messages-list__label">Conversations</p>
                   {filteredConversations.map((c) => {
                   const oid = getOtherParticipant(c, user.id);
                   const label = isTeacher
@@ -515,11 +885,13 @@ export default function ChatPage() {
                           <p className="messages-conv__name">{name}</p>
                           <span className="messages-conv__time">{formatTime(c.lastMessageAt)}</span>
                         </div>
-                        {label.subtitle && (
-                          <p className="messages-conv__subtitle">{label.subtitle}</p>
-                        )}
                         <div className="messages-conv__row">
-                          <p className="messages-conv__preview">{c.lastMessage || 'No messages yet'}</p>
+                          <p className="messages-conv__preview">
+                            {label.subtitle && (
+                              <span className="messages-conv__role">{label.subtitle}</span>
+                            )}
+                            {c.lastMessage || 'No messages yet'}
+                          </p>
                           {unread > 0 && <span className="messages-conv__badge">{unread}</span>}
                         </div>
                       </div>
@@ -534,6 +906,45 @@ export default function ChatPage() {
           <div className="messages-main">
             {activeConv ? (
               <>
+                {selectionCount > 0 ? (
+                  <header className="messages-selection-bar">
+                    <button
+                      type="button"
+                      className="messages-selection-bar__close"
+                      onClick={clearSelection}
+                      aria-label="Cancel selection"
+                    >
+                      <X size={18} />
+                    </button>
+                    <p className="messages-selection-bar__count">
+                      {selectionCount} selected
+                    </p>
+                    <div className="messages-selection-bar__actions">
+                      {canEditSelection && (
+                        <button
+                          type="button"
+                          className="messages-selection-bar__action"
+                          onClick={startEditingSelection}
+                          title="Edit message"
+                          aria-label="Edit message"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
+                      {canDeleteSelection && (
+                        <button
+                          type="button"
+                          className="messages-selection-bar__action is-danger"
+                          onClick={() => setPendingDeleteIds(selectedIds)}
+                          title={selectionCount > 1 ? `Delete ${selectionCount} messages` : 'Delete message'}
+                          aria-label={selectionCount > 1 ? `Delete ${selectionCount} messages` : 'Delete message'}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </header>
+                ) : (
                 <header className="messages-thread-head">
                   <button
                     type="button"
@@ -548,21 +959,37 @@ export default function ChatPage() {
                   </div>
                   <div className="messages-thread-head__info">
                     <h2 className="messages-thread-head__name">{otherName}</h2>
-                    <p className={`messages-thread-head__meta ${isAdminThread ? 'is-admin' : ''}`}>
+                    <p className={`messages-thread-head__meta ${isAdminThread ? 'is-admin' : ''} ${presence?.status === 'online' ? 'is-online' : ''}`}>
                       {isAdminThread ? (
                         <><Shield size={12} aria-hidden />School administration</>
+                      ) : typingUserId ? (
+                        <span className="messages-typing-label">typing<span aria-hidden>…</span></span>
                       ) : isTeacher && otherMeta ? (
                         otherMeta
+                      ) : presence?.status === 'online' ? (
+                        <><span className="messages-thread-head__status-dot" aria-hidden />Online</>
+                      ) : presence?.lastSeenAt ? (
+                        `Last seen ${formatTime(presence.lastSeenAt)}`
                       ) : (
-                        <><span className="messages-thread-head__status-dot" aria-hidden />{roleLabel(activeConv.role)}</>
+                        roleLabel(activeConv.role)
                       )}
                     </p>
                   </div>
                 </header>
+                )}
 
-                <div className="messages-thread-body">
+                <div className="messages-thread-body" ref={threadBodyRef}>
                   {loadingMessages ? (
                     <LoadingState message="Loading messages…" className="messages-thread-loading" />
+                  ) : messageError ? (
+                    <div className="messages-error-state messages-error-state--thread" role="alert">
+                      <MessageCircle size={26} aria-hidden />
+                      <strong>Conversation could not load</strong>
+                      <p>{messageError}</p>
+                      <button type="button" onClick={() => loadMessages(active)}>
+                        <RefreshCw size={14} /> Try again
+                      </button>
+                    </div>
                   ) : messages.length === 0 ? (
                     <div className="messages-thread-empty">
                       <div className="messages-thread-empty__icon" aria-hidden>
@@ -572,8 +999,20 @@ export default function ChatPage() {
                       <p>Send the first message to start this conversation.</p>
                     </div>
                   ) : (
-                    <AnimatePresence>
-                      {messageTimeline.map((item) => (
+                    <>
+                      {hasOlderMessages && (
+                        <button
+                          type="button"
+                          className="messages-load-older"
+                          disabled={loadingOlder}
+                          onClick={() => loadMessages(active, { older: true })}
+                        >
+                          {loadingOlder ? <LoaderCircle size={14} className="is-spinning" /> : <RefreshCw size={14} />}
+                          {loadingOlder ? 'Loading…' : 'Load earlier messages'}
+                        </button>
+                      )}
+                      <AnimatePresence initial={false}>
+                        {messageTimeline.map((item) => (
                         item.type === 'date' ? (
                           <div key={item.key} className="messages-date-divider">
                             <span>{item.label}</span>
@@ -583,10 +1022,36 @@ export default function ChatPage() {
                           key={item.key}
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`messages-bubble ${item.message.senderId === user.id ? 'messages-bubble--sent' : 'messages-bubble--received'}`}
+                          className={`messages-bubble ${item.message.senderId === user.id ? 'messages-bubble--sent' : 'messages-bubble--received'} ${item.message.deleted ? 'is-deleted' : ''} ${selectionCount > 0 ? 'is-selecting' : ''} ${selectedIds.includes(item.message.id) ? 'is-selected' : ''}`}
+                          onClick={editingMessageId === item.message.id ? undefined : () => handleBubbleClick(item.message.id)}
                         >
-                          <p className="messages-bubble__text">{item.message.text}</p>
+                          {item.message.deleted ? (
+                            <p className="messages-bubble__deleted">Message deleted</p>
+                          ) : editingMessageId === item.message.id ? (
+                            <form className="messages-bubble__edit" onSubmit={(event) => { event.preventDefault(); handleEditMessage(item.message.id); }}>
+                              <input value={editingText} onChange={(event) => setEditingText(event.target.value)} aria-label="Edit message" autoFocus />
+                              <div><button type="submit" disabled={!editingText.trim()}>Save</button><button type="button" onClick={() => setEditingMessageId(null)}>Cancel</button></div>
+                            </form>
+                          ) : (
+                            <>
+                              {item.message.text && <p className="messages-bubble__text">{item.message.text}</p>}
+                              {item.message.attachments?.length > 0 && (
+                                <div className="messages-bubble__attachments">
+                                  {item.message.attachments.map((attachment) => (
+                                    <a key={attachment.id || attachment.url} href={attachment.url} target="_blank" rel="noreferrer" className="messages-attachment" onClick={(event) => event.stopPropagation()}>
+                                      {isImageAttachment(attachment) ? (
+                                        <img src={attachment.url} alt={attachment.name || 'Shared image'} />
+                                      ) : (
+                                        <span className="messages-attachment__file"><FileText size={18} /><span><strong>{attachment.name || 'Attachment'}</strong><small>{formatFileSize(attachment.size)}</small></span></span>
+                                      )}
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
                           <span className="messages-bubble__meta">
+                            {item.message.editedAt && !item.message.deleted && <span className="messages-bubble__edited">edited</span>}
                             <span className="messages-bubble__time">
                               {new Date(item.message.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -600,38 +1065,91 @@ export default function ChatPage() {
                               </span>
                             )}
                           </span>
+                          {canReactSelection && singleSelected.id === item.message.id && (
+                            <div
+                              ref={reactionMenuRef}
+                              className="messages-reaction-menu"
+                              aria-label="Choose a reaction"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {QUICK_REACTIONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  title={`React ${emoji}`}
+                                  aria-label={`React with ${emoji}`}
+                                  onClick={() => {
+                                    handleReaction(item.message.id, emoji);
+                                    clearSelection();
+                                  }}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {!item.message.deleted && featureSupport.reactions && Object.keys(item.message.reactions || {}).length > 0 && (
+                            <div className="messages-bubble__reactions" aria-label="Message reactions">
+                              {Object.entries(item.message.reactions).map(([emoji, userIds]) => (
+                                <button key={emoji} type="button" className={userIds.includes(user.id) ? 'is-mine' : ''} onClick={(event) => { event.stopPropagation(); handleReaction(item.message.id, emoji); }}>
+                                  <span aria-hidden>{emoji}</span> {userIds.length}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </motion.div>
                         )
-                      ))}
-                    </AnimatePresence>
+                        ))}
+                      </AnimatePresence>
+                    </>
                   )}
                   <div ref={bottomRef} />
                 </div>
 
-                <form className="messages-compose" onSubmit={handleSend} noValidate>
-                  <div className="messages-compose__input-wrap">
-                    <input
-                      ref={inputRef}
-                      value={text}
-                      onChange={(e) => {
-                        inputValueRef.current = e.target.value;
-                        setText(e.target.value);
-                      }}
-                      placeholder="Write a message…"
-                      disabled={sending}
-                      aria-label="Message"
-                    />
+                {canSendMessages ? (
+                  <form className="messages-compose" onSubmit={handleSend} noValidate>
+                    {featureSupport.attachments && (
+                      <>
+                        <input ref={fileInputRef} type="file" className="sr-only" accept={CHAT_ATTACHMENT_ACCEPT} onChange={handleAttachment} />
+                        <button type="button" className="messages-compose__attach" onClick={() => fileInputRef.current?.click()} disabled={sending || uploadingAttachment} aria-label="Attach a file">
+                          {uploadingAttachment ? <LoaderCircle size={18} className="is-spinning" /> : <Paperclip size={18} />}
+                        </button>
+                      </>
+                    )}
+                    <div className="messages-compose__field">
+                      {attachments.length > 0 && (
+                        <div className="messages-compose__attachments" aria-label="Attachments ready to send">
+                          {attachments.map((attachment, index) => (
+                            <span key={attachment.id || index}><FileText size={13} />{attachment.name}<button type="button" onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${attachment.name}`}><X size={12} /></button></span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="messages-compose__input-wrap">
+                        <input
+                          ref={inputRef}
+                          value={text}
+                          onChange={(event) => handleTypingChange(event.target.value)}
+                          placeholder="Write a message…"
+                          disabled={sending}
+                          aria-label="Message"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      ref={sendButtonRef}
+                      type="submit"
+                      className="messages-compose__send"
+                      disabled={sending || uploadingAttachment || (!text.trim() && attachments.length === 0)}
+                      aria-label="Send message"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </form>
+                ) : (
+                  <div className="messages-compose-readonly" role="status">
+                    You can read this conversation, but your role cannot send messages.
                   </div>
-                  <button
-                    ref={sendButtonRef}
-                    type="submit"
-                    className="messages-compose__send"
-                    disabled={sending || !text.trim()}
-                    aria-label="Send message"
-                  >
-                    <Send size={18} />
-                  </button>
-                </form>
+                )}
               </>
             ) : (
               <div className="messages-main__empty">
@@ -639,11 +1157,11 @@ export default function ChatPage() {
                   icon={MessageCircle}
                   title="Select a conversation"
                   description="Choose a chat from the sidebar or start a new one with the + button."
-                  action={(
+                  action={canSendMessages ? (
                     <button type="button" className="messages-cta-btn" onClick={openCompose}>
                       Start a conversation
                     </button>
-                  )}
+                  ) : null}
                 />
               </div>
             )}
@@ -651,21 +1169,22 @@ export default function ChatPage() {
         </div>
 
         {composeOpen && (
-          <div className="messages-compose-modal" role="dialog" aria-modal="true" aria-label="New conversation">
-            <div className="messages-compose-modal__backdrop" onClick={() => setComposeOpen(false)} />
-            <div className="messages-compose-modal__panel">
+          <div className="messages-compose-modal">
+            <div className="messages-compose-modal__backdrop" onClick={closeCompose} />
+            <div ref={composeModalRef} className="messages-compose-modal__panel" role="dialog" aria-modal="true" aria-labelledby="new-conversation-title" aria-describedby="new-conversation-description">
               <header className="messages-compose-modal__head">
                 <div>
-                  <h2>New conversation</h2>
-                  <p>Choose someone to message</p>
+                  <h2 id="new-conversation-title">New conversation</h2>
+                  <p id="new-conversation-description">Choose someone to message</p>
                 </div>
-                <button type="button" className="messages-compose-modal__close" onClick={() => setComposeOpen(false)} aria-label="Close">
+                <button type="button" className="messages-compose-modal__close" onClick={closeCompose} aria-label="Close new conversation">
                   <X size={18} />
                 </button>
               </header>
               <div className="messages-search">
                 <Search size={16} className="messages-search__icon" />
                 <input
+                  ref={contactSearchRef}
                   type="search"
                   placeholder="Search contacts…"
                   value={contactSearch}
@@ -676,6 +1195,13 @@ export default function ChatPage() {
               <div className="messages-compose-modal__list">
                 {contactsLoading ? (
                   <LoadingState message="Loading contacts…" className="messages-compose-modal__empty" />
+                ) : contactError ? (
+                  <div className="messages-error-state" role="alert">
+                    <MessageCircle size={22} aria-hidden />
+                    <strong>Contacts could not load</strong>
+                    <p>{contactError}</p>
+                    <button type="button" onClick={openCompose}><RefreshCw size={14} /> Try again</button>
+                  </div>
                 ) : filteredContacts.length === 0 ? (
                   <p className="messages-compose-modal__empty">No contacts available to message.</p>
                 ) : (
@@ -701,6 +1227,26 @@ export default function ChatPage() {
                     );
                   })
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+        {pendingDeleteIds.length > 0 && (
+          <div className="messages-compose-modal">
+            <div className="messages-compose-modal__backdrop" onClick={() => setPendingDeleteIds([])} />
+            <div ref={deleteDialogRef} className="messages-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-message-title" aria-describedby="delete-message-description">
+              <span className="messages-delete-dialog__icon" aria-hidden><Trash2 size={15} /></span>
+              <div className="messages-delete-dialog__copy">
+                <h2 id="delete-message-title">
+                  {pendingDeleteIds.length > 1 ? `Delete ${pendingDeleteIds.length} messages?` : 'Delete this message?'}
+                </h2>
+                <p id="delete-message-description">Text, files, and reactions are removed for everyone.</p>
+              </div>
+              <div className="messages-delete-dialog__actions">
+                <button ref={deleteCancelRef} type="button" disabled={deletingSelection} onClick={() => setPendingDeleteIds([])}>Cancel</button>
+                <button type="button" className="is-danger" disabled={deletingSelection} onClick={() => handleDeleteMessages(pendingDeleteIds)}>
+                  {deletingSelection ? 'Deleting…' : 'Delete'}
+                </button>
               </div>
             </div>
           </div>

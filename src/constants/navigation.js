@@ -13,6 +13,15 @@ export const PORTAL_BRANDING_NAV = {
   section: 'School Setup',
 };
 
+export const CREATIVE_CARDS_NAV = {
+  id: 'creative_cards',
+  to: '/creative-cards',
+  label: '🎨 Creative Cards',
+  icon: Palette,
+  iconName: 'Palette',
+  section: 'Create & Celebrate',
+};
+
 const ADMIN_CORE_NAV = [
   { id: 'admin_applications', to: '/admin/applications', label: 'Enrollment Applications', icon: FileText, iconName: 'FileText', section: 'Admissions & Enrollment' },
   { id: 'admin_students', to: '/admin/students', label: 'Students', icon: GraduationCap, iconName: 'GraduationCap', section: 'Students & Classes' },
@@ -41,6 +50,7 @@ export const SCHOOL_ADMIN_NAV = [
   PORTAL_BRANDING_NAV,
   { id: 'admin_teachers', to: '/admin/teachers', label: 'Teachers', icon: Users, iconName: 'Users', section: 'School Setup' },
   { id: 'admin_users', to: '/admin/all-users', label: 'All Users', icon: Users, iconName: 'Users', section: 'Platform' },
+  CREATIVE_CARDS_NAV,
   ...ADMIN_CORE_NAV,
 ];
 
@@ -48,6 +58,7 @@ export const SCHOOL_ADMIN_NAV = [
 export const SUPER_ADMIN_NAV = [
   { id: 'admin_schools', to: '/admin/schools', label: 'Schools', icon: GraduationCap, iconName: 'GraduationCap', section: 'Platform' },
   { id: 'admin_users', to: '/admin/users', label: 'All Users', icon: Users, iconName: 'Users', section: 'Platform' },
+  { id: 'admin_chat', to: '/admin/chat', label: 'Chat', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
   PORTAL_BRANDING_NAV,
 ];
 
@@ -57,6 +68,7 @@ export const PARENT_NAV = [
   { id: 'parent_documents', to: '/parent/documents', label: 'Documents', icon: FolderOpen, iconName: 'FolderOpen', section: 'Enrollment' },
   { id: 'parent_attendance', to: '/parent/attendance', label: 'Attendance', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'Attendance' },
   { id: 'parent_photos', to: '/parent/photos', label: 'Photos', icon: Image, iconName: 'Image', section: 'Photos & Media' },
+  CREATIVE_CARDS_NAV,
   { id: 'parent_fees', to: '/parent/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Fees & Payments' },
   { id: 'parent_messages', to: '/parent/messages', label: 'Messages', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
   { id: 'parent_notice_board', to: '/parent/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
@@ -71,6 +83,7 @@ export const TEACHER_NAV = [
   { id: 'teacher_attendance', to: '/teacher/attendance', label: 'Attendance', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'My Classes & Students' },
   { id: 'teacher_photos', to: '/teacher/photos', label: 'Send Photos', icon: Image, iconName: 'Image', section: 'Photos & Media' },
   { id: 'teacher_class_album', to: '/teacher/class-album', label: 'Class Album', icon: Tv, iconName: 'Tv', section: 'Photos & Media' },
+  CREATIVE_CARDS_NAV,
   { id: 'teacher_messages', to: '/teacher/messages', label: 'Messages', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
   { id: 'teacher_notice_board', to: '/teacher/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
   { id: 'teacher_profile', to: '/profile', label: 'Profile', icon: UserCheck, iconName: 'UserCheck', section: 'Account' },

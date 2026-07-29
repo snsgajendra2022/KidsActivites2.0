@@ -107,7 +107,8 @@ function ensureConversationSubscription(conversationId) {
 
 /**
  * Subscribe to real-time conversation events.
- * Listener receives payloads: message:new, conversation:read.
+ * Listener receives payloads such as message:new, message:updated,
+ * message:deleted, message:reaction, conversation:read, typing, presence:update.
  * Returns an unsubscribe function.
  */
 export function subscribeToConversation(conversationId, listener) {
@@ -139,6 +140,25 @@ export function markConversationReadViaSocket(conversationId) {
       body: JSON.stringify({ conversationId }),
     });
   });
+}
+
+function publish(destination, body) {
+  ensureClient().then((activeClient) => {
+    if (!activeClient?.connected) return;
+    activeClient.publish({
+      destination,
+      body: JSON.stringify(body),
+    });
+  });
+}
+
+export function publishTyping(conversationId, isTyping) {
+  if (!conversationId) return;
+  publish('/app/chat/typing', { conversationId, isTyping });
+}
+
+export function publishPresence(status) {
+  publish('/app/chat/presence', { status });
 }
 
 export function disconnectChatRealtime() {
