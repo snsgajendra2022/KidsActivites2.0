@@ -1,5 +1,5 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { probeUploadBandwidth } from './services/uploadBandwidthService.js';
 import { classroomUploadManager } from './utils/classroomUploadQueue.js';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -72,6 +72,7 @@ import MyNoticeBoard from './pages/shared/MyNoticeBoard.jsx';
 import MyNoticeDetail from './pages/shared/MyNoticeDetail.jsx';
 import ChatPage from './pages/shared/ChatPage.jsx';
 import Profile from './pages/shared/Profile.jsx';
+const CreativeCardsPage = lazy(() => import('./pages/shared/CreativeCardsPage.jsx'));
 
 const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
 const SUPER_ADMIN_ONLY = [ROLES.SUPER_ADMIN];
@@ -87,12 +88,21 @@ const TEACHER_ROLES = [ROLES.TEACHER];
 const NOTICE_BOARD_ADMIN_ROLES = [...CORE_ADMIN, ROLES.ACCOUNTANT];
 const NOTICE_BOARD_READ_ROLES = [...PARENT_ROLES, ...TEACHER_ROLES, ...CORE_ADMIN];
 const ATTENDANCE_HISTORY_ROLES = [...PARENT_ROLES, ...TEACHER_ROLES, ...CORE_ADMIN];
+const CREATIVE_CARDS_ROLES = [ROLES.SCHOOL_ADMIN, ROLES.TEACHER, ROLES.PARENT, ROLES.STUDENT];
 
 function TenantLayout() {
   return (
     <TenantPathGate>
       <Outlet />
     </TenantPathGate>
+  );
+}
+
+function CreativeCardsRoute() {
+  return (
+    <Suspense fallback={<div className="grid min-h-72 place-items-center text-sm font-semibold text-violet-700">Opening your creative studio…</div>}>
+      <CreativeCardsPage />
+    </Suspense>
   );
 }
 
@@ -197,6 +207,11 @@ export default function App() {
         <Route path="teacher/attendance" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><AttendanceSessionPage /></ProtectedRoute>} />
 
         {/* Shared authenticated routes */}
+        <Route path="creative-cards" element={<ProtectedRoute allowedRoles={CREATIVE_CARDS_ROLES}><CreativeCardsRoute /></ProtectedRoute>} />
+        <Route path="creative-cards/templates" element={<ProtectedRoute allowedRoles={CREATIVE_CARDS_ROLES}><CreativeCardsRoute /></ProtectedRoute>} />
+        <Route path="creative-cards/create/:templateId" element={<ProtectedRoute allowedRoles={CREATIVE_CARDS_ROLES}><CreativeCardsRoute /></ProtectedRoute>} />
+        <Route path="creative-cards/my-cards" element={<ProtectedRoute allowedRoles={CREATIVE_CARDS_ROLES}><CreativeCardsRoute /></ProtectedRoute>} />
+        <Route path="creative-cards/view/:cardId" element={<ProtectedRoute allowedRoles={CREATIVE_CARDS_ROLES}><CreativeCardsRoute /></ProtectedRoute>} />
         <Route path="attendance/students/:studentId" element={<ProtectedRoute allowedRoles={ATTENDANCE_HISTORY_ROLES}><StudentAttendanceHistory /></ProtectedRoute>} />
         <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       </Route>

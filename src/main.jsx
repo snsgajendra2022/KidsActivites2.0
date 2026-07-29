@@ -18,6 +18,7 @@ import './styles/login-portal.css';
 import './styles/editorial.css';
 import './styles/public-pages.css';
 import './styles/timeline.css';
+import './styles/creative-cards.css';
 import { applyPortalTheme } from './utils/themeUtils.js';
 import { DEFAULT_PORTAL_CONFIG } from './data/defaultPortalConfig.js';
 import { isApiEnabled } from './services/api/config.js';
