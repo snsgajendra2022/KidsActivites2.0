@@ -11,7 +11,9 @@ export async function routeRequest({ mockFn, apiFn }) {
   try {
     return await apiFn();
   } catch (err) {
-    if (isApiFallbackMock()) {
+    const status = Number(err?.status || 0);
+    const infrastructureFailure = status === 0 || status >= 500;
+    if (isApiFallbackMock() && infrastructureFailure) {
       console.warn('[KidsActivites] API unavailable, using mock data:', err.message);
       return mockFn();
     }

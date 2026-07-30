@@ -83,7 +83,13 @@ function computeStats(children, summary) {
 
 const QUICK_LINKS = [
   { key: 'enrollment', icon: FileText, label: 'Enrollment', path: '/parent/enrollment' },
+  { key: 'attendance', icon: Clock, label: 'Attendance', path: '/parent/attendance' },
+  { key: 'homework', icon: FileText, label: 'Homework', path: '/parent/homework' },
+  { key: 'exams', icon: GraduationCap, label: 'Results', path: '/parent/exams' },
+  { key: 'timetable', icon: Clock, label: 'Timetable', path: '/parent/timetable' },
   { key: 'fees', icon: CreditCard, label: 'Fees', path: '/parent/fees' },
+  { key: 'leave', icon: AlertCircle, label: 'Leave', path: '/parent/leave' },
+  { key: 'transport', icon: Users, label: 'Bus Track', path: '/parent/transport' },
   { key: 'documents', icon: FolderOpen, label: 'Documents', path: '/parent/documents' },
   { key: 'photos', icon: Image, label: 'Photos', path: '/parent/photos' },
   { key: 'messages', icon: MessageCircle, label: 'Messages', path: '/parent/messages' },

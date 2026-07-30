@@ -66,17 +66,17 @@ function StudentCardSkeleton() {
   );
 }
 
-function StudentCard({ student, classOptions, onSaved, applicationPath }) {
+function StudentCard({ student, classOptions, onSaved, applicationPath, profilePath }) {
   const { toast } = useToast();
-  const [selectedClass, setSelectedClass] = useState(student.classApplying || '');
+  const currentClassId = student.classId || student.class?.id || '';
+  const [selectedClass, setSelectedClass] = useState(currentClassId);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setSelectedClass(student.classApplying || '');
-  }, [student.classApplying]);
-
-  const isDirty = selectedClass !== (student.classApplying || '');
-  const currentClassLabel = resolveClassLabel(student.classApplying, classOptions);
+  const isDirty = selectedClass !== currentClassId;
+  const currentClassLabel = resolveClassLabel(currentClassId, classOptions)
+    || student.className
+    || student.class?.name
+    || student.classApplying?.toUpperCase();
 
   const handleUpdateClass = async () => {
     if (!selectedClass || !isDirty) return;
@@ -175,7 +175,14 @@ function StudentCard({ student, classOptions, onSaved, applicationPath }) {
           </div>
         </div>
 
-        <div className="admin-teacher-card__actions admin-teacher-card__actions--single">
+        <div className="admin-teacher-card__actions">
+          <Link
+            to={profilePath}
+            className="admin-teacher-card__action-btn admin-teacher-card__action-btn--primary"
+          >
+            <User size={15} aria-hidden />
+            Student Profile
+          </Link>
           <Link
             to={applicationPath}
             className="admin-teacher-card__action-btn admin-teacher-card__action-btn--secondary"
@@ -220,7 +227,7 @@ export default function AdminStudents() {
         setClassOptions(
           (Array.isArray(classes) ? classes : [])
             .map((cls) => ({
-              value: cls.code,
+              value: String(cls.id),
               label: cls.name || cls.code?.toUpperCase(),
             }))
             .sort((a, b) => a.label.localeCompare(b.label)),
@@ -236,6 +243,7 @@ export default function AdminStudents() {
   }, [toast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch student list on mount
     loadData();
   }, [loadData]);
 
@@ -246,17 +254,22 @@ export default function AdminStudents() {
   const filteredStudents = useMemo(() => {
     const query = search.toLowerCase();
     return students.filter((student) => {
-      const classLabel = resolveClassLabel(student.classApplying, classOptions);
+      const studentClassId = student.classId || student.class?.id || '';
+      const classLabel = resolveClassLabel(studentClassId, classOptions)
+        || student.className
+        || student.class?.name
+        || student.classApplying;
       const matchesSearch = !query || [
         student.name,
         student.applicationNo,
         student.parentName,
-        student.classApplying,
+        studentClassId,
+        student.className,
         classLabel,
       ].some((value) => String(value || '').toLowerCase().includes(query));
 
       const matchesClass = !classFilter
-        || (student.classApplying || '').toLowerCase() === classFilter.toLowerCase();
+        || String(studentClassId) === classFilter;
 
       return matchesSearch && matchesClass;
     });
@@ -264,7 +277,7 @@ export default function AdminStudents() {
 
   const stats = useMemo(() => ({
     total: students.length,
-    withClass: students.filter((s) => s.classApplying).length,
+    withClass: students.filter((s) => s.classId || s.class?.id).length,
     confirmed: students.filter((s) => s.status === ENROLLMENT_STATUSES.ADMISSION_CONFIRMED).length,
   }), [students]);
 
@@ -360,6 +373,7 @@ export default function AdminStudents() {
                 classOptions={classOptions}
                 onSaved={handleClassSaved}
                 applicationPath={tenantPath(`/admin/applications/${student.id}`)}
+                profilePath={tenantPath(`/admin/students/${student.id}`)}
               />
             ))}
           </div>

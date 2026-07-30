@@ -1,0 +1,27 @@
+---
+description: Reuse existing Class and Student relationships in every new form
+alwaysApply: true
+---
+
+# Class and Student Relationships
+
+Before creating or changing a page:
+
+- Inspect existing models, services, API contracts, and role permissions.
+- Reuse the existing Class and Student records; never create parallel catalogs.
+- Never ask users to type `className` or `studentName` when selecting an existing entity.
+- Load classes from the role-scoped API and bind the selected `classId`.
+- After class selection, request only that class roster from the backend.
+- Clear `studentId` whenever `classId` changes.
+- Save relationship IDs only (`classId`, `studentId`, or `studentIds`).
+- Do not send denormalized Class/Student names in create/update requests.
+- Resolve names through backend relationships in read responses.
+- Include loading, empty, API-error, required-field, and stale-request handling.
+- Enforce tenant and role scope server-side; frontend filtering is not authorization.
+
+Manual names are valid only while creating/editing the Class or Student entity
+itself, not while referencing it from attendance, fees, homework, exams,
+library, certificates, transport, reports, or other modules.
+
+Do not modify the existing enrollment forms or `enrollmentService.js` for this
+rule unless the user explicitly requests enrollment changes.

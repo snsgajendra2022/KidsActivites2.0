@@ -37,6 +37,7 @@ import ApplicationsList from './pages/admin/ApplicationsList.jsx';
 import ApplicationReview from './pages/admin/ApplicationReview.jsx';
 import AdminFees from './pages/admin/AdminFees.jsx';
 import AdminStudents from './pages/admin/AdminStudents.jsx';
+import StudentProfile from './pages/admin/StudentProfile.jsx';
 import AdminSettings from './pages/admin/AdminSettings.jsx';
 import AdminClassManagement from './pages/admin/AdminClassManagement.jsx';
 import AdminReports from './pages/admin/AdminReports.jsx';
@@ -72,6 +73,36 @@ import MyNoticeBoard from './pages/shared/MyNoticeBoard.jsx';
 import MyNoticeDetail from './pages/shared/MyNoticeDetail.jsx';
 import ChatPage from './pages/shared/ChatPage.jsx';
 import Profile from './pages/shared/Profile.jsx';
+
+import HomeworkPage from './pages/modules/HomeworkPage.jsx';
+import ExamsPage from './pages/modules/ExamsPage.jsx';
+import ExamMarksPage from './pages/modules/ExamMarksPage.jsx';
+import TimetablePage from './pages/modules/TimetablePage.jsx';
+import LeaveRequestsPage from './pages/modules/LeaveRequestsPage.jsx';
+import LmsPage from './pages/modules/LmsPage.jsx';
+import { TransportRoutesPage, TransportVehiclesPage } from './pages/modules/TransportPages.jsx';
+import TransportLiveTrackingPage from './pages/modules/TransportLiveTrackingPage.jsx';
+import ParentTransportTrackingPage from './pages/modules/ParentTransportTrackingPage.jsx';
+import { LibraryBooksPage, LibraryIssuesPage } from './pages/modules/LibraryPages.jsx';
+import {
+  CertificatesPage,
+  ExpensesPage,
+  HrStaffPage,
+  InventoryPage,
+  LoginHistoryPage,
+  PayrollPage,
+  PerformanceNotesPage,
+  SubscriptionPlansPage,
+} from './pages/modules/OpsModulePages.jsx';
+import AccountingDashboardPage from './pages/modules/AccountingDashboardPage.jsx';
+import AiAssistantPage from './pages/modules/AiAssistantPage.jsx';
+import AdvancedAttendancePage from './pages/modules/AdvancedAttendancePage.jsx';
+import AdvancedFeesPage from './pages/modules/AdvancedFeesPage.jsx';
+import RolesPermissionsPage from './pages/modules/RolesPermissionsPage.jsx';
+import SecurityCenterPage from './pages/modules/SecurityCenterPage.jsx';
+import CommunicationCenterPage from './pages/modules/CommunicationCenterPage.jsx';
+import ManagementReportsHubPage from './pages/modules/ManagementReportsHubPage.jsx';
+
 const CreativeCardsPage = lazy(() => import('./pages/shared/CreativeCardsPage.jsx'));
 
 const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
@@ -161,6 +192,7 @@ export default function App() {
         <Route path="admin/applications" element={<ProtectedRoute allowedRoles={SUPPORT_APP_ROLES}><ApplicationsList /></ProtectedRoute>} />
         <Route path="admin/applications/:id" element={<ProtectedRoute allowedRoles={APPLICATION_REVIEW_ROLES}><ApplicationReview /></ProtectedRoute>} />
         <Route path="admin/students" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminStudents /></ProtectedRoute>} />
+        <Route path="admin/students/:studentId" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><StudentProfile /></ProtectedRoute>} />
         <Route path="admin/fees" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdminFees /></ProtectedRoute>} />
         <Route path="admin/photos" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminPhotos /></ProtectedRoute>} />
         <Route path="admin/chat" element={<ProtectedRoute allowedRoles={CHAT_ADMIN_ROLES}><ChatPage /></ProtectedRoute>} />
@@ -181,6 +213,31 @@ export default function App() {
         <Route path="admin/schools" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminSchools /></ProtectedRoute>} />
         <Route path="admin/attendance" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AttendanceDashboard /></ProtectedRoute>} />
         <Route path="admin/attendance/session" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AttendanceSessionPage /></ProtectedRoute>} />
+        <Route path="admin/attendance-advanced" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdvancedAttendancePage /></ProtectedRoute>} />
+        <Route path="admin/homework" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><HomeworkPage /></ProtectedRoute>} />
+        <Route path="admin/exams" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ExamsPage /></ProtectedRoute>} />
+        <Route path="admin/exam-marks" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><ExamMarksPage /></ProtectedRoute>} />
+        <Route path="admin/timetable" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TimetablePage /></ProtectedRoute>} />
+        <Route path="admin/lms" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><LmsPage /></ProtectedRoute>} />
+        <Route path="admin/fees-advanced" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdvancedFeesPage /></ProtectedRoute>} />
+        <Route path="admin/accounting" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AccountingDashboardPage /></ProtectedRoute>} />
+        <Route path="admin/expenses" element={<ProtectedRoute allowedRoles={FEES_ROLES}><ExpensesPage /></ProtectedRoute>} />
+        <Route path="admin/communication" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><CommunicationCenterPage /></ProtectedRoute>} />
+        <Route path="admin/transport/vehicles" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportVehiclesPage /></ProtectedRoute>} />
+        <Route path="admin/transport/routes" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportRoutesPage /></ProtectedRoute>} />
+        <Route path="admin/transport/live" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportLiveTrackingPage /></ProtectedRoute>} />
+        <Route path="admin/library/books" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><LibraryBooksPage /></ProtectedRoute>} />
+        <Route path="admin/library/issues" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><LibraryIssuesPage /></ProtectedRoute>} />
+        <Route path="admin/inventory" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><InventoryPage /></ProtectedRoute>} />
+        <Route path="admin/hr" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><HrStaffPage /></ProtectedRoute>} />
+        <Route path="admin/payroll" element={<ProtectedRoute allowedRoles={FEES_ROLES}><PayrollPage /></ProtectedRoute>} />
+        <Route path="admin/certificates" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><CertificatesPage /></ProtectedRoute>} />
+        <Route path="admin/ai" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AiAssistantPage /></ProtectedRoute>} />
+        <Route path="admin/subscription" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><SubscriptionPlansPage /></ProtectedRoute>} />
+        <Route path="admin/roles" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><RolesPermissionsPage /></ProtectedRoute>} />
+        <Route path="admin/security" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><SecurityCenterPage /></ProtectedRoute>} />
+        <Route path="admin/login-history" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><LoginHistoryPage /></ProtectedRoute>} />
+        <Route path="admin/reports-hub" element={<ProtectedRoute allowedRoles={REPORTS_ROLES}><ManagementReportsHubPage /></ProtectedRoute>} />
 
         {/* Parent routes */}
         <Route path="parent" element={<Navigate to="dashboard" replace />} />
@@ -194,6 +251,12 @@ export default function App() {
         <Route path="parent/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeDetail backPath="/parent/notice-board" /></ProtectedRoute>} />
         <Route path="parent/notifications" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><NotificationsPage title="Notifications" subtitle="Your enrollment and school notifications." /></ProtectedRoute>} />
         <Route path="parent/attendance" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><StudentAttendanceHistory /></ProtectedRoute>} />
+        <Route path="parent/homework" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><HomeworkPage layout="app" readOnly /></ProtectedRoute>} />
+        <Route path="parent/exams" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ExamMarksPage layout="app" readOnly /></ProtectedRoute>} />
+        <Route path="parent/timetable" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><TimetablePage layout="app" readOnly /></ProtectedRoute>} />
+        <Route path="parent/lms" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LmsPage layout="app" readOnly /></ProtectedRoute>} />
+        <Route path="parent/leave" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LeaveRequestsPage layout="app" /></ProtectedRoute>} />
+        <Route path="parent/transport" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentTransportTrackingPage /></ProtectedRoute>} />
 
         {/* Teacher routes */}
         <Route path="teacher/dashboard" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherDashboard /></ProtectedRoute>} />
@@ -205,6 +268,12 @@ export default function App() {
         <Route path="teacher/notice-board" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><MyNoticeBoard basePath="/teacher/notice-board" title="Notice Board" subtitle="Announcements shared with you by the school." /></ProtectedRoute>} />
         <Route path="teacher/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><MyNoticeDetail backPath="/teacher/notice-board" /></ProtectedRoute>} />
         <Route path="teacher/attendance" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><AttendanceSessionPage /></ProtectedRoute>} />
+        <Route path="teacher/homework" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><HomeworkPage layout="app" /></ProtectedRoute>} />
+        <Route path="teacher/exams" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ExamsPage layout="app" /></ProtectedRoute>} />
+        <Route path="teacher/marks" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ExamMarksPage layout="app" /></ProtectedRoute>} />
+        <Route path="teacher/notes" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><PerformanceNotesPage layout="app" /></ProtectedRoute>} />
+        <Route path="teacher/timetable" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TimetablePage layout="app" readOnly /></ProtectedRoute>} />
+        <Route path="teacher/lms" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><LmsPage layout="app" /></ProtectedRoute>} />
 
         {/* Shared authenticated routes */}
         <Route path="creative-cards" element={<ProtectedRoute allowedRoles={CREATIVE_CARDS_ROLES}><CreativeCardsRoute /></ProtectedRoute>} />

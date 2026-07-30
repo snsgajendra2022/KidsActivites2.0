@@ -1,5 +1,5 @@
 import { ArrowLeft, Edit3, LayoutGrid, Plus, Sparkles } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import {
@@ -15,8 +15,10 @@ import {
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import creativeData from '../../data/kidsCreativeCards.json';
-import { CLASS_STUDENTS, INITIAL_PHOTOS, TEACHER_CLASSES } from '../../data/mockPhotos.js';
+import { INITIAL_PHOTOS } from '../../data/mockPhotos.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import { useClassStudentOptions } from '../../hooks/useClassStudentOptions.js';
+import { loadStudentOptions } from '../../services/schoolModules/relationshipOptions.js';
 import {
   getCreativeCardById,
   getCreativeCards,
@@ -68,6 +70,7 @@ export default function CreativeCardsPage() {
   const [favorites, setFavorites] = useState(() => getCreativeFavorites());
   const [statistics, setStatistics] = useState(() => getCreativeStatistics());
   const [celebrating, setCelebrating] = useState(false);
+  const { classOptions } = useClassStudentOptions(user, '', { loadStudents: false });
 
   const refresh = () => {
     setCards(getCreativeCards());
@@ -90,8 +93,14 @@ export default function CreativeCardsPage() {
   const editingCard = location.state?.card || (cardId ? (getCreativeCardById(cardId) || getCreativeDraftById(cardId)) : null);
   const recentCards = [...cards, ...drafts].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   const favoriteTemplateIds = favorites.filter((item) => item.targetType === 'template').map((item) => item.targetId);
-  const classes = useMemo(() => TEACHER_CLASSES.map((item) => ({ ...item, label: item.name })), []);
-  const students = useMemo(() => CLASS_STUDENTS.map((item) => ({ ...item, className: TEACHER_CLASSES.find((group) => group.id === item.classId)?.name })), []);
+  const classes = useMemo(
+    () => classOptions.map((option) => ({ id: option.value, label: option.label })),
+    [classOptions],
+  );
+  const loadClassStudents = useCallback(
+    (classId) => loadStudentOptions(user, { classId }),
+    [user],
+  );
   const albumImages = useMemo(() => INITIAL_PHOTOS.filter((item) => item.imageUrl && item.type !== 'video'), []);
   const earnedAchievements = creativeData.achievements.filter((achievement) => Number(statistics[achievement.metric] || 0) >= achievement.threshold).length;
   const dashboardStats = {
@@ -134,7 +143,7 @@ export default function CreativeCardsPage() {
 
         {mode === 'dashboard' && <CreativeCardsDashboard recentCards={recentCards} stats={dashboardStats} onCreate={() => go('/creative-cards/templates')} onBrowseTemplates={(categoryId) => go('/creative-cards/templates', categoryId ? { categoryId } : undefined)} onOpenCard={viewCard} onOpenSaved={() => go('/creative-cards/my-cards')} onSelectTemplate={chooseTemplate} />}
         {mode === 'templates' && <TemplateGallery initialCategory={location.state?.categoryId} albumImages={albumImages} favoriteIds={favoriteTemplateIds} onSelect={chooseTemplate} onFavorite={handleFavorite} onCreateBlank={() => chooseTemplate(creativeData.templates[0])} />}
-        {mode === 'create' && <CardEditor template={selectedTemplate} initialCard={location.state?.card ? { ...location.state.card, schoolName: location.state.card.schoolName || schoolName } : { senderName, schoolName, photoUrl: albumImages[0]?.imageUrl || '' }} classes={classes} students={students} albumImages={albumImages} onBack={() => go('/creative-cards/templates')} onSaved={handleSaved} onDownload={() => toast('Your PNG card has been downloaded!', 'success')} />}
+        {mode === 'create' && <CardEditor template={selectedTemplate} initialCard={location.state?.card ? { ...location.state.card, schoolName: location.state.card.schoolName || schoolName } : { senderName, schoolName, photoUrl: albumImages[0]?.imageUrl || '' }} classes={classes} loadStudents={loadClassStudents} albumImages={albumImages} onBack={() => go('/creative-cards/templates')} onSaved={handleSaved} onDownload={() => toast('Your PNG card has been downloaded!', 'success')} />}
         {mode === 'saved' && <SavedCards cards={recentCards} onCreate={() => go('/creative-cards/templates')} onEdit={editCard} onDownload={viewCard} onCardsChange={refresh} />}
         {mode === 'view' && <CardViewer card={editingCard} onBack={() => go('/creative-cards/my-cards')} onEdit={editCard} />}
         <CelebrationAnimation show={celebrating} />

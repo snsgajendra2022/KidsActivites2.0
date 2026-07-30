@@ -146,10 +146,13 @@ async function mockGetTeacherClasses(teacherId) {
   return TEACHER_CLASSES;
 }
 
-async function mockGetTeacherStudents(teacherId) {
+async function mockGetTeacherStudents(teacherId, filters = {}) {
   await delay(150);
   void teacherId;
-  return CLASS_STUDENTS;
+  if (!filters.classId) return CLASS_STUDENTS;
+  return CLASS_STUDENTS.filter(
+    (student) => String(student.classId || student.class?.id || '') === String(filters.classId),
+  );
 }
 
 async function mockGetTeacherStats(teacherId) {
@@ -172,14 +175,26 @@ async function mockGetTeacherStats(teacherId) {
 export async function getTeacherClasses(teacherId) {
   return routeRequest({
     mockFn: () => mockGetTeacherClasses(teacherId),
-    apiFn: () => api.get('/teacher/classes'),
+    apiFn: async () => {
+      const data = await api.get('/teacher/classes');
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.items)) return data.items;
+      if (Array.isArray(data?.content)) return data.content;
+      return [];
+    },
   });
 }
 
-export async function getTeacherStudents(teacherId) {
+export async function getTeacherStudents(teacherId, filters = {}) {
   return routeRequest({
-    mockFn: () => mockGetTeacherStudents(teacherId),
-    apiFn: () => api.get('/teacher/students'),
+    mockFn: () => mockGetTeacherStudents(teacherId, filters),
+    apiFn: async () => {
+      const data = await api.get('/teacher/students', filters);
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.items)) return data.items;
+      if (Array.isArray(data?.content)) return data.content;
+      return [];
+    },
   });
 }
 

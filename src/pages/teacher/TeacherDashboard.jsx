@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Image, MessageCircle, Users, Send, ArrowRight } from 'lucide-react';
+import { GraduationCap, Image, MessageCircle, Users, Send, ArrowRight, BookOpen, ClipboardCheck, FileText } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
@@ -26,17 +26,18 @@ export default function TeacherDashboard() {
       <PageTransition>
         <div className="premium-page-header">
           <h1 className="premium-page-title">Teacher Dashboard</h1>
-          <p className="premium-page-subtitle">Welcome, {user?.name}. Manage your classes and parent communication.</p>
+          <p className="premium-page-subtitle">Welcome, {user?.name}. Manage attendance, homework, marks, and parent communication.</p>
         </div>
 
         <div className="bento-grid">
           <WelcomeBanner
             title="Your Classroom Hub"
-            subtitle="Share photos, send messages, and keep parents connected with classroom updates."
+            subtitle="Take attendance, upload homework, enter marks, share notes, and keep parents connected."
             actions={
               <>
-                <Link to={tenantPath('/teacher/photos')} className="premium-btn premium-btn-white premium-btn-sm"><Send size={16} /> Send Photos</Link>
-                <Link to={tenantPath('/teacher/messages')} className="premium-btn premium-btn-white premium-btn-sm">View Messages</Link>
+                <Link to={tenantPath('/teacher/attendance')} className="premium-btn premium-btn-white premium-btn-sm"><ClipboardCheck size={16} /> Take Attendance</Link>
+                <Link to={tenantPath('/teacher/homework')} className="premium-btn premium-btn-white premium-btn-sm"><BookOpen size={16} /> Homework</Link>
+                <Link to={tenantPath('/teacher/messages')} className="premium-btn premium-btn-white premium-btn-sm">Messages</Link>
               </>
             }
           />
@@ -45,6 +46,31 @@ export default function TeacherDashboard() {
           <div className="bento-span-3"><BentoStatCard icon={Users} value={stats?.totalStudents ?? '—'} label="Total Students" variant="emerald" /></div>
           <div className="bento-span-3"><BentoStatCard icon={Image} value={stats?.photosShared ?? '—'} label="Photos Shared" variant="sky" /></div>
           <div className="bento-span-3"><BentoStatCard icon={MessageCircle} value={stats?.unreadMessages ?? '—'} label="Unread Messages" variant="amber" /></div>
+
+          <div className="bento-span-12">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 className="card-title" style={{ margin: 0 }}>Daily Tools</h3>
+            </div>
+            <div className="parent-dashboard-quicklinks">
+              {[
+                { to: '/teacher/attendance', label: 'Attendance', icon: ClipboardCheck },
+                { to: '/teacher/homework', label: 'Homework', icon: BookOpen },
+                { to: '/teacher/marks', label: 'Enter Marks', icon: FileText },
+                { to: '/teacher/notes', label: 'Notes', icon: FileText },
+                { to: '/teacher/lms', label: 'Share Notes', icon: Send },
+                { to: '/teacher/timetable', label: 'Timetable', icon: GraduationCap },
+                { to: '/teacher/photos', label: 'Photos', icon: Image },
+                { to: '/teacher/messages', label: 'Parents', icon: MessageCircle },
+              ].map(({ to, label, icon: Icon }) => (
+                <Link key={to} to={tenantPath(to)} className="parent-dashboard-quicklink">
+                  <span className="parent-dashboard-quicklink__icon" aria-hidden>
+                    <Icon size={20} />
+                  </span>
+                  <span className="parent-dashboard-quicklink__label">{label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
 
           <div className="bento-span-12">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -64,7 +90,7 @@ export default function TeacherDashboard() {
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
                       <Link to={tenantPath('/teacher/students')} className="premium-btn premium-btn-secondary premium-btn-sm">Students</Link>
-                      <Link to={tenantPath('/teacher/photos')} className="premium-btn premium-btn-primary premium-btn-sm">Send Photos <ArrowRight size={14} /></Link>
+                      <Link to={tenantPath('/teacher/attendance')} className="premium-btn premium-btn-primary premium-btn-sm">Attendance <ArrowRight size={14} /></Link>
                     </div>
                   </div>
                 </div>

@@ -54,6 +54,11 @@ export function normalizeParentChild(child) {
   const cls = child.class || {};
   const academic = child.academic || {};
   const applicationId = child.applicationId || child.id;
+  const studentId = child.studentId
+    || child.enrolledStudentId
+    || student.id
+    || student.studentId
+    || null;
   const classId = child.classId
     || child.assignedClassId
     || child.enrolledClassId
@@ -76,6 +81,7 @@ export function normalizeParentChild(child) {
 
   return {
     applicationId,
+    studentId,
     applicationNo: child.applicationNo,
     status: child.status,
     statusLabel: child.statusLabel || STATUS_LABELS[child.status] || child.status,
@@ -191,7 +197,9 @@ export async function getParentChildren(user) {
     },
     apiFn: async () => {
       const data = await api.get('/parent/children');
-      const list = Array.isArray(data) ? data : [];
+      const list = Array.isArray(data)
+        ? data
+        : (Array.isArray(data?.items) ? data.items : (Array.isArray(data?.content) ? data.content : []));
       return list.map((child) => normalizeParentChild(child));
     },
   });

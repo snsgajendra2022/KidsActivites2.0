@@ -72,7 +72,13 @@ export async function listClasses(filters = {}) {
       }
       return rows;
     },
-    apiFn: () => api.get('/admin/classes', filters),
+    apiFn: async () => {
+      const data = await api.get('/admin/classes', filters);
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.items)) return data.items;
+      if (Array.isArray(data?.content)) return data.content;
+      return [];
+    },
   });
 }
 

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle2, Eye, Image, LayoutTemplate, Palette, Printer, RotateCcw, Save, Send, Sparkles, Type } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import CardDownload from './CardDownload.jsx';
 import CardPreview from './CardPreview.jsx';
 import ColorPicker from './ColorPicker.jsx';
@@ -49,6 +49,7 @@ export default function CardEditor({
   initialCard,
   classes = [],
   students = [],
+  loadStudents,
   albumImages = [],
   onBack,
   onSaved,
@@ -67,9 +68,39 @@ export default function CardEditor({
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
+  const [resolvedStudents, setResolvedStudents] = useState(students);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentsError, setStudentsError] = useState('');
   const previewRef = useRef(null);
   const update = (key, value) => setCard((current) => ({ ...current, [key]: value }));
-  const visibleStudents = card.classId ? students.filter((student) => String(student.classId || student.class?.id) === String(card.classId)) : students;
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve()
+      .then(() => {
+        setResolvedStudents([]);
+        setStudentsError('');
+        if (!card.classId || typeof loadStudents !== 'function') return students;
+        setStudentsLoading(true);
+        return loadStudents(card.classId);
+      })
+      .then((options) => {
+        if (!active) return;
+        setResolvedStudents((options || []).map((option) => ({
+          id: option.id || option.value,
+          label: option.label || option.name || option.fullName,
+        })));
+      })
+      .catch((error) => {
+        if (!active) return;
+        setResolvedStudents([]);
+        setStudentsError(error?.message || 'Unable to load students for this class.');
+      })
+      .finally(() => {
+        if (active) setStudentsLoading(false);
+      });
+    return () => { active = false; };
+  }, [card.classId, loadStudents, students]);
   const validate = () => {
     const next = {};
     if (!card.templateId) next.templateId = 'Oops! Choose a magical template first 😊';
@@ -114,7 +145,7 @@ export default function CardEditor({
   };
   const handleStudent = (event) => {
     const id = event.target.value;
-    const selected = students.find((item) => getId(item) === id);
+    const selected = resolvedStudents.find((item) => getId(item) === id);
     const name = selected?.name || selected?.fullName || selected?.label || '';
     setCard((current) => ({ ...current, studentId: id, studentName: name, recipientName: name }));
   };
@@ -143,7 +174,7 @@ export default function CardEditor({
           <div className="grid gap-4">
             <label className="text-sm font-semibold text-slate-700">Recipient name<input value={card.recipientName} onChange={(event) => update('recipientName', event.target.value)} maxLength={60} placeholder="Who is this card for?" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal" aria-invalid={Boolean(errors.recipientName)} />{errors.recipientName && <span className="mt-1 block text-xs text-rose-600">{errors.recipientName}</span>}</label>
             <label className="text-sm font-semibold text-slate-700">Class<select value={card.classId} onChange={handleClass} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal" aria-invalid={Boolean(errors.classId)}><option value="">Select class</option>{classes.map((item, index) => <option key={getId(item, index)} value={getId(item, index)}>{item.name || item.label}</option>)}</select>{errors.classId && <span className="mt-1 block text-xs text-rose-600">{errors.classId}</span>}</label>
-            <label className="text-sm font-semibold text-slate-700">Student<select value={card.studentId} onChange={handleStudent} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal" aria-invalid={Boolean(errors.studentId)}><option value="">Select student</option>{visibleStudents.map((item, index) => <option key={getId(item, index)} value={getId(item, index)}>{item.name || item.fullName || item.label}</option>)}</select>{errors.studentId && <span className="mt-1 block text-xs text-rose-600">{errors.studentId}</span>}</label>
+            <label className="text-sm font-semibold text-slate-700">Student<select value={card.studentId} onChange={handleStudent} disabled={!card.classId || studentsLoading} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal disabled:cursor-not-allowed disabled:opacity-60" aria-invalid={Boolean(errors.studentId)}><option value="">{!card.classId ? 'Select class first' : (studentsLoading ? 'Loading students…' : 'Select student')}</option>{resolvedStudents.map((item, index) => <option key={getId(item, index)} value={getId(item, index)}>{item.name || item.fullName || item.label}</option>)}</select>{studentsError && <span className="mt-1 block text-xs text-rose-600">{studentsError}</span>}{errors.studentId && <span className="mt-1 block text-xs text-rose-600">{errors.studentId}</span>}</label>
             <label className="text-sm font-semibold text-slate-700">Occasion<select value={card.occasion} onChange={(event) => update('occasion', event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal"><option value="">Choose occasion</option>{data.categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <label className="text-sm font-semibold text-slate-700">Card title<input value={card.title} onChange={(event) => update('title', event.target.value)} maxLength={80} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal" aria-invalid={Boolean(errors.title)} />{errors.title && <span className="mt-1 block text-xs text-rose-600">{errors.title}</span>}</label>
             <label className="text-sm font-semibold text-slate-700">From<input value={card.senderName} onChange={(event) => update('senderName', event.target.value)} placeholder="Teacher or school name" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal" /></label>
