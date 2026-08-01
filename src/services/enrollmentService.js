@@ -574,6 +574,305 @@ export async function updateStudentClass(studentId, classApplying) {
   });
 }
 
+const STUDENT_PROFILES_KEY = 'sb_student_profiles';
+
+function getStudentProfileOverrides() {
+  return getStore(STUDENT_PROFILES_KEY, {});
+}
+
+function saveStudentProfileOverride(studentId, profile) {
+  const all = getStudentProfileOverrides();
+  all[studentId] = profile;
+  setStore(STUDENT_PROFILES_KEY, all);
+}
+
+function buildGuardiansFromApplication(app) {
+  const parent = app?.parent || {};
+  const guardians = [];
+  if (parent.fatherName) {
+    guardians.push({
+      name: parent.fatherName,
+      relation: 'Father',
+      phone: parent.fatherMobile || '',
+      email: parent.fatherEmail || '',
+      occupation: parent.fatherOccupation || '',
+      isPrimary: true,
+    });
+  }
+  if (parent.motherName) {
+    guardians.push({
+      name: parent.motherName,
+      relation: 'Mother',
+      phone: parent.motherMobile || '',
+      email: parent.motherEmail || '',
+      occupation: parent.motherOccupation || '',
+      isPrimary: guardians.length === 0,
+    });
+  }
+  if (parent.guardianName) {
+    guardians.push({
+      name: parent.guardianName,
+      relation: parent.guardianRelationship || 'Guardian',
+      phone: parent.alternateContact || '',
+      email: '',
+      isPrimary: guardians.length === 0,
+    });
+  }
+  return guardians;
+}
+
+function buildHistoryFromApplication(app, extraHistory = []) {
+  const fromStatus = (app?.statusHistory || []).map((item) => ({
+    title: item.status,
+    note: item.note || '',
+    date: item.date,
+  }));
+  return [...extraHistory, ...fromStatus]
+    .filter((item) => item?.date || item?.title)
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+}
+
+function buildStudentProfileFromApplication(app, override = {}) {
+  const student = { ...(app?.student || {}), ...(override.student || {}) };
+  const academic = app?.academic || {};
+  const medicalSource = {
+    medicalConditions: student.medicalConditions || '',
+    allergies: student.allergies || '',
+    specialNeeds: student.specialNeeds || '',
+    medications: '',
+    doctorName: '',
+    doctorPhone: '',
+    ...(override.medical || {}),
+  };
+  const emergencyFromStudent = student.emergencyContactName || student.emergencyContactNumber
+    ? [{
+      name: student.emergencyContactName || '',
+      relation: 'Emergency',
+      phone: student.emergencyContactNumber || '',
+    }]
+    : [];
+  const lifecycleStatus = override.lifecycleStatus
+    || (override.transferCertificate ? 'transferred' : 'active');
+
+  return {
+    id: app.id,
+    applicationId: app.id,
+    applicationNo: app.applicationNo,
+    admissionNumber: override.admissionNumber || app.applicationNo || '',
+    fullName: override.fullName || student.fullName || '',
+    dateOfBirth: override.dateOfBirth || student.dateOfBirth || '',
+    gender: override.gender || student.gender || '',
+    classId: override.classId || student.classId || '',
+    classApplying: override.classApplying || student.classApplying || '',
+    section: override.section || student.section || '',
+    rollNumber: override.rollNumber || student.rollNumber || '',
+    house: override.house || student.house || '',
+    bloodGroup: override.bloodGroup || student.bloodGroup || '',
+    previousSchool: override.previousSchool || student.previousSchool || academic.previousSchool || '',
+    previousClass: override.previousClass || academic.previousClass || '',
+    photoUrl: override.photoUrl || student.photoUrl || null,
+    lifecycleStatus,
+    status: app.status,
+    guardians: override.guardians || buildGuardiansFromApplication(app),
+    emergencyContacts: override.emergencyContacts?.length
+      ? override.emergencyContacts
+      : emergencyFromStudent,
+    medical: medicalSource,
+    documents: override.documents || app.documents || {},
+    transferCertificate: override.transferCertificate || null,
+    history: buildHistoryFromApplication(app, override.history || []),
+  };
+}
+
+/** Normalize API profile payloads into the shape StudentProfile.jsx expects. */
+function normalizeStudentProfile(data) {
+  if (!data || typeof data !== 'object') return data;
+  const medical = data.medical || {};
+  const history = Array.isArray(data.history)
+    ? data.history.map((item) => ({
+      title: item.title || item.action || '',
+      note: item.note || '',
+      date: item.date || item.at || '',
+    }))
+    : [];
+  let documents = data.documents;
+  if (Array.isArray(documents)) {
+    documents = Object.fromEntries(
+      documents.map((doc) => [doc.fieldKey || doc.key || doc.id, doc]),
+    );
+  }
+
+  return {
+    ...data,
+    admissionNumber: data.admissionNumber || data.admissionNo || '',
+    classApplying: data.classApplying || data.className || data.class?.name || '',
+    section: data.section || data.sectionName || data.section?.name || '',
+    classId: data.classId || data.class?.id || '',
+    applicationId: data.applicationId || data.id,
+    lifecycleStatus: data.lifecycleStatus || data.status || 'active',
+    medical: {
+      medicalConditions: medical.medicalConditions || medical.conditions || '',
+      allergies: medical.allergies || '',
+      specialNeeds: medical.specialNeeds || '',
+      medications: medical.medications || '',
+      doctorName: medical.doctorName || '',
+      doctorPhone: medical.doctorPhone || '',
+    },
+    documents: documents || {},
+    history,
+  };
+}
+
+function findEnrolledApplication(studentId) {
+  const app = getAll().find((a) => a.id === studentId);
+  if (!app) {
+    throw Object.assign(new Error('Student not found'), { status: 404, code: 'NOT_FOUND' });
+  }
+  if (![
+    ENROLLMENT_STATUSES.ADMISSION_CONFIRMED,
+    ENROLLMENT_STATUSES.ACCOUNT_CREATED,
+  ].includes(app.status) && !getStudentProfileOverrides()[studentId]) {
+    throw Object.assign(new Error('Student profile is only available for enrolled students'), {
+      status: 400,
+      code: 'VALIDATION_ERROR',
+    });
+  }
+  return app;
+}
+
+export async function getStudentProfile(studentId) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(200);
+      const app = findEnrolledApplication(studentId);
+      const override = getStudentProfileOverrides()[studentId] || {};
+      return buildStudentProfileFromApplication(app, override);
+    },
+    apiFn: async () => normalizeStudentProfile(await api.get(`/admin/students/${studentId}`)),
+  });
+}
+
+export async function updateStudentProfile(studentId, payload = {}) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(300);
+      const app = findEnrolledApplication(studentId);
+      const existing = getStudentProfileOverrides()[studentId] || {};
+      const changeNote = String(payload.changeNote || '').trim();
+      const historyEntry = changeNote
+        ? [{
+          title: 'PROFILE_UPDATED',
+          note: changeNote,
+          date: new Date().toISOString(),
+        }]
+        : [];
+
+      const nextOverride = {
+        ...existing,
+        admissionNumber: payload.admissionNumber ?? existing.admissionNumber,
+        fullName: payload.fullName ?? existing.fullName,
+        dateOfBirth: payload.dateOfBirth ?? existing.dateOfBirth,
+        gender: payload.gender ?? existing.gender,
+        classId: payload.classId ?? existing.classId,
+        classApplying: payload.classApplying ?? existing.classApplying,
+        section: payload.section ?? existing.section,
+        rollNumber: payload.rollNumber ?? existing.rollNumber,
+        house: payload.house ?? existing.house,
+        bloodGroup: payload.bloodGroup ?? existing.bloodGroup,
+        previousSchool: payload.previousSchool ?? existing.previousSchool,
+        previousClass: payload.previousClass ?? existing.previousClass,
+        emergencyContacts: payload.emergencyContacts ?? existing.emergencyContacts,
+        medical: {
+          ...(existing.medical || {}),
+          ...(payload.medical || {}),
+        },
+        history: [...historyEntry, ...(existing.history || [])],
+        transferCertificate: existing.transferCertificate || null,
+        lifecycleStatus: existing.lifecycleStatus || 'active',
+      };
+
+      if (payload.fullName || payload.classApplying || payload.classId) {
+        const apps = getAll();
+        const idx = apps.findIndex((a) => a.id === studentId);
+        if (idx >= 0) {
+          apps[idx] = {
+            ...apps[idx],
+            student: {
+              ...apps[idx].student,
+              ...(payload.fullName ? { fullName: payload.fullName } : {}),
+              ...(payload.classApplying ? { classApplying: payload.classApplying } : {}),
+              ...(payload.classId ? { classId: payload.classId } : {}),
+              ...(payload.section ? { section: payload.section } : {}),
+              ...(payload.bloodGroup ? { bloodGroup: payload.bloodGroup } : {}),
+              ...(payload.dateOfBirth ? { dateOfBirth: payload.dateOfBirth } : {}),
+              ...(payload.gender ? { gender: payload.gender } : {}),
+            },
+          };
+          saveAll(apps);
+        }
+      }
+
+      saveStudentProfileOverride(studentId, nextOverride);
+      return buildStudentProfileFromApplication(app, nextOverride);
+    },
+    apiFn: async () => normalizeStudentProfile(
+      await api.patch(`/admin/students/${studentId}`, payload),
+    ),
+  });
+}
+
+export async function issueTransferCertificate(studentId, payload = {}) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(350);
+      const app = findEnrolledApplication(studentId);
+      const existing = getStudentProfileOverrides()[studentId] || {};
+      if (existing.transferCertificate?.certificateNumber) {
+        throw Object.assign(new Error('Transfer certificate has already been issued'), {
+          status: 409,
+          code: 'CONFLICT',
+        });
+      }
+
+      const year = new Date().getFullYear();
+      const certificate = {
+        id: `tc-${Date.now()}`,
+        certificateNumber: `TC-${year}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+        studentId,
+        issueDate: payload.issueDate || new Date().toISOString().slice(0, 10),
+        reason: payload.reason || 'Transfer requested by parent/guardian',
+        lastClass: payload.lastClass
+          || [app.student?.classApplying, existing.section || app.student?.section]
+            .filter(Boolean)
+            .join(' - '),
+        conduct: payload.conduct || 'Good',
+        issuedBy: payload.issuedBy || 'Principal',
+        status: 'issued',
+      };
+
+      const nextOverride = {
+        ...existing,
+        lifecycleStatus: 'transferred',
+        transferCertificate: certificate,
+        history: [
+          {
+            title: 'TRANSFER_CERTIFICATE_ISSUED',
+            note: `Certificate ${certificate.certificateNumber} issued`,
+            date: new Date().toISOString(),
+          },
+          ...(existing.history || []),
+        ],
+      };
+      saveStudentProfileOverride(studentId, nextOverride);
+      return buildStudentProfileFromApplication(app, nextOverride);
+    },
+    apiFn: async () => {
+      await api.post(`/admin/students/${studentId}/transfer-certificate`, payload);
+      return normalizeStudentProfile(await api.get(`/admin/students/${studentId}`));
+    },
+  });
+}
+
 export async function getDashboardChartData() {
   const user = getStoredUser();
   return routeRequest({

@@ -25,9 +25,26 @@ import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js'
 
 const PortalConfigContext = createContext(null);
 
+const PRODUCT_NAME = 'Kids Activities';
+
+/** Remap legacy SchoolBridge branding stored in portal/platform config. */
+function normalizeProductBrand(name) {
+  if (!name || typeof name !== 'string') return PRODUCT_NAME;
+  const trimmed = name.trim();
+  if (!trimmed) return PRODUCT_NAME;
+  if (/^school\s*bridge$/i.test(trimmed)) return PRODUCT_NAME;
+  return trimmed.replace(/\bSchool\s*Bridge\b/gi, PRODUCT_NAME);
+}
+
+function normalizeFooterText(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text.replace(/\bSchool\s*Bridge\b/gi, PRODUCT_NAME);
+}
+
 function applyDocumentBranding(config) {
   if (!config) return;
-  document.title = `${config.portalName} — ${config.tagline || config.school?.name || 'School Portal'}`;
+  const portalName = normalizeProductBrand(config.portalName);
+  document.title = `${portalName} — ${config.tagline || config.school?.name || 'School Portal'}`;
   applyPortalTheme(config.theme, config.enrollmentTheme);
 
   const favicon = config.branding?.faviconUrl;
@@ -44,7 +61,8 @@ function applyDocumentBranding(config) {
 
 function applyPlatformBranding(platform) {
   if (!platform) return;
-  document.title = `${platform.platformName} — ${platform.tagline || 'School Portal'}`;
+  const platformName = normalizeProductBrand(platform.platformName);
+  document.title = `${platformName} — ${platform.tagline || 'School Portal'}`;
 }
 
 function resolveActiveSchoolId({
@@ -335,14 +353,14 @@ export function PortalConfigProvider({ children, user = null }) {
         ? (platform?.enrollmentForm || DEFAULT_ENROLLMENT_FORM)
         : config?.enrollmentForm,
       portalName: isPlatformPublic
-        ? (platform?.platformName || 'Kids Activities')
-        : (config?.portalName || 'Kids Activities'),
+        ? normalizeProductBrand(platform?.platformName)
+        : normalizeProductBrand(config?.portalName),
       tagline: isPlatformPublic
         ? (platform?.tagline || '')
         : (config?.tagline || ''),
       footerText: isPlatformPublic
-        ? (platform?.footerText || DEFAULT_PORTAL_CONFIG.footerText)
-        : (config?.footer?.copyright || config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
+        ? normalizeFooterText(platform?.footerText || DEFAULT_PORTAL_CONFIG.footerText)
+        : normalizeFooterText(config?.footer?.copyright || config?.footerText || DEFAULT_PORTAL_CONFIG.footerText),
       footer: isPlatformPublic ? null : config?.footer,
       landingPage: isPlatformPublic ? null : config?.landingPage,
       landingPagePublished: isPlatformPublic ? null : config?.landingPagePublished,

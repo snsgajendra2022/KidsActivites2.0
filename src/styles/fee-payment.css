@@ -26,7 +26,7 @@
 
 .fee-payment-card-title {
   margin: 0 0 0.25rem;
-  font-family: Manrope, Inter, system-ui, sans-serif;
+  font-family: var(--sb-font-heading, 'Fredoka', sans-serif);
   font-size: 1.0625rem;
   font-weight: 700;
   color: var(--sb-primary);

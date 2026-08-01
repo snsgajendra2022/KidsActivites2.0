@@ -548,44 +548,122 @@ Validate `studentId` belongs to the authenticated parent and derive
 
 ---
 
-## 7. LMS
+## 7. LMS / Digital Classroom
 
-### CRUD resource
+Dedicated course LMS (ported from BuildFlow My Learning + certificates).
+Legacy ERP stub CRUD at `/admin/lms` (erp_records) remains for backward
+compatibility but the portal UI uses `/api/v1/lms/*`.
+
+### Courses
 
 ```text
-/admin/lms
+GET    /lms/courses
+POST   /lms/courses
+GET    /lms/courses/{courseId}
+PATCH  /lms/courses/{courseId}
+POST   /lms/courses/{courseId}/publish
+POST   /lms/courses/{courseId}/archive
+DELETE /lms/courses/{courseId}
+POST   /lms/courses/{courseId}/lessons
+POST   /lms/courses/{courseId}/quizzes
+PATCH  /lms/lessons/{lessonId}
+DELETE /lms/lessons/{lessonId}
+DELETE /lms/quizzes/{quizId}
 ```
 
-### Create/update request
+Course create/update body (lessons + quizzes optional nested replace):
 
 ```json
 {
   "title": "Introduction to Numbers",
-  "type": "video_lesson",
+  "description": "Counting foundations",
   "classId": "uuid",
+  "className": "Nursery A",
   "subject": "Mathematics",
-  "status": "published",
-  "description": "Animated counting lesson",
-  "resourceUrl": "https://media-url",
-  "fileId": null,
-  "payload": null,
-  "publishedAt": "2026-07-30T08:00:00Z"
+  "status": "draft",
+  "estimatedDurationMinutes": 45,
+  "lessons": [
+    {
+      "title": "Counting 1–10",
+      "type": "video",
+      "content": "Watch and count along",
+      "resourceUrl": "https://youtube.com/watch?v=…",
+      "durationMinutes": 8,
+      "sortOrder": 0
+    }
+  ],
+  "quizzes": [
+    {
+      "title": "Numbers check",
+      "passPercentage": 60,
+      "maxAttempts": 3,
+      "requiredForCompletion": true,
+      "questions": [
+        {
+          "question": "How many apples?",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            { "text": "2", "correct": false },
+            { "text": "3", "correct": true }
+          ]
+        }
+      ]
+    }
+  ]
 }
 ```
 
-Types: `video_lesson | notes | study_material | quiz | practice_test | question_bank`.
+Lesson types: `video | text | document | audio | quiz`.
+Course status: `draft | published | archived`.
 
-Additional endpoints:
+### Enrollments
 
 ```text
-POST /admin/lms/{id}/publish
-POST /admin/lms/{id}/archive
-GET  /parent/lms
-POST /parent/lms/{id}/attempts
-GET  /parent/lms/{id}/attempts/{attemptId}
+GET    /lms/enrollments?courseId=
+POST   /lms/enrollments
+POST   /lms/enrollments/enroll-class
+DELETE /lms/enrollments/{enrollmentId}
 ```
 
-Validate quiz payloads by type. Publish requires a resource URL, file, or valid quiz payload.
+```json
+{
+  "courseId": "uuid",
+  "studentId": "uuid",
+  "userId": "uuid",
+  "dueDate": "2026-08-31"
+}
+```
+
+`enroll-class` enrolls all students in `classId` (parent user as learner account).
+
+### Digital Classroom (My Learning)
+
+```text
+GET  /lms/my-learning
+GET  /lms/my-learning/{enrollmentId}
+POST /lms/lessons/{lessonId}/progress
+POST /lms/quizzes/{quizId}/attempts
+POST /lms/quizzes/{quizId}/attempts/{attemptId}/submit
+POST /lms/enrollments/{enrollmentId}/complete
+```
+
+Progress body: `{ "enrollmentId", "status": "in_progress|completed", "timeSpentSeconds" }`.
+Quiz submit body: `{ "answers": [{ "questionId", "selectedOptionId" }] }`.
+
+Completion requires all lessons completed and every required quiz either passed
+or attempts exhausted. Completing issues a course certificate (`CERT-YYYY-####`).
+
+### Course certificates
+
+```text
+GET /lms/certificates
+GET /lms/certificates/{certificateId}/html
+GET /public/lms/certificates/verify/{certificateNumber}
+```
+
+HTML preview is returned as `renderedHtml` for print/download. Document
+automation certificates remain under `/admin/certificates` (ERP).
 
 ---
 

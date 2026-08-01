@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   BookOpen,
@@ -257,8 +257,7 @@ function FeatureCard({ feature, index }) {
 }
 
 export default function KidsLandingPage() {
-  const navigate = useNavigate();
-  const [workspaceSlug, setWorkspaceSlug] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const revealItems = document.querySelectorAll('.kl-feature-reveal');
@@ -284,15 +283,6 @@ export default function KidsLandingPage() {
     revealItems.forEach((item) => observer.observe(item));
     return () => observer.disconnect();
   }, []);
-
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  function handleSignIn(e) {
-    e.preventDefault();
-    const slug = workspaceSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-    if (!slug) return;
-    navigate(`/${slug}/login`);
-  }
 
   function closeMobileNav() {
     setMobileNavOpen(false);
@@ -445,25 +435,11 @@ export default function KidsLandingPage() {
                 <div className="kl-icon-tile">
                   <LogIn size={28} />
                 </div>
-                <h3>Sign in to your workspace</h3>
-                <p>Enter your workspace slug to open your portal login.</p>
-                <form className="kl-access-form" onSubmit={handleSignIn}>
-                  <label className="kl-access-field">
-                    <span className="kl-access-field__label">Workspace slug</span>
-                    <input
-                      name="workspaceSlug"
-                      value={workspaceSlug}
-                      onChange={(e) => setWorkspaceSlug(e.target.value)}
-                      placeholder="your-program"
-                      autoComplete="organization"
-                      required
-                    />
-                    <small>e.g. little-stars → /little-stars/login</small>
-                  </label>
-                  <button className="kl-button kl-button--navy" type="submit">
-                    Continue <ArrowRight size={18} />
-                  </button>
-                </form>
+                <h3>Already have an account?</h3>
+                <p>Sign in with your registered email. We will open the right workspace for you automatically.</p>
+                <Link className="kl-button kl-button--navy" to="/login">
+                  Sign in with email <ArrowRight size={18} />
+                </Link>
               </article>
             </div>
           </div>

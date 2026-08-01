@@ -17,8 +17,8 @@
 }
 
 .messages-panel {
-  --messages-font: Inter, system-ui, -apple-system, sans-serif;
-  --messages-font-display: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  --messages-font: var(--sb-font-body, 'Fredoka', sans-serif);
+  --messages-font-display: var(--sb-font-heading, 'Fredoka', sans-serif);
   font-family: var(--messages-font);
   -webkit-font-smoothing: antialiased;
   display: grid;

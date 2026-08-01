@@ -1,26 +1,172 @@
-/* KidsActivites login — form controls inside AuthSplitLayout */
+/* KidsActivites login — aligned with Kids Landing (Fredoka + navy/yellow) */
+/* Fredoka loaded globally via index.html */
 
-.login-portal .field-group:focus-within .field-label {
-  color: var(--sb-gold);
+.login-portal {
+  --kl-yellow: #fbbf24;
+  --kl-navy: #0f172a;
+  --kl-ink: #111827;
+  --kl-muted: #64748b;
+  --kl-line: #e2e8f0;
+
+  /* Remap portal tokens so shared auth/editorial rules inherit landing palette */
+  --sb-navy: #0f172a;
+  --sb-deep-blue: #1e293b;
+  --sb-gold: #fbbf24;
+  --sb-cream: #ffffff;
+  --sb-ivory: #ffffff;
+  --sb-purple: #0f172a;
+  --sb-purple-dark: #0f172a;
+  --sb-purple-soft: #fbbf24;
+  --sb-lavender: #fef9c3;
+  --sb-ink: #0f172a;
+  --sb-muted: #64748b;
+  --sb-line: #e2e8f0;
+  --sb-border: #e2e8f0;
+  --sb-primary: #0f172a;
+  --sb-secondary: #fbbf24;
+  --sb-accent: #fbbf24;
+  --sb-surface: #ffffff;
+  --sb-surface-warm: #fef9c3;
+  --sb-on-surface: #111827;
+  --sb-on-surface-variant: #64748b;
+  --sb-surface-container-high: #fef9c3;
+  --sb-font-heading: 'Fredoka', sans-serif;
+  --sb-font-body: 'Fredoka', sans-serif;
+  --font-display: 'Fredoka', sans-serif;
+  --font-main: 'Fredoka', sans-serif;
+  --primary: #0f172a;
+  --primary-dark: #020617;
+  --sb-shadow-sm: 0 2px 12px rgba(15, 23, 42, 0.06);
+  --sb-shadow-md: 0 16px 40px rgba(15, 23, 42, 0.1);
+  --sb-shadow-lg: 0 28px 65px rgba(15, 23, 42, 0.14);
+  --sb-radius: 0.75rem;
+  --sb-radius-lg: 1rem;
+  --sb-radius-xl: 1.5rem;
+
+  font-family: 'Fredoka', sans-serif;
+  color: var(--kl-navy);
+  -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(circle at 8% 15%, rgba(254, 249, 195, 0.52), transparent 35%),
+    radial-gradient(circle at 92% 7%, rgba(224, 242, 254, 0.52), transparent 35%),
+    #fff;
 }
 
-.login-card-subtitle {
-  font-size: 12px;
-  color: var(--sb-on-surface-variant, #45474c);
+.login-portal *,
+.login-portal *::before,
+.login-portal *::after {
+  box-sizing: border-box;
 }
 
-.login-field-label {
-  font-size: 14px;
+/* ─── Split shell ─── */
+.login-portal.sb-editorial-auth .auth-split,
+.login-portal .auth-split {
+  background:
+    radial-gradient(circle at 8% 15%, rgba(254, 249, 195, 0.52), transparent 35%),
+    radial-gradient(circle at 92% 7%, rgba(224, 242, 254, 0.52), transparent 35%),
+    #fff;
+  min-height: 100dvh;
+}
+
+.login-portal.sb-editorial-auth .auth-split__visual,
+.login-portal .auth-split__visual {
+  background: var(--kl-navy);
+  color: #fff;
+}
+
+.login-portal.sb-editorial-auth .auth-split__visual::before,
+.login-portal .auth-split__visual::before {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(251, 191, 36, 0.22), transparent 42%),
+    radial-gradient(circle at 86% 78%, rgba(224, 242, 254, 0.14), transparent 46%),
+    linear-gradient(160deg, #0f172a 0%, #1e293b 52%, #0f172a 100%);
+  opacity: 1;
+}
+
+.login-portal .auth-split__visual--has-image::before {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, #0f172a 88%, transparent) 0%,
+    color-mix(in srgb, #1e293b 78%, transparent) 50%,
+    color-mix(in srgb, #fbbf24 18%, #0f172a 72%) 100%
+  );
+}
+
+.login-portal .auth-split__visual .sb-eyebrow,
+.login-portal .auth-split__visual-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-bottom: 1.25rem;
+  padding: 7px 15px;
+  border-radius: 999px;
+  color: var(--kl-yellow) !important;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  font-family: 'Fredoka', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.login-portal .auth-split__visual h1 {
+  font-family: 'Fredoka', sans-serif;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.login-portal .auth-split__visual p {
+  color: rgba(255, 255, 255, 0.72);
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.login-portal .auth-split__feature {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 1rem;
+}
+
+.login-portal .auth-split__feature-icon {
+  background: rgba(251, 191, 36, 0.14);
+  color: var(--kl-yellow);
+  border-radius: 0.75rem;
+}
+
+.login-portal .auth-split__feature-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Fredoka', sans-serif;
+}
+
+.login-portal .auth-split__feature-text {
+  font-family: 'Fredoka', sans-serif;
   font-weight: 600;
-  color: color-mix(in srgb, var(--sb-purple-dark) 80%, transparent);
 }
 
-.login-muted-text {
-  color: #6b7a8c;
+/* ─── Form card ─── */
+.login-portal .auth-split__form-side {
+  padding: 1.5rem 1rem;
 }
 
 .login-portal .auth-split__card {
+  width: min(28rem, 100%);
   padding: 1.75rem 1.5rem;
+  border: 1px solid var(--kl-line);
+  border-radius: 1.75rem;
+  background: #fff;
+  box-shadow: 0 28px 65px rgba(15, 23, 42, 0.1);
+}
+
+.login-portal.sb-editorial-auth .auth-split__card {
+  border-color: var(--kl-line);
+  box-shadow: 0 28px 65px rgba(15, 23, 42, 0.1);
 }
 
 .login-portal .auth-split__card-header {
@@ -34,37 +180,90 @@
 
 .login-portal .auth-split__card-portal-name {
   margin: 0;
-  font-family: var(--sb-font-heading);
+  font-family: 'Fredoka', sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--sb-purple-dark);
+  letter-spacing: -0.02em;
+  color: var(--kl-navy);
 }
 
-.login-portal .auth-split__card-title {
-  font-size: 1.5rem;
+.login-portal .auth-split__card-brand-divider {
+  background: var(--kl-line);
+}
+
+.login-portal .auth-split__card-title,
+.login-portal.sb-editorial-auth .auth-split__card-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: clamp(1.5rem, 3vw, 1.75rem);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--kl-navy);
+}
+
+.login-portal .auth-split__subtitle {
+  color: var(--kl-muted);
+  font-family: 'Fredoka', sans-serif;
 }
 
 .login-portal .sb-alert {
   font-size: 0.875rem;
   line-height: 1.45;
+  font-family: 'Fredoka', sans-serif;
+  border-radius: 0.875rem;
 }
 
-/* Login method switch */
+.login-card-subtitle {
+  font-size: 12px;
+  color: var(--kl-muted);
+  font-family: 'Fredoka', sans-serif;
+}
+
+.login-field-label,
+.login-portal .field-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.login-portal .field-group:focus-within .field-label,
+.login-portal .field-group:focus-within .login-field-label {
+  color: var(--kl-navy);
+}
+
+.login-muted-text {
+  color: var(--kl-muted);
+  font-family: 'Fredoka', sans-serif;
+}
+
+.login-portal a.text-accent,
+.login-portal .text-accent {
+  color: var(--kl-navy) !important;
+  font-weight: 700;
+}
+
+.login-portal a.text-accent:hover {
+  color: #1e3a8a !important;
+}
+
+/* ─── Method switch ─── */
 .login-method-footer {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--sb-border);
+  border-top: 1px solid var(--kl-line);
   text-align: center;
 }
 
 .login-method-footer__or {
   margin: 0 0 0.625rem;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--sb-muted);
+  letter-spacing: 0.1em;
+  color: var(--kl-muted);
+  font-family: 'Fredoka', sans-serif;
 }
 
 .login-method-switch {
@@ -74,22 +273,25 @@
   gap: 8px;
   width: 100%;
   padding: 0.625rem 0.5rem;
+  font-family: 'Fredoka', sans-serif;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--sb-gold);
-  background: transparent;
-  border: none;
-  border-radius: var(--sb-radius);
+  font-weight: 700;
+  color: #92400e;
+  background: #fef9c3;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 999px;
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 
 .login-method-switch:hover {
-  color: var(--sb-navy);
-  background: color-mix(in srgb, var(--sb-gold) 8%, transparent);
+  color: #172033;
+  background: var(--kl-yellow);
+  box-shadow: 0 10px 22px rgba(251, 191, 36, 0.28);
+  transform: translateY(-1px);
 }
 
-/* OTP boxes */
+/* ─── OTP boxes ─── */
 .login-otp-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -101,41 +303,38 @@
   aspect-ratio: 1;
   max-height: 52px;
   text-align: center;
+  font-family: 'Fredoka', sans-serif;
   font-size: 18px;
   font-weight: 700;
-  border-radius: var(--sb-radius);
-  border: 1px solid var(--sb-line);
+  border-radius: 0.875rem;
+  border: 1px solid var(--kl-line);
   background: #fff;
-  color: var(--sb-purple-dark);
+  color: var(--kl-navy);
   outline: none;
-  transition: all 0.2s ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .login-otp-box:focus {
-  border-color: var(--sb-purple);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-purple) 20%, transparent);
+  border-color: var(--kl-yellow);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.28);
 }
 
-.login-submit-btn {
-  min-height: 2.75rem;
-}
-
-/* Identity & password fields */
+/* ─── Inputs ─── */
 .login-identity-wrap,
 .login-password-wrap {
   display: flex;
   align-items: stretch;
-  border-radius: var(--sb-radius);
-  border: 1px solid var(--sb-border);
+  border-radius: 0.875rem;
+  border: 1px solid var(--kl-line);
   background: #fff;
   overflow: hidden;
-  transition: all var(--sb-transition);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .login-identity-wrap:focus-within,
 .login-password-wrap:focus-within {
-  border-color: var(--sb-purple);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-purple) 20%, transparent);
+  border-color: var(--kl-yellow);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.28);
 }
 
 .login-identity-icon {
@@ -144,9 +343,9 @@
   justify-content: center;
   width: 44px;
   flex-shrink: 0;
-  color: var(--sb-purple-dark);
-  background: var(--sb-lavender);
-  border-right: 1px solid var(--sb-line);
+  color: #92400e;
+  background: #fef9c3;
+  border-right: 1px solid rgba(251, 191, 36, 0.22);
 }
 
 .login-identity-input,
@@ -156,7 +355,9 @@
   border: none;
   background: transparent;
   padding: 12px 14px;
+  font-family: 'Fredoka', sans-serif;
   font-size: 14px;
+  color: var(--kl-ink);
   outline: none;
 }
 
@@ -169,42 +370,124 @@
   border: none;
   border-left: 1px solid transparent;
   background: transparent;
-  color: var(--sb-muted);
+  color: var(--kl-muted);
   cursor: pointer;
   transition: color 0.15s ease;
 }
 
 .login-password-wrap:focus-within .login-password-toggle {
-  border-left-color: var(--sb-line);
+  border-left-color: var(--kl-line);
 }
 
 .login-password-toggle:hover {
-  color: var(--sb-navy);
+  color: var(--kl-navy);
 }
 
-.login-portal .sb-input {
+.login-portal .sb-input,
+.login-portal .input-premium {
   min-height: 2.75rem;
+  font-family: 'Fredoka', sans-serif;
+  border-color: var(--kl-line);
+  border-radius: 0.875rem;
+  color: var(--kl-ink);
 }
 
-/* New applicant CTA */
+.login-portal .sb-input:focus,
+.login-portal .input-premium:focus {
+  border-color: var(--kl-yellow);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.28);
+}
+
+.login-portal input[type='checkbox'] {
+  accent-color: var(--kl-navy);
+}
+
+/* ─── Buttons (landing pill style) ─── */
+.login-submit-btn {
+  min-height: 3rem;
+}
+
+.login-portal .sb-button-primary,
+.login-portal .login-submit-btn.sb-button-primary,
+.login-portal.sb-editorial-auth .sb-button-primary,
+.login-portal.sb-editorial-auth .login-submit-btn.sb-button-primary {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--kl-navy);
+  color: #fff;
+  box-shadow: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.login-portal .sb-button-primary:hover:not(:disabled),
+.login-portal .login-submit-btn.sb-button-primary:hover:not(:disabled),
+.login-portal.sb-editorial-auth .sb-button-primary:hover:not(:disabled),
+.login-portal.sb-editorial-auth .login-submit-btn.sb-button-primary:hover:not(:disabled) {
+  background: #020617;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+}
+
+.login-portal .sb-button-secondary {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid var(--kl-line);
+  background: #fff;
+  color: var(--kl-ink);
+  min-height: 2.75rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.login-portal .sb-button-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+/* ─── QR panel ─── */
+.login-portal .login-qr-panel {
+  font-family: 'Fredoka', sans-serif;
+}
+
+.login-portal .login-qr-panel .text-brand {
+  color: var(--kl-navy) !important;
+}
+
+.login-portal .login-qr-panel > div:first-child {
+  border-color: var(--kl-line) !important;
+  border-radius: 1.25rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+/* ─── New applicant CTA ─── */
 .login-enroll-section {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--sb-border);
+  border-top: 1px solid var(--kl-line);
 }
 
 .login-enroll-section__label {
   margin: 0 0 0.625rem;
   text-align: center;
+  font-family: 'Fredoka', sans-serif;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--sb-muted);
+  color: var(--kl-muted);
 }
 
 @media (min-width: 640px) {
   .login-portal .auth-split__card {
+    padding: 2rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .login-portal .auth-split__form-side {
     padding: 2rem;
   }
 }

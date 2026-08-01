@@ -17,7 +17,7 @@
 
 .parent-photos-header__title {
   margin: 0 0 0.35rem;
-  font-family: Manrope, 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  font-family: var(--sb-font-heading, 'Fredoka', sans-serif);
   font-size: clamp(1.5rem, 3vw, 1.875rem);
   font-weight: 700;
   letter-spacing: -0.02em;

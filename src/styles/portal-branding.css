@@ -656,8 +656,8 @@
   border-radius: 0.875rem;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: var(--admin-sidebar-bg, linear-gradient(180deg, #2d1b4e 0%, #1a0f2e 100%));
-  box-shadow: 0 8px 24px rgba(26, 15, 46, 0.22);
+  background: var(--admin-sidebar-bg, linear-gradient(180deg, #0f172a 0%, #1e293b 100%));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
 }
 
 .branding-sidebar-preview__panel--collapsed {

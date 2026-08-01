@@ -21,7 +21,7 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className="portal-shell flex h-screen overflow-hidden sb-surface text-[var(--sb-on-surface,#243447)]">
+    <div className="portal-shell flex h-screen overflow-hidden sb-surface text-[var(--sb-on-surface,#111827)]">
       <Sidebar
         user={user}
         open={sidebarOpen}

@@ -7,10 +7,18 @@ import { useTenantPath } from '../../hooks/useTenantPath.js';
 import AuthSplitLayout from '../../components/layout/AuthSplitLayout.jsx';
 import LoadingState from '../../components/ui/LoadingState.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { ROLE_DASHBOARD } from '../../constants/roles.js';
+import { prefixTenantPath } from '../../utils/tenantUtils.js';
 import '../../styles/login-portal.css';
 import QrLoginPanel from '../../components/auth/QrLoginPanel.jsx';
 
 const OTP_RESEND_SECONDS = 30;
+
+function postLoginPath(user, fallbackTenantSlug) {
+  const slug = user?.tenantSlug || fallbackTenantSlug || null;
+  const dashboard = ROLE_DASHBOARD[user?.role] || '/';
+  return prefixTenantPath(dashboard, slug) || dashboard;
+}
 
 function detectOtpChannel(identity, { mobileEnabled, emailEnabled }) {
   const value = identity.trim();
@@ -144,7 +152,7 @@ export default function Login() {
   } = useAuth();
   const navigate = useNavigate();
   const { tenantSlug } = useTenant();
-  const { roleDashboard, tenantPath } = useTenantPath();
+  const { tenantPath } = useTenantPath();
   const { portalName, school, loginMethods } = usePortalConfig();
 
   const isMethodEnabled = (key) => loginMethods?.[key] !== false;
@@ -152,16 +160,21 @@ export default function Login() {
   const mobileOtpEnabled = isMethodEnabled('mobileOtp');
   const emailOtpEnabled = isMethodEnabled('emailOtp');
   const qrLoginEnabled = isMethodEnabled('qrLogin');
-  const otpLoginEnabled = mobileOtpEnabled || emailOtpEnabled;
-  const anyLoginEnabled = emailLoginEnabled || otpLoginEnabled || qrLoginEnabled;
+  const otpLoginEnabled = tenantSlug
+    ? (mobileOtpEnabled || emailOtpEnabled)
+    : emailOtpEnabled;
+  const anyLoginEnabled = emailLoginEnabled || otpLoginEnabled || (tenantSlug && qrLoginEnabled);
 
-  const otpChannelOptions = { mobileEnabled: mobileOtpEnabled, emailEnabled: emailOtpEnabled };
+  const otpChannelOptions = {
+    mobileEnabled: Boolean(tenantSlug) && mobileOtpEnabled,
+    emailEnabled: emailOtpEnabled,
+  };
   const activeOtpChannel = sentOtpChannel || detectOtpChannel(otpIdentity, otpChannelOptions);
   const otpTargetReady = isOtpIdentityValid(otpIdentity, activeOtpChannel);
 
   const pickDefaultMethod = () => {
     if (emailLoginEnabled) return 'email';
-    if (qrLoginEnabled) return 'qr';
+    if (tenantSlug && qrLoginEnabled) return 'qr';
     if (otpLoginEnabled) return 'otp';
     return 'email';
   };
@@ -170,34 +183,38 @@ export default function Login() {
     setMethod((current) => {
       if (current === 'email' && emailLoginEnabled) return 'email';
       if (current === 'otp' && otpLoginEnabled) return 'otp';
-      if (current === 'qr' && qrLoginEnabled) return 'qr';
+      if (current === 'qr' && tenantSlug && qrLoginEnabled) return 'qr';
       return pickDefaultMethod();
     });
-  }, [emailLoginEnabled, otpLoginEnabled, qrLoginEnabled]);
+  }, [emailLoginEnabled, otpLoginEnabled, qrLoginEnabled, tenantSlug]);
 
   const loginEmailPlaceholder = tenantSlug
     ? `you@${tenantSlug}.kidsactivites.com`
     : 'you@school.edu.in';
 
   const welcomeBlurb = (() => {
+    const schoolLabel = school?.name || portalName || 'your school portal';
     if (!anyLoginEnabled) {
-      return `Contact your school administrator for login access to ${school?.name}.`;
+      return `Contact your school administrator for login access to ${schoolLabel}.`;
+    }
+    if (!tenantSlug) {
+      return 'Sign in with your registered email and password. We will open the right workspace for you automatically.';
     }
     if (emailLoginEnabled && otpLoginEnabled) {
       const otpParts = [];
       if (mobileOtpEnabled) otpParts.push('mobile');
       if (emailOtpEnabled) otpParts.push('email');
       const otpText = otpParts.length === 2 ? 'mobile or email OTP' : `${otpParts[0]} OTP`;
-      return `Sign in with email and password, or use ${otpText} for quick access to ${school?.name}.`;
+      return `Sign in with email and password, or use ${otpText} for quick access to ${schoolLabel}.`;
     }
     if (emailLoginEnabled) {
-      return `Sign in with your school-registered email and password to access ${school?.name}.`;
+      return `Sign in with your school-registered email and password to access ${schoolLabel}.`;
     }
     const otpParts = [];
     if (mobileOtpEnabled) otpParts.push('mobile');
     if (emailOtpEnabled) otpParts.push('email');
     const otpText = otpParts.length === 2 ? 'mobile or email OTP' : `${otpParts[0]} OTP`;
-    return `Sign in with ${otpText} to access ${school?.name}.`;
+    return `Sign in with ${otpText} to access ${schoolLabel}.`;
   })();
 
   useEffect(() => {
@@ -254,7 +271,7 @@ export default function Login() {
     setLoading(true);
     try {
       const user = await login(emailForm);
-      navigate(roleDashboard(user.role) || tenantPath('/'));
+      navigate(postLoginPath(user, tenantSlug));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -271,7 +288,7 @@ export default function Login() {
       const user = channel === 'email'
         ? await loginWithEmailOtp({ email: otpIdentity.trim(), otp })
         : await loginWithOtp({ mobile: otpIdentity.replace(/\D/g, ''), otp });
-      navigate(roleDashboard(user.role) || tenantPath('/'));
+      navigate(postLoginPath(user, tenantSlug));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -302,7 +319,7 @@ export default function Login() {
     const alternatives = [];
     if (emailLoginEnabled && method !== 'email') alternatives.push({ key: 'email', label: 'Email & Password', icon: Mail });
     if (otpLoginEnabled && method !== 'otp') alternatives.push({ key: 'otp', label: 'OTP', icon: Shield });
-    if (qrLoginEnabled && method !== 'qr') alternatives.push({ key: 'qr', label: 'QR Login', icon: QrCode });
+    if (tenantSlug && qrLoginEnabled && method !== 'qr') alternatives.push({ key: 'qr', label: 'QR Login', icon: QrCode });
     if (!alternatives.length) return null;
     return (
       <div className="login-method-footer">
@@ -330,7 +347,7 @@ export default function Login() {
     setLoading(true);
     try {
       const user = await loginWithQr(tokenPayload);
-      navigate(roleDashboard(user.role) || tenantPath('/'));
+      navigate(postLoginPath(user, tenantSlug));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -430,7 +447,7 @@ export default function Login() {
   }
 
   if (isAuthenticated && user?.role) {
-    return <Navigate to={roleDashboard(user.role) || tenantPath('/')} replace />;
+    return <Navigate to={postLoginPath(user, tenantSlug)} replace />;
   }
 
   return (

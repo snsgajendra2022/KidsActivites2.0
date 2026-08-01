@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   Building2,
@@ -20,8 +19,6 @@ import EditorialTimeline from '../../components/public/EditorialTimeline.jsx';
 import FinalImageCTA from '../../components/public/FinalImageCTA.jsx';
 import EditorialFooter from '../../components/public/EditorialFooter.jsx';
 import PlatformLandingSections from '../../components/public/PlatformLandingSections.jsx';
-import FormInput from '../../components/ui/FormInput.jsx';
-import Button from '../../components/ui/Button.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 
@@ -66,19 +63,9 @@ function parseHeroHeadline(headline) {
 
 export default function AccessLanding() {
   const { portalName, branding, platform } = usePortalConfig();
-  const navigate = useNavigate();
-  const [workspaceSlug, setWorkspaceSlug] = useState('');
-
   const heroImage = branding?.heroImageUrl || DEFAULT_PORTAL_CONFIG.branding.heroImageUrl;
   const heroLines = parseHeroHeadline(platform?.heroHeadline);
   const heroSubtext = platform?.heroSubtext?.trim() || DEFAULT_HERO_SUBTEXT;
-
-  function handleSignIn(e) {
-    e.preventDefault();
-    const slug = workspaceSlug.trim().toLowerCase();
-    if (!slug) return;
-    navigate(`/${slug}/login`);
-  }
 
   return (
     <PublicLayout hideFooter className="sb-editorial-page">
@@ -133,21 +120,11 @@ export default function AccessLanding() {
             <div className="sb-access-card__icon">
               <LogIn size={22} />
             </div>
-            <h2>Sign in to your workspace</h2>
-            <p>Enter your workspace slug to open your portal login.</p>
-            <form onSubmit={handleSignIn} className="flex flex-col gap-3 sm:flex-row">
-              <FormInput
-                name="workspaceSlug"
-                placeholder="your-program"
-                value={workspaceSlug}
-                onChange={(e) => setWorkspaceSlug(e.target.value)}
-                helper="e.g. little-stars → /little-stars/login"
-                className="flex-1"
-              />
-              <Button type="submit" variant="primary" size="lg" className="sb-purple-cta shrink-0 sm:self-end !border-0">
-                Continue
-              </Button>
-            </form>
+            <h2>Already have an account?</h2>
+            <p>Sign in with your registered email. We will open the right workspace for you automatically.</p>
+            <Link to="/login" className="sb-purple-cta">
+              Sign in with email <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </section>

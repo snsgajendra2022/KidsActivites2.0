@@ -1,58 +1,64 @@
-/* KidsActivites Premium Theme — design tokens */
+/* KidsActivites Premium Theme — design tokens (Kids Landing navy/yellow + Fredoka) */
 
 :root {
-  /* Brand palette — navy (portal/admin) */
-  --sb-navy: #0B1F3A;
-  --sb-deep-blue: #102E52;
-  --sb-gold: #C9A24A;
-  --sb-cream: #FAF7F2;
-  --sb-ivory: #FBF8F1;
+  /* Brand palette — Kids Landing / login */
+  --kl-yellow: #fbbf24;
+  --kl-navy: #0f172a;
+  --kl-ink: #111827;
+  --kl-muted: #64748b;
+  --kl-line: #e2e8f0;
+
+  --sb-navy: #0f172a;
+  --sb-deep-blue: #1e293b;
+  --sb-gold: #fbbf24;
+  --sb-cream: #ffffff;
+  --sb-ivory: #ffffff;
   --sb-forest: #2F5D50;
-  --sb-slate: #243447;
-  --sb-muted: #756A7D;
-  --sb-border: #E5E0D5;
+  --sb-slate: #111827;
+  --sb-muted: #64748b;
+  --sb-border: #e2e8f0;
 
-  /* Editorial purple palette (public admissions) */
-  --sb-purple: #7A238C;
-  --sb-purple-dark: #35134A;
-  --sb-purple-soft: #B899C9;
-  --sb-lavender: #E8DDF0;
-  --sb-ink: #20152A;
-  --sb-line: #C9A6D8;
-  --sb-footer: #21184B;
+  /* Legacy purple aliases → remapped to navy/yellow so older rules stay on-brand */
+  --sb-purple: #0f172a;
+  --sb-purple-dark: #0f172a;
+  --sb-purple-soft: #fbbf24;
+  --sb-lavender: #fef9c3;
+  --sb-ink: #0f172a;
+  --sb-line: #e2e8f0;
+  --sb-footer: #0f172a;
 
-  /* Portal purple theme — sidebar, header & content (all authenticated users) */
-  --admin-purple-deep: #574174;
-  --admin-purple-mid: #624f80;
-  --admin-purple-light: #6e5a8e;
-  --admin-purple-surface: #f9f7fc;
-  --admin-purple-border: color-mix(in srgb, var(--admin-purple-mid) 14%, #ebe6f2);
+  /* Portal shell chrome (sidebar/header) — navy scale (kept names for layout.css) */
+  --admin-purple-deep: #0f172a;
+  --admin-purple-mid: #1e293b;
+  --admin-purple-light: #334155;
+  --admin-purple-surface: #ffffff;
+  --admin-purple-border: color-mix(in srgb, var(--admin-purple-mid) 12%, #e2e8f0);
 
   /* Semantic aliases */
   --sb-primary: var(--sb-navy);
   --sb-secondary: var(--sb-gold);
   --sb-accent: var(--sb-gold);
-  --sb-surface: var(--sb-ivory);
-  --sb-surface-warm: var(--sb-cream);
-  --sb-on-surface: var(--sb-slate);
-  --sb-on-surface-variant: var(--sb-muted);
+  --sb-surface: #ffffff;
+  --sb-surface-warm: #fef9c3;
+  --sb-on-surface: #111827;
+  --sb-on-surface-variant: #64748b;
   --sb-outline-variant: var(--sb-border);
-  --sb-surface-container-high: color-mix(in srgb, var(--sb-gold) 12%, var(--sb-ivory));
-  --sb-surface-container: color-mix(in srgb, var(--sb-navy) 4%, var(--sb-ivory));
+  --sb-surface-container-high: #fef9c3;
+  --sb-surface-container: color-mix(in srgb, var(--sb-navy) 4%, #ffffff);
 
   /* Typography */
-  --sb-font-heading: Georgia, 'Times New Roman', serif;
-  --sb-font-body: Inter, system-ui, -apple-system, sans-serif;
+  --sb-font-heading: 'Fredoka', sans-serif;
+  --sb-font-body: 'Fredoka', sans-serif;
   --font-display: var(--sb-font-heading);
   --font-main: var(--sb-font-body);
 
   /* Legacy bridges (global.css, premium.css, enrollment) */
   --primary: var(--sb-navy);
-  --primary-dark: #061018;
-  --primary-light: color-mix(in srgb, var(--sb-gold) 18%, var(--sb-ivory));
+  --primary-dark: #020617;
+  --primary-light: color-mix(in srgb, var(--sb-gold) 18%, #ffffff);
   --navy: var(--sb-navy);
-  --bg: var(--sb-ivory);
-  --text: var(--sb-slate);
+  --bg: #ffffff;
+  --text: var(--sb-on-surface);
   --muted: var(--sb-muted);
   --line: var(--sb-border);
   --card: #ffffff;
@@ -100,9 +106,9 @@
   --sb-text-section: clamp(1.125rem, 1.5vw + 0.75rem, 1.375rem);
 
   /* Shadows */
-  --sb-shadow-sm: 0 2px 12px rgba(11, 31, 58, 0.06);
-  --sb-shadow-md: 0 8px 32px rgba(11, 31, 58, 0.1);
-  --sb-shadow-lg: 0 16px 48px rgba(11, 31, 58, 0.14);
+  --sb-shadow-sm: 0 2px 12px rgba(15, 23, 42, 0.06);
+  --sb-shadow-md: 0 8px 32px rgba(15, 23, 42, 0.1);
+  --sb-shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.14);
 
   /* Transitions */
   --sb-transition: 0.35s cubic-bezier(0.23, 1, 0.32, 1);

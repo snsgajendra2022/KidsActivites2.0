@@ -1,6 +1,6 @@
 /* KidsActivites — layout (portal shell, sidebar, auth split) */
 
-/* App shell — editorial purple sidebar */
+/* App shell — navy sidebar (brand tokens) */
 .app-sidebar {
   background: var(--sb-footer) !important;
   border-right: 1px solid color-mix(in srgb, var(--sb-purple-soft) 20%, transparent) !important;
@@ -449,7 +449,7 @@
   }
 }
 
-/* Authenticated portal shell — deep purple theme (all roles) */
+/* Authenticated portal shell — Kids Landing navy/yellow (all roles) */
 .portal-shell {
   --admin-sidebar-bg: linear-gradient(
     180deg,
@@ -457,15 +457,23 @@
     var(--admin-purple-mid) 48%,
     var(--admin-purple-light) 100%
   );
-  --admin-page-bg: linear-gradient(
-    165deg,
-    #fcfbfe 0%,
-    var(--admin-purple-surface) 42%,
-    #f3eef8 100%
-  );
+  --admin-page-bg:
+    radial-gradient(circle at 8% 12%, rgba(254, 249, 195, 0.48), transparent 36%),
+    radial-gradient(circle at 94% 6%, rgba(224, 242, 254, 0.45), transparent 34%),
+    radial-gradient(circle at 50% 100%, rgba(254, 249, 195, 0.22), transparent 42%),
+    #ffffff;
   --sb-primary: var(--admin-purple-deep);
+  --sb-secondary: var(--sb-gold);
+  --sb-accent: var(--sb-gold);
   --sb-surface: var(--admin-purple-surface);
-  --sb-surface-container-high: color-mix(in srgb, var(--admin-purple-mid) 8%, white);
+  --sb-surface-container-high: color-mix(in srgb, var(--sb-gold) 14%, white);
+  --sb-font-heading: 'Fredoka', sans-serif;
+  --sb-font-body: 'Fredoka', sans-serif;
+  --font-display: 'Fredoka', sans-serif;
+  --font-main: 'Fredoka', sans-serif;
+  font-family: 'Fredoka', sans-serif;
+  color: var(--sb-on-surface, #111827);
+  -webkit-font-smoothing: antialiased;
 }
 
 .portal-shell main {
@@ -524,7 +532,7 @@
   background: rgba(255, 255, 255, 0.18) !important;
 }
 
-/* Header dropdowns — dark text on white panel (not inherited from purple header) */
+/* Header dropdowns — dark text on white panel (not inherited from navy header) */
 .portal-shell .app-header .user-menu-dropdown,
 .portal-shell .app-header .notif-dropdown-panel {
   color: var(--admin-purple-deep);

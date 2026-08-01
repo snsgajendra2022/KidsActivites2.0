@@ -57,7 +57,7 @@ export default function TeacherDashboard() {
                 { to: '/teacher/homework', label: 'Homework', icon: BookOpen },
                 { to: '/teacher/marks', label: 'Enter Marks', icon: FileText },
                 { to: '/teacher/notes', label: 'Notes', icon: FileText },
-                { to: '/teacher/lms', label: 'Share Notes', icon: Send },
+                { to: '/teacher/lms', label: 'Digital Classroom', icon: Send },
                 { to: '/teacher/timetable', label: 'Timetable', icon: GraduationCap },
                 { to: '/teacher/photos', label: 'Photos', icon: Image },
                 { to: '/teacher/messages', label: 'Parents', icon: MessageCircle },

@@ -39,7 +39,7 @@
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.16);
   border: 2px solid rgba(255, 255, 255, 0.28);
-  font-family: Manrope, Inter, system-ui, sans-serif;
+  font-family: var(--sb-font-heading, 'Fredoka', sans-serif);
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -47,7 +47,7 @@
 
 .account-settings-profile__name {
   margin: 0 0 0.5rem;
-  font-family: Manrope, Inter, system-ui, sans-serif;
+  font-family: var(--sb-font-heading, 'Fredoka', sans-serif);
   font-size: 1.0625rem;
   font-weight: 700;
   line-height: 1.3;
@@ -144,7 +144,7 @@
 
 .account-settings-panel__head h3 {
   margin: 0 0 0.25rem;
-  font-family: Manrope, Inter, system-ui, sans-serif;
+  font-family: var(--sb-font-heading, 'Fredoka', sans-serif);
   font-size: 1rem;
   font-weight: 700;
   color: var(--sb-primary);

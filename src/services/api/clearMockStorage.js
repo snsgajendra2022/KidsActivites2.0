@@ -13,6 +13,7 @@ const MOCK_KEYS = [
   'sb_conversations',
   'sb_messages',
   'sb_audit_logs',
+  'sb_student_profiles',
 ];
 
 const MOCK_PREFIXES = ['sb_portal_config_', 'sb_portal_branding_'];

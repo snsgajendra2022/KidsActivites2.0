@@ -18,6 +18,10 @@ const FEE_STATUS_LABELS = {
 
 const STATUS_VARIANT = {
   draft: 'default',
+  published: 'success',
+  archived: 'default',
+  active: 'info',
+  completed: 'success',
   submitted: 'info',
   under_review: 'info',
   correction_required: 'warning',

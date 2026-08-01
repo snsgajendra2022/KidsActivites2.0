@@ -21,6 +21,21 @@ function platformAdminRequestOpts() {
   };
 }
 
+/**
+ * Platform bare `/login` must not send X-Tenant-Slug (including VITE_TENANT_SLUG),
+ * so the backend can resolve the workspace from email via user_directory.
+ */
+function emailFirstAuthOpts() {
+  const adminOpts = platformAdminRequestOpts();
+  if (adminOpts.headers) return adminOpts;
+  if (typeof window === 'undefined') return {};
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  if (path === '/login' || path === '/forgot-password') {
+    return { skipTenantHeader: true };
+  }
+  return {};
+}
+
 function saveOtpSession(channel, target, otp) {
   const normalizedTarget = channel === 'email'
     ? normalizeIdentity(target).toLowerCase()
@@ -131,11 +146,16 @@ export async function loginByEmail(email, password) {
 
   const data = await api.post('/auth/login', { email, password }, {
     auth: false,
-    ...platformAdminRequestOpts(),
+    ...emailFirstAuthOpts(),
   });
   setTokens(data.accessToken, data.refreshToken);
   return markDemoSession(
-    { ...data.user, identity: email, loginMethod: 'email' },
+    {
+      ...data.user,
+      identity: email,
+      loginMethod: 'email',
+      tenantSlug: data.tenantSlug || data.user?.tenantSlug || null,
+    },
     false,
   );
 }
@@ -175,8 +195,15 @@ export async function sendLoginOtp(mobile) {
 export async function sendEmailLoginOtp(email) {
   if (isApiEnabled()) {
     const trimmed = normalizeIdentity(email).toLowerCase();
-    const data = await api.post('/auth/login/otp/send', { channel: 'email', email: trimmed }, { auth: false });
-    return { email: data.email || trimmed, expiresIn: data.expiresIn || 300 };
+    const data = await api.post('/auth/login/otp/send', { channel: 'email', email: trimmed }, {
+      auth: false,
+      ...emailFirstAuthOpts(),
+    });
+    return {
+      email: data.email || trimmed,
+      expiresIn: data.expiresIn || 300,
+      tenantSlug: data.tenantSlug || null,
+    };
   }
 
   await delay(700);
@@ -233,13 +260,17 @@ export async function verifyOtpByChannel(channel, target, otp) {
     const body = channel === 'email'
       ? { channel: 'email', email: normalizeIdentity(target).toLowerCase(), otp }
       : { channel: 'mobile', mobile: normalizeMobile(target), otp };
-    const data = await api.post('/auth/login/otp/verify', body, { auth: false });
+    const data = await api.post('/auth/login/otp/verify', body, {
+      auth: false,
+      ...(channel === 'email' ? emailFirstAuthOpts() : {}),
+    });
     setTokens(data.accessToken, data.refreshToken);
     return markDemoSession(
       {
         ...data.user,
         identity: channel === 'email' ? body.email : body.mobile,
         loginMethod: channel === 'email' ? 'email_otp' : 'otp',
+        tenantSlug: data.tenantSlug || data.user?.tenantSlug || null,
       },
       false,
     );
@@ -278,7 +309,10 @@ export async function forgotPassword(email) {
     await delay(300);
     return { message: 'If an account exists, a reset link has been sent.' };
   }
-  return api.post('/auth/forgot-password', { email }, { auth: false });
+  return api.post('/auth/forgot-password', { email }, {
+    auth: false,
+    ...emailFirstAuthOpts(),
+  });
 }
 
 export async function resetPassword(token, newPassword) {

@@ -56,7 +56,9 @@ export default function AuthSplitLayout({
         >
           {loginHeroUrl ? <AuthHeroImage src={loginHeroUrl} /> : null}
           <div className="auth-split__visual-content">
-            <p className="sb-eyebrow !text-[var(--sb-gold)]">{visualBadge || 'Secure Portal'}</p>
+            <p className={`sb-eyebrow${className.includes('login-portal') ? ' auth-split__visual-badge' : ' !text-[var(--sb-gold)]'}`}>
+              {visualBadge || 'Secure Portal'}
+            </p>
             <h1>{visualTitle || `Welcome to ${portalName}`}</h1>
             <p className="mt-4">
               {visualSubtitle || `Sign in to manage admissions, fees, and communication for ${school?.name || 'your school'}.`}

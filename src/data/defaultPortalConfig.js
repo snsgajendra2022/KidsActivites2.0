@@ -32,11 +32,11 @@ export const DEFAULT_PORTAL_CONFIG = {
     loginHeroUrl: HERO_IMAGE,
   },
   theme: {
-    brandColor: '#1B2E4B',
-    accentColor: '#0058BE',
+    brandColor: '#0f172a',
+    accentColor: '#fbbf24',
   },
   enrollmentTheme: {
-    brandNavy: '#1B2E4B',
+    brandNavy: '#0f172a',
     brandRed: '#C81E1E',
     brandGrayLight: '#E5E7EB',
     formBg: '#F3F4F6',

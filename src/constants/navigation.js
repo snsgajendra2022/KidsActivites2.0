@@ -1,5 +1,5 @@
 import {
-  BarChart3, Bell, BookOpen, Bot, Briefcase, Bus, ClipboardCheck, CreditCard, FileText,
+  Award, BarChart3, Bell, BookOpen, Bot, Briefcase, Bus, ClipboardCheck, CreditCard, FileText,
   FolderOpen, GraduationCap, Home, Image, Library, LogOut, Megaphone, MessageCircle,
   Package, Palette, Receipt, Settings, Shield, Sparkles, UserCheck, Users, ClipboardList, Tv, Wallet,
 } from 'lucide-react';
@@ -29,6 +29,7 @@ const ADMIN_ERP_NAV = [
   { id: 'admin_exam_marks', to: '/admin/exam-marks', label: 'Marks Entry', icon: ClipboardList, iconName: 'ClipboardList', section: 'Academics' },
   { id: 'admin_timetable', to: '/admin/timetable', label: 'Timetable', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'Academics' },
   { id: 'admin_lms', to: '/admin/lms', label: 'Digital Classroom', icon: Sparkles, iconName: 'Sparkles', section: 'Academics' },
+  { id: 'admin_lms_certificates', to: '/admin/lms/certificates', label: 'Course Certificates', icon: Award, iconName: 'Award', section: 'Academics' },
   { id: 'admin_attendance_advanced', to: '/admin/attendance-advanced', label: 'Advanced Attendance', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'Students & Classes' },
   { id: 'admin_fees_advanced', to: '/admin/fees-advanced', label: 'Advanced Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Fees & Finance' },
   { id: 'admin_accounting', to: '/admin/accounting', label: 'Accounting Dashboard', icon: Wallet, iconName: 'Wallet', section: 'Fees & Finance' },
@@ -42,7 +43,7 @@ const ADMIN_ERP_NAV = [
   { id: 'admin_inventory', to: '/admin/inventory', label: 'Inventory', icon: Package, iconName: 'Package', section: 'Operations' },
   { id: 'admin_hr', to: '/admin/hr', label: 'HR & Staff', icon: Briefcase, iconName: 'Briefcase', section: 'Operations' },
   { id: 'admin_payroll', to: '/admin/payroll', label: 'Payroll', icon: Receipt, iconName: 'Receipt', section: 'Operations' },
-  { id: 'admin_certificates', to: '/admin/certificates', label: 'Certificates', icon: FileText, iconName: 'FileText', section: 'Documents' },
+  { id: 'admin_certificates', to: '/admin/certificates', label: 'Document Certificates', icon: FileText, iconName: 'FileText', section: 'Documents' },
   { id: 'admin_ai', to: '/admin/ai', label: 'AI Assistant', icon: Bot, iconName: 'Bot', section: 'Premium' },
   { id: 'admin_roles', to: '/admin/roles', label: 'Roles & Permissions', icon: Shield, iconName: 'Shield', section: 'Settings' },
   { id: 'admin_security', to: '/admin/security', label: 'Security Center', icon: Shield, iconName: 'Shield', section: 'Settings' },
@@ -123,7 +124,7 @@ export const TEACHER_NAV = [
   { id: 'teacher_marks', to: '/teacher/marks', label: 'Enter Marks', icon: ClipboardList, iconName: 'ClipboardList', section: 'Teaching' },
   { id: 'teacher_notes', to: '/teacher/notes', label: 'Performance Notes', icon: FileText, iconName: 'FileText', section: 'Teaching' },
   { id: 'teacher_timetable', to: '/teacher/timetable', label: 'My Timetable', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'Teaching' },
-  { id: 'teacher_lms', to: '/teacher/lms', label: 'Share Notes / LMS', icon: Sparkles, iconName: 'Sparkles', section: 'Teaching' },
+  { id: 'teacher_lms', to: '/teacher/lms', label: 'Digital Classroom', icon: Sparkles, iconName: 'Sparkles', section: 'Teaching' },
   { id: 'teacher_photos', to: '/teacher/photos', label: 'Send Photos', icon: Image, iconName: 'Image', section: 'Photos & Media' },
   { id: 'teacher_class_album', to: '/teacher/class-album', label: 'Class Album', icon: Tv, iconName: 'Tv', section: 'Photos & Media' },
   CREATIVE_CARDS_NAV,
