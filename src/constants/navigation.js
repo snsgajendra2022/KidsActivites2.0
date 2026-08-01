@@ -80,9 +80,9 @@ export const SCHOOL_ADMIN_NAV = [
   PORTAL_BRANDING_NAV,
   { id: 'admin_teachers', to: '/admin/teachers', label: 'Teachers', icon: Users, iconName: 'Users', section: 'School Setup' },
   { id: 'admin_users', to: '/admin/all-users', label: 'All Users', icon: Users, iconName: 'Users', section: 'Platform' },
-  { id: 'admin_subscription', to: '/admin/subscription', label: 'Subscription Plans', icon: Sparkles, iconName: 'Sparkles', section: 'Premium' },
   CREATIVE_CARDS_NAV,
   ...ADMIN_CORE_NAV,
+  { id: 'admin_subscription', to: '/admin/subscription', label: 'Subscription Plans', icon: Sparkles, iconName: 'Sparkles', section: 'Premium' },
 ];
 
 /** Platform operator only — not school day-to-day (admissions, fees, photos, etc.). */

@@ -1,9 +1,13 @@
 import { Link, NavLink } from 'react-router-dom';
+import { useLayoutEffect, useRef } from 'react';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
+
+/** Survives AppLayout remounts when each page wraps its own shell. */
+let persistedSidebarNavScrollTop = 0;
 
 function isChatNavItem(item) {
   const id = item?.id || '';
@@ -45,6 +49,36 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
   const navItems = getNavItems(user?.role);
   const homePath = roleDashboard(user?.role) || '/';
   const unreadMessageCount = useUnreadMessageCount();
+  const navRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = navRef.current;
+    if (!el) return undefined;
+    el.scrollTop = persistedSidebarNavScrollTop;
+    const onScroll = () => {
+      persistedSidebarNavScrollTop = el.scrollTop;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      persistedSidebarNavScrollTop = el.scrollTop;
+      el.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
+  const handleNavClick = () => {
+    const el = navRef.current;
+    if (el) persistedSidebarNavScrollTop = el.scrollTop;
+
+    // Close mobile drawer only; avoid unnecessary desktop state churn.
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      onClose?.();
+    }
+
+    // Keep scroll after remount / focus changes from route navigation.
+    requestAnimationFrame(() => {
+      if (navRef.current) navRef.current.scrollTop = persistedSidebarNavScrollTop;
+    });
+  };
 
   return (
     <>
@@ -57,12 +91,12 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
       />
 
       <aside
-        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-[color-mix(in_srgb,var(--sb-gold)_15%,transparent)] transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 ${
-          open ? 'translate-x-0 shadow-xl shadow-black/20' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
+        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-[var(--sb-border)] transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 ${
+          open ? 'translate-x-0 shadow-xl shadow-black/10' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
         } ${collapsed ? 'app-sidebar--collapsed' : 'w-72'}`}
       >
         <div
-          className={`sidebar-top relative flex shrink-0 border-b border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] ${
+          className={`sidebar-top relative flex shrink-0 border-b border-[var(--sb-border)] ${
             collapsed ? 'sidebar-top--collapsed' : 'h-16 items-center px-3'
           }`}
         >
@@ -101,7 +135,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
                 onClick={onClose}
                 className="flex min-w-0 flex-1 items-center gap-3 pr-10"
               >
-                <PortalLogo size="md" inverse sidebar />
+                <PortalLogo size="md" sidebar />
                 <div className="min-w-0">
                   <div className="sidebar-brand-title font-display truncate text-sm font-bold">{portalName}</div>
                   <div className="sidebar-brand-subtitle truncate text-[11px]">{school?.name}</div>
@@ -131,7 +165,10 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           )}
         </div>
 
-        <nav className={`sidebar-nav flex-1 overflow-y-auto ${collapsed ? 'sidebar-nav--collapsed' : 'space-y-1 px-3 py-2'}`}>
+        <nav
+          ref={navRef}
+          className={`sidebar-nav flex-1 overflow-y-auto ${collapsed ? 'sidebar-nav--collapsed' : 'space-y-1 px-3 py-2'}`}
+        >
           {navItems.map(({ id, to, label, icon: Icon, section }, index) => {
             const prevSection = navItems[index - 1]?.section;
             const showSection = !collapsed && section && section !== prevSection;
@@ -146,7 +183,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
                 )}
                 <NavLink
                   to={to}
-                  onClick={onClose}
+                  onClick={handleNavClick}
                   className={(props) => sidebarLinkClass({ ...props, collapsed })}
                   title={collapsed ? label : undefined}
                 >
@@ -173,14 +210,6 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             );
           })}
         </nav>
-
-        {!collapsed && user && (
-          <div className="shrink-0 border-t border-[color-mix(in_srgb,var(--sb-gold)_12%,transparent)] p-4">
-            <div className="sidebar-user-card rounded-xl p-3 ring-1">
-              <div className="sidebar-user-meta text-[10px] font-medium">{school?.academicYear}</div>
-            </div>
-          </div>
-        )}
       </aside>
     </>
   );

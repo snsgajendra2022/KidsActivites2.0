@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import * as L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import PlaceSearchInput from './PlaceSearchInput.jsx';
+import { collectMapLatLngs } from '../../utils/transportRouteGeo.js';
+import {
+  bearingDegrees,
+  geoJsonToLatLngs,
+} from '../../services/geocoding/roadRouting.js';
 
 const STATUS_COLORS = {
   running: '#0B6E4F',
@@ -9,27 +15,116 @@ const STATUS_COLORS = {
   offline: '#667085',
 };
 
-function createBusElement(status = 'running') {
-  const el = document.createElement('div');
-  el.className = 'live-bus-marker';
-  el.style.width = '28px';
-  el.style.height = '28px';
-  el.style.borderRadius = '999px';
-  el.style.border = '2px solid #fff';
-  el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
-  el.style.background = STATUS_COLORS[status] || STATUS_COLORS.running;
-  el.style.display = 'grid';
-  el.style.placeItems = 'center';
-  el.style.color = '#fff';
-  el.style.fontSize = '12px';
-  el.style.fontWeight = '700';
-  el.textContent = 'B';
-  return el;
+const FALLBACK_CENTER = [22.9734, 78.6569];
+const FALLBACK_ZOOM = 5;
+const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+function createBusIcon(status = 'running', selected = false) {
+  const color = STATUS_COLORS[status] || STATUS_COLORS.running;
+  return L.divIcon({
+    className: 'live-bus-marker',
+    html: `<div style="
+      width:28px;height:28px;border-radius:999px;border:2px solid #fff;
+      box-shadow:0 2px 8px rgba(0,0,0,0.25);background:${color};
+      display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;
+      outline:${selected ? '3px solid #0058be' : 'none'};
+    ">B</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
+
+function createStopIcon(stopType, sequence) {
+  const color = stopType === 'school' ? '#0058be' : '#111827';
+  const label = sequence != null ? String(sequence) : '';
+  return L.divIcon({
+    className: 'live-stop-marker',
+    html: `<div style="
+      min-width:${label ? 22 : 12}px;height:${label ? 22 : 12}px;padding:0 ${label ? 5 : 0}px;
+      border-radius:999px;background:${color};color:#fff;font-size:11px;font-weight:700;
+      display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);
+    ">${label}</div>`,
+    iconSize: [label ? 22 : 12, label ? 22 : 12],
+    iconAnchor: [label ? 11 : 6, label ? 11 : 6],
+  });
+}
+
+function createArrowIcon(bearing) {
+  return L.divIcon({
+    className: 'route-dir-arrow',
+    html: `<div style="
+      width:18px;height:18px;display:grid;place-items:center;
+      transform:rotate(${bearing}deg);
+      filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));
+    "><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      <path d="M7 1 L12 11 L7 8.5 L2 11 Z" fill="#0058be" stroke="#fff" stroke-width="1"/>
+    </svg></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+}
+
+function fitMapToPoints(map, points, { maxZoom = 15 } = {}) {
+  if (!map || !points?.length) return false;
+  if (points.length === 1) {
+    map.setView(points[0], Math.min(14, maxZoom));
+    return true;
+  }
+  map.fitBounds(points, { padding: [48, 48], maxZoom });
+  return true;
+}
+
+function addRoadRouteLayers(map, geoJson) {
+  const group = L.layerGroup();
+  const latlngs = geoJsonToLatLngs(geoJson);
+  if (latlngs.length < 2) {
+    if (geoJson) {
+      L.geoJSON(geoJson, {
+        style: { color: '#0058be', weight: 5, opacity: 0.9 },
+      }).addTo(group);
+    }
+    return group;
+  }
+
+  // Road casing + fill so the path reads like a road line on the map.
+  L.polyline(latlngs, {
+    color: '#0b1c30',
+    weight: 8,
+    opacity: 0.35,
+    lineJoin: 'round',
+    lineCap: 'round',
+    interactive: false,
+  }).addTo(group);
+
+  L.polyline(latlngs, {
+    color: '#0058be',
+    weight: 5,
+    opacity: 0.95,
+    lineJoin: 'round',
+    lineCap: 'round',
+  }).addTo(group);
+
+  // Direction arrows along the driving path.
+  const step = Math.max(8, Math.floor(latlngs.length / 10));
+  for (let i = 0; i < latlngs.length - 1; i += step) {
+    const [lat1, lng1] = latlngs[i];
+    const [lat2, lng2] = latlngs[Math.min(i + 1, latlngs.length - 1)];
+    const mid = [(lat1 + lat2) / 2, (lng1 + lng2) / 2];
+    const bearing = bearingDegrees(lat1, lng1, lat2, lng2);
+    L.marker(mid, {
+      icon: createArrowIcon(bearing),
+      interactive: false,
+      keyboard: false,
+    }).addTo(group);
+  }
+
+  return group;
 }
 
 /**
- * Production Mapbox live fleet map.
- * Requires VITE_MAPBOX_TOKEN. Does not invent coordinates.
+ * Free live fleet map (Leaflet + OSM).
+ * Route lines prefer on-road driving geometry with travel direction.
  */
 export default function LiveBusMap({
   vehicles = [],
@@ -38,57 +133,77 @@ export default function LiveBusMap({
   stopFeatures = [],
   onSelectVehicle,
   className = '',
+  fitToken = '',
+  defaultCenter = null,
+  searchBias = null,
+  emptyTitle = 'No map locations yet',
+  emptyHint = 'Select a route with mapped stops, or wait for live GPS from a bus.',
+  showSearch = true,
+  routingLabel = '',
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
+  const layerRef = useRef(null);
   const markersRef = useRef(new Map());
-  const token = import.meta.env.VITE_MAPBOX_TOKEN;
+  const routeLayerRef = useRef(null);
+  const lastFitTokenRef = useRef('');
+  const defaultCenterRef = useRef(defaultCenter);
+  defaultCenterRef.current = defaultCenter;
 
   useEffect(() => {
-    if (!token || !containerRef.current || mapRef.current) return undefined;
+    if (!containerRef.current || mapRef.current) return undefined;
 
-    mapboxgl.accessToken = token;
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [77.4126, 23.2599],
-      zoom: 11,
+    const map = L.map(containerRef.current, {
+      center: FALLBACK_CENTER,
+      zoom: FALLBACK_ZOOM,
+      zoomControl: true,
     });
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: false }), 'top-right');
+
+    L.tileLayer(OSM_TILE_URL, {
+      attribution: OSM_ATTRIBUTION,
+      maxZoom: 19,
+    }).addTo(map);
+
+    layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
-    const markers = markersRef.current;
 
-    map.on('load', () => {
-      if (routeGeoJson) {
-        map.addSource('bus-route', { type: 'geojson', data: routeGeoJson });
-        map.addLayer({
-          id: 'bus-route-line',
-          type: 'line',
-          source: 'bus-route',
-          paint: {
-            'line-color': '#0058be',
-            'line-width': 4,
-            'line-opacity': 0.85,
-          },
-        });
-      }
-    });
+    const resize = () => map.invalidateSize();
+    requestAnimationFrame(resize);
+    const timer = setTimeout(resize, 200);
+    window.addEventListener('resize', resize);
 
     return () => {
-      markers.forEach((marker) => marker.remove());
-      markers.clear();
+      clearTimeout(timer);
+      window.removeEventListener('resize', resize);
+      markersRef.current.clear();
       map.remove();
       mapRef.current = null;
+      layerRef.current = null;
+      routeLayerRef.current = null;
+      lastFitTokenRef.current = '';
     };
-  }, [token, routeGeoJson]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !token) return;
+    if (!map) return;
+
+    if (routeLayerRef.current) {
+      map.removeLayer(routeLayerRef.current);
+      routeLayerRef.current = null;
+    }
+
+    if (routeGeoJson) {
+      routeLayerRef.current = addRoadRouteLayers(map, routeGeoJson).addTo(map);
+    }
+  }, [routeGeoJson]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = layerRef.current;
+    if (!map || !layer) return;
 
     const seen = new Set();
-    const bounds = new mapboxgl.LngLatBounds();
-    let hasPoint = false;
 
     vehicles.forEach((vehicle) => {
       const id = String(vehicle.vehicle_id || vehicle.vehicleId || vehicle.id);
@@ -97,78 +212,149 @@ export default function LiveBusMap({
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
       seen.add(id);
-      hasPoint = true;
-      bounds.extend([lng, lat]);
+      const selected = selectedVehicleId && String(selectedVehicleId) === id;
+      const status = vehicle.tracking_status || vehicle.status;
+      const icon = createBusIcon(status, selected);
 
       let marker = markersRef.current.get(id);
       if (!marker) {
-        const el = createBusElement(vehicle.tracking_status || vehicle.status);
-        el.addEventListener('click', () => onSelectVehicle?.(vehicle));
-        marker = new mapboxgl.Marker({ element: el, rotationAlignment: 'map' })
-          .setLngLat([lng, lat])
-          .addTo(map);
+        marker = L.marker([lat, lng], { icon })
+          .addTo(layer)
+          .on('click', () => onSelectVehicle?.(vehicle));
         markersRef.current.set(id, marker);
       } else {
-        const el = marker.getElement();
-        el.style.background = STATUS_COLORS[vehicle.tracking_status || vehicle.status] || STATUS_COLORS.running;
-        el.style.outline = selectedVehicleId && String(selectedVehicleId) === id
-          ? '3px solid #0058be'
-          : 'none';
-        const current = marker.getLngLat();
-        // Smooth ease to latest GPS point (real updates only)
-        marker.setLngLat([lng, lat]);
-        if (vehicle.heading != null) {
-          el.style.transform += ''; // rotation handled via CSS if needed
-          marker.setRotation(Number(vehicle.heading) || 0);
-        }
-        void current;
+        marker.setLatLng([lat, lng]);
+        marker.setIcon(icon);
+      }
+
+      if (vehicle.heading != null && Number.isFinite(Number(vehicle.heading))) {
+        const el = marker.getElement()?.querySelector('div');
+        if (el) el.style.transform = `rotate(${Number(vehicle.heading)}deg)`;
       }
     });
 
     stopFeatures.forEach((stop) => {
       const id = `stop-${stop.id}`;
-      if (markersRef.current.has(id)) return;
-      if (!Number.isFinite(stop.longitude) || !Number.isFinite(stop.latitude)) return;
-      const el = document.createElement('div');
-      el.style.width = '10px';
-      el.style.height = '10px';
-      el.style.borderRadius = '999px';
-      el.style.background = stop.stop_type === 'school' ? '#0058be' : '#111827';
-      el.style.border = '2px solid #fff';
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([stop.longitude, stop.latitude])
-        .setPopup(new mapboxgl.Popup({ offset: 12 }).setText(stop.name || 'Stop'))
-        .addTo(map);
-      markersRef.current.set(id, marker);
-      bounds.extend([stop.longitude, stop.latitude]);
-      hasPoint = true;
+      if (!Number.isFinite(stop.latitude) || !Number.isFinite(stop.longitude)) return;
+      seen.add(id);
+
+      let marker = markersRef.current.get(id);
+      if (!marker) {
+        marker = L.marker([stop.latitude, stop.longitude], {
+          icon: createStopIcon(stop.stop_type, stop.sequence),
+        })
+          .bindPopup(stop.name || 'Stop')
+          .addTo(layer);
+        markersRef.current.set(id, marker);
+      } else {
+        marker.setLatLng([stop.latitude, stop.longitude]);
+        marker.setIcon(createStopIcon(stop.stop_type, stop.sequence));
+        marker.setPopupContent(stop.name || 'Stop');
+      }
     });
 
-    // Remove stale vehicle markers
     markersRef.current.forEach((marker, id) => {
-      if (id.startsWith('stop-')) return;
       if (!seen.has(id)) {
-        marker.remove();
+        layer.removeLayer(marker);
         markersRef.current.delete(id);
       }
     });
 
-    if (hasPoint && !map.__didFit) {
-      map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 600 });
-      map.__didFit = true;
+    const points = collectMapLatLngs({
+      stops: stopFeatures,
+      vehicles,
+      geoJson: routeGeoJson,
+    });
+
+    const token = String(fitToken || '');
+    const shouldRefit = token !== lastFitTokenRef.current;
+    if (shouldRefit) {
+      lastFitTokenRef.current = token;
+      if (points.length) {
+        fitMapToPoints(map, points);
+      } else {
+        const center = defaultCenterRef.current;
+        if (Array.isArray(center) && Number.isFinite(center[0]) && Number.isFinite(center[1])) {
+          map.setView(center, 12);
+        } else {
+          map.setView(FALLBACK_CENTER, FALLBACK_ZOOM);
+        }
+      }
+    } else if (selectedVehicleId) {
+      const selected = vehicles.find(
+        (vehicle) => String(vehicle.vehicle_id || vehicle.vehicleId) === String(selectedVehicleId),
+      );
+      const lat = Number(selected?.latitude ?? selected?.lat);
+      const lng = Number(selected?.longitude ?? selected?.lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        map.panTo([lat, lng], { animate: true });
+      }
     }
-  }, [vehicles, selectedVehicleId, stopFeatures, onSelectVehicle, token]);
 
-  if (!token) {
-    return (
-      <div className={`grid place-items-center rounded-xl border border-dashed border-[#c5d0e0] bg-[#f7f9fc] p-8 text-center text-sm text-[#667085] ${className}`}>
-        <p className="font-semibold text-[#0b1c30]">Mapbox token required</p>
-        <p className="mt-2 max-w-md">
-          Set <code>VITE_MAPBOX_TOKEN</code> to render the live fleet map. Tracking APIs and WebSocket updates still work without the map canvas.
-        </p>
-      </div>
-    );
-  }
+    requestAnimationFrame(() => map.invalidateSize());
+  }, [
+    vehicles,
+    selectedVehicleId,
+    stopFeatures,
+    routeGeoJson,
+    onSelectVehicle,
+    fitToken,
+  ]);
 
-  return <div ref={containerRef} className={`min-h-[420px] w-full overflow-hidden rounded-xl ${className}`} />;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !Array.isArray(defaultCenter)) return;
+    const points = collectMapLatLngs({
+      stops: stopFeatures,
+      vehicles,
+      geoJson: routeGeoJson,
+    });
+    if (points.length) return;
+    map.setView(defaultCenter, 12);
+  }, [defaultCenter, stopFeatures, vehicles, routeGeoJson]);
+
+  const hasPoints = collectMapLatLngs({
+    stops: stopFeatures,
+    vehicles,
+    geoJson: routeGeoJson,
+  }).length > 0;
+
+  return (
+    <div className={`relative overflow-hidden rounded-xl ${className}`}>
+      {showSearch && (
+        <div className="absolute left-3 right-3 top-3 z-[500] max-w-md">
+          <div className="rounded-xl border border-[#d0d5dd] bg-white/95 p-2 shadow-md backdrop-blur">
+            <PlaceSearchInput
+              label=""
+              placeholder="Search area to move the map…"
+              latitude={searchBias?.lat}
+              longitude={searchBias?.lng}
+              onSelect={(place) => {
+                const map = mapRef.current;
+                if (!map) return;
+                map.setView([place.latitude, place.longitude], 15);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {routingLabel ? (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-[450] rounded-lg border border-[#d0d5dd] bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#0b1c30] shadow-md">
+          {routingLabel}
+        </div>
+      ) : null}
+
+      <div ref={containerRef} className="h-full min-h-[420px] w-full" />
+
+      {!hasPoints && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[400] p-4">
+          <div className="rounded-xl border border-[#d0d5dd] bg-white/95 px-4 py-3 shadow-md">
+            <p className="text-sm font-semibold text-[#0b1c30]">{emptyTitle}</p>
+            <p className="mt-1 text-xs text-[#667085]">{emptyHint}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

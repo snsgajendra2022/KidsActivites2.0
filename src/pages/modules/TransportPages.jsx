@@ -1,5 +1,6 @@
 import ModuleCrudPage from '../../components/modules/ModuleCrudPage.jsx';
-import { transportRouteService, transportVehicleService } from '../../services/schoolModules/index.js';
+import TransportRoutesManagePage from './TransportRoutesManagePage.jsx';
+import { transportVehicleService } from '../../services/schoolModules/index.js';
 
 const vehicleColumns = [
   { key: 'vehicleNumber', label: 'Vehicle', primary: true },
@@ -31,32 +32,6 @@ const vehicleFields = [
   },
 ];
 
-const routeColumns = [
-  { key: 'name', label: 'Route', primary: true },
-  { key: 'stops', label: 'Stops' },
-  { key: 'morningStart', label: 'Morning' },
-  { key: 'eveningStart', label: 'Evening' },
-  { key: 'status', label: 'Status', badge: true },
-];
-
-const routeFields = [
-  { key: 'name', label: 'Route Name', required: true },
-  { key: 'stops', label: 'Stops (comma separated)', required: true, fullWidth: true },
-  { key: 'morningStart', label: 'Morning Start', type: 'time', required: true },
-  { key: 'eveningStart', label: 'Evening Start', type: 'time', required: true },
-  {
-    key: 'status',
-    label: 'Status',
-    type: 'select',
-    required: true,
-    defaultValue: 'active',
-    options: [
-      { value: 'active', label: 'Active' },
-      { value: 'inactive', label: 'Inactive' },
-    ],
-  },
-];
-
 export function TransportVehiclesPage() {
   return (
     <ModuleCrudPage
@@ -72,15 +47,5 @@ export function TransportVehiclesPage() {
 }
 
 export function TransportRoutesPage() {
-  return (
-    <ModuleCrudPage
-      title="Transport Routes & Stops"
-      subtitle="Define routes, stops, and trip timings."
-      service={transportRouteService}
-      columns={routeColumns}
-      fields={routeFields}
-      createLabel="Add Route"
-      searchKeys={['name', 'stops', 'status']}
-    />
-  );
+  return <TransportRoutesManagePage />;
 }

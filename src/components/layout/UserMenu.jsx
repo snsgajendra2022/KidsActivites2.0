@@ -41,7 +41,7 @@ export default function UserMenu({ user, onLogout }) {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-[11px] font-bold text-white">
+        <div className="user-menu-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-[11px] font-bold text-white">
           {initials}
         </div>
         <div className="hidden min-w-0 text-left lg:block">

@@ -1,16 +1,17 @@
 /* KidsActivites — layout (portal shell, sidebar, auth split) */
 
-/* App shell — navy sidebar (brand tokens) */
+/* App shell — light sidebar (matches page cards / surface theme) */
 .app-sidebar {
-  background: var(--sb-footer) !important;
-  border-right: 1px solid color-mix(in srgb, var(--sb-purple-soft) 20%, transparent) !important;
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--sb-surface, #ffffff) !important;
+  border-right: 1px solid var(--sb-border, #e2e8f0) !important;
+  color: var(--sb-on-surface, #111827);
 }
 
-/* Sidebar scrollbar — navy thumb (matches app scrollbar) */
+/* Sidebar scrollbar */
 .app-sidebar .sidebar-nav {
   scrollbar-width: thin;
-  scrollbar-color: var(--navy) transparent;
+  scrollbar-color: color-mix(in srgb, var(--sb-navy) 28%, transparent) transparent;
+  overflow-anchor: none;
 }
 
 .app-sidebar .sidebar-nav::-webkit-scrollbar {
@@ -22,61 +23,61 @@
 }
 
 .app-sidebar .sidebar-nav::-webkit-scrollbar-thumb {
-  background: var(--navy);
+  background: color-mix(in srgb, var(--sb-navy) 22%, transparent);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 .app-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--sb-navy) 38%, transparent);
   background-clip: padding-box;
 }
 
 .app-sidebar .sidebar-top {
-  border-bottom-color: color-mix(in srgb, var(--sb-gold) 12%, transparent) !important;
+  border-bottom-color: var(--sb-border, #e2e8f0) !important;
 }
 
 .app-sidebar .font-display,
 .app-sidebar .text-brand {
-  color: #fff !important;
+  color: var(--sb-primary, var(--sb-navy)) !important;
 }
 
 .app-sidebar .sidebar-nav-section {
-  color: color-mix(in srgb, var(--sb-gold) 55%, rgba(255, 255, 255, 0.45)) !important;
+  color: var(--sb-muted, #64748b) !important;
 }
 
 .app-sidebar .sidebar-nav-link {
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--sb-on-surface-variant, #64748b);
 }
 
 .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover {
-  background: color-mix(in srgb, var(--sb-gold) 10%, transparent) !important;
+  background: color-mix(in srgb, var(--sb-navy) 5%, white) !important;
 }
 
 .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) span {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--sb-on-surface, #111827);
 }
 
 .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) svg {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--sb-muted, #64748b);
 }
 
 .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover span,
 .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover svg {
-  color: var(--sb-gold);
+  color: var(--sb-navy);
 }
 
 .app-sidebar .sidebar-nav-link-active,
 .app-sidebar .sidebar-nav-link-active span,
 .app-sidebar .sidebar-nav-link-active svg {
-  color: var(--sb-purple-dark) !important;
+  color: #fff !important;
 }
 
 .app-sidebar .sidebar-nav-link-active {
-  background: linear-gradient(135deg, var(--sb-gold) 0%, color-mix(in srgb, var(--sb-gold) 85%, white) 100%) !important;
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--sb-gold) 35%, transparent);
+  background: var(--sb-navy, #0f172a) !important;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--sb-navy) 22%, transparent);
 }
 
 .sidebar-nav-icon-wrap {
@@ -91,8 +92,8 @@
   height: 1.25rem;
   padding: 0 0.35rem;
   border-radius: 999px;
-  background: var(--sb-gold, #c9a24a);
-  color: var(--sb-footer, #091426);
+  background: var(--sb-gold, #fbbf24);
+  color: var(--sb-navy, #0f172a);
   font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1;
@@ -102,8 +103,8 @@
 }
 
 .sidebar-nav-link-active .sidebar-nav-badge {
-  background: var(--sb-footer, #091426);
-  color: var(--sb-gold, #c9a24a);
+  background: var(--sb-gold, #fbbf24);
+  color: var(--sb-navy, #0f172a);
 }
 
 .sidebar-nav-badge--rail {
@@ -114,64 +115,65 @@
   height: 1rem;
   padding: 0 0.2rem;
   font-size: 0.5625rem;
-  border: 2px solid var(--sb-footer, #091426);
+  border: 2px solid var(--sb-surface, #ffffff);
 }
 
 .app-sidebar .sidebar-collapse-btn {
-  border-color: color-mix(in srgb, var(--sb-purple-soft) 25%, transparent);
-  background: color-mix(in srgb, var(--sb-purple) 15%, var(--sb-footer));
-  color: rgba(255, 255, 255, 0.7);
+  border-color: var(--sb-border, #e2e8f0);
+  background: #fff;
+  color: var(--sb-muted, #64748b);
 }
 
 .app-sidebar .sidebar-collapse-btn:hover {
-  background: color-mix(in srgb, var(--sb-purple) 30%, var(--sb-footer));
-  color: var(--sb-gold);
+  background: color-mix(in srgb, var(--sb-navy) 5%, white);
+  border-color: color-mix(in srgb, var(--sb-navy) 16%, white);
+  color: var(--sb-navy);
 }
 
 .app-sidebar .rounded-xl.bg-brand-muted {
-  background: color-mix(in srgb, var(--sb-gold) 8%, var(--sb-deep-blue)) !important;
-  ring-color: color-mix(in srgb, var(--sb-gold) 15%, transparent);
+  background: color-mix(in srgb, var(--sb-gold) 14%, white) !important;
+  ring-color: color-mix(in srgb, var(--sb-gold) 22%, transparent);
 }
 
 .app-sidebar .rounded-xl.bg-brand-muted .text-brand {
-  color: #fff !important;
+  color: var(--sb-navy) !important;
 }
 
 .app-sidebar .sidebar-brand-title {
-  color: #fff;
+  color: var(--sb-navy, #0f172a);
 }
 
 .app-sidebar .sidebar-brand-subtitle {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--sb-muted, #64748b);
 }
 
 .app-sidebar .sidebar-user-card {
-  background: color-mix(in srgb, var(--sb-purple) 15%, var(--sb-footer));
-  --tw-ring-color: color-mix(in srgb, var(--sb-purple-soft) 20%, transparent);
+  background: color-mix(in srgb, var(--sb-navy) 3%, white);
+  --tw-ring-color: var(--sb-border, #e2e8f0);
 }
 
 .app-sidebar .sidebar-user-name {
-  color: #fff;
+  color: var(--sb-on-surface, #111827);
 }
 
 .app-sidebar .sidebar-user-role {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--sb-muted, #64748b);
 }
 
 .app-sidebar .sidebar-user-meta {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--sb-muted, #64748b);
 }
 
 .sidebar-mobile-backdrop {
-  background: color-mix(in srgb, var(--sb-footer) 30%, transparent);
+  background: color-mix(in srgb, var(--sb-navy) 35%, transparent);
 }
 
 .app-header {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(251, 248, 241, 0.92);
-  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, white 92%, transparent);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--sb-border);
 }
 
@@ -451,12 +453,8 @@
 
 /* Authenticated portal shell — Kids Landing navy/yellow (all roles) */
 .portal-shell {
-  --admin-sidebar-bg: linear-gradient(
-    180deg,
-    var(--admin-purple-deep) 0%,
-    var(--admin-purple-mid) 48%,
-    var(--admin-purple-light) 100%
-  );
+  --admin-sidebar-bg: #ffffff;
+  --admin-chrome-bg: #ffffff;
   --admin-page-bg:
     radial-gradient(circle at 8% 12%, rgba(254, 249, 195, 0.48), transparent 36%),
     radial-gradient(circle at 94% 6%, rgba(224, 242, 254, 0.45), transparent 34%),
@@ -481,58 +479,55 @@
 }
 
 .portal-shell .app-header {
-  background: linear-gradient(
-    90deg,
-    var(--admin-purple-deep) 0%,
-    var(--admin-purple-mid) 55%,
-    var(--admin-purple-light) 100%
-  );
-  border-bottom: 1px solid color-mix(in srgb, white 12%, var(--admin-purple-deep));
-  color: #fff;
+  background: color-mix(in srgb, white 94%, transparent);
+  border-bottom: 1px solid var(--sb-border, #e2e8f0);
+  color: var(--sb-on-surface, #111827);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--sb-navy) 2%, transparent);
 }
 
 .portal-shell .app-header .font-display,
 .portal-shell .app-header .text-brand {
-  color: #fff !important;
+  color: var(--sb-primary, var(--sb-navy)) !important;
 }
 
 .portal-shell .app-header .text-muted,
 .portal-shell .app-header input::placeholder {
-  color: rgba(255, 255, 255, 0.55) !important;
+  color: var(--sb-muted, #64748b) !important;
 }
 
 .portal-shell .app-header input[type='search'] {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  color: #fff !important;
+  background: var(--sb-surface, #ffffff) !important;
+  border-color: var(--sb-border, #e2e8f0) !important;
+  color: var(--sb-on-surface, #111827) !important;
 }
 
 .portal-shell .app-header input[type='search']:focus {
-  background: rgba(255, 255, 255, 0.18) !important;
-  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: #fff !important;
+  border-color: color-mix(in srgb, var(--sb-gold) 45%, var(--sb-border)) !important;
 }
 
 .portal-shell .app-header .rounded-full.border {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  color: rgba(255, 255, 255, 0.85) !important;
+  background: var(--sb-surface, #ffffff) !important;
+  border-color: var(--sb-border, #e2e8f0) !important;
+  color: var(--sb-muted, #64748b) !important;
 }
 
 .portal-shell .app-header > div > button,
 .portal-shell .app-header .user-menu-trigger,
 .portal-shell .app-header .notif-bell-btn {
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  border-color: var(--sb-border, #e2e8f0) !important;
+  background: #fff !important;
+  color: var(--sb-on-surface-variant, #64748b) !important;
 }
 
 .portal-shell .app-header > div > button:hover,
 .portal-shell .app-header .user-menu-trigger:hover,
 .portal-shell .app-header .notif-bell-btn:hover {
-  background: rgba(255, 255, 255, 0.18) !important;
+  background: color-mix(in srgb, var(--sb-gold) 12%, white) !important;
+  color: var(--sb-navy) !important;
 }
 
-/* Header dropdowns — dark text on white panel (not inherited from navy header) */
+/* Header dropdowns — dark text on white panel */
 .portal-shell .app-header .user-menu-dropdown,
 .portal-shell .app-header .notif-dropdown-panel {
   color: var(--admin-purple-deep);
@@ -575,7 +570,7 @@
 }
 
 .portal-shell .app-header .notif-dropdown-item:hover {
-  background: var(--admin-purple-surface) !important;
+  background: color-mix(in srgb, var(--sb-navy) 4%, white) !important;
 }
 
 .portal-shell .app-header .user-menu-dropdown button.text-rose-600 {
@@ -586,33 +581,36 @@
   background: #fff1f2 !important;
 }
 
-.portal-shell .app-header .text-brand {
+.portal-shell .app-header .bg-brand {
+  background: var(--sb-navy, #0f172a) !important;
   color: #fff !important;
 }
 
-.portal-shell .app-header .bg-brand {
-  background: rgba(255, 255, 255, 0.22) !important;
+.portal-shell .app-header .user-menu-avatar {
+  background: var(--sb-navy, #0f172a) !important;
+  color: #fff !important;
 }
 
 .portal-shell .app-header .notif-bell-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: #fff;
+  border-color: var(--sb-border, #e2e8f0);
+  color: var(--sb-on-surface-variant, #64748b);
 }
 
 .portal-shell .app-header .notif-bell-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: color-mix(in srgb, var(--sb-gold) 12%, white);
+  color: var(--sb-navy);
 }
 
 .portal-shell .app-sidebar {
   background: var(--admin-sidebar-bg) !important;
-  border-right: 1px solid color-mix(in srgb, white 10%, var(--admin-purple-deep)) !important;
-  color: rgba(255, 255, 255, 0.88);
-  box-shadow: 4px 0 28px color-mix(in srgb, var(--admin-purple-deep) 35%, transparent);
+  border-right: 1px solid var(--sb-border, #e2e8f0) !important;
+  color: var(--sb-on-surface, #111827);
+  box-shadow: 1px 0 0 color-mix(in srgb, var(--sb-navy) 3%, transparent);
 }
 
 .portal-shell .app-sidebar .sidebar-top {
-  border-bottom-color: color-mix(in srgb, white 12%, var(--admin-purple-deep)) !important;
+  border-bottom-color: var(--sb-border, #e2e8f0) !important;
 }
 
 .portal-shell .app-sidebar .sidebar-logo-wrap,
@@ -623,13 +621,11 @@
   min-width: 2.5rem;
   min-height: 2.5rem;
   max-width: 9rem;
-  padding: 0.35rem 0.5rem;
+  padding: 0.25rem 0.4rem;
   border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow:
-    0 2px 12px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .portal-shell .app-sidebar .sidebar-logo-wrap img,
@@ -706,17 +702,17 @@
   height: 2rem;
   padding: 0;
   border-radius: 0.625rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--sb-border, #e2e8f0);
+  background: #fff;
+  color: var(--sb-muted, #64748b);
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .portal-shell .app-sidebar .sidebar-expand-btn:hover,
 .portal-shell .app-sidebar .sidebar-collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.24);
-  color: var(--sb-gold);
+  background: color-mix(in srgb, var(--sb-navy) 5%, white);
+  border-color: color-mix(in srgb, var(--sb-navy) 16%, white);
+  color: var(--sb-navy);
 }
 
 .portal-shell .app-sidebar .sidebar-mobile-close-btn {
@@ -725,12 +721,12 @@
   width: 2rem;
   height: 2rem;
   border-radius: 0.625rem;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--sb-muted, #64748b);
 }
 
 .portal-shell .app-sidebar .sidebar-mobile-close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: color-mix(in srgb, var(--sb-navy) 5%, white);
+  color: var(--sb-navy);
 }
 
 .portal-shell .app-sidebar .sidebar-logo-link--collapsed {
@@ -771,7 +767,7 @@
   max-width: 2.5rem;
   padding: 0.25rem;
   border-radius: 0.75rem;
-  background: linear-gradient(145deg, #ffffff 0%, #f0ebf6 100%);
+  background: color-mix(in srgb, var(--sb-gold) 16%, white);
   color: var(--admin-purple-deep);
   font-size: 0.625rem;
   font-weight: 800;
@@ -779,9 +775,8 @@
   line-height: 1.15;
   text-align: center;
   word-break: break-word;
-  box-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--sb-gold) 28%, var(--sb-border));
 }
 
 .portal-shell .app-sidebar .portal-logo-sidebar-mark {
@@ -791,11 +786,9 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow:
-    0 2px 12px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  background: transparent;
+  border: none;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -853,11 +846,11 @@
   height: 2.5rem !important;
   padding: 0 !important;
   border-radius: 0.75rem !important;
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--sb-gold) 38%, transparent) !important;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--sb-navy) 22%, transparent) !important;
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link--rail:not(.sidebar-nav-link-active):hover {
-  background: rgba(255, 255, 255, 0.09) !important;
+  background: color-mix(in srgb, var(--sb-navy) 5%, white) !important;
   border-radius: 0.75rem;
 }
 
@@ -869,89 +862,88 @@
 .portal-shell .app-sidebar .font-display,
 .portal-shell .app-sidebar .text-brand,
 .portal-shell .app-sidebar .sidebar-brand-title {
-  color: #fff !important;
+  color: var(--sb-navy, #0f172a) !important;
 }
 
 .portal-shell .app-sidebar .sidebar-brand-subtitle {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--sb-muted, #64748b);
 }
 
 .portal-shell .app-sidebar .sidebar-user-card {
-  background: rgba(255, 255, 255, 0.1) !important;
-  --tw-ring-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--sb-navy) 3%, white) !important;
+  --tw-ring-color: var(--sb-border, #e2e8f0);
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .portal-shell .app-sidebar .sidebar-user-name {
-  color: #fff;
+  color: var(--sb-on-surface, #111827);
 }
 
 .portal-shell .app-sidebar .sidebar-user-role {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--sb-muted, #64748b);
 }
 
 .portal-shell .app-sidebar .sidebar-user-meta {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--sb-muted, #64748b);
 }
 
 .portal-shell .sidebar-mobile-backdrop {
-  background: color-mix(in srgb, var(--admin-purple-deep) 55%, transparent);
+  background: color-mix(in srgb, var(--admin-purple-deep) 40%, transparent);
 }
 
 .portal-shell .app-sidebar .sidebar-nav-section {
-  color: color-mix(in srgb, var(--sb-gold) 50%, rgba(255, 255, 255, 0.5)) !important;
+  color: var(--sb-muted, #64748b) !important;
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) {
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--sb-on-surface-variant, #64748b);
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) span {
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--sb-on-surface, #111827);
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) svg {
-  color: rgba(255, 255, 255, 0.58);
+  color: var(--sb-muted, #64748b);
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: color-mix(in srgb, var(--sb-navy) 5%, white) !important;
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover span,
 .portal-shell .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active):hover svg {
-  color: var(--sb-gold);
+  color: var(--sb-navy);
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link-active {
-  background: linear-gradient(
-    135deg,
-    var(--sb-gold) 0%,
-    color-mix(in srgb, var(--sb-gold) 85%, white) 100%
-  ) !important;
-  box-shadow: 0 2px 14px color-mix(in srgb, var(--sb-gold) 35%, transparent);
+  background: var(--sb-navy, #0f172a) !important;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--sb-navy) 22%, transparent);
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link-active,
 .portal-shell .app-sidebar .sidebar-nav-link-active span,
 .portal-shell .app-sidebar .sidebar-nav-link-active svg {
-  color: var(--admin-purple-deep) !important;
+  color: #fff !important;
 }
 
 .portal-shell .app-sidebar .sidebar-collapse-btn {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.75);
+  border-color: var(--sb-border, #e2e8f0);
+  background: #fff;
+  color: var(--sb-muted, #64748b);
 }
 
 .portal-shell .app-sidebar .sidebar-collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--sb-gold);
+  background: color-mix(in srgb, var(--sb-navy) 5%, white);
+  color: var(--sb-navy);
 }
 
 .portal-shell .premium-page-title,
 .portal-shell .sb-page-title {
+  font-family: 'Fredoka', var(--sb-font-heading), sans-serif !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
   color: var(--admin-purple-deep) !important;
 }
 

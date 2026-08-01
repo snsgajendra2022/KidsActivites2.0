@@ -10,7 +10,7 @@ The frontend is already prepared to consume real tracking data:
 |--------------------|------|
 | Admin live fleet page | `src/pages/modules/TransportLiveTrackingPage.jsx` |
 | Parent assigned-bus page | `src/pages/modules/ParentTransportTrackingPage.jsx` |
-| Mapbox live map | `src/components/transport/LiveBusMap.jsx` |
+| Free OSM live map (Leaflet) | `src/components/transport/LiveBusMap.jsx` |
 | Tracking HTTP client | `src/services/transportTracking/trackingApi.js` |
 | Tracking WebSocket client | `src/services/transportTracking/trackingSocket.js` |
 | Driver Expo location publisher | `mobile/src/services/transport/driverLocationPublisher.ts` |
@@ -286,8 +286,9 @@ Tracking uses the same Spring Boot host as the rest of the app:
 
 ```bash
 VITE_API_URL=https://your-spring-boot-host/api/v1
-VITE_MAPBOX_TOKEN=pk....
 ```
+
+The live map uses free OpenStreetMap tiles via Leaflet. No Mapbox token is required.
 
 Do **not** configure a separate tracking API URL. The frontend calls:
 

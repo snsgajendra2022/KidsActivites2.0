@@ -148,9 +148,9 @@ a.premium-btn-white:hover {
 
 .sb-page-title {
   margin: 0;
-  font-family: var(--sb-font-heading);
-  font-style: italic;
-  font-weight: 400;
+  font-family: 'Fredoka', var(--sb-font-heading), sans-serif;
+  font-style: normal;
+  font-weight: 700;
   font-size: 1.75rem;
   letter-spacing: -0.02em;
   color: var(--sb-purple-dark);

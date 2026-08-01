@@ -46,6 +46,41 @@ export function sortNavItemsByOrder(items, orderIds = []) {
   });
 }
 
+/**
+ * Group items so each section header appears once.
+ * Leading items without a section stay first (e.g. Dashboard).
+ */
+export function coalesceNavBySection(items = []) {
+  if (!items.length) return items;
+
+  const leading = [];
+  const sectionOrder = [];
+  const buckets = new Map();
+  const trailing = [];
+  let seenSection = false;
+
+  for (const item of items) {
+    const section = String(item?.section || '').trim();
+    if (!section) {
+      if (!seenSection) leading.push(item);
+      else trailing.push(item);
+      continue;
+    }
+    seenSection = true;
+    if (!buckets.has(section)) {
+      sectionOrder.push(section);
+      buckets.set(section, []);
+    }
+    buckets.get(section).push(item);
+  }
+
+  return [
+    ...leading,
+    ...sectionOrder.flatMap((section) => buckets.get(section) || []),
+    ...trailing,
+  ];
+}
+
 function navPathKey(to) {
   if (!to) return '';
   // Ignore tenant prefix and trailing slash so /s/demo/parent/photos ≡ /parent/photos
@@ -74,9 +109,9 @@ export function mergeMissingBuiltinNavItems(apiItems, role, config = {}) {
     if (pathKey && seenPaths.has(pathKey)) return false;
     return true;
   });
-  if (!missing.length) return dedupedApiItems;
+  if (!missing.length) return coalesceNavBySection(dedupedApiItems);
   const orderIds = resolveMenuOrderForRole(role, config.menuOrder, config.customMenuItems);
-  return sortNavItemsByOrder([...dedupedApiItems, ...missing], orderIds);
+  return coalesceNavBySection(sortNavItemsByOrder([...dedupedApiItems, ...missing], orderIds));
 }
 
 /**
@@ -131,11 +166,12 @@ export function resolveNavItemsForRole(role, config = {}) {
       to: item.to,
       label: item.label,
       icon: resolveMenuIcon(item.icon),
+      section: item.section || 'More',
       custom: true,
     }));
 
   const orderIds = resolveMenuOrderForRole(role, menuOrder, customMenuItems);
-  return sortNavItemsByOrder([...resolvedBase, ...resolvedCustom], orderIds);
+  return coalesceNavBySection(sortNavItemsByOrder([...resolvedBase, ...resolvedCustom], orderIds));
 }
 
 /** @deprecated use resolveNavItemsForRole */
