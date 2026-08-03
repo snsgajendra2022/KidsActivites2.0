@@ -12,6 +12,7 @@ export { default as PremiumCard } from './PremiumCard.jsx';
 export { default as DashboardCard } from './DashboardCard.jsx';
 export { default as FormPanel } from './FormPanel.jsx';
 export { default as PageHeader } from './PageHeader.jsx';
+export { default as SearchField } from './SearchField.jsx';
 export { default as WorkspaceUrlPreview } from './WorkspaceUrlPreview.jsx';
 
 export function Stepper({ currentStep }) {

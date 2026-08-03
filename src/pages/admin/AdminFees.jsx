@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, CreditCard } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
-import { PageHeader, EmptyState } from '../../components/ui/index.jsx';
+import { PageHeader, EmptyState, SearchField } from '../../components/ui/index.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import Select from '../../components/ui/Select.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -208,15 +208,13 @@ export default function AdminFees() {
       <PageHeader title="Fees" subtitle="Manage fee assignments, payment verification, and receipts." />
 
       <div className="mb-5 flex flex-wrap gap-3">
-        <div className="relative min-w-[200px] flex-1">
-          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#45474c]" />
-          <input
-            className="input-premium h-11 w-full rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] pl-10 pr-4 text-sm outline-none focus:border-[#0058be] focus:shadow-[0_0_0_4px_rgba(0,88,190,0.1)]"
-            placeholder="Search by student, application no., or transaction ID…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <SearchField
+          className="min-w-[200px] flex-1"
+          maxWidthClass=""
+          placeholder="Search by student, application no., or transaction ID…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
         <Select
           options={FEE_STATUS_OPTIONS}
           placeholder="Filter by status"

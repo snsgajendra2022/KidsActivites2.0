@@ -125,7 +125,11 @@ a.sb-link-btn--light:hover { color: var(--sb-navy) !important; }
   width: 100%;
   border: 1px solid var(--sb-border);
   border-radius: var(--sb-radius);
-  padding: 0.75rem 1rem;
+  /* Longhand so utilities / .with-leading-icon can override one side */
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
   font-size: 0.875rem;
   background: #fff;
   color: var(--sb-on-surface);
@@ -137,6 +141,44 @@ a.sb-link-btn--light:hover { color: var(--sb-navy) !important; }
   outline: none;
   border-color: var(--sb-gold);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sb-gold) 20%, transparent);
+}
+
+/* Leading-icon search fields use flex layout in SearchField.jsx.
+   Keep padding helpers for any remaining absolute-icon inputs. */
+.with-leading-icon,
+.input-premium.with-leading-icon {
+  padding-left: 3rem !important;
+  padding-right: 1rem;
+}
+
+.search-field__input {
+  /* Reset premium input padding — field chrome lives on the wrapper */
+  padding: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  height: auto !important;
+  width: 100%;
+}
+
+.search-field input[type='search'],
+.with-leading-icon[type='search'],
+.app-header input[type='search'] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-field input[type='search']::-webkit-search-decoration,
+.search-field input[type='search']::-webkit-search-cancel-button,
+.search-field input[type='search']::-webkit-search-results-button,
+.search-field input[type='search']::-webkit-search-results-decoration,
+.with-leading-icon[type='search']::-webkit-search-decoration,
+.with-leading-icon[type='search']::-webkit-search-cancel-button,
+.app-header input[type='search']::-webkit-search-decoration,
+.app-header input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }
 
 .field-group:focus-within .field-label {

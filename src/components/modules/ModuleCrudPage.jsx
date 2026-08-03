@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import DashboardLayout from '../layout/DashboardLayout.jsx';
 import AppLayout from '../layout/AppLayout.jsx';
 import PageTransition from '../ui/PageTransition.jsx';
-import { EmptyState, LoadingState, PageHeader } from '../ui/index.jsx';
+import { EmptyState, LoadingState, PageHeader, SearchField } from '../ui/index.jsx';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
 import Select from '../ui/Select.jsx';
@@ -417,15 +417,11 @@ export default function ModuleCrudPage({
         />
 
         <div className="mb-4">
-          <div className="relative max-w-md">
-            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#667085]" />
-            <input
-              className="input-premium h-11 w-full rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] pl-10 pr-4 text-sm outline-none focus:border-[#0058be]"
-              placeholder="Search records…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
+          <SearchField
+            placeholder="Search records…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
         </div>
 
         {loading ? (

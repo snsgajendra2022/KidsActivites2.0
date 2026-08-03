@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bus, MapPin, Plus, Search, Trash2, UserRound } from 'lucide-react';
+import { Bus, MapPin, Plus, Trash2, UserRound } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
-import { EmptyState, LoadingState, PageHeader } from '../../components/ui/index.jsx';
+import { EmptyState, LoadingState, PageHeader, SearchField } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Input from '../../components/ui/Input.jsx';
 import Select from '../../components/ui/Select.jsx';
@@ -76,17 +76,28 @@ export default function TransportAssignmentsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [assignments, routeList, vehicleList] = await Promise.all([
-        transportAssignmentService.list(),
-        transportRouteService.list().catch(() => []),
-        transportVehicleService.list().catch(() => []),
+      const [assignmentsResult, routeList, vehicleList] = await Promise.all([
+        transportAssignmentService.list().catch((err) => {
+          toast(err?.message || 'Unable to load transport assignments.', 'error');
+          return [];
+        }),
+        transportRouteService.list().catch((err) => {
+          toast(err?.message || 'Unable to load routes.', 'warning');
+          return [];
+        }),
+        transportVehicleService.list().catch((err) => {
+          toast(err?.message || 'Unable to load vehicles.', 'warning');
+          return [];
+        }),
       ]);
-      setItems(Array.isArray(assignments) ? assignments : []);
+      setItems(Array.isArray(assignmentsResult) ? assignmentsResult : []);
       setRoutes(Array.isArray(routeList) ? routeList : []);
       setVehicles(Array.isArray(vehicleList) ? vehicleList : []);
     } catch (err) {
-      toast(err?.message || 'Unable to load transport assignments.', 'error');
+      toast(err?.message || 'Unable to load transport data.', 'error');
       setItems([]);
+      setRoutes([]);
+      setVehicles([]);
     } finally {
       setLoading(false);
     }
@@ -95,6 +106,26 @@ export default function TransportAssignmentsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Refresh routes/vehicles whenever the assign modal opens (in case they were created after page load).
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [routeList, vehicleList] = await Promise.all([
+          transportRouteService.list().catch(() => null),
+          transportVehicleService.list().catch(() => null),
+        ]);
+        if (cancelled) return;
+        if (Array.isArray(routeList)) setRoutes(routeList);
+        if (Array.isArray(vehicleList)) setVehicles(vehicleList);
+      } catch {
+        // Keep previously loaded options.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [modalOpen]);
 
   useEffect(() => {
     if (!modalOpen || !form.studentId) {
@@ -122,17 +153,37 @@ export default function TransportAssignmentsPage() {
 
   const routeMap = useMemo(() => {
     const map = new Map();
-    routes.forEach((route) => map.set(String(route.id), route));
+    routes.forEach((route) => {
+      const id = route.id || route.routeId;
+      if (id) map.set(String(id), route);
+    });
     return map;
   }, [routes]);
 
   const vehicleMap = useMemo(() => {
     const map = new Map();
-    vehicles.forEach((vehicle) => map.set(String(vehicle.id), vehicle));
+    vehicles.forEach((vehicle) => {
+      const id = vehicle.id || vehicle.vehicleId;
+      if (id) map.set(String(id), vehicle);
+    });
     return map;
   }, [vehicles]);
 
   const selectedRoute = routeMap.get(String(form.routeId)) || null;
+
+  const routeOptions = useMemo(() => (
+    routes
+      .map((route) => {
+        const id = route.id || route.routeId;
+        if (!id) return null;
+        return {
+          value: String(id),
+          label: route.name || route.routeName || String(id),
+        };
+      })
+      .filter(Boolean)
+  ), [routes]);
+
   const stopOptions = useMemo(() => {
     const stops = normalizeRouteStops(selectedRoute?.stops);
     return stops.map((stop) => ({
@@ -148,10 +199,16 @@ export default function TransportAssignmentsPage() {
         return !vehicleRouteId || vehicleRouteId === String(form.routeId);
       })
       : vehicles;
-    return list.map((vehicle) => ({
-      value: String(vehicle.id),
-      label: vehicle.vehicleNumber || vehicle.vehicle_number || vehicle.id,
-    }));
+    return list
+      .map((vehicle) => {
+        const id = vehicle.id || vehicle.vehicleId;
+        if (!id) return null;
+        return {
+          value: String(id),
+          label: vehicle.vehicleNumber || vehicle.vehicle_number || vehicle.name || String(id),
+        };
+      })
+      .filter(Boolean);
   }, [vehicles, form.routeId]);
 
   const enriched = useMemo(() => items.map((item) => {
@@ -160,7 +217,7 @@ export default function TransportAssignmentsPage() {
     const stop = normalizeRouteStops(route?.stops).find((s) => String(s.id) === String(item.stopId));
     return {
       ...item,
-      routeName: route?.name || item.routeName || '—',
+      routeName: route?.name || route?.routeName || item.routeName || '—',
       vehicleNumber: vehicle?.vehicleNumber || vehicle?.vehicle_number || item.vehicleNumber || '—',
       stopName: stop?.name || item.stopName || '—',
       studentLabel: item.studentName || item.studentId || '—',
@@ -351,15 +408,11 @@ export default function TransportAssignmentsPage() {
         </div>
 
         <div className="mb-4">
-          <div className="relative max-w-md">
-            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#667085]" />
-            <input
-              className="input-premium h-11 w-full rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] pl-10 pr-4 text-sm outline-none focus:border-[#0058be]"
-              placeholder="Search student, vehicle, route, stop…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
+          <SearchField
+            placeholder="Search student, vehicle, route, stop…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
         </div>
 
         {loading ? (
@@ -491,8 +544,8 @@ export default function TransportAssignmentsPage() {
                   label="Route"
                   required
                   value={form.routeId}
-                  options={routes.map((route) => ({ value: String(route.id), label: route.name }))}
-                  placeholder="Select route"
+                  options={routeOptions}
+                  placeholder={routeOptions.length ? 'Select route' : 'No routes yet — add under Transport Routes'}
                   onChange={(event) => patchForm('routeId', event.target.value)}
                 />
                 <Select
@@ -500,7 +553,7 @@ export default function TransportAssignmentsPage() {
                   required
                   value={form.vehicleId}
                   options={vehicleOptions}
-                  placeholder="Select vehicle"
+                  placeholder={vehicleOptions.length ? 'Select vehicle' : 'No vehicles yet — add under Transport Vehicles'}
                   onChange={(event) => patchForm('vehicleId', event.target.value)}
                 />
                 <Select
@@ -508,7 +561,11 @@ export default function TransportAssignmentsPage() {
                   required
                   value={form.stopId}
                   options={stopOptions}
-                  placeholder={form.routeId ? 'Select stop' : 'Select route first'}
+                  placeholder={
+                    !form.routeId
+                      ? 'Select route first'
+                      : (stopOptions.length ? 'Select stop' : 'No stops on this route')
+                  }
                   disabled={!form.routeId}
                   onChange={(event) => patchForm('stopId', event.target.value)}
                 />
@@ -522,6 +579,11 @@ export default function TransportAssignmentsPage() {
                   onChange={(event) => patchForm('status', event.target.value)}
                 />
               </div>
+              {routeOptions.length === 0 && (
+                <p className="mt-2 text-xs text-amber-700">
+                  No routes loaded. Create a route under Transport Routes, then reopen this form.
+                </p>
+              )}
               <Button
                 className="mt-3"
                 variant="secondary"

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
-import { PageHeader } from '../../components/ui/index.jsx';
+import { PageHeader, SearchField } from '../../components/ui/index.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import Select from '../../components/ui/Select.jsx';
 import {
@@ -110,15 +109,13 @@ export default function ApplicationsList() {
       <PageHeader title="Enrollment Applications" subtitle="Review, approve, and manage all enrollment applications." />
 
       <div className="sb-filter-bar mb-5">
-        <div className="relative min-w-[200px] flex-1">
-          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#45474c]" />
-          <input
-            className="input-premium h-11 w-full rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] pl-10 pr-4 text-sm outline-none focus:border-[#0058be] focus:shadow-[0_0_0_4px_rgba(0,88,190,0.1)]"
-            placeholder="Search by name or application no."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <SearchField
+          className="min-w-[200px] flex-1"
+          maxWidthClass=""
+          placeholder="Search by name or application no."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
         <Select
           options={statusOptions}
           placeholder="Filter by status"

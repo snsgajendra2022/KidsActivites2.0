@@ -319,6 +319,17 @@ export const transportVehicleService = createCrudService({
   resource: 'transport/vehicles',
   seed: TRANSPORT_VEHICLE_SEED,
   idPrefix: 'bus',
+  normalizeItem: (item) => {
+    if (!item) return item;
+    return {
+      ...item,
+      id: item.id || item.vehicleId,
+      vehicleNumber: item.vehicleNumber || item.vehicle_number || item.number || '',
+      routeId: item.routeId || item.route_id || item.route?.id || '',
+      routeName: item.routeName || item.route?.name || '',
+      status: item.status || 'active',
+    };
+  },
 });
 
 export const transportRouteService = createCrudService({
@@ -326,6 +337,17 @@ export const transportRouteService = createCrudService({
   resource: 'transport/routes',
   seed: TRANSPORT_ROUTE_SEED,
   idPrefix: 'route',
+  normalizeItem: (item) => {
+    if (!item) return item;
+    return {
+      ...item,
+      id: item.id || item.routeId,
+      name: item.name || item.routeName || '',
+      vehicleId: item.vehicleId || item.vehicle_id || item.vehicle?.id || '',
+      stops: item.stops || item.stopList || [],
+      status: item.status || 'active',
+    };
+  },
 });
 
 export const transportAssignmentService = createCrudService({

@@ -161,14 +161,16 @@ export default function StudentApplicationStopPicker({
         All enrolled students are listed. Select multiple students at once — each application address becomes a map stop on this route.
       </p>
 
-      <div className="relative mb-3">
-        <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#667085]" />
-        <input
-          className="input-premium h-10 w-full rounded-lg border border-[#c5c6cd] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#0058be]"
-          placeholder="Search student name…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+      <div className="mb-3">
+        <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-[#c5c6cd] bg-white px-3 focus-within:border-[#0058be]">
+          <Search size={14} className="shrink-0 text-[#667085]" aria-hidden />
+          <input
+            className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none"
+            placeholder="Search student name…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
       </div>
 
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

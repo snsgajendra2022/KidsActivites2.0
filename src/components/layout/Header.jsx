@@ -29,17 +29,21 @@ export default function Header({ user, onMenuClick, onLogout }) {
           {portalName}
         </Link>
 
-        <div className="relative hidden min-w-0 flex-1 lg:block lg:max-w-xl">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7a8c]"
-          />
-          <input
-            type="search"
-            placeholder="Search applications, students, fees…"
-            aria-label="Search"
-            className="h-10 w-full rounded-xl border border-black/5 sb-surface pl-11 pr-4 text-sm outline-none transition-all placeholder:text-[#9aa3b2] focus:border-[color-mix(in_srgb,var(--sb-secondary)_40%,transparent)] focus:bg-white focus:ring-2 focus:ring-[color-mix(in_srgb,var(--sb-secondary)_10%,transparent)]"
-          />
+        <div className="hidden min-w-0 flex-1 lg:block lg:max-w-xl">
+          <label className="flex h-10 w-full items-center gap-2.5 rounded-xl border border-black/5 sb-surface px-3.5 transition-all focus-within:border-[color-mix(in_srgb,var(--sb-secondary)_40%,transparent)] focus-within:bg-white focus-within:ring-2 focus-within:ring-[color-mix(in_srgb,var(--sb-secondary)_10%,transparent)]">
+            <Search
+              size={16}
+              className="shrink-0 text-[#6b7a8c]"
+              aria-hidden
+            />
+            <input
+              type="text"
+              role="searchbox"
+              placeholder="Search applications, students, fees…"
+              aria-label="Search"
+              className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-[#9aa3b2]"
+            />
+          </label>
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">

@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  BookOpen, Plus, Search, Sparkles, Archive, Send, Trash2, Users, Award,
+  BookOpen, Plus, Sparkles, Archive, Send, Trash2, Users, Award,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
-import { EmptyState, LoadingState, PageHeader } from '../../components/ui/index.jsx';
+import { EmptyState, LoadingState, PageHeader, SearchField } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
-import Input from '../../components/ui/Input.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { ConfirmModal } from '../../components/ui/Modal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -119,15 +118,13 @@ export default function LmsCoursesPage({ layout = 'dashboard', basePath = '/admi
         />
 
         <div className="mb-4 flex items-center gap-3">
-          <div className="relative max-w-md flex-1">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#667085]" />
-            <Input
-              className="pl-9"
-              placeholder="Search courses…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+          <SearchField
+            className="flex-1"
+            maxWidthClass="max-w-md"
+            placeholder="Search courses…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
         {loading ? (

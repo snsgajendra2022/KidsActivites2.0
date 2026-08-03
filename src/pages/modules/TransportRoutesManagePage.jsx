@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPinned, Plus, Search, Trash2 } from 'lucide-react';
+import { MapPinned, Plus, Trash2 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
-import { EmptyState, LoadingState, PageHeader } from '../../components/ui/index.jsx';
+import { EmptyState, LoadingState, PageHeader, SearchField } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Input from '../../components/ui/Input.jsx';
 import Select from '../../components/ui/Select.jsx';
@@ -240,15 +240,11 @@ export default function TransportRoutesManagePage() {
         </div>
 
         <div className="mb-4">
-          <div className="relative max-w-md">
-            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#667085]" />
-            <input
-              className="input-premium h-11 w-full rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] pl-10 pr-4 text-sm outline-none focus:border-[#0058be]"
-              placeholder="Search routes or stops…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
+          <SearchField
+            placeholder="Search routes or stops…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
         </div>
 
         {loading ? (

@@ -13,6 +13,9 @@ export function asCrudList(data) {
   if (Array.isArray(data.content)) return data.content;
   if (Array.isArray(data.records)) return data.records;
   if (Array.isArray(data.results)) return data.results;
+  if (Array.isArray(data.routes)) return data.routes;
+  if (Array.isArray(data.vehicles)) return data.vehicles;
+  if (Array.isArray(data.assignments)) return data.assignments;
   if (Array.isArray(data.data)) return data.data;
   return [];
 }

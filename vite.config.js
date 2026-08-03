@@ -56,6 +56,15 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     plugins: [react(), tailwindcss(), firebaseMessagingSwPlugin(env)],
+    resolve: {
+      alias: [
+        {
+          // Exact match only — do not break leaflet/dist/*.css imports.
+          find: /^leaflet$/,
+          replacement: path.resolve(__dirname, 'node_modules/leaflet/dist/leaflet-src.esm.js'),
+        },
+      ],
+    },
     define: {
       global: 'globalThis',
     },
@@ -74,7 +83,10 @@ export default defineConfig(({ mode }) => {
         'kidsactivities.snssystem.com',
         'sns.localhost',
         'localhost',
+        '192.168.1.58',
+        '192.168.31.108',
         '161.35.132.9',
+        '192.168.1.40',
       ],
       // Dev-only: disable HMR when accessed via HTTPS reverse proxy (no WS upgrade on nginx).
       hmr: process.env.VITE_DISABLE_HMR === 'true' ? false : undefined,
@@ -86,7 +98,10 @@ export default defineConfig(({ mode }) => {
         'kidsactivities.snssystem.com',
         'sns.localhost',
         'localhost',
+        '192.168.1.58',
+        '192.168.31.108',
         '161.35.132.9',
+        '192.168.1.40',
       ],
     },
   };
