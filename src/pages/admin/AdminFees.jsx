@@ -17,6 +17,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { getFees, verifyPayment, rejectPayment } from '../../services/feeService.js';
 import { downloadFeeReceipt } from '../../utils/feeReceipt.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import '../../styles/admin-modules.css';
 
 function feeStatusKey(status) {
   if (status === 'verified') return 'fee_verified';
@@ -98,6 +99,18 @@ export default function AdminFees() {
     const matchStatus = !statusFilter || fee.status === statusFilter;
     return matchSearch && matchStatus;
   }), [fees, search, statusFilter]);
+
+  const kpiCards = useMemo(() => {
+    const pending = fees.filter((fee) => fee.status === 'fee_pending').length;
+    const submitted = fees.filter((fee) => fee.status === 'payment_submitted').length;
+    const verified = fees.filter((fee) => fee.status === 'verified').length;
+    return [
+      { label: 'Total', value: fees.length, hint: 'All fee records' },
+      { label: 'Pending', value: pending, hint: 'Awaiting payment' },
+      { label: 'Submitted', value: submitted, hint: 'Needs verify' },
+      { label: 'Verified', value: verified, hint: 'Completed' },
+    ];
+  }, [fees]);
 
   const closeModal = () => {
     setModal(null);
@@ -207,7 +220,7 @@ export default function AdminFees() {
     <DashboardLayout>
       <PageHeader title="Fees" subtitle="Manage fee assignments, payment verification, and receipts." />
 
-      <div className="mb-5 flex flex-wrap gap-3">
+      <div className="admin-record-toolbar">
         <SearchField
           className="min-w-[200px] flex-1"
           maxWidthClass=""
@@ -225,12 +238,25 @@ export default function AdminFees() {
         />
       </div>
 
+      {!loading && fees.length > 0 && (
+        <div className="admin-record-kpi">
+          {kpiCards.map((card) => (
+            <div key={card.label} className="admin-record-kpi__card">
+              <p className="admin-record-kpi__label">{card.label}</p>
+              <p className="admin-record-kpi__value">{card.value}</p>
+              <p className="admin-record-kpi__hint">{card.hint}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="sb-card p-8 text-center text-sm text-[#45474c]/70">Loading fee records…</div>
       ) : fees.length === 0 ? (
         <EmptyState icon={CreditCard} title="No Fee Records Found" description="Fee records will appear here once assigned to applications." />
       ) : (
         <ResponsiveDataTable
+          layout="cards"
           columns={FEE_COLUMNS}
           data={filtered}
           minWidth={1000}

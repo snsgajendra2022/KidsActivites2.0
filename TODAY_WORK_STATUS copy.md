@@ -76,9 +76,7 @@ Role-based navigation and dashboards
 - Added safe optional selected-child access for screens shared across role stacks.
 
 
-6. Reusable ERP mobile interface
---------------------------------
-
+Reusable ERP mobile interface
 - Added a reusable module list screen with:
   - Loading state
   - Empty state
@@ -91,9 +89,7 @@ Role-based navigation and dashboards
   buttons, modals, and feedback utilities across the new screens.
 
 
-7. Notification routing
------------------------
-
+Notification routing
 - Added deep-link routing for homework notifications.
 - Added role-aware routing for leave requested, approved, and rejected events.
 - Added routing for published exams and exam marks.
@@ -102,9 +98,7 @@ Role-based navigation and dashboards
 - Preserved safe fallback behavior for unsupported notification destinations.
 
 
-8. Verification completed
--------------------------
-
+Verification completed
 - TypeScript validation passed:npm run typecheck`.
 - The new ERP screens, APIs, navigation routes, and shared types compile without
   TypeScript errors.

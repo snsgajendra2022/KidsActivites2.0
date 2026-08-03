@@ -1,7 +1,12 @@
 import { listClasses } from '../classManagementService.js';
 import { listStudentsForRelationships } from '../studentDirectoryService.js';
 import { getTeacherClasses, getTeacherStudents, listTeachers } from '../teacherService.js';
-import { getParentChildren } from '../parentService.js';
+import {
+  enrichParentChildrenWithClass,
+  getParentChildren,
+  getParentDashboard,
+  normalizeParentChild,
+} from '../parentService.js';
 import { ROLES } from '../../constants/roles.js';
 
 /** Default subject catalog until /admin/subjects exists on the backend. */
@@ -17,12 +22,63 @@ export const DEFAULT_SUBJECTS = [
 ];
 
 function studentLabel(student) {
-  return student.fullName
-    || student.name
-    || student.studentName
-    || student.applicationNo
-    || student.id
+  const nested = student?.student || {};
+  return student?.studentName
+    || student?.fullName
+    || student?.name
+    || nested.fullName
+    || [nested.firstName, nested.lastName].filter(Boolean).join(' ')
+    || student?.applicationNo
+    || student?.id
     || 'Student';
+}
+
+/** Resolve the relationship id parents use for leave / attendance / LMS. */
+export function resolveParentStudentId(child) {
+  if (!child) return '';
+  const nested = child.student || {};
+  return String(
+    child.studentId
+      || child.enrolledStudentId
+      || nested.id
+      || nested.studentId
+      || child.applicationId
+      || child.id
+      || '',
+  ).trim();
+}
+
+async function loadParentChildrenForOptions(user) {
+  let children = [];
+  try {
+    children = await getParentChildren(user) || [];
+  } catch {
+    children = [];
+  }
+
+  const normalized = (children || []).map((child) => normalizeParentChild(child)).filter(Boolean);
+  const hasResolvableStudent = normalized.some((child) => resolveParentStudentId(child));
+
+  if (!normalized.length || !hasResolvableStudent) {
+    try {
+      const dash = await getParentDashboard(user?.id, user?.schoolId, user);
+      const fromDash = (dash?.children || []).map((child) => normalizeParentChild(child)).filter(Boolean);
+      if (fromDash.length) children = fromDash;
+      else children = normalized;
+    } catch {
+      children = normalized;
+    }
+  } else {
+    children = normalized;
+  }
+
+  try {
+    children = await enrichParentChildrenWithClass(user?.id, children, user);
+  } catch {
+    // Keep whatever we already resolved.
+  }
+
+  return (children || []).map((child) => normalizeParentChild(child)).filter(Boolean);
 }
 
 function classLabel(cls) {
@@ -109,18 +165,26 @@ export async function loadStudentOptions(user, { classId, sectionId } = {}) {
   const role = String(user?.role || '').toLowerCase();
 
   if (role === ROLES.PARENT || role === ROLES.STUDENT) {
-    const children = await getParentChildren(user);
+    const children = await loadParentChildrenForOptions(user);
     return (children || [])
-      .filter((child) => child.studentId && studentMatchesClass(child, classId, sectionId))
-      .map((child) => ({
-        value: String(child.studentId),
-        label: studentLabel(child),
-        meta: {
-          studentId: String(child.studentId),
-          classId: child.classId || '',
-          sectionId: child.sectionId || child.section?.id || '',
-        },
-      }));
+      .map((child) => {
+        const studentId = resolveParentStudentId(child);
+        if (!studentId) return null;
+        if (!studentMatchesClass(child, classId, sectionId)) return null;
+        const label = studentLabel(child);
+        const className = child.className || '';
+        return {
+          value: studentId,
+          label: className ? `${label} · ${className}` : label,
+          meta: {
+            studentId,
+            classId: child.classId || '',
+            className,
+            sectionId: child.sectionId || child.section?.id || '',
+          },
+        };
+      })
+      .filter(Boolean);
   }
 
   // Staff selectors are always class-scoped. Never load the complete student

@@ -222,6 +222,7 @@ export default function App() {
         <Route path="admin/attendance" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AttendanceDashboard /></ProtectedRoute>} />
         <Route path="admin/attendance/session" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AttendanceSessionPage /></ProtectedRoute>} />
         <Route path="admin/attendance-advanced" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdvancedAttendancePage /></ProtectedRoute>} />
+        <Route path="admin/leave" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><LeaveRequestsPage layout="dashboard" /></ProtectedRoute>} />
         <Route path="admin/homework" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><HomeworkPage /></ProtectedRoute>} />
         <Route path="admin/exams" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ExamsPage /></ProtectedRoute>} />
         <Route path="admin/exam-marks" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><ExamMarksPage /></ProtectedRoute>} />

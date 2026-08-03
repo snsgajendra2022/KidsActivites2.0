@@ -29,6 +29,7 @@ import {
   suggestNearestStop,
 } from '../../utils/transportAddress.js';
 import { normalizeRouteStops } from '../../utils/transportRouteGeo.js';
+import '../../styles/admin-modules.css';
 
 const EMPTY_FORM = {
   classId: '',
@@ -247,6 +248,17 @@ export default function TransportAssignmentsPage() {
     { key: 'status', label: 'Status', badge: true },
   ], []);
 
+  const kpiCards = useMemo(() => {
+    const active = enriched.filter((item) => String(item.status || '').toLowerCase() === 'active').length;
+    const withAddress = enriched.filter((item) => item.addressLabel && item.addressLabel !== '—').length;
+    return [
+      { label: 'Assigned', value: enriched.length, hint: 'Students on transport' },
+      { label: 'Active', value: active, hint: 'Current assignments' },
+      { label: 'With address', value: withAddress, hint: 'Home address set' },
+      { label: 'Showing', value: filtered.length, hint: search.trim() ? 'Match search' : 'Full list' },
+    ];
+  }, [enriched, filtered.length, search]);
+
   const openCreate = () => {
     setEditing(null);
     setForm({ ...EMPTY_FORM });
@@ -392,23 +404,22 @@ export default function TransportAssignmentsPage() {
           )}
         />
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[#667085]">1 · Student</p>
-            <p className="mt-1 text-sm text-[#344054]">Pick class → enrolled student (from enrollment).</p>
+        {!loading && items.length > 0 && (
+          <div className="admin-record-kpi">
+            {kpiCards.map((card) => (
+              <div key={card.label} className="admin-record-kpi__card">
+                <p className="admin-record-kpi__label">{card.label}</p>
+                <p className="admin-record-kpi__value">{card.value}</p>
+                <p className="admin-record-kpi__hint">{card.hint}</p>
+              </div>
+            ))}
           </div>
-          <div className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[#667085]">2 · Home address</p>
-            <p className="mt-1 text-sm text-[#344054]">Use enrollment address, or fill it if missing.</p>
-          </div>
-          <div className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[#667085]">3 · Vehicle + stop</p>
-            <p className="mt-1 text-sm text-[#344054]">Assign bus/route; suggest nearest mapped stop.</p>
-          </div>
-        </div>
+        )}
 
-        <div className="mb-4">
+        <div className="admin-record-toolbar">
           <SearchField
+            className="min-w-[200px] flex-1"
+            maxWidthClass=""
             placeholder="Search student, vehicle, route, stop…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -425,6 +436,7 @@ export default function TransportAssignmentsPage() {
           />
         ) : (
           <ResponsiveDataTable
+            layout="cards"
             columns={columns}
             data={filtered}
             emptyMessage="No assignments match your search."

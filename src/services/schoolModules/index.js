@@ -300,12 +300,60 @@ function normalizeTimetableSlot(slot) {
   };
 }
 
-export const leaveService = createCrudService({
-  key: 'leave_requests',
-  resource: 'leave-requests',
-  seed: LEAVE_SEED,
-  idPrefix: 'leave',
-});
+export const leaveService = (() => {
+  const base = createCrudService({
+    key: 'leave_requests',
+    resource: 'leave-requests',
+    seed: LEAVE_SEED,
+    idPrefix: 'leave',
+  });
+
+  async function approve(id, body = {}) {
+    return routeRequest({
+      mockFn: async () => base.update(id, {
+        status: 'approved',
+        reviewNote: body.reviewNote || null,
+        reviewedAt: new Date().toISOString(),
+      }),
+      apiFn: async () => {
+        try {
+          return await api.post(`/admin/leave-requests/${id}/approve`, body);
+        } catch (err) {
+          const status = Number(err?.status || 0);
+          if (status !== 404 && status !== 405) throw err;
+          return base.update(id, {
+            status: 'approved',
+            reviewNote: body.reviewNote || null,
+          });
+        }
+      },
+    });
+  }
+
+  async function reject(id, body = {}) {
+    return routeRequest({
+      mockFn: async () => base.update(id, {
+        status: 'rejected',
+        reviewNote: body.reviewNote || null,
+        reviewedAt: new Date().toISOString(),
+      }),
+      apiFn: async () => {
+        try {
+          return await api.post(`/admin/leave-requests/${id}/reject`, body);
+        } catch (err) {
+          const status = Number(err?.status || 0);
+          if (status !== 404 && status !== 405) throw err;
+          return base.update(id, {
+            status: 'rejected',
+            reviewNote: body.reviewNote || null,
+          });
+        }
+      },
+    });
+  }
+
+  return { ...base, approve, reject };
+})();
 
 export const lmsService = createCrudService({
   key: 'lms',

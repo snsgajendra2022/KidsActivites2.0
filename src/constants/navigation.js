@@ -57,6 +57,7 @@ const ADMIN_CORE_NAV = [
   { id: 'admin_students', to: '/admin/students', label: 'Students', icon: GraduationCap, iconName: 'GraduationCap', section: 'Students & Classes' },
   { id: 'admin_class_management', to: '/admin/class-management', label: 'Class Management', icon: ClipboardList, iconName: 'ClipboardList', section: 'Students & Classes' },
   { id: 'admin_attendance', to: '/admin/attendance', label: 'Attendance', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'Students & Classes' },
+  { id: 'admin_leave', to: '/admin/leave', label: 'Leave Approvals', icon: UserCheck, iconName: 'UserCheck', section: 'Students & Classes' },
   { id: 'admin_photos', to: '/admin/photos', label: 'Photo Sharing', icon: Image, iconName: 'Image', section: 'Media & Albums' },
   { id: 'admin_albums', to: '/admin/albums', label: 'Class Albums', icon: Tv, iconName: 'Tv', section: 'Media & Albums' },
   { id: 'admin_fees', to: '/admin/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Fees & Finance' },
@@ -83,14 +84,14 @@ export const SCHOOL_ADMIN_NAV = [
   { id: 'admin_users', to: '/admin/all-users', label: 'All Users', icon: Users, iconName: 'Users', section: 'Platform' },
   CREATIVE_CARDS_NAV,
   ...ADMIN_CORE_NAV,
-  { id: 'admin_subscription', to: '/admin/subscription', label: 'Subscription Plans', icon: Sparkles, iconName: 'Sparkles', section: 'Premium' },
+  // { id: 'admin_subscription', to: '/admin/subscription', label: 'Subscription Plans', icon: Sparkles, iconName: 'Sparkles', section: 'Premium' },
 ];
 
 /** Platform operator only — not school day-to-day (admissions, fees, photos, etc.). */
 export const SUPER_ADMIN_NAV = [
   { id: 'admin_schools', to: '/admin/schools', label: 'Schools', icon: GraduationCap, iconName: 'GraduationCap', section: 'Platform' },
   { id: 'admin_users', to: '/admin/users', label: 'All Users', icon: Users, iconName: 'Users', section: 'Platform' },
-  { id: 'admin_subscription', to: '/admin/subscription', label: 'Subscription Plans', icon: Sparkles, iconName: 'Sparkles', section: 'Platform' },
+  // { id: 'admin_subscription', to: '/admin/subscription', label: 'Subscription Plans', icon: Sparkles, iconName: 'Sparkles', section: 'Platform' },
   { id: 'admin_chat', to: '/admin/chat', label: 'Chat', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
   PORTAL_BRANDING_NAV,
 ];

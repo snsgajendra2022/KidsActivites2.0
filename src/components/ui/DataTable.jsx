@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import '../../styles/admin-modules.css';
 
 function getCellValue(row, column) {
   if (column.render) return column.render(row);
@@ -11,6 +12,115 @@ function getCellValue(row, column) {
 function cellContent(value) {
   if (value === null || value === undefined || value === '') return '—';
   return value;
+}
+
+function asPlainText(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return '';
+}
+
+function initialsFrom(value) {
+  const text = asPlainText(value).trim() || '•';
+  const parts = text.split(/\s+/).slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase() || '').join('') || '•';
+}
+
+function formatLabel(value) {
+  const text = asPlainText(value);
+  if (!text) return '—';
+  return text.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function BadgePill({ value }) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'object') return value;
+  return <span className="admin-record-pill">{formatLabel(value)}</span>;
+}
+
+/** Leave-style advanced cards for admin module lists (all breakpoints). */
+function AdvancedRecordCards({
+  columns,
+  data,
+  keyExtractor,
+  emptyMessage,
+  renderActions,
+}) {
+  const isEmpty = !data?.length;
+  const visible = columns.filter((col) => col.card !== false);
+  const primaryColumn = visible.find((col) => col.primary) || visible[0];
+  const badgeColumn = visible.find((col) => col.badge);
+  const detailColumns = visible.filter(
+    (col) => col !== primaryColumn && col !== badgeColumn,
+  );
+
+  if (isEmpty) {
+    return (
+      <div className="admin-record-empty">
+        <p className="text-sm text-[#64748b]">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-record-list">
+      {data.map((row, index) => {
+        const actions = renderActions?.(row);
+        const titleValue = primaryColumn ? getCellValue(row, primaryColumn) : null;
+        const titleText = asPlainText(titleValue) || (primaryColumn?.label || 'Record');
+        const subtitle = primaryColumn?.subtitle
+          ? cellContent(primaryColumn.subtitle(row))
+          : null;
+        const badgeValue = badgeColumn ? getCellValue(row, badgeColumn) : null;
+
+        return (
+          <article key={keyExtractor(row, index)} className="admin-record-card">
+            <div className="admin-record-card__main">
+              <div className="admin-record-card__avatar" aria-hidden>
+                {initialsFrom(titleText)}
+              </div>
+              <div className="admin-record-card__body">
+                <div className="admin-record-card__top">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="admin-record-card__title">
+                      {cellContent(titleValue)}
+                    </h3>
+                    {subtitle ? (
+                      <p className="admin-record-card__subtitle">{subtitle}</p>
+                    ) : null}
+                  </div>
+                  {badgeColumn ? (
+                    <div className="shrink-0">
+                      <BadgePill value={badgeValue} />
+                    </div>
+                  ) : null}
+                </div>
+
+                {detailColumns.length > 0 ? (
+                  <dl className="admin-record-card__fields">
+                    {detailColumns.map((col) => (
+                      <div key={col.label} className="admin-record-card__field">
+                        <dt>{col.label}</dt>
+                        <dd className={col.muted ? 'is-muted' : undefined}>
+                          {cellContent(getCellValue(row, col))}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+              </div>
+            </div>
+
+            {actions ? (
+              <div className="admin-record-card__actions">{actions}</div>
+            ) : null}
+          </article>
+        );
+      })}
+    </div>
+  );
 }
 
 function DesktopTable({ columns, data, keyExtractor, minWidth, emptyMessage, renderActions, actionsHeaderClass }) {
@@ -143,7 +253,7 @@ function MobileCards({
   );
 }
 
-/** Responsive table — desktop table + mobile card records */
+/** Responsive table — desktop table + mobile cards; pass layout="cards" for leave-style lists. */
 export function ResponsiveDataTable({
   columns,
   data = [],
@@ -152,9 +262,24 @@ export function ResponsiveDataTable({
   minWidth = 900,
   className = '',
   nested = false,
+  layout = 'table',
   renderActions,
   actionsHeaderClass = '!text-right',
 }) {
+  if (layout === 'cards') {
+    return (
+      <div className={`admin-record-wrap ${className}`.trim()}>
+        <AdvancedRecordCards
+          columns={columns}
+          data={data}
+          keyExtractor={keyExtractor}
+          emptyMessage={emptyMessage}
+          renderActions={renderActions}
+        />
+      </div>
+    );
+  }
+
   const wrapClass = nested
     ? `overflow-hidden ${className}`
     : `premium-table-wrap overflow-hidden ${className}`;
@@ -189,9 +314,25 @@ export function ResponsiveDataTablePanel({
   keyExtractor = (row, index) => row.id ?? index,
   emptyMessage = 'No records found.',
   minWidth = 900,
+  layout = 'table',
   renderActions,
   actionsHeaderClass = '!text-right',
 }) {
+  if (layout === 'cards') {
+    return (
+      <div className="admin-record-wrap">
+        {toolbar}
+        <AdvancedRecordCards
+          columns={columns}
+          data={data}
+          keyExtractor={keyExtractor}
+          emptyMessage={emptyMessage}
+          renderActions={renderActions}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="premium-table-wrap overflow-hidden">
       {toolbar}

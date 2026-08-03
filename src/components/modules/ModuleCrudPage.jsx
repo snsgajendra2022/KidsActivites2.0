@@ -13,7 +13,7 @@ import { ResponsiveDataTable, TableActionButton } from '../ui/DataTable.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { findOption } from '../../services/schoolModules/relationshipOptions.js';
-
+import '../../styles/admin-modules.css';
 const EMPTY_LIST_FILTERS = Object.freeze({});
 
 function isFieldVisible(field, form, user, editing) {
@@ -172,6 +172,9 @@ export default function ModuleCrudPage({
   readOnly = false,
   headerActions = null,
   listFilters = EMPTY_LIST_FILTERS,
+  /** Optional override for table row actions. Receives (item, helpers). */
+  renderRowActions,
+  hideCreate = false,
 }) {
   const Layout = layout === 'app' ? AppLayout : DashboardLayout;
   const { toast } = useToast();
@@ -266,6 +269,37 @@ export default function ModuleCrudPage({
     return items.filter((item) => keys.some((key) => String(item[key] || '').toLowerCase().includes(query)));
   }, [items, search, searchKeys, columns]);
 
+  const kpiCards = useMemo(() => {
+    const statusKey = columns.find((col) => col.badge && col.key)?.key
+      || (columns.some((col) => col.key === 'status') ? 'status' : null);
+    const cards = [
+      { label: 'Total', value: items.length, hint: 'All records' },
+      { label: 'Showing', value: filtered.length, hint: search.trim() ? 'Match search' : 'Current list' },
+    ];
+    if (statusKey) {
+      const counts = {};
+      items.forEach((item) => {
+        const raw = String(item[statusKey] || 'other').toLowerCase();
+        counts[raw] = (counts[raw] || 0) + 1;
+      });
+      const ranked = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2);
+      ranked.forEach(([key, count]) => {
+        cards.push({
+          label: key.replace(/_/g, ' '),
+          value: count,
+          hint: 'By status',
+        });
+      });
+    } else {
+      cards.push(
+        { label: 'Editable', value: readOnly ? 0 : items.length, hint: readOnly ? 'Read only' : 'Can update' },
+        { label: 'Fields', value: fields.length, hint: 'Form fields' },
+      );
+    }
+    return cards.slice(0, 4);
+  }, [columns, fields.length, filtered.length, items, readOnly, search]);
   const buildDefaults = () => {
     const defaults = {};
     fields.forEach((field) => {
@@ -407,7 +441,7 @@ export default function ModuleCrudPage({
           actions={(
             <div className="flex flex-wrap gap-2">
               {headerActions}
-              {!readOnly && (
+              {!readOnly && !hideCreate && (
                 <Button onClick={openCreate}>
                   <Plus size={16} /> {createLabel}
                 </Button>
@@ -416,13 +450,27 @@ export default function ModuleCrudPage({
           )}
         />
 
-        <div className="mb-4">
+        <div className="admin-record-toolbar">
           <SearchField
+            className="admin-record-search min-w-[200px] flex-1"
+            maxWidthClass=""
             placeholder="Search records…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+
+        {!loading && items.length > 0 && (
+          <div className="admin-record-kpi">
+            {kpiCards.map((card) => (
+              <div key={card.label} className="admin-record-kpi__card">
+                <p className="admin-record-kpi__label">{card.label}</p>
+                <p className="admin-record-kpi__value">{card.value}</p>
+                <p className="admin-record-kpi__hint">{card.hint}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <LoadingState message="Loading module data…" />
@@ -430,25 +478,34 @@ export default function ModuleCrudPage({
           <EmptyState
             title={emptyTitle}
             description={emptyDescription}
-            action={!readOnly ? <Button onClick={openCreate}>{createLabel}</Button> : null}
+            action={!readOnly && !hideCreate ? <Button onClick={openCreate}>{createLabel}</Button> : null}
           />
         ) : (
           <ResponsiveDataTable
+            layout="cards"
             columns={columns}
             data={filtered}
             emptyMessage="No records match your search."
             minWidth={860}
-            renderActions={readOnly ? undefined : ((item) => (
-              <>
-                <TableActionButton variant="outline" onClick={() => openEdit(item)}>Edit</TableActionButton>
-                <TableActionButton variant="danger" onClick={() => setDeleteId(item.id)}>
-                  <Trash2 size={14} /> Delete
-                </TableActionButton>
-              </>
-            ))}
+            renderActions={readOnly && !renderRowActions ? undefined : ((item) => {
+              if (typeof renderRowActions === 'function') {
+                return renderRowActions(item, {
+                  openEdit,
+                  requestDelete: (id) => setDeleteId(id),
+                  reload: load,
+                });
+              }
+              return (
+                <>
+                  <TableActionButton variant="outline" onClick={() => openEdit(item)}>Edit</TableActionButton>
+                  <TableActionButton variant="danger" onClick={() => setDeleteId(item.id)}>
+                    <Trash2 size={14} /> Delete
+                  </TableActionButton>
+                </>
+              );
+            })}
           />
         )}
-
         <Modal
           open={modalOpen}
           onClose={() => setModalOpen(false)}

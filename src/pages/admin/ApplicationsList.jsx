@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader, SearchField } from '../../components/ui/index.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
@@ -9,6 +9,7 @@ import {
 } from '../../components/ui/DataTable.jsx';
 import { getApplications } from '../../services/enrollmentService.js';
 import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
+import '../../styles/admin-modules.css';
 
 const APP_COLUMNS = [
   { key: 'applicationNo', label: 'Application No.', primary: true },
@@ -104,11 +105,22 @@ export default function ApplicationsList() {
 
   const statusOptions = Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }));
 
+  const kpiCards = useMemo(() => {
+    const pending = apps.filter((a) => ['submitted', 'under_review', 'documents_pending', 'correction_required'].includes(a.status)).length;
+    const approved = apps.filter((a) => ['approved', 'admission_confirmed', 'account_created'].includes(a.status)).length;
+    return [
+      { label: 'Total', value: total || apps.length, hint: 'All applications' },
+      { label: 'Showing', value: filtered.length, hint: 'Current filters' },
+      { label: 'In review', value: pending, hint: 'Needs attention' },
+      { label: 'Approved', value: approved, hint: 'Progressed' },
+    ];
+  }, [apps, filtered.length, total]);
+
   return (
     <DashboardLayout>
       <PageHeader title="Enrollment Applications" subtitle="Review, approve, and manage all enrollment applications." />
 
-      <div className="sb-filter-bar mb-5">
+      <div className="admin-record-toolbar">
         <SearchField
           className="min-w-[200px] flex-1"
           maxWidthClass=""
@@ -126,7 +138,20 @@ export default function ApplicationsList() {
         />
       </div>
 
+      {!loading && apps.length > 0 && (
+        <div className="admin-record-kpi">
+          {kpiCards.map((card) => (
+            <div key={card.label} className="admin-record-kpi__card">
+              <p className="admin-record-kpi__label">{card.label}</p>
+              <p className="admin-record-kpi__value">{card.value}</p>
+              <p className="admin-record-kpi__hint">{card.hint}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <ResponsiveDataTable
+        layout="cards"
         columns={APP_COLUMNS}
         data={filtered}
         minWidth={1000}
@@ -135,7 +160,6 @@ export default function ApplicationsList() {
           <TableActionLink to={`/admin/applications/${app.id}`}>View Application</TableActionLink>
         )}
       />
-
       {!loading && totalPages > 1 && (
         <div className="sb-list-footer mt-4 flex items-center justify-between text-sm text-[#45474c]">
           <span>
