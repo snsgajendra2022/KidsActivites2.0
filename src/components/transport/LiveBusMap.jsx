@@ -156,8 +156,11 @@ export default function LiveBusMap({
     const map = L.map(containerRef.current, {
       center: FALLBACK_CENTER,
       zoom: FALLBACK_ZOOM,
-      zoomControl: true,
+      zoomControl: false,
+      attributionControl: true,
     });
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     L.tileLayer(OSM_TILE_URL, {
       attribution: OSM_ATTRIBUTION,
@@ -167,14 +170,25 @@ export default function LiveBusMap({
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
-    const resize = () => map.invalidateSize();
+    const resize = () => {
+      map.invalidateSize({ animate: false });
+    };
     requestAnimationFrame(resize);
-    const timer = setTimeout(resize, 200);
+    const timer = setTimeout(resize, 250);
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
+
+    let observer;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => resize());
+      observer.observe(containerRef.current);
+    }
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize);
+      observer?.disconnect();
       markersRef.current.clear();
       map.remove();
       mapRef.current = null;
@@ -320,10 +334,10 @@ export default function LiveBusMap({
   }).length > 0;
 
   return (
-    <div className={`relative overflow-hidden rounded-xl ${className}`}>
+    <div className={`relative z-0 isolate h-full w-full min-h-0 overflow-hidden rounded-xl ${className}`}>
       {showSearch && (
-        <div className="absolute left-3 right-3 top-3 z-[500] max-w-md">
-          <div className="rounded-xl border border-[#d0d5dd] bg-white/95 p-2 shadow-md backdrop-blur">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] flex justify-stretch p-2 sm:justify-end sm:p-3">
+          <div className="pointer-events-auto w-full max-w-none rounded-xl border border-[#d0d5dd] bg-white/95 p-2 shadow-md backdrop-blur sm:max-w-sm lg:max-w-md">
             <PlaceSearchInput
               label=""
               placeholder="Search area to move the map…"
@@ -340,16 +354,16 @@ export default function LiveBusMap({
       )}
 
       {routingLabel ? (
-        <div className="pointer-events-none absolute bottom-3 left-3 z-[450] rounded-lg border border-[#d0d5dd] bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#0b1c30] shadow-md">
+        <div className="pointer-events-none absolute bottom-14 left-2 z-[450] max-w-[min(100%-1rem,220px)] rounded-lg border border-[#d0d5dd] bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold text-[#0b1c30] shadow-md sm:bottom-3 sm:left-3 sm:max-w-xs sm:px-3 sm:text-xs">
           {routingLabel}
         </div>
       ) : null}
 
-      <div ref={containerRef} className="h-full min-h-[420px] w-full" />
+      <div ref={containerRef} className="live-bus-map-canvas relative z-0 h-full w-full min-h-[280px]" />
 
       {!hasPoints && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[400] p-4">
-          <div className="rounded-xl border border-[#d0d5dd] bg-white/95 px-4 py-3 shadow-md">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[400] p-3 sm:p-4">
+          <div className="rounded-xl border border-[#d0d5dd] bg-white/95 px-3 py-3 shadow-md sm:px-4">
             <p className="text-sm font-semibold text-[#0b1c30]">{emptyTitle}</p>
             <p className="mt-1 text-xs text-[#667085]">{emptyHint}</p>
           </div>

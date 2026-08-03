@@ -3,6 +3,7 @@ import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import PlaceSearchInput from './PlaceSearchInput.jsx';
+import StudentApplicationStopPicker from './StudentApplicationStopPicker.jsx';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
 import Select from '../ui/Select.jsx';
@@ -81,21 +82,63 @@ export default function RouteStopsEditor({
     })));
   };
 
-  const addStop = ({ name, lat, lng, stopType = 'pickup' }) => {
+  const addStop = (payload) => {
+    const lat = Number(payload?.lat);
+    const lng = Number(payload?.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     const current = stopsRef.current;
+    const alreadyStudent = payload.studentId
+      && current.some((stop) => String(stop.studentId) === String(payload.studentId));
+    if (alreadyStudent) return;
+
     commit([
       ...current,
       {
-        id: makeStopId(),
-        name: name || `Stop ${current.length + 1}`,
+        id: payload.id || makeStopId(),
+        name: payload.name || `Stop ${current.length + 1}`,
         lat,
         lng,
-        radiusMeters: 80,
-        stopType,
+        radiusMeters: payload.radiusMeters || 80,
+        stopType: payload.stopType || 'pickup',
         sequence: current.length + 1,
+        ...(payload.studentId ? { studentId: payload.studentId } : {}),
+        ...(payload.applicationId ? { applicationId: payload.applicationId } : {}),
+        ...(payload.addressLabel ? { addressLabel: payload.addressLabel } : {}),
+        ...(payload.pinCode ? { pinCode: payload.pinCode } : {}),
       },
     ]);
+  };
+
+  const addStopsBatch = (batch = []) => {
+    if (!Array.isArray(batch) || !batch.length) return;
+    const current = [...stopsRef.current];
+    const seenStudents = new Set(
+      current.filter((stop) => stop.studentId).map((stop) => String(stop.studentId)),
+    );
+
+    batch.forEach((payload) => {
+      const lat = Number(payload?.lat);
+      const lng = Number(payload?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      if (payload.studentId && seenStudents.has(String(payload.studentId))) return;
+
+      current.push({
+        id: payload.id || makeStopId(),
+        name: payload.name || `Stop ${current.length + 1}`,
+        lat,
+        lng,
+        radiusMeters: payload.radiusMeters || 80,
+        stopType: payload.stopType || 'pickup',
+        sequence: current.length + 1,
+        ...(payload.studentId ? { studentId: payload.studentId } : {}),
+        ...(payload.applicationId ? { applicationId: payload.applicationId } : {}),
+        ...(payload.addressLabel ? { addressLabel: payload.addressLabel } : {}),
+        ...(payload.pinCode ? { pinCode: payload.pinCode } : {}),
+      });
+      if (payload.studentId) seenStudents.add(String(payload.studentId));
+    });
+
+    commit(current);
   };
 
   const updateStop = (id, patch) => {
@@ -127,8 +170,9 @@ export default function RouteStopsEditor({
     const map = L.map(containerRef.current, {
       center: start,
       zoom: Array.isArray(initialCenter) ? 13 : 5,
-      zoomControl: true,
+      zoomControl: false,
     });
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.tileLayer(OSM_TILE_URL, { attribution: OSM_ATTRIBUTION, maxZoom: 19 }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -149,12 +193,23 @@ export default function RouteStopsEditor({
       ]).map((stop, index) => ({ ...stop, sequence: index + 1 })));
     });
 
-    const resize = () => map.invalidateSize();
+    const resize = () => map.invalidateSize({ animate: false });
     requestAnimationFrame(resize);
     const timer = setTimeout(resize, 250);
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
+
+    let observer;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => resize());
+      observer.observe(containerRef.current);
+    }
 
     return () => {
       clearTimeout(timer);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize);
+      observer?.disconnect();
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
@@ -244,8 +299,20 @@ export default function RouteStopsEditor({
 
   return (
     <div className="space-y-3">
+      <StudentApplicationStopPicker
+        existingStops={stops}
+        searchBias={bias}
+        onAddStops={(batch) => {
+          addStopsBatch(batch);
+          const last = batch?.[batch.length - 1];
+          if (last && Number.isFinite(last.lat) && Number.isFinite(last.lng)) {
+            mapRef.current?.setView([last.lat, last.lng], 13);
+          }
+        }}
+      />
+
       <PlaceSearchInput
-        label="Search & add stop location"
+        label="Or search a place / landmark"
         placeholder="Type area, school, landmark, or full address…"
         latitude={bias.lat}
         longitude={bias.lng}
@@ -260,13 +327,14 @@ export default function RouteStopsEditor({
       />
 
       <p className="text-xs text-[#667085]">
-        Search a place or click the map. Stop order builds a real on-road driving path with direction arrows.
+        Prefer selecting students so stops come from enrollment application addresses. You can also search or click the map.
+        Stop order builds an on-road driving path.
         {routeMeta ? ` ${routeMeta}.` : ''}
       </p>
 
       <div
         ref={containerRef}
-        className="h-[300px] w-full overflow-hidden rounded-xl border border-[#d0d5dd]"
+        className="h-[min(45vh,300px)] w-full overflow-hidden rounded-xl border border-[#d0d5dd] sm:h-[340px] lg:h-[380px]"
       />
 
       <div className="space-y-2">
@@ -313,6 +381,9 @@ export default function RouteStopsEditor({
               {Number.isFinite(stop.lat) && Number.isFinite(stop.lng)
                 ? `${Number(stop.lat).toFixed(5)}, ${Number(stop.lng).toFixed(5)}`
                 : 'Location missing — search again or click the map.'}
+              {stop.pinCode ? ` · PIN ${stop.pinCode}` : ''}
+              {stop.addressLabel ? ` · ${stop.addressLabel}` : ''}
+              {stop.studentId ? ' · from application' : ''}
             </p>
           </div>
         ))}

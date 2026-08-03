@@ -37,6 +37,7 @@ const ADMIN_ERP_NAV = [
   { id: 'admin_communication', to: '/admin/communication', label: 'Communication Center', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
   { id: 'admin_transport_vehicles', to: '/admin/transport/vehicles', label: 'Transport Vehicles', icon: Bus, iconName: 'Bus', section: 'Operations' },
   { id: 'admin_transport_routes', to: '/admin/transport/routes', label: 'Transport Routes', icon: Bus, iconName: 'Bus', section: 'Operations' },
+  { id: 'admin_transport_assignments', to: '/admin/transport/assignments', label: 'Student Bus Assignments', icon: Bus, iconName: 'Bus', section: 'Operations' },
   { id: 'admin_transport_live', to: '/admin/transport/live', label: 'Live Bus Tracking', icon: Bus, iconName: 'Bus', section: 'Operations' },
   { id: 'admin_library_books', to: '/admin/library/books', label: 'Library Books', icon: Library, iconName: 'Library', section: 'Operations' },
   { id: 'admin_library_issues', to: '/admin/library/issues', label: 'Library Issues', icon: Library, iconName: 'Library', section: 'Operations' },

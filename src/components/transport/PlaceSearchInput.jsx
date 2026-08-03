@@ -74,9 +74,12 @@ export default function PlaceSearchInput({
     <div ref={wrapRef} className="relative">
       {label ? <label className="form-label mb-1.5 block">{label}</label> : null}
       <div className="relative">
-        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#667085]" />
+        <span className="pointer-events-none absolute inset-y-0 left-0 z-[1] flex w-11 items-center justify-center text-[#667085]">
+          <Search size={16} aria-hidden />
+        </span>
         <input
-          className="input-premium h-11 w-full rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] pl-10 pr-10 text-sm outline-none focus:border-[#0058be]"
+          className="h-11 w-full rounded-lg border border-[#c5c6cd] bg-[#f8f9ff] text-sm text-[#0b1c30] outline-none transition focus:border-[#0058be] focus:shadow-[0_0_0_4px_rgba(0,88,190,0.1)] disabled:opacity-60"
+          style={{ paddingLeft: '2.75rem', paddingRight: '2.5rem' }}
           placeholder={placeholder}
           value={query}
           disabled={disabled}
@@ -86,10 +89,10 @@ export default function PlaceSearchInput({
           }}
           autoComplete="off"
         />
-        {query && (
+        {query ? (
           <button
             type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#667085] hover:bg-[#eef2ff]"
+            className="absolute inset-y-0 right-0 z-[1] flex w-10 items-center justify-center text-[#667085] hover:text-[#0b1c30]"
             onClick={() => {
               setQuery('');
               setResults([]);
@@ -100,7 +103,7 @@ export default function PlaceSearchInput({
           >
             <X size={14} />
           </button>
-        )}
+        ) : null}
       </div>
 
       {open && (loading || results.length > 0 || error) && (

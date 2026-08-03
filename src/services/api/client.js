@@ -151,7 +151,28 @@ async function refreshAccessTokenResult() {
     return { ok: false, reason: 'expired' };
   }
 
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
+    clearTokens();
+    return { ok: false, reason: 'expired' };
+  }
+
+  // Wrong X-Tenant-Slug (e.g. bare /admin/... URL) must not wipe a valid school session.
+  if (res.status === 403) {
+    let text = '';
+    try {
+      text = await res.text();
+    } catch {
+      text = '';
+    }
+    const json = parseJsonBody(text);
+    const code = String(json?.error?.code || '');
+    const message = String(json?.error?.message || text || '').toLowerCase();
+    const tenantMismatch = /tenant|workspace/i.test(code)
+      || message.includes('tenant')
+      || message.includes('workspace');
+    if (tenantMismatch) {
+      return { ok: false, reason: 'transient' };
+    }
     clearTokens();
     return { ok: false, reason: 'expired' };
   }

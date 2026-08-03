@@ -7,12 +7,14 @@ import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Input from '../../components/ui/Input.jsx';
 import Select from '../../components/ui/Select.jsx';
+import LoadingState from '../../components/ui/LoadingState.jsx';
 import SmartFileUpload from '../../components/upload/SmartFileUpload.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { getApplicationByParent } from '../../services/enrollmentService.js';
-import { getFeeByApplication, submitPayment } from '../../services/feeService.js';
+import { getMyFee, normalizeFee, submitPayment } from '../../services/feeService.js';
+import { listParentFees } from '../../services/advancedFeeService.js';
 import { downloadFeeReceipt } from '../../utils/feeReceipt.js';
 import '../../styles/fee-payment.css';
 
@@ -27,21 +29,103 @@ function formatBreakdownLabel(key) {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
 }
 
+function isFeeAssigned(fee) {
+  if (!fee) return false;
+  if (fee.status === 'not_assigned') return false;
+  if (fee.breakdown && Object.keys(fee.breakdown).length > 0) return true;
+  if (Number(fee.total) > 0) return true;
+  return Boolean(fee.status && fee.status !== 'not_assigned');
+}
+
+function toParentFeeView(item) {
+  if (!item) return null;
+  if (item.breakdown || item.applicationId || item.payment || item.applicationNo) {
+    return normalizeFee(item);
+  }
+  const heads = item.heads || item.lineItems || item.items || [];
+  const breakdown = item.breakdown
+    || (Array.isArray(heads)
+      ? heads.reduce((acc, line, index) => {
+        const key = line.key || line.name || line.label || `item_${index + 1}`;
+        acc[key] = Number(line.amount ?? line.net ?? 0);
+        return acc;
+      }, {})
+      : null);
+  const statusRaw = String(item.status || '').toLowerCase();
+  const status = statusRaw === 'paid' || statusRaw === 'verified'
+    ? 'verified'
+    : (statusRaw === 'partial' || statusRaw === 'issued' || statusRaw === 'draft'
+      ? 'fee_pending'
+      : (statusRaw || 'fee_pending'));
+  return normalizeFee({
+    id: item.id || item.invoiceId,
+    applicationId: item.applicationId || null,
+    applicationNo: item.invoiceNo || item.applicationNo || item.id,
+    studentName: item.studentName || item.student?.fullName || null,
+    status,
+    breakdown,
+    total: Number(item.netAmount ?? item.total ?? item.amount ?? item.gross ?? 0),
+    payment: item.payment || null,
+    source: 'invoice',
+  });
+}
+
 export default function ParentFees() {
   const { user } = useAuth();
   const { school, portalName } = usePortalConfig();
   const { toast } = useToast();
   const [app, setApp] = useState(null);
   const [fee, setFee] = useState(null);
+  const [invoices, setInvoices] = useState([]);
   const [payment, setPayment] = useState({ method: '', transactionId: '', proof: null });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  const refreshFees = async (applicationId) => {
+    const [enrollmentFee, parentFeeList] = await Promise.all([
+      getMyFee(applicationId, user).catch(() => null),
+      listParentFees().catch(() => []),
+    ]);
+    const invoiceViews = (Array.isArray(parentFeeList) ? parentFeeList : [])
+      .map(toParentFeeView)
+      .filter(Boolean);
+    setInvoices(invoiceViews);
+
+    if (isFeeAssigned(enrollmentFee)) {
+      setFee(enrollmentFee);
+      return enrollmentFee;
+    }
+
+    const firstOpenInvoice = invoiceViews.find((inv) => inv.status !== 'verified') || invoiceViews[0] || null;
+    setFee(firstOpenInvoice);
+    return firstOpenInvoice;
+  };
 
   useEffect(() => {
-    getApplicationByParent(user.id).then(async (data) => {
-      setApp(data);
-      if (data) setFee(await getFeeByApplication(data.id));
-    });
-  }, [user.id]);
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setLoadError('');
+      try {
+        const application = await getApplicationByParent(user.id).catch(() => null);
+        if (cancelled) return;
+        setApp(application);
+        await refreshFees(application?.id || null);
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err?.message || 'Unable to load fee details.');
+          setFee(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    if (user?.id) load();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const handleDownloadReceipt = () => {
     try {
@@ -54,19 +138,28 @@ export default function ParentFees() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!fee?.id) {
+      toast('No fee record available to submit payment against.', 'warning');
+      return;
+    }
     if (!payment.method || !payment.transactionId) {
       toast('Please complete all required fields before submitting.', 'warning');
       return;
     }
-    setLoading(true);
+    setSubmitting(true);
     try {
-      await submitPayment(fee.id, { method: payment.method, transactionId: payment.transactionId });
+      await submitPayment(fee.id, {
+        method: payment.method,
+        transactionId: payment.transactionId,
+        proofFileKey: payment.proof?.fileKey || payment.proof?.key || undefined,
+      });
       toast('Payment proof submitted successfully.', 'success');
-      setFee(await getFeeByApplication(app.id));
-    } catch {
-      toast('Something went wrong. Please try again.', 'error');
+      setPayment({ method: '', transactionId: '', proof: null });
+      await refreshFees(app?.id || fee.applicationId || null);
+    } catch (err) {
+      toast(err?.message || 'Something went wrong. Please try again.', 'error');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -76,6 +169,8 @@ export default function ParentFees() {
       ? 'fee_submitted'
       : 'fee_pending';
 
+  const showPaymentForm = fee && isFeeAssigned(fee) && fee.status === 'fee_pending' && fee.source !== 'invoice';
+
   return (
     <DashboardLayout>
       <PageTransition>
@@ -84,7 +179,13 @@ export default function ParentFees() {
           subtitle="View fee breakdown and submit payment proof."
         />
 
-        {!fee || fee.status === 'not_assigned' ? (
+        {loading ? (
+          <LoadingState message="Loading fee details…" />
+        ) : loadError ? (
+          <div className="sb-card fee-payment-card">
+            <p className="fee-payment-empty">{loadError}</p>
+          </div>
+        ) : !isFeeAssigned(fee) ? (
           <div className="sb-card fee-payment-card">
             <p className="fee-payment-empty">
               Fee has not been assigned yet. Please wait for admin approval.
@@ -95,19 +196,20 @@ export default function ParentFees() {
             <section className="sb-card fee-payment-card">
               <h3 className="fee-payment-card-title">Fee Summary</h3>
               <p className="fee-payment-card-sub">
-                {app?.student?.fullName} · {fee.applicationNo}
+                {fee.studentName || app?.student?.fullName || 'Student'}
+                {fee.applicationNo ? ` · ${fee.applicationNo}` : ''}
               </p>
 
               <div className="fee-payment-breakdown">
                 {fee.breakdown && Object.entries(fee.breakdown).map(([k, v]) => (
                   <div key={k} className={`fee-payment-row${k === 'discount' ? ' discount' : ''}`}>
                     <span>{formatBreakdownLabel(k)}</span>
-                    <span>₹{v.toLocaleString()}</span>
+                    <span>₹{Number(v || 0).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
                 <div className="fee-payment-row total">
                   <span>Total Payable</span>
-                  <span>₹{fee.total?.toLocaleString()}</span>
+                  <span>₹{Number(fee.total || 0).toLocaleString('en-IN')}</span>
                 </div>
               </div>
 
@@ -128,7 +230,7 @@ export default function ParentFees() {
               )}
             </section>
 
-            {fee.status === 'fee_pending' && (
+            {showPaymentForm && (
               <section className="sb-card fee-payment-card">
                 <h3 className="fee-payment-card-title">Submit Payment Proof</h3>
                 <p className="fee-payment-card-sub">
@@ -185,13 +287,32 @@ export default function ParentFees() {
                   <Button
                     type="submit"
                     variant="primary"
-                    loading={loading}
+                    loading={submitting}
                     className="fee-payment-submit"
                   >
                     <CreditCard size={18} />
                     Submit Payment Proof
                   </Button>
                 </form>
+              </section>
+            )}
+
+            {invoices.length > 1 && (
+              <section className="sb-card fee-payment-card fee-payment-layout__full">
+                <h3 className="fee-payment-card-title">Other fee invoices</h3>
+                <div className="fee-payment-breakdown">
+                  {invoices.map((inv) => (
+                    <button
+                      key={inv.id}
+                      type="button"
+                      className={`fee-payment-row fee-payment-invoice-row${fee?.id === inv.id ? ' is-active' : ''}`}
+                      onClick={() => setFee(inv)}
+                    >
+                      <span>{inv.applicationNo || inv.id}</span>
+                      <span>₹{Number(inv.total || 0).toLocaleString('en-IN')}</span>
+                    </button>
+                  ))}
+                </div>
               </section>
             )}
           </div>

@@ -76,8 +76,12 @@ describe('chatService mock messaging', () => {
     const reacted = await toggleMessageReaction('conversation', sent.id, 'teacher', '👍');
     expect(reacted.reactions['👍']).toEqual(['teacher']);
 
-    const removedReaction = await toggleMessageReaction('conversation', sent.id, 'teacher', '👍');
-    expect(removedReaction.reactions['👍']).toBeUndefined();
+    const switched = await toggleMessageReaction('conversation', sent.id, 'teacher', '🎉');
+    expect(switched.reactions['👍']).toBeUndefined();
+    expect(switched.reactions['🎉']).toEqual(['teacher']);
+
+    const removedReaction = await toggleMessageReaction('conversation', sent.id, 'teacher', '🎉');
+    expect(removedReaction.reactions['🎉']).toBeUndefined();
 
     const deleted = await deleteMessage('conversation', sent.id);
     expect(deleted).toMatchObject({ deleted: true, text: '', attachments: [] });

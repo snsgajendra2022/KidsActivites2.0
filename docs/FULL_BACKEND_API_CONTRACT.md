@@ -446,6 +446,10 @@ Rules:
 | GET | `/admin/report-cards/{id}` | Report-card snapshot |
 | GET | `/admin/report-cards/{id}/pdf` | PDF response |
 
+Frontend parent results page (`/{tenant}/parent/exams`) calls **`GET /parent/exam-marks`**
+(not `/admin/exam-marks`). Admin/teacher marks entry uses `/admin/exam-marks`.
+Parents only receive rows for **published** exams.
+
 Rules:
 
 - Exam status: `draft | scheduled | completed | published`.
@@ -494,6 +498,9 @@ Rules:
 | POST | `/admin/timetable/bulk` | Replace class/week atomically |
 | GET | `/teacher/timetable` | Own timetable |
 | GET | `/parent/timetable` | Child class timetable |
+
+Frontend: `/{tenant}/parent/timetable` uses **`GET /parent/timetable`** and shows only
+slots for the parent’s child class(es). Admin uses `/admin/timetable`.
 
 Return `409` with `conflicts[]` for teacher, class, or room overlaps. Require `endTime > startTime` and unique class/day/period.
 
@@ -635,7 +642,19 @@ DELETE /lms/enrollments/{enrollmentId}
 }
 ```
 
-`enroll-class` enrolls all students in `classId` (parent user as learner account).
+`enroll-class` enrolls all students in `classId` and must create learner
+enrollments visible to linked parent accounts via `GET /lms/my-learning`
+(and/or `GET /lms/enrollments?studentId=` for each child).
+
+Frontend parent page `/{tenant}/parent/lms` calls:
+
+1. `GET /lms/my-learning?studentIds=&classIds=` (also tries `/parent/lms/my-learning`)
+2. If empty, loads the parent’s children and requests:
+   - `GET /lms/enrollments?studentId=` (and `/parent/lms/enrollments`)
+   - then `GET /lms/enrollments?classId=` for class enrollments
+
+Backend should return the same enrollment shape from my-learning for parents
+when their child’s class was enrolled via `enroll-class`.
 
 ### Digital Classroom (My Learning)
 
@@ -1067,6 +1086,7 @@ GET   /admin/security/mfa
 PATCH /admin/security/mfa
 POST  /admin/security/mfa/enable
 POST  /admin/security/mfa/verify
+POST  /admin/security/mfa/disable   (optional alias)
 GET   /admin/security/backup-policy
 PUT   /admin/security/backup-policy
 POST  /admin/security/backups/run
@@ -1074,6 +1094,9 @@ GET   /admin/security/backups
 ```
 
 MFA methods: `otp_sms | totp`. Encrypt backups; restore requires privileged authorization and audit.
+
+**Full request/response contract (frontend + backend checklist):**  
+[`SECURITY_CENTER_BACKEND_CONTRACT.md`](./SECURITY_CENTER_BACKEND_CONTRACT.md)
 
 ---
 

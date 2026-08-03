@@ -128,8 +128,8 @@ export default function AdminFees() {
       toast('Fee payment verified successfully.', 'success');
       closeModal();
       reload();
-    } catch {
-      toast('Something went wrong. Please try again.', 'error');
+    } catch (err) {
+      toast(err?.message || 'Unable to verify payment. Please try again.', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -146,8 +146,8 @@ export default function AdminFees() {
       toast('Payment rejected. Parent can resubmit proof.', 'success');
       closeModal();
       reload();
-    } catch {
-      toast('Something went wrong. Please try again.', 'error');
+    } catch (err) {
+      toast(err?.message || 'Unable to reject payment. Please try again.', 'error');
     } finally {
       setActionLoading(false);
     }

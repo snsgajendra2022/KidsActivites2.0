@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../../components/layout/AppLayout.jsx';
@@ -141,6 +141,63 @@ function applyReadReceipt(messages, readerId, readAt, currentUserId) {
 
 const QUICK_REACTIONS = ['👍', '❤️', '🎉', '😊'];
 
+function reactionUserIds(userIds = []) {
+  return (Array.isArray(userIds) ? userIds : []).map(String);
+}
+
+function getUserReactionEmoji(reactions = {}, userId) {
+  const uid = String(userId || '');
+  if (!uid) return null;
+  return Object.entries(reactions || {}).find(([, ids]) => reactionUserIds(ids).includes(uid))?.[0] || null;
+}
+
+function applyLocalReaction(reactions = {}, userId, emoji) {
+  const uid = String(userId);
+  const nextEmoji = String(emoji || '');
+  const next = {};
+  Object.entries(reactions || {}).forEach(([key, ids]) => {
+    const filtered = reactionUserIds(ids).filter((id) => id !== uid);
+    if (filtered.length) next[key] = filtered;
+  });
+  const alreadyOnTarget = reactionUserIds(reactions?.[nextEmoji]).includes(uid);
+  if (!alreadyOnTarget && nextEmoji) {
+    next[nextEmoji] = [...reactionUserIds(next[nextEmoji]), uid];
+  }
+  return next;
+}
+
+/** Keep other users from the server, but never let the current user own more than one emoji. */
+function mergeReactionsKeepingMine(serverReactions, localReactions, userId) {
+  const uid = String(userId);
+  const merged = {};
+  Object.entries(serverReactions || {}).forEach(([emoji, ids]) => {
+    const filtered = reactionUserIds(ids).filter((id) => id !== uid);
+    if (filtered.length) merged[emoji] = filtered;
+  });
+  Object.entries(localReactions || {}).forEach(([emoji, ids]) => {
+    if (!reactionUserIds(ids).includes(uid)) return;
+    merged[emoji] = [...reactionUserIds(merged[emoji]).filter((id) => id !== uid), uid];
+  });
+  return merged;
+}
+
+/** Display safety: if a user somehow appears on multiple emojis, keep only their latest. */
+function reactionsForDisplay(reactions = {}, currentUserId) {
+  const uid = String(currentUserId || '');
+  if (!uid) return reactions || {};
+  const mineEmojis = Object.entries(reactions || {})
+    .filter(([, ids]) => reactionUserIds(ids).includes(uid))
+    .map(([emoji]) => emoji);
+  if (mineEmojis.length <= 1) return reactions || {};
+  const keep = mineEmojis[mineEmojis.length - 1];
+  const next = {};
+  Object.entries(reactions || {}).forEach(([emoji, ids]) => {
+    const list = reactionUserIds(ids).filter((id) => id !== uid || emoji === keep);
+    if (list.length) next[emoji] = list;
+  });
+  return next;
+}
+
 function formatFileSize(bytes = 0) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -193,7 +250,6 @@ export default function ChatPage() {
   const deleteDialogRef = useRef(null);
   const deleteCancelRef = useRef(null);
   const threadBodyRef = useRef(null);
-  const reactionMenuRef = useRef(null);
   const sendButtonRef = useRef(null);
   const sendLockRef = useRef(false);
   const inputValueRef = useRef('');
@@ -636,36 +692,6 @@ export default function ChatPage() {
 
   const clearSelection = useCallback(() => setSelectedIds([]), []);
 
-  useLayoutEffect(() => {
-    const body = threadBodyRef.current;
-    const menu = reactionMenuRef.current;
-    if (!body || !menu) return undefined;
-
-    const position = () => {
-      const bubble = menu.parentElement;
-      if (!bubble) return;
-      const bodyRect = body.getBoundingClientRect();
-      const bubbleRect = bubble.getBoundingClientRect();
-      const menuRect = menu.getBoundingClientRect();
-      const center = bubbleRect.top + bubbleRect.height / 2;
-      const half = menuRect.height / 2;
-      const clamped = Math.min(
-        Math.max(center, bodyRect.top + half + 8),
-        bodyRect.bottom - half - 8,
-      );
-      menu.style.setProperty('--menu-y-shift', `${Math.round(clamped - center)}px`);
-    };
-
-    position();
-    const update = () => window.requestAnimationFrame(position);
-    body.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
-    return () => {
-      body.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
-    };
-  }, [canReactSelection, singleSelected?.id]);
-
   const handleBubbleClick = useCallback((messageId) => {
     if (window.getSelection?.()?.toString()) return;
     toggleMessageSelection(messageId);
@@ -727,13 +753,30 @@ export default function ChatPage() {
   };
 
   const handleReaction = async (messageId, emoji) => {
-    if (!featureSupport.reactions) return;
+    if (!featureSupport.reactions || !user?.id) return;
+    const previous = messages.find((message) => message.id === messageId);
+    const optimisticReactions = applyLocalReaction(previous?.reactions, user.id, emoji);
+    setMessages((current) => current.map((message) => (
+      message.id === messageId ? { ...message, reactions: optimisticReactions } : message
+    )));
     try {
       const updated = await toggleMessageReaction(active, messageId, user.id, emoji);
+      const reactions = mergeReactionsKeepingMine(
+        updated?.reactions,
+        optimisticReactions,
+        user.id,
+      );
       setMessages((current) => current.map((message) => (
-        message.id === messageId ? { ...message, ...updated } : message
+        message.id === messageId
+          ? { ...message, ...updated, reactions }
+          : message
       )));
     } catch (error) {
+      if (previous) {
+        setMessages((current) => current.map((message) => (
+          message.id === messageId ? previous : message
+        )));
+      }
       syncFeatureSupport(error);
       toast(error?.message || 'Unable to update reaction.', 'error');
     }
@@ -1022,6 +1065,9 @@ export default function ChatPage() {
                           key={item.key}
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
+                          className={`messages-bubble-wrap ${item.message.senderId === user.id ? 'messages-bubble-wrap--sent' : 'messages-bubble-wrap--received'}${selectedIds.includes(item.message.id) ? ' is-selected' : ''}${selectionCount > 0 ? ' is-selecting' : ''}`}
+                        >
+                        <div
                           className={`messages-bubble ${item.message.senderId === user.id ? 'messages-bubble--sent' : 'messages-bubble--received'} ${item.message.deleted ? 'is-deleted' : ''} ${selectionCount > 0 ? 'is-selecting' : ''} ${selectedIds.includes(item.message.id) ? 'is-selected' : ''}`}
                           onClick={editingMessageId === item.message.id ? undefined : () => handleBubbleClick(item.message.id)}
                         >
@@ -1065,37 +1111,65 @@ export default function ChatPage() {
                               </span>
                             )}
                           </span>
-                          {canReactSelection && singleSelected.id === item.message.id && (
+                        </div>
+                          {canReactSelection && singleSelected.id === item.message.id ? (
                             <div
-                              ref={reactionMenuRef}
-                              className="messages-reaction-menu"
+                              className="messages-reaction-menu messages-reaction-menu--docked"
                               aria-label="Choose a reaction"
                               onClick={(event) => event.stopPropagation()}
                             >
-                              {QUICK_REACTIONS.map((emoji) => (
-                                <button
-                                  key={emoji}
-                                  type="button"
-                                  title={`React ${emoji}`}
-                                  aria-label={`React with ${emoji}`}
-                                  onClick={() => {
-                                    handleReaction(item.message.id, emoji);
-                                    clearSelection();
-                                  }}
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
+                              {QUICK_REACTIONS.map((emoji) => {
+                                const mine = getUserReactionEmoji(
+                                  reactionsForDisplay(item.message.reactions, user.id),
+                                  user.id,
+                                ) === emoji;
+                                return (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    className={`messages-reaction-menu__btn${mine ? ' is-active' : ''}`}
+                                    title={mine ? `Remove ${emoji}` : `React ${emoji}`}
+                                    aria-label={mine ? `Remove reaction ${emoji}` : `React with ${emoji}`}
+                                    aria-pressed={mine}
+                                    onClick={() => {
+                                      handleReaction(item.message.id, emoji);
+                                      clearSelection();
+                                    }}
+                                  >
+                                    {emoji}
+                                  </button>
+                                );
+                              })}
                             </div>
-                          )}
-                          {!item.message.deleted && featureSupport.reactions && Object.keys(item.message.reactions || {}).length > 0 && (
+                          ) : (
+                            !item.message.deleted
+                            && featureSupport.reactions
+                            && Object.keys(reactionsForDisplay(item.message.reactions, user.id)).length > 0 && (
                             <div className="messages-bubble__reactions" aria-label="Message reactions">
-                              {Object.entries(item.message.reactions).map(([emoji, userIds]) => (
-                                <button key={emoji} type="button" className={userIds.includes(user.id) ? 'is-mine' : ''} onClick={(event) => { event.stopPropagation(); handleReaction(item.message.id, emoji); }}>
-                                  <span aria-hidden>{emoji}</span> {userIds.length}
-                                </button>
-                              ))}
+                              {Object.entries(reactionsForDisplay(item.message.reactions, user.id)).map(([emoji, userIds]) => {
+                                const ids = reactionUserIds(userIds);
+                                const mine = ids.includes(String(user.id));
+                                return (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    className={`messages-bubble__reaction-btn${mine ? ' is-mine' : ''}`}
+                                    title={mine ? `Remove ${emoji}` : `React ${emoji}`}
+                                    aria-label={`${emoji}${ids.length > 1 ? ` ${ids.length}` : ''}${mine ? ', your reaction' : ''}`}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleReaction(item.message.id, emoji);
+                                    }}
+                                  >
+                                    <span className="messages-bubble__reaction-emoji" aria-hidden>{emoji}</span>
+                                    {ids.length > 1 && (
+                                      <span className="messages-bubble__reaction-count">{ids.length}</span>
+                                    )}
+                                  </button>
+                                );
+                              })}
                             </div>
+                            )
                           )}
                         </motion.div>
                         )

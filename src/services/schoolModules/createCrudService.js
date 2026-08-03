@@ -6,6 +6,17 @@ function makeId(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+export function asCrudList(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.content)) return data.content;
+  if (Array.isArray(data.records)) return data.records;
+  if (Array.isArray(data.results)) return data.results;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+}
+
 /**
  * Shared mock + API CRUD service for school ERP modules.
  * Live API path: /admin/{resource} (override via options).
@@ -17,13 +28,15 @@ export function createCrudService({
   idPrefix = 'item',
   listPath,
   itemPath,
+  normalizeItem,
 }) {
   const storageKey = `sb_${key}`;
   const baseList = listPath || `/admin/${resource}`;
   const baseItem = itemPath || ((id) => `/admin/${resource}/${id}`);
+  const normalize = typeof normalizeItem === 'function' ? normalizeItem : (item) => item;
 
   function readAll() {
-    return getStore(storageKey, seed);
+    return getStore(storageKey, seed).map(normalize);
   }
 
   function writeAll(items) {
@@ -43,7 +56,7 @@ export function createCrudService({
       },
       apiFn: async () => {
         const data = await api.get(baseList, filters);
-        return Array.isArray(data) ? data : (data?.items || []);
+        return asCrudList(data).map(normalize);
       },
     });
   }
@@ -54,7 +67,9 @@ export function createCrudService({
         await delay(80);
         return readAll().find((item) => item.id === id) || null;
       },
-      apiFn: () => api.get(typeof baseItem === 'function' ? baseItem(id) : `${baseItem}/${id}`),
+      apiFn: async () => normalize(
+        await api.get(typeof baseItem === 'function' ? baseItem(id) : `${baseItem}/${id}`),
+      ),
     });
   }
 
@@ -63,18 +78,18 @@ export function createCrudService({
       mockFn: async () => {
         await delay(150);
         const now = new Date().toISOString();
-        const item = {
+        const item = normalize({
           id: makeId(idPrefix),
           createdAt: now,
           updatedAt: now,
           ...payload,
-        };
+        });
         const items = readAll();
         items.unshift(item);
         writeAll(items);
         return item;
       },
-      apiFn: () => api.post(baseList, payload),
+      apiFn: async () => normalize(await api.post(baseList, payload)),
     });
   }
 
@@ -85,16 +100,18 @@ export function createCrudService({
         const items = readAll();
         const index = items.findIndex((item) => item.id === id);
         if (index < 0) throw new Error('Record not found');
-        items[index] = {
+        items[index] = normalize({
           ...items[index],
           ...updates,
           id,
           updatedAt: new Date().toISOString(),
-        };
+        });
         writeAll(items);
         return items[index];
       },
-      apiFn: () => api.patch(typeof baseItem === 'function' ? baseItem(id) : `${baseItem}/${id}`, updates),
+      apiFn: async () => normalize(
+        await api.patch(typeof baseItem === 'function' ? baseItem(id) : `${baseItem}/${id}`, updates),
+      ),
     });
   }
 

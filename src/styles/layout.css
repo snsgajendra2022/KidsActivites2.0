@@ -890,6 +890,13 @@
 
 .portal-shell .sidebar-mobile-backdrop {
   background: color-mix(in srgb, var(--admin-purple-deep) 40%, transparent);
+  z-index: 1100;
+}
+
+@media (max-width: 1023px) {
+  .portal-shell .app-sidebar {
+    z-index: 1200;
+  }
 }
 
 .portal-shell .app-sidebar .sidebar-nav-section {

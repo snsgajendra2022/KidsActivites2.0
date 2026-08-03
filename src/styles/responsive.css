@@ -89,8 +89,8 @@ svg {
 }
 
 /* Touch-friendly minimum targets */
-button:not(.media-card-toolbar__btn):not(.admin-photos-card__btn):not([data-close-button]):not(.sb-switch):not(.portal-settings__nav-btn):not(.portal-settings__target-btn),
-[role='button']:not(.media-card-toolbar__btn):not(.sb-switch),
+button:not(.media-card-toolbar__btn):not(.admin-photos-card__btn):not([data-close-button]):not(.sb-switch):not(.portal-settings__nav-btn):not(.portal-settings__target-btn):not(.messages-bubble__reaction-btn):not(.messages-reaction-menu__btn),
+[role='button']:not(.media-card-toolbar__btn):not(.sb-switch):not(.messages-bubble__reaction-btn):not(.messages-reaction-menu__btn),
 a.sb-btn-primary,
 a.sb-btn-secondary,
 a.sb-link-btn,

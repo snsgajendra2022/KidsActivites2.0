@@ -15,6 +15,10 @@ export function normalizeRouteStops(stops) {
           radiusMeters: Number(stop.radiusMeters) || 80,
           stopType: stop.stopType || stop.stop_type || (index === stops.length - 1 ? 'school' : 'pickup'),
           etaOffsetMin: stop.etaOffsetMin ?? null,
+          ...(stop.studentId ? { studentId: String(stop.studentId) } : {}),
+          ...(stop.applicationId ? { applicationId: String(stop.applicationId) } : {}),
+          ...(stop.addressLabel ? { addressLabel: String(stop.addressLabel) } : {}),
+          ...(stop.pinCode ? { pinCode: String(stop.pinCode) } : {}),
         };
       })
       .filter(Boolean)
@@ -163,5 +167,9 @@ export function payloadStopsForApi(stops) {
     radiusMeters: stop.radiusMeters || 80,
     stopType: stop.stopType || 'pickup',
     ...(stop.etaOffsetMin != null ? { etaOffsetMin: stop.etaOffsetMin } : {}),
+    ...(stop.studentId ? { studentId: stop.studentId } : {}),
+    ...(stop.applicationId ? { applicationId: stop.applicationId } : {}),
+    ...(stop.addressLabel ? { addressLabel: stop.addressLabel } : {}),
+    ...(stop.pinCode ? { pinCode: stop.pinCode } : {}),
   }));
 }

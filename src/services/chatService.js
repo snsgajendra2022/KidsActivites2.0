@@ -323,16 +323,28 @@ export async function deleteMessage(conversationId, messageId) {
 }
 
 export async function toggleMessageReaction(conversationId, messageId, userId, emoji) {
+  const uid = String(userId);
   return routeRequest({
     mockFn: async () => {
       await delay(100);
       return updateMockMessage(conversationId, messageId, (message) => {
         const reactions = { ...(message.reactions || {}) };
-        const users = new Set(reactions[emoji] || []);
-        if (users.has(userId)) users.delete(userId);
-        else users.add(userId);
-        if (users.size) reactions[emoji] = [...users];
-        else delete reactions[emoji];
+        const nextEmoji = String(emoji || '');
+        if (!nextEmoji) return { ...message, reactions };
+
+        // One reaction per user: remove this user from every emoji first.
+        Object.keys(reactions).forEach((key) => {
+          const users = (reactions[key] || []).map(String).filter((id) => id !== uid);
+          if (users.length) reactions[key] = users;
+          else delete reactions[key];
+        });
+
+        const alreadyOnTarget = (message.reactions?.[nextEmoji] || []).map(String).includes(uid);
+        // Clicking the same emoji again clears it (toggle off).
+        if (!alreadyOnTarget) {
+          reactions[nextEmoji] = [...(reactions[nextEmoji] || []).map(String).filter((id) => id !== uid), uid];
+        }
+
         return { ...message, reactions };
       });
     },
@@ -340,7 +352,7 @@ export async function toggleMessageReaction(conversationId, messageId, userId, e
       'reactions',
       () => api.post(
         `/chat/conversations/${conversationId}/messages/${messageId}/reactions`,
-        { emoji },
+        { emoji, replace: true },
       ),
     ),
   });

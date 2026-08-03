@@ -210,7 +210,7 @@ export default function TransportRoutesManagePage() {
           subtitle="Build each route as an ordered stop list with real map locations. Live tracking uses this path."
           actions={(
             <div className="flex flex-wrap gap-2">
-              <Link to="/admin/transport/live">
+              <Link to="../live" relative="path">
                 <Button variant="secondary">
                   <MapPinned size={16} /> Open live tracking
                 </Button>
@@ -229,7 +229,7 @@ export default function TransportRoutesManagePage() {
           </div>
           <div className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-wide text-[#667085]">Add stops in order</p>
-            <p className="mt-1 text-sm text-[#344054]">Search location → place stop 1, 2, 3… school last.</p>
+            <p className="mt-1 text-sm text-[#344054]">Select students — application address becomes map stops.</p>
           </div>
           <div className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-wide text-[#667085]">Track on live map</p>
@@ -289,9 +289,8 @@ export default function TransportRoutesManagePage() {
           )}
         >
           <div className="mb-4 rounded-xl border border-[#d0d5dd] bg-[#f8f9ff] px-4 py-3 text-sm text-[#344054]">
-            <strong className="text-[#0b1c30]">How this route works:</strong>
-            {' '}Stop order (1 → 2 → School) becomes the blue line on Live Bus Tracking.
-            Every stop must have a searched or map-clicked location.
+            <strong className="text-[#0b1c30]">Build stops from enrolled students:</strong>
+            {' '}Select class → student. We read the address from their enrollment application, put it on the map, then draw the road path.
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Input
@@ -335,7 +334,7 @@ export default function TransportRoutesManagePage() {
             <div className="md:col-span-2 border-t border-[#eaecf0] pt-4">
               <h3 className="mb-1 text-sm font-bold text-[#0b1c30]">Stops & map locations</h3>
               <p className="mb-3 text-xs text-[#667085]">
-                Search your area first, then click the map for exact pickup points. Use arrows to set order.
+                Add students from enrollment applications first. Then reorder stops and save — live tracking uses this path.
               </p>
               {modalOpen ? (
                 <RouteStopsEditor

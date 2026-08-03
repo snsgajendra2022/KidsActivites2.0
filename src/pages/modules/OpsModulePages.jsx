@@ -6,7 +6,6 @@ import {
   expenseService,
   hrStaffService,
   inventoryService,
-  loginHistoryService,
   payrollService,
   performanceNoteService,
   subscriptionService,
@@ -286,44 +285,6 @@ export function SubscriptionPlansPage() {
       createLabel="Add Plan"
       searchKeys={['name', 'features', 'status']}
       readOnly={!canManagePlans}
-    />
-  );
-}
-
-export function LoginHistoryPage() {
-  return (
-    <ModuleCrudPage
-      title="Login History"
-      subtitle="Review successful and failed authentication attempts."
-      service={loginHistoryService}
-      columns={[
-        { key: 'userName', label: 'User', primary: true },
-        { key: 'email', label: 'Email' },
-        { key: 'ip', label: 'IP' },
-        { key: 'device', label: 'Device' },
-        { key: 'status', label: 'Status', badge: true },
-        { key: 'createdAt', label: 'Time' },
-      ]}
-      fields={[
-        { key: 'userName', label: 'User Name', required: true },
-        { key: 'email', label: 'Email', type: 'email', required: true },
-        { key: 'ip', label: 'IP Address', required: true },
-        { key: 'device', label: 'Device', required: true },
-        {
-          key: 'status',
-          label: 'Status',
-          type: 'select',
-          required: true,
-          defaultValue: 'success',
-          options: [
-            { value: 'success', label: 'Success' },
-            { value: 'failed', label: 'Failed' },
-          ],
-        },
-      ]}
-      createLabel="Add Login Event"
-      readOnly
-      searchKeys={['userName', 'email', 'ip', 'device', 'status']}
     />
   );
 }

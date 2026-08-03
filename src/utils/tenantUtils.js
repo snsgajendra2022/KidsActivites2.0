@@ -34,17 +34,19 @@ export function prefixTenantPath(path, tenantSlug) {
   const normalized = path.startsWith('/') ? path : `/${path}`;
   if (normalized === `/${tenantSlug}`) return normalized;
 
+  const appRoots = new Set([
+    'admin', 'parent', 'teacher', 'login', 'profile', 'enroll', 'enrollment',
+    'forgot-password', 'reset-password', 'verify-email',
+  ]);
+
   const tenantPrefix = `/${tenantSlug}/`;
   if (normalized.startsWith(tenantPrefix)) {
-    // Avoid false "already prefixed" when tenant slug is "admin" and path is "/admin/...".
-    // Real prefixed routes look like /{tenant}/admin/..., /{tenant}/login, etc.
+    // Already /{tenant}/admin|parent|... — do not prefix again.
+    // (When tenantSlug is "admin", bare "/admin/..." also starts with this prefix;
+    // only treat as prefixed when the next segment is a real app root.)
     const remainder = normalized.slice(tenantPrefix.length);
-    const firstSeg = remainder.split('/').filter(Boolean)[0];
-    const appRoots = new Set([
-      'admin', 'parent', 'teacher', 'login', 'profile', 'enroll', 'enrollment',
-      'forgot-password', 'reset-password', 'verify-email',
-    ]);
-    if (appRoots.has(firstSeg)) {
+    const nextSeg = remainder.split('/').filter(Boolean)[0];
+    if (appRoots.has(nextSeg)) {
       return normalized;
     }
   }

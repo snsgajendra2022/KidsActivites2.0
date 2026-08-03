@@ -1,5 +1,8 @@
 import ModuleCrudPage from '../../components/modules/ModuleCrudPage.jsx';
-import { examMarksService } from '../../services/schoolModules/index.js';
+import {
+  examMarksService,
+  parentExamMarksService,
+} from '../../services/schoolModules/index.js';
 import {
   gradeFromMarks,
   loadExamOptions,
@@ -10,7 +13,15 @@ const columns = [
   { key: 'studentName', label: 'Student', primary: true },
   { key: 'examName', label: 'Exam' },
   { key: 'className', label: 'Class' },
-  { key: 'marksObtained', label: 'Marks' },
+  {
+    key: 'marksObtained',
+    label: 'Marks',
+    render: (row) => (
+      row.maxMarks != null
+        ? `${row.marksObtained ?? 0} / ${row.maxMarks}`
+        : String(row.marksObtained ?? '—')
+    ),
+  },
   { key: 'grade', label: 'Grade' },
   { key: 'rank', label: 'Rank' },
   { key: 'comments', label: 'Comments' },
@@ -61,18 +72,35 @@ const fields = [
   { key: 'maxMarks', label: 'Max Marks', visible: false },
 ];
 
-export default function ExamMarksPage({ layout = 'dashboard', readOnly = false }) {
+export default function ExamMarksPage({
+  layout = 'dashboard',
+  readOnly = false,
+  audience = 'staff',
+}) {
+  const isParent = audience === 'parent' || (readOnly && layout === 'app');
+  const service = isParent ? parentExamMarksService : examMarksService;
+
   return (
     <ModuleCrudPage
-      title="Marks Entry"
-      subtitle="Select an exam, load students from that class, then enter marks against student IDs."
-      service={examMarksService}
+      title={isParent ? 'Exam Results' : 'Marks Entry'}
+      subtitle={
+        isParent
+          ? 'Published exam results for your children.'
+          : 'Select an exam, load students from that class, then enter marks. Publish the exam so parents can see results.'
+      }
+      service={service}
       columns={columns}
-      fields={fields}
+      fields={isParent ? [] : fields}
       createLabel="Enter Marks"
       layout={layout}
-      readOnly={readOnly}
+      readOnly={readOnly || isParent}
       searchKeys={['studentName', 'examName', 'examId', 'grade', 'className']}
+      emptyTitle={isParent ? 'No published results yet' : 'No marks yet'}
+      emptyDescription={
+        isParent
+          ? 'Results appear here after the school publishes an exam. Ask admin to set the exam status to Published.'
+          : 'Enter the first marks record for an exam.'
+      }
       transformCreate={(form, _editing, { user: currentUser }) => {
         const maxMarks = Number(form.maxMarks || 100);
         const marksObtained = Number(form.marksObtained);

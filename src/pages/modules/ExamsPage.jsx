@@ -72,6 +72,7 @@ function buildFields(user) {
         { value: 'completed', label: 'Completed' },
         { value: 'published', label: 'Published' },
       ],
+      helpText: 'Parents only see marks after this exam is Published.',
       visibleWhen: ({ user: currentUser }) => currentUser?.role !== ROLES.TEACHER,
     },
     { key: 'sectionId', label: 'Section', visible: false },

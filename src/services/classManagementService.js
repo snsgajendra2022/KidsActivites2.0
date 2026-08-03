@@ -58,26 +58,68 @@ export function formatBillingFrequency(value) {
   return BILLING_FREQUENCIES.find((f) => f.value === value)?.label || value;
 }
 
+function unwrapClassList(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.content)) return data.content;
+  if (Array.isArray(data.classes)) return data.classes;
+  if (Array.isArray(data.records)) return data.records;
+  if (Array.isArray(data.results)) return data.results;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+}
+
+/** Normalize class rows from API / mock into a consistent shape for selectors. */
+export function normalizeClassRecord(cls) {
+  if (!cls) return null;
+  const id = cls.id || cls.classId || cls.uuid || null;
+  if (!id) return null;
+  const status = String(cls.status || 'active').toLowerCase();
+  return {
+    ...cls,
+    id: String(id),
+    classId: String(cls.classId || id),
+    name: cls.name || cls.className || cls.title || cls.code || String(id),
+    code: cls.code || cls.classCode || '',
+    status,
+    sectionId: cls.sectionId || cls.section?.id || '',
+  };
+}
+
 export async function listClasses(filters = {}) {
   return routeRequest({
     mockFn: async () => {
       await delay(150);
       let rows = [...mockClasses];
       if (filters.status && filters.status !== 'all') {
-        rows = rows.filter((c) => c.status === filters.status);
+        const wanted = String(filters.status).toLowerCase();
+        rows = rows.filter((c) => String(c.status || '').toLowerCase() === wanted);
       }
       if (filters.search?.trim()) {
         const q = filters.search.trim().toLowerCase();
         rows = rows.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
       }
-      return rows;
+      return rows.map(normalizeClassRecord).filter(Boolean);
     },
     apiFn: async () => {
-      const data = await api.get('/admin/classes', filters);
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data?.items)) return data.items;
-      if (Array.isArray(data?.content)) return data.content;
-      return [];
+      const params = { ...filters };
+      if (params.q == null && params.search) {
+        params.q = params.search;
+        delete params.search;
+      }
+      const data = await api.get('/admin/classes', params);
+      let rows = unwrapClassList(data).map(normalizeClassRecord).filter(Boolean);
+      if (filters.status && filters.status !== 'all') {
+        const wanted = String(filters.status).toLowerCase();
+        const filtered = rows.filter((c) => String(c.status || 'active').toLowerCase() === wanted);
+        // Some backends ignore status — if filter empties a non-empty list, keep actives only by exclusion.
+        if (filtered.length) rows = filtered;
+        else if (rows.length) {
+          rows = rows.filter((c) => String(c.status || 'active').toLowerCase() !== 'inactive');
+        }
+      }
+      return rows;
     },
   });
 }

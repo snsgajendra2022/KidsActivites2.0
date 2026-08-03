@@ -1538,6 +1538,34 @@ Also updates application status → `fee_submitted`.
 
 ---
 
+### `POST /admin/fees/:feeId/record-payment`
+
+Admin records office/cash collection and marks the fee verified in one step.
+Preferred for `/admin/fees` “Mark as paid” when parent has not submitted proof yet.
+
+**Auth:** `accountant`, `school_admin`, `super_admin`
+
+**Request body:**
+```json
+{
+  "method": "cash",
+  "transactionId": "CASH-20260803-01",
+  "amount": 75000,
+  "note": "Collected at front desk",
+  "verifiedBy": "Priya Sharma"
+}
+```
+
+**Response `200`:** `FeeRecord` with `status: "verified"` and receipt fields.
+
+**Frontend:** `recordAdminFeePayment()` tries this first, then falls back to
+`POST /admin/fees/:feeId/verify` (with payment fields) or submit+verify.
+
+> Note: `POST /admin/fees/:feeId/submit-payment` is **not** required. Parent proof
+> uses `POST /fees/:feeId/submit-payment` only.
+
+---
+
 ### `POST /admin/fees/:feeId/verify`
 
 Accountant verifies payment.
@@ -2205,6 +2233,7 @@ Filtered server-side using `menuVisibility` from portal config + role permission
 | `getFees` | GET | `/admin/fees` |
 | `getFeeByApplication` | GET | `/fees/my-fee` |
 | `submitPayment` | POST | `/fees/:feeId/submit-payment` |
+| `recordAdminFeePayment` | POST | `/admin/fees/:feeId/record-payment` (fallback: verify / submit+verify) |
 | `verifyPayment` | POST | `/admin/fees/:feeId/verify` |
 | `rejectPayment` | POST | `/admin/fees/:feeId/reject` |
 | `getPhotos` | GET | `/media/photos` |

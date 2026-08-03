@@ -62,7 +62,7 @@ export const EXAM_SEED = [
     subject: 'Mathematics',
     maxMarks: 50,
     examDate: today,
-    status: 'scheduled',
+    status: 'published',
     createdAt: now,
   },
   {
@@ -94,6 +94,7 @@ export const EXAM_MARKS_SEED = [
     grade: 'A',
     rank: 1,
     comments: 'Strong conceptual understanding.',
+    published: true,
     createdAt: now,
   },
 ];
@@ -227,6 +228,8 @@ export const TRANSPORT_ROUTE_SEED = [
     createdAt: now,
   },
 ];
+
+export const TRANSPORT_ASSIGNMENT_SEED = [];
 
 export const LIBRARY_BOOK_SEED = [
   {
@@ -372,11 +375,24 @@ export const SUBSCRIPTION_SEED = [
 export const LOGIN_HISTORY_SEED = [
   {
     id: 'login-1',
+    userId: 'u-admin',
     userName: 'School Admin',
     email: 'admin@school.test',
     ip: '192.168.1.10',
     device: 'Chrome / macOS',
     status: 'success',
+    failureReason: null,
+    createdAt: now,
+  },
+  {
+    id: 'login-2',
+    userId: 'u-parent',
+    userName: 'Parent User',
+    email: 'parent@school.test',
+    ip: '192.168.1.22',
+    device: 'Safari / iOS',
+    status: 'failed',
+    failureReason: 'Invalid password',
     createdAt: now,
   },
 ];

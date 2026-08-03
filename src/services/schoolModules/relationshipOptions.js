@@ -55,45 +55,60 @@ const STAFF_ROLES = new Set([
 /**
  * Load class options for the current user role.
  */
+function mapClassOptions(classes, extraMeta = {}) {
+  return (classes || [])
+    .filter((cls) => {
+      const id = cls?.id || cls?.classId;
+      if (!id) return false;
+      const status = String(cls.status || 'active').toLowerCase();
+      return status !== 'inactive' && status !== 'archived' && status !== 'deleted';
+    })
+    .map((cls) => {
+      const classId = String(cls.id || cls.classId);
+      return {
+        value: classId,
+        label: classLabel(cls),
+        meta: {
+          classId,
+          className: cls.name || cls.className || '',
+          sectionId: cls.sectionId || cls.section?.id || '',
+          classCode: cls.code || cls.classCode || '',
+          code: cls.code || cls.classCode || '',
+          ...extraMeta,
+        },
+      };
+    })
+    .sort((a, b) => String(a.label).localeCompare(String(b.label)));
+}
+
 export async function loadClassOptions(user) {
-  if (user?.role === ROLES.TEACHER) {
+  const role = String(user?.role || '').toLowerCase();
+
+  if (role === ROLES.TEACHER) {
     const classes = await getTeacherClasses(user.id);
-    return (classes || []).map((cls) => ({
-      value: String(cls.classId || cls.id),
-      label: classLabel(cls),
-      meta: {
-        classId: String(cls.classId || cls.id),
-        className: cls.name || cls.className || '',
-        sectionId: cls.sectionId || '',
-        teacherId: user.id,
-        teacherName: user.name || '',
-      },
-    }));
+    return mapClassOptions(classes, {
+      teacherId: user.id,
+      teacherName: user.name || '',
+    });
   }
 
-  if (!STAFF_ROLES.has(user?.role)) return [];
+  if (!STAFF_ROLES.has(role)) return [];
 
-  const classes = await listClasses({ status: 'active' });
-  return (classes || [])
-    .filter((cls) => cls.status !== 'inactive' && (cls.id || cls.classId))
-    .map((cls) => ({
-      value: String(cls.id || cls.classId),
-      label: classLabel(cls),
-      meta: {
-        classId: String(cls.id || cls.classId),
-        className: cls.name || '',
-        sectionId: cls.sectionId || cls.section?.id || '',
-        classCode: cls.code || '',
-        code: cls.code || '',
-      },
-    }));
+  let classes = await listClasses({ status: 'active' });
+  if (!classes?.length) {
+    // Backend may not filter by status=active — fall back to full list.
+    classes = await listClasses({});
+  }
+  return mapClassOptions(classes);
 }
 
 /**
  * Load students for a selected class.
  */
 export async function loadStudentOptions(user, { classId, sectionId } = {}) {
-  if (user?.role === ROLES.PARENT || user?.role === ROLES.STUDENT) {
+  const role = String(user?.role || '').toLowerCase();
+
+  if (role === ROLES.PARENT || role === ROLES.STUDENT) {
     const children = await getParentChildren(user);
     return (children || [])
       .filter((child) => child.studentId && studentMatchesClass(child, classId, sectionId))
@@ -112,7 +127,7 @@ export async function loadStudentOptions(user, { classId, sectionId } = {}) {
   // directory and infer relationships from display names.
   if (!classId) return [];
 
-  if (user?.role === ROLES.TEACHER) {
+  if (role === ROLES.TEACHER) {
     const students = await getTeacherStudents(user.id, {
       classId,
       ...(sectionId ? { sectionId } : {}),
@@ -129,7 +144,7 @@ export async function loadStudentOptions(user, { classId, sectionId } = {}) {
       }));
   }
 
-  if (!STAFF_ROLES.has(user?.role)) return [];
+  if (!STAFF_ROLES.has(role)) return [];
 
   const students = await listStudentsForRelationships({
     classId,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus.js';
@@ -7,13 +7,61 @@ import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import NetworkBanner from './NetworkBanner.jsx';
 
+const SIDEBAR_COLLAPSE_KEY = 'ka.sidebar.collapsed';
+/** Collapse rail below this width so map / content pages keep usable main width. */
+const AUTO_COLLAPSE_MAX_WIDTH = 1279;
+
+function readPersistedCollapsed() {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_COLLAPSE_KEY);
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+  } catch {
+    /* ignore */
+  }
+  if (typeof window !== 'undefined') {
+    return window.innerWidth <= AUTO_COLLAPSE_MAX_WIDTH;
+  }
+  return false;
+}
+
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(readPersistedCollapsed);
+  const [userPinned, setUserPinned] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSE_KEY) != null;
+    } catch {
+      return false;
+    }
+  });
   const { loginPath } = useTenantPath();
   useNetworkStatus();
+
+  useEffect(() => {
+    const onResize = () => {
+      if (userPinned) return;
+      setCollapsed(window.innerWidth <= AUTO_COLLAPSE_MAX_WIDTH);
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [userPinned]);
+
+  const onToggleCollapse = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      setUserPinned(true);
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSE_KEY, next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const onLogout = () => {
     logout();
@@ -27,13 +75,13 @@ export default function AppLayout({ children }) {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         collapsed={collapsed}
-        onToggleCollapse={() => setCollapsed((c) => !c)}
+        onToggleCollapse={onToggleCollapse}
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <NetworkBanner />
         <Header user={user} onMenuClick={() => setSidebarOpen(true)} onLogout={onLogout} />
-        <main className="flex-1 min-w-0 overflow-x-clip overflow-y-auto p-3 sm:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 min-w-0 overflow-x-clip overflow-y-auto p-3 sm:p-4 lg:p-6 xl:p-8">{children}</main>
       </div>
     </div>
   );

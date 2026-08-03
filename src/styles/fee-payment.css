@@ -7,6 +7,24 @@
   align-items: start;
 }
 
+.fee-payment-layout__full {
+  grid-column: 1 / -1;
+}
+
+.fee-payment-invoice-row {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.fee-payment-invoice-row.is-active {
+  font-weight: 700;
+  color: var(--sb-primary);
+}
+
+
 @media (min-width: 1024px) {
   .fee-payment-layout {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

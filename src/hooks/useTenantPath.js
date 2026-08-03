@@ -5,12 +5,13 @@ import { ROLE_DASHBOARD } from '../constants/roles.js';
 
 /** Prefix app paths with the current tenant slug from the URL. */
 export function useTenantPath() {
-  const { tenantSlug } = useTenant();
+  const { tenantSlug, schoolSlug } = useTenant();
+  const slug = tenantSlug || schoolSlug || null;
 
   return useMemo(() => ({
-    tenantSlug,
-    tenantPath: (path) => prefixTenantPath(path, tenantSlug),
-    loginPath: tenantSlug ? `/${tenantSlug}/login` : '/login',
-    roleDashboard: (role) => prefixTenantPath(ROLE_DASHBOARD[role] || '/login', tenantSlug),
-  }), [tenantSlug]);
+    tenantSlug: slug,
+    tenantPath: (path) => prefixTenantPath(path, slug),
+    loginPath: slug ? `/${slug}/login` : '/login',
+    roleDashboard: (role) => prefixTenantPath(ROLE_DASHBOARD[role] || '/login', slug),
+  }), [slug]);
 }

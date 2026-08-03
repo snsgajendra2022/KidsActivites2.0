@@ -9,9 +9,11 @@ import PageTransition from '../../components/ui/PageTransition.jsx';
 import { EmptyState, LoadingState, PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { lmsApi } from '../../services/lmsService.js';
+import { getParentChildren, getParentDashboard } from '../../services/parentService.js';
 
 function ProgressRing({ pct, size = 48, stroke = 4 }) {
   const r = (size - stroke) / 2;
@@ -36,6 +38,7 @@ function ProgressRing({ pct, size = 48, stroke = 4 }) {
 
 export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms' }) {
   const Layout = layout === 'dashboard' ? DashboardLayout : AppLayout;
+  const { user } = useAuth();
   const { tenantPath } = useTenantPath();
   const { toast } = useToast();
   const [items, setItems] = useState([]);
@@ -46,16 +49,38 @@ export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms
     (async () => {
       setLoading(true);
       try {
-        const data = await lmsApi.myLearning();
+        let children = [];
+        try {
+          const dashboard = await getParentDashboard(user?.id, user?.schoolId, user);
+          children = dashboard.children || [];
+        } catch {
+          try {
+            children = await getParentChildren(user);
+          } catch {
+            children = [];
+          }
+        }
+
+        const studentIds = children
+          .map((child) => child.studentId || child.enrolledStudentId || child.student?.id)
+          .filter(Boolean);
+        const classIds = children
+          .map((child) => child.classId || child.assignedClassId || child.student?.classId)
+          .filter(Boolean);
+
+        const data = await lmsApi.myLearning({ studentIds, classIds });
         if (!cancelled) setItems(data.items || []);
       } catch (err) {
-        if (!cancelled) toast(err?.message || 'Unable to load Digital Classroom.', 'error');
+        if (!cancelled) {
+          setItems([]);
+          toast(err?.message || 'Unable to load Digital Classroom.', 'error');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.id, user?.schoolId, toast]);
 
   const openCertificate = async (certificateId) => {
     try {
@@ -77,7 +102,7 @@ export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms
       <PageTransition>
         <PageHeader
           title="Digital Classroom"
-          subtitle="Your enrolled courses, progress, and certificates."
+          subtitle="Courses enrolled for your children (by class or student)."
           actions={(
             <Link to={tenantPath(`${basePath}/certificates`)}>
               <Button variant="secondary"><Award size={16} /> Certificates</Button>
@@ -86,12 +111,12 @@ export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms
         />
 
         {loading ? (
-          <LoadingState label="Loading your classroom…" />
+          <LoadingState message="Loading your classroom…" />
         ) : items.length === 0 ? (
           <EmptyState
             icon={Sparkles}
             title="No courses yet"
-            description="When your school enrolls you in a Digital Classroom course, it will appear here."
+            description="After the school enrolls your child’s class (or student) in a published Digital Classroom course, it will show here."
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -1,4 +1,4 @@
-import { createCrudService } from './createCrudService.js';
+import { createCrudService, asCrudList } from './createCrudService.js';
 import {
   CERTIFICATE_SEED,
   EXAM_MARKS_SEED,
@@ -19,6 +19,7 @@ import {
   TIMETABLE_SEED,
   TRANSPORT_ROUTE_SEED,
   TRANSPORT_VEHICLE_SEED,
+  TRANSPORT_ASSIGNMENT_SEED,
 } from '../../data/schoolModuleSeeds.js';
 import { delay } from '../mockApi.js';
 import { api } from '../api/client.js';
@@ -43,6 +44,7 @@ export const examService = createCrudService({
   resource: 'exams',
   seed: EXAM_SEED,
   idPrefix: 'exam',
+  normalizeItem: normalizeExam,
 });
 
 export const examMarksService = createCrudService({
@@ -50,14 +52,253 @@ export const examMarksService = createCrudService({
   resource: 'exam-marks',
   seed: EXAM_MARKS_SEED,
   idPrefix: 'mark',
+  normalizeItem: normalizeExamMark,
 });
+
+/** Parent-facing published exam marks only (`GET /parent/exam-marks`). */
+export const parentExamMarksService = {
+  async list(filters = {}) {
+    return routeRequest({
+      mockFn: async () => {
+        await delay(120);
+        const exams = await examService.list();
+        const publishedIds = new Set(
+          exams.filter((exam) => String(exam.status).toLowerCase() === 'published').map((exam) => String(exam.id)),
+        );
+        const marks = await examMarksService.list();
+        return marks
+          .filter((mark) => publishedIds.has(String(mark.examId)) || mark.published === true)
+          .filter((mark) => {
+            if (filters.studentId) return String(mark.studentId) === String(filters.studentId);
+            if (filters.examId) return String(mark.examId) === String(filters.examId);
+            return true;
+          })
+          .map(normalizeExamMark);
+      },
+      apiFn: async () => {
+        try {
+          return asCrudList(await api.get('/parent/exam-marks', filters)).map(normalizeExamMark);
+        } catch (err) {
+          const status = Number(err?.status || 0);
+          if (status === 404 || status === 405) {
+            // Fallback some gateways expose under /parent/exams with embedded marks
+            const exams = asCrudList(await api.get('/parent/exams', filters));
+            return exams.flatMap((exam) => {
+              const nested = exam.marks || exam.examMarks || [];
+              if (!Array.isArray(nested) || !nested.length) {
+                if (exam.marksObtained == null && exam.studentId == null) return [];
+                return [normalizeExamMark({ ...exam, examId: exam.examId || exam.id, examName: exam.examName || exam.name })];
+              }
+              return nested.map((mark) => normalizeExamMark({
+                ...mark,
+                examId: mark.examId || exam.id,
+                examName: mark.examName || exam.name,
+                className: mark.className || exam.className,
+              }));
+            });
+          }
+          throw err;
+        }
+      },
+    });
+  },
+  async getById() {
+    throw new Error('Parent exam marks are read-only.');
+  },
+  async create() {
+    throw new Error('Parents cannot enter marks.');
+  },
+  async update() {
+    throw new Error('Parents cannot edit marks.');
+  },
+  async remove() {
+    throw new Error('Parents cannot delete marks.');
+  },
+};
+
+function normalizeExam(exam) {
+  if (!exam) return exam;
+  return {
+    ...exam,
+    id: exam.id,
+    name: exam.name || exam.title || 'Exam',
+    type: exam.type || exam.examType || '',
+    classId: exam.classId || exam.class_id || null,
+    className: exam.className || exam.class?.name || '',
+    subjectId: exam.subjectId || exam.subject_id || null,
+    subject: exam.subject || exam.subjectName || exam.subject?.name || '',
+    maxMarks: exam.maxMarks != null ? Number(exam.maxMarks) : null,
+    examDate: exam.examDate || exam.date || null,
+    status: String(exam.status || 'draft').toLowerCase(),
+  };
+}
+
+function normalizeExamMark(mark) {
+  if (!mark) return mark;
+  return {
+    ...mark,
+    id: mark.id || mark.markId || `${mark.examId}-${mark.studentId}`,
+    examId: mark.examId || mark.exam_id || mark.exam?.id || null,
+    examName: mark.examName || mark.exam?.name || mark.examTitle || '',
+    studentId: mark.studentId || mark.student_id || mark.student?.id || null,
+    studentName: mark.studentName
+      || mark.student?.fullName
+      || mark.student?.name
+      || [mark.student?.firstName, mark.student?.lastName].filter(Boolean).join(' ')
+      || '',
+    classId: mark.classId || mark.class_id || mark.exam?.classId || null,
+    className: mark.className || mark.class?.name || mark.exam?.className || '',
+    marksObtained: mark.marksObtained != null ? Number(mark.marksObtained) : Number(mark.marks ?? mark.score ?? 0),
+    maxMarks: mark.maxMarks != null ? Number(mark.maxMarks) : Number(mark.exam?.maxMarks ?? 100),
+    grade: mark.grade || '',
+    rank: mark.rank != null ? Number(mark.rank) : null,
+    comments: mark.comments || mark.remark || '',
+    published: mark.published === true || String(mark.exam?.status || '').toLowerCase() === 'published',
+  };
+}
+
+function normalizeLoginEvent(event) {
+  if (!event) return event;
+  const createdAt = event.createdAt || event.timestamp || event.loggedAt || event.time || null;
+  let createdAtLabel = createdAt;
+  if (createdAt) {
+    const date = new Date(createdAt);
+    if (!Number.isNaN(date.getTime())) {
+      createdAtLabel = date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+  }
+  return {
+    ...event,
+    id: event.id || event.eventId || `${event.userId || 'user'}-${createdAt || Date.now()}`,
+    userId: event.userId || event.user?.id || null,
+    userName: event.userName || event.user?.name || event.name || 'Unknown user',
+    email: event.email || event.user?.email || '',
+    ip: event.ip || event.ipAddress || event.clientIp || '—',
+    device: event.device || event.userAgent || event.client || '—',
+    status: String(event.status || event.result || 'success').toLowerCase(),
+    failureReason: event.failureReason || event.reason || event.errorMessage || null,
+    createdAt,
+    createdAtLabel,
+  };
+}
 
 export const timetableService = createCrudService({
   key: 'timetable',
   resource: 'timetable',
   seed: TIMETABLE_SEED,
   idPrefix: 'tt',
+  normalizeItem: normalizeTimetableSlot,
 });
+
+/** Parent: only the child's class timetable (`GET /parent/timetable`). */
+export const parentTimetableService = {
+  async list(filters = {}) {
+    return routeRequest({
+      mockFn: async () => {
+        await delay(120);
+        const { getParentDashboard } = await import('../parentService.js');
+        const parentId = filters.parentId || filters.userId || null;
+        const dashboard = parentId
+          ? await getParentDashboard(parentId, filters.schoolId || null, { id: parentId })
+          : { children: [] };
+        const children = dashboard.children || [];
+        const classIds = new Set(
+          children.map((child) => child.classId).filter(Boolean).map(String),
+        );
+        if (filters.classId) {
+          classIds.clear();
+          classIds.add(String(filters.classId));
+        }
+        if (!classIds.size) return [];
+        const slots = await timetableService.list();
+        return slots
+          .filter((slot) => classIds.has(String(slot.classId)))
+          .map(normalizeTimetableSlot)
+          .sort((a, b) => {
+            const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+            if (dayDiff !== 0) return dayDiff;
+            return Number(a.period || 0) - Number(b.period || 0);
+          });
+      },
+      apiFn: async () => {
+        const params = {};
+        if (filters.classId) params.classId = filters.classId;
+        if (filters.studentId) params.studentId = filters.studentId;
+        return asCrudList(await api.get('/parent/timetable', params))
+          .map(normalizeTimetableSlot);
+      },
+    });
+  },
+  async getById() {
+    throw new Error('Parent timetable is read-only.');
+  },
+  async create() {
+    throw new Error('Parents cannot edit the timetable.');
+  },
+  async update() {
+    throw new Error('Parents cannot edit the timetable.');
+  },
+  async remove() {
+    throw new Error('Parents cannot edit the timetable.');
+  },
+};
+
+/** Teacher: own teaching timetable (`GET /teacher/timetable`). */
+export const teacherTimetableService = {
+  async list(filters = {}) {
+    return routeRequest({
+      mockFn: async () => {
+        await delay(120);
+        const slots = await timetableService.list();
+        const teacherId = filters.teacherId || filters.userId || null;
+        if (!teacherId) return slots.map(normalizeTimetableSlot);
+        return slots
+          .filter((slot) => String(slot.teacherId || '') === String(teacherId))
+          .map(normalizeTimetableSlot);
+      },
+      apiFn: async () => asCrudList(await api.get('/teacher/timetable', filters))
+        .map(normalizeTimetableSlot),
+    });
+  },
+  async getById() {
+    throw new Error('Teacher timetable is read-only here.');
+  },
+  async create() {
+    throw new Error('Teachers cannot create timetable slots here.');
+  },
+  async update() {
+    throw new Error('Teachers cannot edit timetable slots here.');
+  },
+  async remove() {
+    throw new Error('Teachers cannot delete timetable slots here.');
+  },
+};
+
+function normalizeTimetableSlot(slot) {
+  if (!slot) return slot;
+  return {
+    ...slot,
+    id: slot.id || `${slot.classId}-${slot.day}-${slot.period}`,
+    classId: slot.classId || slot.class_id || slot.class?.id || null,
+    className: slot.className || slot.class?.name || '',
+    day: slot.day || slot.weekday || '',
+    period: slot.period != null ? Number(slot.period) : null,
+    startTime: slot.startTime || slot.start || '',
+    endTime: slot.endTime || slot.end || '',
+    subjectId: slot.subjectId || slot.subject_id || slot.subject?.id || null,
+    subject: slot.subject || slot.subjectName || slot.subject?.name || '',
+    teacherId: slot.teacherId || slot.teacher_id || slot.teacher?.id || null,
+    teacherName: slot.teacherName || slot.teacher?.name || slot.teacher?.fullName || '',
+    room: slot.room || slot.roomNo || '',
+  };
+}
 
 export const leaveService = createCrudService({
   key: 'leave_requests',
@@ -85,6 +326,13 @@ export const transportRouteService = createCrudService({
   resource: 'transport/routes',
   seed: TRANSPORT_ROUTE_SEED,
   idPrefix: 'route',
+});
+
+export const transportAssignmentService = createCrudService({
+  key: 'transport_assignments',
+  resource: 'transport/assignments',
+  seed: TRANSPORT_ASSIGNMENT_SEED,
+  idPrefix: 'ta',
 });
 
 export const libraryBookService = createCrudService({
@@ -148,6 +396,7 @@ export const loginHistoryService = createCrudService({
   resource: 'security/login-history',
   seed: LOGIN_HISTORY_SEED,
   idPrefix: 'login',
+  normalizeItem: normalizeLoginEvent,
 });
 
 export const performanceNoteService = createCrudService({

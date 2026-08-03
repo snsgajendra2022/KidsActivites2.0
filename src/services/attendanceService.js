@@ -129,3 +129,75 @@ export async function exportAttendanceReport(params = {}) {
 export async function getAttendanceAuditLogs(sessionId) {
   return api.get(`/attendance/session/${sessionId}/audit-logs`);
 }
+
+/**
+ * POST /admin/attendance/events
+ * Advanced attendance: period / late / early / QR / RFID / face events.
+ */
+export async function saveAttendanceEvent(payload) {
+  return api.post('/admin/attendance/events', payload);
+}
+
+/**
+ * Save one attendance event for many students.
+ * Prefers studentIds[] on a single request; falls back to one request per student.
+ */
+export async function saveAttendanceEventsForStudents(basePayload, studentIds = []) {
+  const ids = [...new Set((studentIds || []).map(String).filter(Boolean))];
+  if (!ids.length) {
+    throw new Error('Select at least one student.');
+  }
+
+  // Prefer bulk payload when backend supports it
+  if (ids.length > 1) {
+    try {
+      return await api.post('/admin/attendance/events', {
+        ...basePayload,
+        studentIds: ids,
+        studentId: undefined,
+      });
+    } catch (err) {
+      const status = Number(err?.status || 0);
+      if (![400, 404, 405, 422].includes(status)) throw err;
+    }
+  }
+
+  const results = [];
+  const errors = [];
+  for (const studentId of ids) {
+    try {
+      // Device modes need unique event ids per student when shared note is used
+      const deviceEventId = basePayload.deviceEventId
+        ? `${basePayload.deviceEventId}:${studentId}`
+        : undefined;
+      const data = await saveAttendanceEvent({
+        ...basePayload,
+        studentId,
+        studentIds: undefined,
+        deviceEventId: deviceEventId || basePayload.deviceEventId,
+      });
+      results.push({ studentId, data });
+    } catch (err) {
+      errors.push({ studentId, message: err?.message || 'Failed' });
+    }
+  }
+
+  if (!results.length) {
+    throw new Error(errors[0]?.message || 'Unable to save attendance events.');
+  }
+
+  return {
+    savedCount: results.length,
+    failedCount: errors.length,
+    results,
+    errors,
+    message: errors.length
+      ? `Saved for ${results.length} student(s); ${errors.length} failed.`
+      : `Attendance recorded for ${results.length} student(s).`,
+  };
+}
+
+/** GET /admin/attendance/reports — optional advanced reports feed */
+export async function getAdvancedAttendanceReports(params = {}) {
+  return api.get('/admin/attendance/reports', params);
+}

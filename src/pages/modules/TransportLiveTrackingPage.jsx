@@ -279,7 +279,12 @@ export default function TransportLiveTrackingPage() {
               <Button variant="secondary" onClick={() => setGpsOpen(true)}>
                 GPS device setup
               </Button>
-              <Link to="/admin/transport/routes">
+              <Link to="../assignments" relative="path">
+                <Button variant="secondary">
+                  <RouteIcon size={14} /> Student assignments
+                </Button>
+              </Link>
+              <Link to="../routes" relative="path">
                 <Button variant="secondary">
                   <RouteIcon size={14} /> Manage routes
                 </Button>
@@ -288,7 +293,7 @@ export default function TransportLiveTrackingPage() {
           )}
         />
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <div className="mb-4 hidden gap-3 xl:grid xl:grid-cols-3">
           <div className="rounded-xl border border-[#d0d5dd] bg-white px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-wide text-[#667085]">1 · Choose route</p>
             <p className="mt-1 text-sm text-[#344054]">Select which bus path to display.</p>
@@ -307,7 +312,7 @@ export default function TransportLiveTrackingPage() {
           <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Live GPS feed unavailable: {fleetError}. You can still view route paths from saved stops.
             {' '}
-            <Link className="font-semibold text-[#0058be] underline" to="/admin/transport/routes">
+            <Link className="font-semibold text-[#0058be] underline" to="../routes" relative="path">
               Edit routes
             </Link>
           </div>
@@ -316,7 +321,7 @@ export default function TransportLiveTrackingPage() {
         {mappedRouteCount === 0 && !routesLoading && (
           <div className="mb-4 rounded-xl border border-[#d0d5dd] bg-[#f8f9ff] px-4 py-3 text-sm text-[#344054]">
             No route has map locations yet. Go to{' '}
-            <Link className="font-semibold text-[#0058be] underline" to="/admin/transport/routes">
+            <Link className="font-semibold text-[#0058be] underline" to="../routes" relative="path">
               Transport Routes
             </Link>
             , search each stop, save, then return here.
@@ -332,17 +337,20 @@ export default function TransportLiveTrackingPage() {
             <p className="mx-auto mt-2 max-w-md text-sm text-[#667085]">
               Live tracking shows one clear route path at a time. Add stops with map locations, then open this page again.
             </p>
-            <Link to="/admin/transport/routes" className="mt-4 inline-block">
+            <Link to="../routes" relative="path" className="mt-4 inline-block">
               <Button>Go to Transport Routes</Button>
             </Link>
           </div>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_300px]">
-            <Panel step="1" title="Choose route" className="max-h-[720px]">
+          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[260px_minmax(0,1fr)_280px]">
+            <Panel step="1" title="Choose route" className="max-h-[220px] 2xl:max-h-[min(70vh,720px)]">
               <div className="relative mb-3">
-                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#667085]" />
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex w-9 items-center justify-center text-[#667085]">
+                  <Search size={14} />
+                </span>
                 <input
-                  className="input-premium h-10 w-full rounded-lg border border-[#c5c6cd] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#0058be]"
+                  className="h-10 w-full rounded-lg border border-[#c5c6cd] bg-white text-sm outline-none focus:border-[#0058be]"
+                  style={{ paddingLeft: '2.25rem', paddingRight: '0.75rem' }}
                   placeholder="Search route name…"
                   value={routeSearch}
                   onChange={(event) => setRouteSearch(event.target.value)}
@@ -377,7 +385,7 @@ export default function TransportLiveTrackingPage() {
                             )}
                           </p>
                           {stops.length > 0 && (
-                            <div className="mt-2">
+                            <div className="mt-2 hidden sm:block">
                               <RouteStopTimeline stops={stops} compact />
                             </div>
                           )}
@@ -394,42 +402,44 @@ export default function TransportLiveTrackingPage() {
               </div>
             </Panel>
 
-            <div className="space-y-4">
+            <div className="order-first min-w-0 space-y-4 2xl:order-none">
               <div className="sb-card overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eaecf0] bg-[#f8f9ff] px-4 py-3">
-                  <div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eaecf0] bg-[#f8f9ff] px-3 py-3 sm:px-4">
+                  <div className="min-w-0">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-[#0058be]">Step 2</p>
-                    <h3 className="text-sm font-bold text-[#0b1c30]">
+                    <h3 className="truncate text-sm font-bold text-[#0b1c30]">
                       {selectedRoute ? `Map · ${selectedRoute.name}` : 'Map · Select a route'}
                     </h3>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#475467]">
                     <span className="rounded-full border border-[#d0d5dd] bg-white px-2.5 py-1">
-                      {mappedStopCount}/{selectedStops.length} stops mapped
+                      {mappedStopCount}/{selectedStops.length} stops
                     </span>
                     <span className="rounded-full border border-[#d0d5dd] bg-white px-2.5 py-1">
-                      {filteredVehicles.length} live bus{filteredVehicles.length === 1 ? '' : 'es'}
+                      {filteredVehicles.length} bus{filteredVehicles.length === 1 ? '' : 'es'}
                     </span>
                   </div>
                 </div>
-                <LiveBusMap
-                  vehicles={filteredVehicles}
-                  selectedVehicleId={selectedId}
-                  routeGeoJson={roadRoute.geoJson}
-                  stopFeatures={stopFeatures}
-                  fitToken={`${selectedRouteId}:${roadRoute.source}:${roadRoute.distanceMeters}:${stopFeatures.map((stop) => `${stop.id}:${stop.latitude}:${stop.longitude}`).join('|')}`}
-                  defaultCenter={schoolCenter}
-                  searchBias={searchBias}
-                  routingLabel={routingLabel}
-                  onSelectVehicle={(vehicle) => setSelectedId(String(vehicle.vehicle_id || vehicle.vehicleId))}
-                  emptyTitle={selectedRoute ? `${selectedRoute.name} needs map locations` : 'Select a route'}
-                  emptyHint="Open Manage routes, search each stop, save, then refresh this page."
-                  className="h-[520px] border-0"
-                />
+                <div className="h-[min(62vh,520px)] w-full sm:h-[min(68vh,560px)] lg:h-[min(70vh,640px)] 2xl:h-[620px]">
+                  <LiveBusMap
+                    vehicles={filteredVehicles}
+                    selectedVehicleId={selectedId}
+                    routeGeoJson={roadRoute.geoJson}
+                    stopFeatures={stopFeatures}
+                    fitToken={`${selectedRouteId}:${roadRoute.source}:${roadRoute.distanceMeters}:${stopFeatures.map((stop) => `${stop.id}:${stop.latitude}:${stop.longitude}`).join('|')}`}
+                    defaultCenter={schoolCenter}
+                    searchBias={searchBias}
+                    routingLabel={routingLabel}
+                    onSelectVehicle={(vehicle) => setSelectedId(String(vehicle.vehicle_id || vehicle.vehicleId))}
+                    emptyTitle={selectedRoute ? `${selectedRoute.name} needs map locations` : 'Select a route'}
+                    emptyHint="Open Manage routes, search each stop, save, then refresh this page."
+                    className="h-full w-full border-0"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex max-h-[720px] flex-col gap-4">
+            <div className="flex max-h-none flex-col gap-4 2xl:max-h-[min(70vh,720px)]">
               <Panel step="2b" title="Stop order on this route" className="min-h-0 flex-1 overflow-hidden">
                 {selectedRoute ? (
                   <>
@@ -440,7 +450,7 @@ export default function TransportLiveTrackingPage() {
                       {' · '}
                       <span className="capitalize">{selectedRoute.status || 'active'}</span>
                     </div>
-                    <div className="min-h-0 flex-1 overflow-y-auto">
+                    <div className="min-h-0 max-h-[240px] flex-1 overflow-y-auto 2xl:max-h-none">
                       <RouteStopTimeline
                         stops={selectedStops}
                         emptyText="This route has no stops. Add them under Manage routes."
@@ -464,7 +474,7 @@ export default function TransportLiveTrackingPage() {
                 {fleetLoading ? (
                   <p className="text-sm text-[#667085]">Loading live positions…</p>
                 ) : (
-                  <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+                  <div className="min-h-0 max-h-[220px] flex-1 space-y-2 overflow-y-auto 2xl:max-h-none">
                     {filteredVehicles.length === 0 ? (
                       <p className="rounded-lg border border-dashed border-[#c5c6cd] bg-[#f8f9ff] px-3 py-3 text-sm text-[#667085]">
                         No live GPS on this route yet. The blue path still shows from saved stops.

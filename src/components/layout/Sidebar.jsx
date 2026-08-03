@@ -83,7 +83,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
   return (
     <>
       <div
-        className={`sidebar-mobile-backdrop fixed inset-0 z-40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
+        className={`sidebar-mobile-backdrop fixed inset-0 z-[1100] backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={onClose}
@@ -91,7 +91,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
       />
 
       <aside
-        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-[var(--sb-border)] transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 ${
+        className={`app-sidebar fixed inset-y-0 left-0 z-[1200] flex h-full flex-col border-r border-[var(--sb-border)] transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 ${
           open ? 'translate-x-0 shadow-xl shadow-black/10' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
         } ${collapsed ? 'app-sidebar--collapsed' : 'w-72'}`}
       >

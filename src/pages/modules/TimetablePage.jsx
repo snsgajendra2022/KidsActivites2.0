@@ -1,5 +1,11 @@
+import { useMemo } from 'react';
 import ModuleCrudPage from '../../components/modules/ModuleCrudPage.jsx';
-import { timetableService } from '../../services/schoolModules/index.js';
+import { useAuth } from '../../context/AuthContext.jsx';
+import {
+  parentTimetableService,
+  teacherTimetableService,
+  timetableService,
+} from '../../services/schoolModules/index.js';
 import {
   loadClassOptions,
   loadSubjectOptions,
@@ -66,18 +72,59 @@ const fields = [
   { key: 'room', label: 'Room' },
 ];
 
-export default function TimetablePage({ layout = 'dashboard', readOnly = false }) {
+export default function TimetablePage({
+  layout = 'dashboard',
+  readOnly = false,
+  audience = 'staff',
+}) {
+  const { user } = useAuth();
+  const isParent = audience === 'parent';
+  const isTeacher = audience === 'teacher';
+
+  const service = isParent
+    ? parentTimetableService
+    : (isTeacher ? teacherTimetableService : timetableService);
+
+  const listFilters = useMemo(() => {
+    if (isParent) {
+      return {
+        parentId: user?.id || null,
+        schoolId: user?.schoolId || null,
+      };
+    }
+    if (isTeacher) {
+      return {
+        teacherId: user?.id || null,
+        userId: user?.id || null,
+      };
+    }
+    return {};
+  }, [isParent, isTeacher, user?.id, user?.schoolId]);
+
   return (
     <ModuleCrudPage
-      title="Timetable Management"
-      subtitle="Schedule periods using existing classes, subjects, and teachers."
-      service={timetableService}
+      title={isParent ? 'Class Timetable' : (isTeacher ? 'My Timetable' : 'Timetable Management')}
+      subtitle={
+        isParent
+          ? 'Weekly schedule for your child’s class only.'
+          : (isTeacher
+            ? 'Your assigned teaching periods.'
+            : 'Schedule periods using existing classes, subjects, and teachers.')
+      }
+      service={service}
       columns={columns}
-      fields={fields}
+      fields={isParent || isTeacher ? [] : fields}
       createLabel="Add Period"
       layout={layout}
-      readOnly={readOnly}
+      readOnly={readOnly || isParent || isTeacher}
+      listFilters={listFilters}
       searchKeys={['className', 'day', 'subject', 'teacherName', 'room']}
+      emptyTitle={isParent ? 'No timetable for this class yet' : 'No timetable periods yet'}
+      emptyDescription={
+        isParent
+          ? 'Once the school publishes a timetable for your child’s class, it will appear here.'
+          : 'Create the first period to get started.'
+      }
       transformCreate={async (form, editing) => {
         const existing = await timetableService.list({ classId: form.classId, day: form.day });
         const conflict = existing.find((slot) => {
