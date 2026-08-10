@@ -1,6 +1,4 @@
 import { clearTokens } from './tokenStorage.js';
-import { resolveTenantSlug } from './config.js';
-import { schoolLoginPath } from '../../utils/tenantUtils.js';
 
 export const USER_STORAGE_KEY = 'kidsactivites_user';
 export const AUTH_SESSION_CLEARED_EVENT = 'kidsactivites:session-cleared';
@@ -20,15 +18,15 @@ export function clearLocalAuthSession() {
   }
 }
 
-/** Redirect to login once — avoids multiple parallel uploads each triggering navigation. */
+/** Redirect to platform login once — avoids multiple parallel uploads each triggering navigation. */
 export function redirectToLoginOnce() {
   if (typeof window === 'undefined') return;
   if (redirectingToLogin) return;
-  if (window.location.pathname.includes('/login')) return;
+  if (window.location.pathname === '/login' || window.location.pathname.endsWith('/login')) return;
 
   redirectingToLogin = true;
   clearLocalAuthSession();
-  window.location.assign(schoolLoginPath(resolveTenantSlug()));
+  window.location.assign('/login');
 }
 
 export function resetLoginRedirectGuard() {

@@ -7,17 +7,14 @@ import { useTenantPath } from '../../hooks/useTenantPath.js';
 import AuthSplitLayout from '../../components/layout/AuthSplitLayout.jsx';
 import LoadingState from '../../components/ui/LoadingState.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
-import { ROLE_DASHBOARD } from '../../constants/roles.js';
-import { prefixTenantPath } from '../../utils/tenantUtils.js';
+import { authenticatedHomePath } from '../../utils/authRoutes.js';
 import '../../styles/login-portal.css';
 import QrLoginPanel from '../../components/auth/QrLoginPanel.jsx';
 
 const OTP_RESEND_SECONDS = 30;
 
 function postLoginPath(user, fallbackTenantSlug) {
-  const slug = user?.tenantSlug || fallbackTenantSlug || null;
-  const dashboard = ROLE_DASHBOARD[user?.role] || '/';
-  return prefixTenantPath(dashboard, slug) || dashboard;
+  return authenticatedHomePath(user, fallbackTenantSlug);
 }
 
 function detectOtpChannel(identity, { mobileEnabled, emailEnabled }) {

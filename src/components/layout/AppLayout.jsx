@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus.js';
-import { useTenantPath } from '../../hooks/useTenantPath.js';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import NetworkBanner from './NetworkBanner.jsx';
@@ -37,7 +36,6 @@ export default function AppLayout({ children }) {
       return false;
     }
   });
-  const { loginPath } = useTenantPath();
   useNetworkStatus();
 
   useEffect(() => {
@@ -63,9 +61,9 @@ export default function AppLayout({ children }) {
     });
   }, []);
 
-  const onLogout = () => {
-    logout();
-    navigate(loginPath);
+  const onLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   return (

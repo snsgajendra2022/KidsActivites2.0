@@ -71,6 +71,6 @@ export function schoolEnrollPath(schoolSlug) {
   return schoolSlug ? `/${schoolSlug}/enroll` : '/enrollment';
 }
 
-export function schoolLoginPath(schoolSlug) {
-  return schoolSlug ? `/${schoolSlug}/login` : '/login';
+export function schoolLoginPath(_schoolSlug) {
+  return '/login';
 }

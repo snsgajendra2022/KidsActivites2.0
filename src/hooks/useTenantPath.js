@@ -11,7 +11,8 @@ export function useTenantPath() {
   return useMemo(() => ({
     tenantSlug: slug,
     tenantPath: (path) => prefixTenantPath(path, slug),
-    loginPath: slug ? `/${slug}/login` : '/login',
+    // Auth redirects always use platform login (not /{tenant}/login).
+    loginPath: '/login',
     roleDashboard: (role) => prefixTenantPath(ROLE_DASHBOARD[role] || '/login', slug),
   }), [slug]);
 }

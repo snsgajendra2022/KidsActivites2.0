@@ -419,6 +419,39 @@ export const libraryIssueService = createCrudService({
   idPrefix: 'issue',
 });
 
+libraryIssueService.returnBook = async function returnBook(id) {
+  return routeRequest({
+    mockFn: async () => {
+      await delay(150);
+      const items = libraryIssueService.readAll();
+      const index = items.findIndex((item) => item.id === id);
+      if (index < 0) throw new Error('Issue record not found');
+      const today = new Date().toISOString().slice(0, 10);
+      items[index] = {
+        ...items[index],
+        status: 'returned',
+        returnDate: today,
+        updatedAt: new Date().toISOString(),
+      };
+      libraryIssueService.writeAll(items);
+      return items[index];
+    },
+    apiFn: async () => {
+      try {
+        return await api.post(`/admin/library/issues/${id}/return`, {});
+      } catch (err) {
+        // Fallback if return endpoint is not wired yet.
+        if (err?.status === 404 || err?.code === 'NOT_FOUND') {
+          return libraryIssueService.update(id, {
+            status: 'returned',
+            returnDate: new Date().toISOString().slice(0, 10),
+          });
+        }
+        throw err;
+      }
+    },
+  });
+};
 export const inventoryService = createCrudService({
   key: 'inventory',
   resource: 'inventory',

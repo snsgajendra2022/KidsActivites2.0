@@ -68,6 +68,31 @@
   min-height: 100dvh;
 }
 
+/* Wavy join between visual + form — large smooth omission waves (section edges only) */
+@media (min-width: 901px) {
+  .login-portal .auth-split__visual,
+  .login-portal.sb-editorial-auth .auth-split__visual {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 0 H86 C98 5 74 11 86 16.5 C98 22 74 28 86 33.5 C98 39 74 45 86 50.5 C98 56 74 62 86 67.5 C98 73 74 79 86 84.5 C98 90 74 96 86 100 H0 Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 0 H86 C98 5 74 11 86 16.5 C98 22 74 28 86 33.5 C98 39 74 45 86 50.5 C98 56 74 62 86 67.5 C98 73 74 79 86 84.5 C98 90 74 96 86 100 H0 Z'/%3E%3C/svg%3E");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+
+  .login-portal .auth-split__form-side,
+  .login-portal.sb-editorial-auth .auth-split__form-side {
+    margin-left: -7%;
+    padding-left: calc(2rem + 7%);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M14 0 C2 5 26 11 14 16.5 C2 22 26 28 14 33.5 C2 39 26 45 14 50.5 C2 56 26 62 14 67.5 C2 73 26 79 14 84.5 C2 90 26 96 14 100 H100 V0 Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M14 0 C2 5 26 11 14 16.5 C2 22 26 28 14 33.5 C2 39 26 45 14 50.5 C2 56 26 62 14 67.5 C2 73 26 79 14 84.5 C2 90 26 96 14 100 H100 V0 Z'/%3E%3C/svg%3E");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+}
+
 .login-portal.sb-editorial-auth .auth-split__visual,
 .login-portal .auth-split__visual {
   background: var(--kl-navy);

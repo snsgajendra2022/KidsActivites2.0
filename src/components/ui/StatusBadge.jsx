@@ -39,6 +39,9 @@ const STATUS_VARIANT = {
   pending: 'warning',
   not_assigned: 'default',
   payment_submitted: 'info',
+  issued: 'warning',
+  returned: 'success',
+  overdue: 'danger',
 };
 
 function resolveLabel(status, children) {

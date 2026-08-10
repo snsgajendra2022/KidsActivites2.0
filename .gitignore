@@ -35,6 +35,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
+# TV QR claim handoff (dev LAN)
+.tv-claims.json
+
 # Testing / coverage
 coverage/
 .nyc_output/

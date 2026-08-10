@@ -72,8 +72,20 @@ export function AuthProvider({ children }) {
       try {
         const profile = await getCurrentUser();
         if (!cancelled && profile) {
-          persistUser({ ...profile, isDemoSession: false });
-          setUser({ ...profile, isDemoSession: false });
+          let previousTenantSlug = null;
+          try {
+            const saved = localStorage.getItem(USER_STORAGE_KEY);
+            previousTenantSlug = saved ? JSON.parse(saved)?.tenantSlug : null;
+          } catch {
+            /* ignore */
+          }
+          const nextUser = {
+            ...profile,
+            isDemoSession: false,
+            tenantSlug: profile.tenantSlug || previousTenantSlug || null,
+          };
+          persistUser(nextUser);
+          setUser(nextUser);
         }
       } catch (err) {
         if (!cancelled && !isTransientApiError(err)) {

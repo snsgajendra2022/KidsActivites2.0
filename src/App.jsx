@@ -7,9 +7,10 @@ import TenantPathGate from './components/routing/TenantPathGate.jsx';
 import { ROLES } from './constants/roles.js';
 
 import PlatformHomeGate from './components/routing/PlatformHomeGate.jsx';
+import PlatformLandingGate from './components/routing/PlatformLandingGate.jsx';
 import PlatformLoginGate from './components/routing/PlatformLoginGate.jsx';
 import TenantHomeGate from './components/routing/TenantHomeGate.jsx';
-import KidsLandingPage from './pages/public/KidsLandingPage.jsx';
+import CatchAllRedirect from './components/routing/CatchAllRedirect.jsx';
 import RegisterSchool from './pages/public/RegisterSchool.jsx';
 import WorkspaceNew from './pages/public/WorkspaceNew.jsx';
 import WorkspaceConfirm from './pages/public/WorkspaceConfirm.jsx';
@@ -153,7 +154,7 @@ export default function App() {
   return (
     <Routes>
       {/* Platform routes (no tenant prefix) */}
-      <Route path="/" element={<KidsLandingPage />} />
+      <Route path="/" element={<PlatformLandingGate />} />
       <Route path="/kids-landing" element={<Navigate to="/" replace />} />
       <Route path="/work-space" element={<PlatformHomeGate />} />
       <Route path="/login" element={<PlatformLoginGate />} />
@@ -306,7 +307,7 @@ export default function App() {
         <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<CatchAllRedirect />} />
     </Routes>
   );
 }

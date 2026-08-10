@@ -323,7 +323,7 @@ export async function geocodeAddress(address, options = {}) {
 }
 
 /**
- * Geocode a structured student / transport address using PIN-first strategy.
+ * Geocode a structured Users / transport address using PIN-first strategy.
  */
 export async function geocodeTransportAddress(address = {}, options = {}) {
   const { queries, pin, tokens } = buildTransportQueries(address);

@@ -1,15 +1,14 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
-import Landing from '../../pages/public/Landing.jsx';
+import { resolveTenantSlug } from '../../services/api/config.js';
 import LoadingState from '../ui/LoadingState.jsx';
 import { authenticatedHomePath } from '../../utils/authRoutes.js';
 
 /**
- * Tenant root (/{slug}/): send signed-in users to their role dashboard;
- * otherwise show the public school landing page.
+ * Unknown URLs: signed-in users → dashboard; guests → platform landing.
  */
-export default function TenantHomeGate() {
+export default function CatchAllRedirect() {
   const { isAuthenticated, user, bootstrapping } = useAuth();
   const { tenantSlug, schoolSlug } = useTenant();
 
@@ -20,11 +19,11 @@ export default function TenantHomeGate() {
   if (isAuthenticated && user?.role) {
     return (
       <Navigate
-        to={authenticatedHomePath(user, tenantSlug || schoolSlug)}
+        to={authenticatedHomePath(user, tenantSlug || schoolSlug || resolveTenantSlug())}
         replace
       />
     );
   }
 
-  return <Landing />;
+  return <Navigate to="/" replace />;
 }
