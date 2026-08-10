@@ -39,10 +39,10 @@ function ensureClient() {
   const token = getAccessToken();
   const tenantSlug = resolveTenantSlug();
   client = new Client({
-    // External proxy (216.98.0.202) strips WebSocket Upgrade headers; use HTTP transports only.
+    // Edge proxy strips Upgrade and buffers long-lived streams — xhr-polling only.
     webSocketFactory: () =>
       new SockJS(getChatSocketUrl(), null, {
-        transports: ['xhr-streaming', 'xhr-polling'],
+        transports: ['xhr-polling'],
       }),
     connectHeaders: {
       Authorization: `Bearer ${token}`,

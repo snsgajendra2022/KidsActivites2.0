@@ -41,9 +41,10 @@ function ensureClient() {
   const token = getAccessToken();
   const tenantSlug = resolveTenantSlug();
   client = new Client({
+    // Same as chatRealtime: xhr-polling only (edge proxy breaks streaming / websocket).
     webSocketFactory: () =>
       new SockJS(getChatSocketUrl(), null, {
-        transports: ['xhr-streaming', 'xhr-polling'],
+        transports: ['xhr-polling'],
       }),
     connectHeaders: {
       Authorization: `Bearer ${token}`,
