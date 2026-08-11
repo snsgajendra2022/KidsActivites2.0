@@ -30,7 +30,96 @@ export const homeworkService = createCrudService({
   resource: 'homework',
   seed: HOMEWORK_SEED,
   idPrefix: 'hw',
+  normalizeItem: normalizeHomework,
 });
+
+export const teacherHomeworkService = createCrudService({
+  key: 'teacher_homework',
+  resource: 'homework',
+  seed: HOMEWORK_SEED,
+  idPrefix: 'hw',
+  listPath: '/teacher/homework',
+  itemPath: (id) => `/teacher/homework/${id}`,
+  normalizeItem: normalizeHomework,
+});
+
+/** Parent-facing homework list (`GET /parent/homework`). */
+export const parentHomeworkService = {
+  async list(filters = {}) {
+    return routeRequest({
+      mockFn: async () => {
+        await delay(120);
+        return (await homeworkService.list(filters)).map(normalizeHomework);
+      },
+      apiFn: async () => {
+        try {
+          return asCrudList(await api.get('/parent/homework', filters)).map(normalizeHomework);
+        } catch (err) {
+          const status = Number(err?.status || 0);
+          if (status === 404 || status === 405) {
+            return asCrudList(await api.get('/admin/homework', filters)).map(normalizeHomework);
+          }
+          throw err;
+        }
+      },
+    });
+  },
+  async getById(id) {
+    return routeRequest({
+      mockFn: async () => normalizeHomework(await homeworkService.getById(id)),
+      apiFn: async () => {
+        try {
+          return normalizeHomework(await api.get(`/parent/homework/${id}`));
+        } catch (err) {
+          const status = Number(err?.status || 0);
+          if (status === 404 || status === 405) {
+            const items = await parentHomeworkService.list();
+            return items.find((item) => String(item.id) === String(id)) || null;
+          }
+          throw err;
+        }
+      },
+    });
+  },
+  async create() {
+    throw new Error('Parents cannot create homework.');
+  },
+  async update() {
+    throw new Error('Parents cannot edit homework.');
+  },
+  async remove() {
+    throw new Error('Parents cannot delete homework.');
+  },
+};
+
+function normalizeHomework(item) {
+  if (!item) return item;
+  const assignedStudentIds = Array.isArray(item.assignedStudentIds)
+    ? item.assignedStudentIds.map(String)
+    : [];
+  const attachments = Array.isArray(item.attachments) ? item.attachments : [];
+  return {
+    ...item,
+    id: item.id,
+    title: item.title || 'Untitled homework',
+    description: item.description || '',
+    subject: item.subject || item.subjectName || '',
+    subjectId: item.subjectId || null,
+    classId: item.classId || null,
+    className: item.className || '',
+    sectionId: item.sectionId || null,
+    teacherId: item.teacherId || null,
+    teacherName: item.teacherName || item.createdByName || '',
+    dueDate: item.dueDate ? String(item.dueDate).slice(0, 10) : '',
+    status: String(item.status || 'assigned').toLowerCase(),
+    assignedCount: item.assignedCount ?? assignedStudentIds.length,
+    assignedStudentIds,
+    attachments,
+    createdAt: item.createdAt || null,
+    updatedAt: item.updatedAt || null,
+    createdByUserId: item.createdByUserId || null,
+  };
+}
 
 export const homeworkSubmissionService = createCrudService({
   key: 'homework_submissions',

@@ -47,7 +47,7 @@ const ADMIN_ERP_NAV = [
   { id: 'admin_certificates', to: '/admin/certificates', label: 'Document Certificates', icon: FileText, iconName: 'FileText', section: 'Documents' },
   { id: 'admin_ai', to: '/admin/ai', label: 'AI Assistant', icon: Bot, iconName: 'Bot', section: 'Premium' },
   { id: 'admin_roles', to: '/admin/roles', label: 'Roles & Permissions', icon: Shield, iconName: 'Shield', section: 'Settings' },
-  { id: 'admin_security', to: '/admin/security', label: 'Security Center', icon: Shield, iconName: 'Shield', section: 'Settings' },
+  // { id: 'admin_security', to: '/admin/security', label: 'Security Center', icon: Shield, iconName: 'Shield', section: 'Settings' },
   { id: 'admin_login_history', to: '/admin/login-history', label: 'Login History', icon: Shield, iconName: 'Shield', section: 'Settings' },
   { id: 'admin_reports_hub', to: '/admin/reports-hub', label: 'Reports Hub', icon: BarChart3, iconName: 'BarChart3', section: 'Reports' },
 ];

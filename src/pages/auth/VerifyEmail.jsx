@@ -31,6 +31,9 @@ export default function VerifyEmail() {
 
   return (
     <AuthSplitLayout
+      showHeader={false}
+      showFooter={false}
+      className="login-portal"
       title="Verify email"
       subtitle={loading ? 'Please wait while we verify your email.' : error ? 'Verification could not be completed.' : 'Your email has been confirmed.'}
       workspaceSlug={tenantSlug}
