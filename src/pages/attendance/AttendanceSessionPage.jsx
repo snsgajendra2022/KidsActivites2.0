@@ -269,7 +269,7 @@ export default function AttendanceSessionPage() {
 
   const statusList = statuses.length
     ? statuses
-    : ['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'EXCUSED'];
+    : ['PRESENT', 'ABSENT', 'LATE', 'EARLY_LEAVE', 'HALF_DAY', 'EXCUSED'];
 
   return (
     <DashboardLayout>

@@ -1,4 +1,9 @@
 import AttendanceStatusChip, { ATTENDANCE_STATUS_CODES } from './AttendanceStatusChip.jsx';
+import {
+  composeAttendanceNote,
+  getAttendanceNoteChips,
+  parseAttendanceNote,
+} from '../../services/attendanceService.js';
 
 function formatUpdatedAt(iso) {
   if (!iso) return null;
@@ -10,7 +15,7 @@ function formatUpdatedAt(iso) {
 }
 
 /**
- * Student row: avatar, name, roll, status chips, note input.
+ * Student row: avatar, name, roll, status chips, polished note display.
  */
 export default function AttendanceStudentRow({
   student,
@@ -28,6 +33,18 @@ export default function AttendanceStudentRow({
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase())
     .join('') || '?';
+
+  const parsed = parseAttendanceNote(student.note);
+  const noteChips = getAttendanceNoteChips(student.note);
+  const editableNote = parsed.hasTags ? parsed.freeText : (student.note || '');
+
+  const handleNoteInput = (value) => {
+    if (parsed.hasTags) {
+      onNoteChange?.(student.studentId, composeAttendanceNote(student.note, value));
+      return;
+    }
+    onNoteChange?.(student.studentId, value);
+  };
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-[#e2e5ec] bg-white p-3 sm:p-4 sm:flex-row sm:items-start">
@@ -71,15 +88,46 @@ export default function AttendanceStudentRow({
             student.status && <AttendanceStatusChip status={student.status} />
           )}
         </div>
-        <input
-          type="text"
-          className="form-input w-full text-sm"
-          placeholder="Note / reason (optional)"
-          value={student.note || ''}
-          disabled={!canEdit}
-          onChange={(e) => onNoteChange?.(student.studentId, e.target.value)}
-          aria-label={`Note for ${name}`}
-        />
+
+        {noteChips.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5" aria-label={`Attendance source for ${name}`}>
+            {noteChips.map((chip) => (
+              <span
+                key={chip.key}
+                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                  chip.key === 'mode'
+                    ? 'border-[#c7d7f5] bg-[#eef5ff] text-[#0058be]'
+                    : chip.key === 'device'
+                      ? 'border-[#e5e8ef] bg-[#f5f7fb] text-[#5a6270]'
+                      : 'border-[#e8ebf2] bg-white text-[#5a6270]'
+                }`}
+              >
+                {chip.key === 'device' ? `Device ${chip.label}` : chip.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        {parsed.freeText && !canEdit ? (
+          <p className="text-sm text-[#5a6270]">{parsed.freeText}</p>
+        ) : null}
+
+        {canEdit ? (
+          <input
+            type="text"
+            className="form-input w-full text-sm"
+            placeholder={
+              parsed.hasTags
+                ? 'Add a teacher note (optional)'
+                : 'Note / reason (optional)'
+            }
+            value={editableNote}
+            onChange={(e) => handleNoteInput(e.target.value)}
+            aria-label={`Note for ${name}`}
+          />
+        ) : !noteChips.length && student.note ? (
+          <p className="text-sm text-[#5a6270]">{student.note}</p>
+        ) : null}
       </div>
     </div>
   );

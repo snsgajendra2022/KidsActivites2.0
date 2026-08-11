@@ -131,28 +131,104 @@ function normalizeHistoryRecord(item) {
   };
 }
 
-/** Turn "[mode=daily][time=09:15]" into "Daily · 09:15". */
-export function formatAttendanceNote(note) {
-  const raw = String(note || '').trim();
-  if (!raw) return '';
+/** Mode labels for tagged attendance notes from advanced capture. */
+const ATTENDANCE_MODE_LABELS = {
+  daily: 'Daily',
+  period: 'Period',
+  late: 'Late entry',
+  early: 'Early leave',
+  qr: 'QR',
+  rfid: 'RFID',
+  face: 'Face',
+};
 
+/**
+ * Parse tagged notes like `[mode=period][period=1][time=09:15] optional text`.
+ */
+export function parseAttendanceNote(note) {
+  const raw = String(note || '');
   const tags = {};
   const tagRe = /\[([^=\]]+)=([^\]]*)\]/g;
   let match;
+  let lastIndex = 0;
   while ((match = tagRe.exec(raw)) !== null) {
     tags[String(match[1]).trim().toLowerCase()] = String(match[2]).trim();
+    lastIndex = tagRe.lastIndex;
   }
 
-  if (Object.keys(tags).length) {
-    const mode = tags.mode
-      ? String(tags.mode).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-      : '';
-    const time = tags.time || '';
-    const parts = [mode, time].filter(Boolean);
-    if (parts.length) return parts.join(' · ');
+  const prefix = lastIndex > 0 ? raw.slice(0, lastIndex).trim() : '';
+  let freeText = raw.slice(lastIndex).trim();
+  const deviceEventId = tags.deviceeventid || tags.deviceEventId || '';
+  // Hide free text when it only repeats the device event id (common for QR/RFID/face).
+  if (freeText && deviceEventId) {
+    const deviceRoot = String(deviceEventId).split(':')[0];
+    if (freeText === deviceEventId || freeText === deviceRoot) {
+      freeText = '';
+    }
   }
 
-  return raw;
+  return {
+    tags,
+    prefix,
+    freeText,
+    hasTags: Object.keys(tags).length > 0,
+  };
+}
+
+/** Build chips for UI: [{ key, label }]. */
+export function getAttendanceNoteChips(note) {
+  const { tags, hasTags } = parseAttendanceNote(note);
+  if (!hasTags) return [];
+
+  const chips = [];
+  const modeKey = String(tags.mode || '').toLowerCase();
+  if (modeKey) {
+    const modeLabel = ATTENDANCE_MODE_LABELS[modeKey]
+      || modeKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    if (modeKey === 'period' && tags.period) {
+      chips.push({ key: 'mode', label: `${modeLabel} ${tags.period}` });
+    } else {
+      chips.push({ key: 'mode', label: modeLabel });
+    }
+  } else if (tags.period) {
+    chips.push({ key: 'period', label: `Period ${tags.period}` });
+  }
+
+  if (tags.time) {
+    chips.push({ key: 'time', label: tags.time });
+  }
+
+  const deviceEventId = tags.deviceeventid || '';
+  if (deviceEventId) {
+    const shortId = String(deviceEventId).split(':')[0];
+    chips.push({ key: 'device', label: shortId });
+  }
+
+  return chips;
+}
+
+/**
+ * Turn "[mode=period][period=1][time=09:15]" into "Period 1 · 09:15".
+ * Device ids are shortened; duplicate free-text device refs are omitted.
+ */
+export function formatAttendanceNote(note) {
+  const { tags, freeText, hasTags } = parseAttendanceNote(note);
+  if (!hasTags) return String(note || '').trim();
+
+  const chips = getAttendanceNoteChips(note);
+  const parts = chips.map((chip) => chip.label);
+  if (freeText) parts.push(freeText);
+  return parts.join(' · ');
+}
+
+/** Keep system tags when the teacher edits only the human note portion. */
+export function composeAttendanceNote(existingNote, freeText) {
+  const { prefix, hasTags } = parseAttendanceNote(existingNote);
+  const text = String(freeText || '').trim();
+  if (hasTags && prefix) {
+    return text ? `${prefix} ${text}` : prefix;
+  }
+  return text;
 }
 
 /** GET /attendance/reports/summary?... */

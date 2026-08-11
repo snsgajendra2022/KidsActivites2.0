@@ -45,7 +45,8 @@ export default function ResetPassword() {
     return (
       <AuthSplitLayout
         showHeader={false}
-        showFooter={false}
+        showFooter
+        footerVariant="auth"
         className="login-portal"
         title="Invalid link"
         subtitle="This reset link is missing or has expired."
@@ -66,7 +67,8 @@ export default function ResetPassword() {
   return (
     <AuthSplitLayout
       showHeader={false}
-      showFooter={false}
+      showFooter
+      footerVariant="auth"
       className="login-portal"
       title="Reset password"
       subtitle="Choose a new password for your account."

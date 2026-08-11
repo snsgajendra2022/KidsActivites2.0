@@ -32,7 +32,8 @@ export default function ForgotPassword() {
   return (
     <AuthSplitLayout
       showHeader={false}
-      showFooter={false}
+      showFooter
+      footerVariant="auth"
       className="login-portal"
       title="Forgot password"
       subtitle="We'll send a secure reset link to your email."

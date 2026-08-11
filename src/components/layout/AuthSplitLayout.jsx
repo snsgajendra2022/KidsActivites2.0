@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PublicHeader from './PublicHeader.jsx';
 import PublicFooter from './PublicFooter.jsx';
+import AuthPageFooter from './AuthPageFooter.jsx';
 import PortalLogo from '../brand/PortalLogo.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 
@@ -41,11 +42,14 @@ export default function AuthSplitLayout({
   footerLink,
   showHeader = true,
   showFooter = true,
+  /** 'default' = public/tenant footer, 'auth' = slim login-style footer */
+  footerVariant = 'default',
   className = '',
 }) {
   const { portalName, school, branding } = usePortalConfig();
   const loginHeroUrl = branding?.loginHeroUrl;
   const hasCustomLogo = Boolean(branding?.logoUrl || branding?.logoIconUrl);
+  const isLoginPortal = className.includes('login-portal');
 
   return (
     <div className={`sb-page sb-editorial-page sb-editorial-auth flex min-h-dvh flex-col ${className}`.trim()}>
@@ -56,7 +60,7 @@ export default function AuthSplitLayout({
         >
           {loginHeroUrl ? <AuthHeroImage src={loginHeroUrl} /> : null}
           <div className="auth-split__visual-content">
-            <p className={`sb-eyebrow${className.includes('login-portal') ? ' auth-split__visual-badge' : ' !text-[var(--sb-gold)]'}`}>
+            <p className={`sb-eyebrow${isLoginPortal ? ' auth-split__visual-badge' : ' !text-[var(--sb-gold)]'}`}>
               {visualBadge || 'Secure Portal'}
             </p>
             <h1>{visualTitle || `Welcome to ${portalName}`}</h1>
@@ -93,7 +97,11 @@ export default function AuthSplitLayout({
           </div>
         </div>
       </div>
-      {showFooter ? <PublicFooter compact /> : null}
+      {showFooter ? (
+        footerVariant === 'auth' || isLoginPortal
+          ? <AuthPageFooter />
+          : <PublicFooter compact />
+      ) : null}
     </div>
   );
 }

@@ -538,3 +538,94 @@
     font-size: 13px;
   }
 }
+
+/* ─── Auth page footer (reset / forgot / verify) ─── */
+.auth-page-footer {
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  border-top: 1px solid rgba(251, 191, 36, 0.28);
+  color: rgba(255, 255, 255, 0.88);
+  padding: 1rem 1.25rem;
+}
+
+.auth-page-footer__inner {
+  margin: 0 auto;
+  max-width: 72rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem 1.5rem;
+}
+
+.auth-page-footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.auth-page-footer__logo {
+  height: 1.75rem;
+  width: auto;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
+}
+
+.auth-page-footer__school {
+  margin: 0;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.auth-page-footer__legal {
+  margin: 0.15rem 0 0;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.35;
+}
+
+.auth-page-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+}
+
+.auth-page-footer__link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.68);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.auth-page-footer__link:hover {
+  color: #fbbf24;
+}
+
+.auth-page-footer__link--accent {
+  color: #fbbf24;
+}
+
+.auth-page-footer__link--accent:hover {
+  color: #fde68a;
+}
+
+.login-portal .auth-page-footer {
+  background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+}
+
+@media (max-width: 640px) {
+  .auth-page-footer__inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
