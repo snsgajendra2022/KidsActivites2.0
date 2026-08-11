@@ -887,6 +887,9 @@
   border: 1px solid rgba(0, 0, 0, 0.08);
   background: #f8fafc;
   color: #334155;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .webpush-banner svg {

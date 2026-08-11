@@ -301,41 +301,61 @@ export async function syncWebPushToken(user) {
 
 /**
  * User-gesture entry: permission prompt + FCM token + backend device upsert.
+ *
+ * IMPORTANT: When permission is still `default`, call `Notification.requestPermission()`
+ * before any other awaits. Browsers only show the Allow dialog from a fresh user gesture;
+ * awaiting support/config checks first often suppresses the prompt (looks like "auto enable failed").
  */
 export async function enableWebPushFromUserGesture(user) {
   if (!user?.id) {
     return { ok: false, reason: 'no_user', message: 'Sign in first, then enable notifications.' };
   }
 
-  const status = await getWebPushStatus();
-  logDev('enable status', {
-    reason: status.reason,
-    browser: status.browser,
-    permission: status.permission,
-    messagingSupported: await checkMessagingSupport(),
-  });
-
-  if (status.reason === 'missing_config' || status.reason === 'insecure' || status.reason === 'unsupported') {
-    return { ok: false, reason: status.reason, message: status.message };
+  if (typeof window === 'undefined' || typeof Notification === 'undefined') {
+    return { ok: false, reason: 'unsupported', message: 'This browser does not support web push notifications.' };
   }
-  if (status.reason === 'denied') {
-    return { ok: false, reason: 'denied', message: status.message };
+  if (!window.isSecureContext) {
+    return {
+      ok: false,
+      reason: 'insecure',
+      message:
+        'Browser notifications need HTTPS or localhost. Open the portal at https://… or http://localhost — not a LAN IP like http://192.168.x.x.',
+    };
   }
 
   try {
-    const permission = Notification.permission === 'granted'
-      ? 'granted'
-      : await Notification.requestPermission();
+    // Keep this as the first await while permission is still default (gesture chain).
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
 
+    if (permission === 'denied') {
+      return {
+        ok: false,
+        reason: 'denied',
+        message:
+          'You blocked notifications. Enable them in browser / OS site settings to continue.',
+      };
+    }
     if (permission !== 'granted') {
       return {
         ok: false,
-        reason: permission === 'denied' ? 'denied' : 'default',
-        message:
-          permission === 'denied'
-            ? 'You blocked notifications. Enable them in browser / OS site settings to continue.'
-            : 'Permission was not granted.',
+        reason: 'default',
+        message: 'Permission was not granted.',
       };
+    }
+
+    const status = await getWebPushStatus();
+    logDev('enable status', {
+      reason: status.reason,
+      browser: status.browser,
+      permission: status.permission,
+      messagingSupported: await checkMessagingSupport(),
+    });
+
+    if (status.reason === 'missing_config' || status.reason === 'insecure' || status.reason === 'unsupported') {
+      return { ok: false, reason: status.reason, message: status.message };
     }
 
     const token = await registerTokenWithBackend(user, { forceUpsert: true, throwOnError: true });

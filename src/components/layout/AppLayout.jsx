@@ -6,6 +6,7 @@ import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import NetworkBanner from './NetworkBanner.jsx';
 import WebPushEnableBanner from '../notifications/WebPushEnableBanner.jsx';
+import '../../styles/notifications.css';
 
 const SIDEBAR_COLLAPSE_KEY = 'ka.sidebar.collapsed';
 /** Collapse rail below this width so map / content pages keep usable main width. */

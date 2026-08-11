@@ -8,11 +8,17 @@ import {
   syncWebPushToken,
 } from '../../services/webPushService.js';
 
+const GESTURE_PROMPTED_KEY = 'sb_web_push_gesture_prompted';
+
 /**
  * Shows why browser push is off and an Enable / Retry button (user gesture for first Allow).
  * Each browser profile registers its own FCM device (Chrome ≠ Safari).
  *
  * Mounted in AppLayout so users see this after login, not only on the Notifications page.
+ *
+ * Also: once per tab session, the first click/keypress after login can open the browser
+ * Allow dialog when permission is still `default` (still a real user gesture — browsers
+ * forbid silent prompts on login alone).
  */
 export default function WebPushEnableBanner({ compact = false }) {
   const { user } = useAuth();
@@ -23,11 +29,14 @@ export default function WebPushEnableBanner({ compact = false }) {
     message: 'Checking notification support…',
   });
   const [busy, setBusy] = useState(false);
-  const autoRetryDone = useRef(false);
+  const autoRetryGen = useRef(0);
+  const busyRef = useRef(false);
+  const statusReasonRef = useRef(status.reason);
 
   const refresh = useCallback(async () => {
     const next = await getWebPushStatus();
     setStatus(next);
+    statusReasonRef.current = next.reason;
     return next;
   }, []);
 
@@ -40,20 +49,78 @@ export default function WebPushEnableBanner({ compact = false }) {
 
   // Permission already granted but no local FCM token → retry quietly (no gesture needed).
   useEffect(() => {
-    if (!user?.id || status.reason !== 'needs_register' || autoRetryDone.current) return;
-    autoRetryDone.current = true;
+    if (!user?.id || status.reason !== 'needs_register') return;
+    const gen = ++autoRetryGen.current;
     let cancelled = false;
     (async () => {
       setBusy(true);
+      busyRef.current = true;
       try {
         await syncWebPushToken(user);
-        if (!cancelled) await refresh();
+        if (!cancelled && gen === autoRetryGen.current) await refresh();
       } finally {
-        if (!cancelled) setBusy(false);
+        if (!cancelled && gen === autoRetryGen.current) {
+          setBusy(false);
+          busyRef.current = false;
+        }
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user, status.reason, refresh]);
+
+  // First pointer/key after login → request permission while still in a user gesture.
+  // Skipped if we already prompted this tab session, or permission is not `default`.
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    try {
+      if (sessionStorage.getItem(GESTURE_PROMPTED_KEY) === '1') return undefined;
+    } catch {
+      // ignore
+    }
+
+    const onGesture = (event) => {
+      if (busyRef.current) return;
+      if (statusReasonRef.current !== 'default') return;
+      // Banner button has its own handler — avoid double requestPermission.
+      const target = event.target;
+      if (target instanceof Element && target.closest('.webpush-banner__btn')) return;
+
+      try {
+        sessionStorage.setItem(GESTURE_PROMPTED_KEY, '1');
+      } catch {
+        // ignore
+      }
+      document.removeEventListener('pointerdown', onGesture, true);
+      document.removeEventListener('keydown', onGesture, true);
+
+      busyRef.current = true;
+      setBusy(true);
+      void (async () => {
+        try {
+          const result = await enableWebPushFromUserGesture(user);
+          await refresh();
+          if (result.ok) {
+            toast(result.message, 'success');
+          } else if (result.reason === 'denied') {
+            toast(result.message, 'error');
+          }
+          // Dismiss / default: leave banner visible; no error toast spam.
+        } finally {
+          busyRef.current = false;
+          setBusy(false);
+        }
+      })();
+    };
+
+    document.addEventListener('pointerdown', onGesture, true);
+    document.addEventListener('keydown', onGesture, true);
+    return () => {
+      document.removeEventListener('pointerdown', onGesture, true);
+      document.removeEventListener('keydown', onGesture, true);
+    };
+  }, [user, refresh, toast]);
 
   if (status.reason === 'granted') {
     if (compact) return null;
@@ -72,7 +139,13 @@ export default function WebPushEnableBanner({ compact = false }) {
 
   const onEnable = async () => {
     setBusy(true);
+    busyRef.current = true;
     try {
+      try {
+        sessionStorage.setItem(GESTURE_PROMPTED_KEY, '1');
+      } catch {
+        // ignore
+      }
       const result = await enableWebPushFromUserGesture(user);
       await refresh();
       if (result.ok) {
@@ -82,6 +155,7 @@ export default function WebPushEnableBanner({ compact = false }) {
       }
     } finally {
       setBusy(false);
+      busyRef.current = false;
     }
   };
 
@@ -94,7 +168,11 @@ export default function WebPushEnableBanner({ compact = false }) {
       <Icon size={18} aria-hidden />
       <div className="webpush-banner__body">
         <strong>Browser notifications{status.browser ? ` · ${status.browser}` : ''}</strong>
-        <p>{status.message}</p>
+        <p>
+          {status.reason === 'default'
+            ? 'Click Allow notifications (or anywhere once) so this browser can receive alerts. Browsers block silent enable on login.'
+            : status.message}
+        </p>
       </div>
       {canClickEnable && (
         <button
