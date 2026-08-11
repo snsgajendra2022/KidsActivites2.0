@@ -21,6 +21,27 @@ export function asCrudList(data) {
 }
 
 /**
+ * Normalize list filters. Guards against React Query misuse where
+ * `queryFn: service.list` passes `{ client, queryKey, signal }` as the first arg.
+ */
+export function normalizeListFilters(filters = {}) {
+  if (!filters || typeof filters !== 'object' || Array.isArray(filters)) {
+    return {};
+  }
+  // React Query QueryFunctionContext keys
+  if ('queryKey' in filters || 'signal' in filters || 'client' in filters || 'meta' in filters) {
+    return {};
+  }
+  const cleaned = {};
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    if (typeof value === 'object') return;
+    cleaned[key] = value;
+  });
+  return cleaned;
+}
+
+/**
  * Shared mock + API CRUD service for school ERP modules.
  * Live API path: /admin/{resource} (override via options).
  */
@@ -47,18 +68,19 @@ export function createCrudService({
   }
 
   async function list(filters = {}) {
+    const safeFilters = normalizeListFilters(filters);
     return routeRequest({
       mockFn: async () => {
         await delay(120);
         let items = readAll();
-        Object.entries(filters).forEach(([field, value]) => {
+        Object.entries(safeFilters).forEach(([field, value]) => {
           if (value === undefined || value === null || value === '') return;
           items = items.filter((item) => String(item[field] || '').toLowerCase() === String(value).toLowerCase());
         });
         return items;
       },
       apiFn: async () => {
-        const data = await api.get(baseList, filters);
+        const data = await api.get(baseList, safeFilters);
         return asCrudList(data).map(normalize);
       },
     });

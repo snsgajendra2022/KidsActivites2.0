@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { refreshAccessToken } from './api/client.js';
 import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from './api/config.js';
 import { getAccessToken } from './api/tokenStorage.js';
 
@@ -8,6 +9,34 @@ function getChatSocketUrl() {
   const tenantSlug = resolveTenantSlug();
   const query = tenantSlug ? `?${TENANT_HEADER}=${encodeURIComponent(tenantSlug)}` : '';
   return `${base}/api/v1/ws/chat${query}`;
+}
+
+function isAccessTokenExpired(token, skewSeconds = 45) {
+  if (!token) return true;
+  try {
+    const segment = token.split('.')[1];
+    if (!segment) return true;
+    const padded = segment.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(segment.length / 4) * 4, '=');
+    const payload = JSON.parse(atob(padded));
+    return typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now() + skewSeconds * 1000;
+  } catch {
+    return true;
+  }
+}
+
+async function buildConnectHeaders() {
+  let token = getAccessToken();
+  if (isAccessTokenExpired(token)) {
+    token = (await refreshAccessToken()) || getAccessToken();
+  }
+  const tenantSlug = resolveTenantSlug();
+  if (!token || !tenantSlug) {
+    throw new Error('Notification socket requires a valid session');
+  }
+  return {
+    Authorization: `Bearer ${token}`,
+    [TENANT_HEADER]: tenantSlug,
+  };
 }
 
 function notificationTopic(userId) {
@@ -25,6 +54,29 @@ function canConnect() {
   return Boolean(API_BASE_URL && resolveTenantSlug() && getAccessToken());
 }
 
+function createClient() {
+  const stompClient = new Client({
+    // Same as chatRealtime: xhr-polling only (edge proxy breaks streaming / websocket).
+    webSocketFactory: () =>
+      new SockJS(getChatSocketUrl(), null, {
+        transports: ['xhr-polling'],
+      }),
+    beforeConnect: async () => {
+      stompClient.connectHeaders = await buildConnectHeaders();
+    },
+    reconnectDelay: 5000,
+    onDisconnect: () => {
+      connectPromise = null;
+      stompSub = null;
+    },
+    onStompError: () => {
+      connectPromise = null;
+      stompSub = null;
+    },
+  });
+  return stompClient;
+}
+
 function ensureClient() {
   if (!canConnect()) {
     return Promise.resolve(null);
@@ -38,36 +90,31 @@ function ensureClient() {
     return connectPromise;
   }
 
-  const token = getAccessToken();
-  const tenantSlug = resolveTenantSlug();
-  client = new Client({
-    // Same as chatRealtime: xhr-polling only (edge proxy breaks streaming / websocket).
-    webSocketFactory: () =>
-      new SockJS(getChatSocketUrl(), null, {
-        transports: ['xhr-polling'],
-      }),
-    connectHeaders: {
-      Authorization: `Bearer ${token}`,
-      ...(tenantSlug ? { [TENANT_HEADER]: tenantSlug } : {}),
-    },
-    reconnectDelay: 5000,
-    onDisconnect: () => {
-      connectPromise = null;
-      stompSub = null;
-    },
-    onStompError: () => {
-      connectPromise = null;
-      stompSub = null;
-    },
-  });
+  if (!client) {
+    client = createClient();
+  }
 
   connectPromise = new Promise((resolve) => {
-    client.onConnect = () => resolve(client);
+    client.onConnect = () => {
+      if (activeUserId && !stompSub) {
+        stompSub = client.subscribe(notificationTopic(activeUserId), (frame) => {
+          try {
+            const payload = JSON.parse(frame.body);
+            dispatchEvent(payload);
+          } catch {
+            // ignore malformed frames
+          }
+        });
+      }
+      resolve(client);
+    };
     client.onWebSocketClose = () => {
       connectPromise = null;
       stompSub = null;
     };
-    client.activate();
+    if (!client.active) {
+      client.activate();
+    }
   });
 
   return connectPromise;

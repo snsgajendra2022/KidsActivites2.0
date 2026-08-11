@@ -59,14 +59,18 @@ function toParentFeeView(item) {
       : (statusRaw || 'fee_pending'));
   return normalizeFee({
     id: item.id || item.invoiceId,
-    applicationId: item.applicationId || null,
+    applicationId: item.applicationId || item.studentId || null,
     applicationNo: item.invoiceNo || item.applicationNo || item.id,
     studentName: item.studentName || item.student?.fullName || null,
+    classId: item.classId || null,
+    className: item.className || item.classApplying || null,
+    title: item.title || (item.source === 'enrollment' ? 'Enrollment Fee' : 'Fee Invoice'),
+    dueDate: item.dueDate || null,
     status,
     breakdown,
     total: Number(item.netAmount ?? item.total ?? item.amount ?? item.gross ?? 0),
     payment: item.payment || null,
-    source: 'invoice',
+    source: item.source || 'invoice',
   });
 }
 
@@ -194,10 +198,12 @@ export default function ParentFees() {
         ) : (
           <div className="fee-payment-layout">
             <section className="sb-card fee-payment-card">
-              <h3 className="fee-payment-card-title">Fee Summary</h3>
+              <h3 className="fee-payment-card-title">{fee.title || 'Fee Summary'}</h3>
               <p className="fee-payment-card-sub">
                 {fee.studentName || app?.student?.fullName || 'Student'}
+                {fee.className ? ` · ${fee.className}` : ''}
                 {fee.applicationNo ? ` · ${fee.applicationNo}` : ''}
+                {fee.dueDate ? ` · Due ${fee.dueDate}` : ''}
               </p>
 
               <div className="fee-payment-breakdown">

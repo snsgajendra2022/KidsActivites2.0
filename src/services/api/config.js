@@ -100,10 +100,20 @@ function resolveTenantSlugFromSubdomainHost() {
 
 /**
  * Resolve tenant slug for API requests.
- * Priority: platform /admin path → URL path `/{slug}/...` → subdomain → VITE_TENANT_SLUG.
+ * Priority: URL path `/{slug}/...` → tenant subdomain → platform `/admin` path → VITE_TENANT_SLUG.
+ *
+ * Important: do NOT treat path `/admin/...` as platform workspace when the host is already a
+ * school subdomain (e.g. shri.kidsactivites.app/admin/certificates) — that incorrectly sent
+ * X-Tenant-Slug: admin and hit the master DB (no erp_records / certificates).
  */
 export function resolveTenantSlug() {
   if (typeof window !== 'undefined') {
+    const fromPath = extractSlugSegment(window.location.pathname);
+    if (fromPath) return fromPath;
+
+    const fromSubdomain = resolveTenantSlugFromSubdomainHost();
+    if (fromSubdomain) return fromSubdomain;
+
     const segments = window.location.pathname.split('/').filter(Boolean);
     const first = segments[0]?.toLowerCase();
 
@@ -111,12 +121,6 @@ export function resolveTenantSlug() {
     if (first === 'admin') {
       return 'admin';
     }
-
-    const fromPath = extractSlugSegment(window.location.pathname);
-    if (fromPath) return fromPath;
-
-    const fromSubdomain = resolveTenantSlugFromSubdomainHost();
-    if (fromSubdomain) return fromSubdomain;
   }
 
   const fromEnv = import.meta.env.VITE_TENANT_SLUG?.trim();

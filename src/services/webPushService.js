@@ -34,10 +34,39 @@ function logDev(...args) {
   }
 }
 
+/** Always log failures — production was silent and looked "healthy" with only Notification.permission. */
+function warnPush(...args) {
+  console.warn('[web-push]', ...args);
+}
+
 function warnDev(...args) {
   if (import.meta.env.DEV) {
     console.warn('[web-push]', ...args);
   }
+}
+
+/** True when this browser profile already stored an FCM token after a successful register. */
+export function hasLocalWebPushToken() {
+  try {
+    return Boolean(localStorage.getItem(TOKEN_KEY));
+  } catch {
+    return false;
+  }
+}
+
+function describePushError(err) {
+  const message = err?.message || String(err || 'Unknown error');
+  const code = err?.code || err?.name || '';
+  if (/push service not available/i.test(message)) {
+    return 'This browser cannot reach the Web Push service (common in some Chromium builds / locked-down environments). Use Chrome or Edge on desktop, or check that push/FCM is not blocked.';
+  }
+  if (/registration-token-not-registered|messaging\/registration-token-not-registered/i.test(message + code)) {
+    return 'FCM rejected the token. Try Allow notifications again after clearing site data for this origin.';
+  }
+  if (/vapid|applicationServerKey|InvalidAccessError/i.test(message + code)) {
+    return 'VAPID / Web Push key rejected. Confirm VITE_FIREBASE_VAPID_KEY matches Firebase Console → Cloud Messaging → Web Push certificates.';
+  }
+  return message;
 }
 
 /** Persistent per-browser-profile id (Chrome ≠ Safari storage). */
@@ -163,6 +192,17 @@ export async function getWebPushStatus() {
     };
   }
   if (permission === 'granted') {
+    // Permission alone is not enough — login sync can fail silently (getToken / SW / push service).
+    if (!hasLocalWebPushToken()) {
+      return {
+        ok: false,
+        reason: 'needs_register',
+        browser,
+        permission,
+        message:
+          `Permission is granted for ${browser}, but this device is not registered for push yet. Click Retry to finish setup.`,
+      };
+    }
     return {
       ok: true,
       reason: 'granted',
@@ -193,6 +233,26 @@ async function ensureFirebaseApp() {
   return messagingInstance;
 }
 
+async function waitForServiceWorkerActive(reg, timeoutMs = 8000) {
+  if (reg.active?.state === 'activated') return reg.active;
+  const pending = reg.installing || reg.waiting;
+  if (!pending) {
+    await navigator.serviceWorker.ready;
+    return reg.active || (await navigator.serviceWorker.ready).active || null;
+  }
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      resolve(reg.active || null);
+    }, timeoutMs);
+    pending.addEventListener('statechange', () => {
+      if (pending.state === 'activated') {
+        clearTimeout(timer);
+        resolve(pending);
+      }
+    });
+  });
+}
+
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return null;
 
@@ -201,7 +261,7 @@ async function registerServiceWorker() {
     scope: '/',
   });
   await navigator.serviceWorker.ready;
-  const target = reg.active || (await navigator.serviceWorker.ready).active;
+  const target = await waitForServiceWorkerActive(reg);
   target?.postMessage({ type: 'FIREBASE_CONFIG', config: firebaseConfig });
   logDev('service worker ready', { scope: reg.scope, state: target?.state });
   return reg;
@@ -210,60 +270,95 @@ async function registerServiceWorker() {
 /**
  * Quiet sync after login — only when permission is already granted.
  * Always upserts the current browser device on the backend (multi-device safe).
+ * Retries briefly — SW / push-service races are common right after login.
  */
 export async function syncWebPushToken(user) {
   if (!user?.id) return null;
   const status = await getWebPushStatus();
   if (status.reason === 'missing_config' || status.reason === 'insecure' || status.reason === 'unsupported') {
-    warnDev('sync skipped:', status.reason, status.message);
+    warnPush('sync skipped:', status.reason, status.message);
     return null;
   }
   if (getNotificationPermission() !== 'granted') {
     return null;
   }
-  return registerTokenWithBackend(user, { forceUpsert: true });
+
+  const delays = [0, 400, 1200];
+  let lastErr = null;
+  for (const delay of delays) {
+    if (delay) await new Promise((r) => setTimeout(r, delay));
+    try {
+      const token = await registerTokenWithBackend(user, { forceUpsert: true, throwOnError: true });
+      if (token) return token;
+    } catch (err) {
+      lastErr = err;
+      warnPush('sync attempt failed:', describePushError(err), err);
+    }
+  }
+  if (lastErr) warnPush('sync gave up after retries:', describePushError(lastErr));
+  return null;
 }
 
 /**
  * User-gesture entry: permission prompt + FCM token + backend device upsert.
+ *
+ * IMPORTANT: When permission is still `default`, call `Notification.requestPermission()`
+ * before any other awaits. Browsers only show the Allow dialog from a fresh user gesture;
+ * awaiting support/config checks first often suppresses the prompt (looks like "auto enable failed").
  */
 export async function enableWebPushFromUserGesture(user) {
   if (!user?.id) {
     return { ok: false, reason: 'no_user', message: 'Sign in first, then enable notifications.' };
   }
 
-  const status = await getWebPushStatus();
-  logDev('enable status', {
-    reason: status.reason,
-    browser: status.browser,
-    permission: status.permission,
-    messagingSupported: await checkMessagingSupport(),
-  });
-
-  if (status.reason === 'missing_config' || status.reason === 'insecure' || status.reason === 'unsupported') {
-    return { ok: false, reason: status.reason, message: status.message };
+  if (typeof window === 'undefined' || typeof Notification === 'undefined') {
+    return { ok: false, reason: 'unsupported', message: 'This browser does not support web push notifications.' };
   }
-  if (status.reason === 'denied') {
-    return { ok: false, reason: 'denied', message: status.message };
+  if (!window.isSecureContext) {
+    return {
+      ok: false,
+      reason: 'insecure',
+      message:
+        'Browser notifications need HTTPS or localhost. Open the portal at https://… or http://localhost — not a LAN IP like http://192.168.x.x.',
+    };
   }
 
   try {
-    const permission = Notification.permission === 'granted'
-      ? 'granted'
-      : await Notification.requestPermission();
+    // Keep this as the first await while permission is still default (gesture chain).
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
 
+    if (permission === 'denied') {
+      return {
+        ok: false,
+        reason: 'denied',
+        message:
+          'You blocked notifications. Enable them in browser / OS site settings to continue.',
+      };
+    }
     if (permission !== 'granted') {
       return {
         ok: false,
-        reason: permission === 'denied' ? 'denied' : 'default',
-        message:
-          permission === 'denied'
-            ? 'You blocked notifications. Enable them in browser / OS site settings to continue.'
-            : 'Permission was not granted.',
+        reason: 'default',
+        message: 'Permission was not granted.',
       };
     }
 
-    const token = await registerTokenWithBackend(user, { forceUpsert: true });
+    const status = await getWebPushStatus();
+    logDev('enable status', {
+      reason: status.reason,
+      browser: status.browser,
+      permission: status.permission,
+      messagingSupported: await checkMessagingSupport(),
+    });
+
+    if (status.reason === 'missing_config' || status.reason === 'insecure' || status.reason === 'unsupported') {
+      return { ok: false, reason: status.reason, message: status.message };
+    }
+
+    const token = await registerTokenWithBackend(user, { forceUpsert: true, throwOnError: true });
     if (!token) {
       return {
         ok: false,
@@ -280,27 +375,29 @@ export async function enableWebPushFromUserGesture(user) {
       deviceId: getOrCreateDeviceId(),
     };
   } catch (err) {
-    warnDev('enable failed', err);
+    warnPush('enable failed', err);
     return {
       ok: false,
       reason: 'error',
-      message: err?.message || 'Failed to enable browser notifications.',
+      message: describePushError(err) || 'Failed to enable browser notifications.',
     };
   }
 }
 
-async function registerTokenWithBackend(user, { forceUpsert = false } = {}) {
+async function registerTokenWithBackend(user, { forceUpsert = false, throwOnError = false } = {}) {
   try {
+    if (!firebaseVapidKey) {
+      throw new Error('VITE_FIREBASE_VAPID_KEY is missing from the production build.');
+    }
+
     const messaging = await ensureFirebaseApp();
     if (!messaging) {
-      warnDev('messaging unavailable');
-      return null;
+      throw new Error('Firebase Messaging is unavailable in this browser.');
     }
 
     const swReg = await registerServiceWorker();
     if (!swReg) {
-      warnDev('service worker registration failed');
-      return null;
+      throw new Error('Service worker registration failed for /firebase-messaging-sw.js.');
     }
 
     const token = await getToken(messaging, {
@@ -308,8 +405,7 @@ async function registerTokenWithBackend(user, { forceUpsert = false } = {}) {
       serviceWorkerRegistration: swReg,
     });
     if (!token) {
-      warnDev('getToken returned empty');
-      return null;
+      throw new Error('getToken returned empty — check VAPID key and Notification permission.');
     }
 
     bindForegroundListener();
@@ -356,7 +452,8 @@ async function registerTokenWithBackend(user, { forceUpsert = false } = {}) {
 
     return token;
   } catch (err) {
-    warnDev('sync failed', err);
+    warnPush('register failed:', describePushError(err), err);
+    if (throwOnError) throw err;
     return null;
   }
 }

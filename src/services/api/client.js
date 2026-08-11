@@ -194,12 +194,17 @@ export async function refreshAccessToken() {
 
 function buildUrl(path, params) {
   const url = new URL(`${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+  if (params && typeof params === 'object' && !Array.isArray(params)) {
+    // Guard React Query QueryFunctionContext and nested objects → "[object Object]" query junk.
+    const looksLikeRqContext = 'queryKey' in params || 'signal' in params || 'client' in params || 'meta' in params;
+    if (!looksLikeRqContext) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return;
+        if (typeof value === 'object') return;
+        if (key === 'client' || key === 'queryKey' || key === 'signal' || key === 'meta') return;
         url.searchParams.set(key, String(value));
-      }
-    });
+      });
+    }
   }
   return url.toString();
 }

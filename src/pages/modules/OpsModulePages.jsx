@@ -178,10 +178,16 @@ export function ExpensesPage() {
 }
 
 export function CertificatesPage() {
+  const { user } = useAuth();
+  const isPlatformWorkspace = String(user?.tenantSlug || '').toLowerCase() === 'admin'
+    || String(user?.role || '').toLowerCase() === 'super_admin';
+
   return (
     <ModuleCrudPage
       title="Document Automation"
-      subtitle="Generate bonafide, ID card, certificates, and transfer documents."
+      subtitle={isPlatformWorkspace
+        ? "School document certificates are per-workspace. Open a school (e.g. /shri/admin/certificates) with a school admin account."
+        : "Generate bonafide, ID card, certificates, and transfer documents."}
       service={certificateService}
       columns={[
         { key: 'certificateNumber', label: 'Certificate No.', primary: true },

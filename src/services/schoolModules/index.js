@@ -51,17 +51,7 @@ export const parentHomeworkService = {
         await delay(120);
         return (await homeworkService.list(filters)).map(normalizeHomework);
       },
-      apiFn: async () => {
-        try {
-          return asCrudList(await api.get('/parent/homework', filters)).map(normalizeHomework);
-        } catch (err) {
-          const status = Number(err?.status || 0);
-          if (status === 404 || status === 405) {
-            return asCrudList(await api.get('/admin/homework', filters)).map(normalizeHomework);
-          }
-          throw err;
-        }
-      },
+      apiFn: async () => asCrudList(await api.get('/parent/homework', filters)).map(normalizeHomework),
     });
   },
   async getById(id) {
@@ -508,6 +498,25 @@ export const libraryIssueService = createCrudService({
   idPrefix: 'issue',
 });
 
+/** Parent-facing library issues for linked students (`GET /parent/library/issues`). */
+export const parentLibraryIssueService = {
+  async list(filters = {}) {
+    return routeRequest({
+      mockFn: async () => {
+        await delay(120);
+        return libraryIssueService.list(filters);
+      },
+      apiFn: async () => asCrudList(await api.get('/parent/library/issues', filters)),
+    });
+  },
+  async getById(id) {
+    return routeRequest({
+      mockFn: async () => libraryIssueService.getById(id),
+      apiFn: async () => api.get(`/parent/library/issues/${id}`),
+    });
+  },
+};
+
 libraryIssueService.returnBook = async function returnBook(id) {
   return routeRequest({
     mockFn: async () => {
@@ -569,12 +578,28 @@ export const expenseService = createCrudService({
   idPrefix: 'exp',
 });
 
-export const certificateService = createCrudService({
+const certificateCrud = createCrudService({
   key: 'certificates',
   resource: 'certificates',
   seed: CERTIFICATE_SEED,
   idPrefix: 'cert',
 });
+
+/** Bound list so React Query cannot pass QueryFunctionContext as filters. */
+export const certificateService = {
+  ...certificateCrud,
+  list: (filters = {}) => certificateCrud.list(
+    filters && typeof filters === 'object' && !Array.isArray(filters) && ('queryKey' in filters || 'signal' in filters)
+      ? {}
+      : (filters || {}),
+  ),
+  getById: (...args) => certificateCrud.getById(...args),
+  create: (...args) => certificateCrud.create(...args),
+  update: (...args) => certificateCrud.update(...args),
+  remove: (...args) => certificateCrud.remove(...args),
+  readAll: (...args) => certificateCrud.readAll(...args),
+  writeAll: (...args) => certificateCrud.writeAll(...args),
+};
 
 export const subscriptionService = createCrudService({
   key: 'subscription_plans',

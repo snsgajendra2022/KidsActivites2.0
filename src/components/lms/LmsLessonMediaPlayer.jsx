@@ -311,7 +311,12 @@ export default function LmsLessonMediaPlayer({
       } catch (err) {
         if (!cancelled) {
           setPlaybackToken(null);
-          setTokenError(err?.message || 'Unable to issue playback token');
+          const code = err?.code || err?.error?.code;
+          if (code === 'NO_MEDIA' || code === 'MEDIA_MISSING') {
+            setTokenError(err?.message || 'No media file available for this lesson.');
+          } else {
+            setTokenError(err?.message || 'Unable to issue playback token');
+          }
         }
       }
     })();

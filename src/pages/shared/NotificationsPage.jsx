@@ -13,7 +13,6 @@ import { markAsRead, markAllRead } from '../../services/notificationService.js';
 import { getPhotos } from '../../services/mediaService.js';
 import { getNotificationTitle, resolveNotificationPath } from '../../utils/notificationLinks.js';
 import { rewritePhotoStudioUrl } from '../../utils/photoStudioUrls.js';
-import WebPushEnableBanner from '../../components/notifications/WebPushEnableBanner.jsx';
 import '../../styles/notifications.css';
 
 const TYPE_CONFIG = {
@@ -199,7 +198,6 @@ export default function NotificationsPage({
   return (
     <DashboardLayout>
       <div className="notif-shell">
-        <WebPushEnableBanner />
         <div className="notif-panel">
           <aside className="notif-sidebar">
             <div className="notif-sidebar__head">
