@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { refreshAccessToken } from './api/client.js';
 import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from './api/config.js';
 import { getAccessToken } from './api/tokenStorage.js';
 
@@ -8,6 +9,35 @@ function getChatSocketUrl() {
   const tenantSlug = resolveTenantSlug();
   const query = tenantSlug ? `?${TENANT_HEADER}=${encodeURIComponent(tenantSlug)}` : '';
   return `${base}/api/v1/ws/chat${query}`;
+}
+
+/** True when JWT is missing/unreadable or within skewSeconds of exp. */
+function isAccessTokenExpired(token, skewSeconds = 45) {
+  if (!token) return true;
+  try {
+    const segment = token.split('.')[1];
+    if (!segment) return true;
+    const padded = segment.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(segment.length / 4) * 4, '=');
+    const payload = JSON.parse(atob(padded));
+    return typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now() + skewSeconds * 1000;
+  } catch {
+    return true;
+  }
+}
+
+async function buildConnectHeaders() {
+  let token = getAccessToken();
+  if (isAccessTokenExpired(token)) {
+    token = (await refreshAccessToken()) || getAccessToken();
+  }
+  const tenantSlug = resolveTenantSlug();
+  if (!token || !tenantSlug) {
+    throw new Error('Chat socket requires a valid session');
+  }
+  return {
+    Authorization: `Bearer ${token}`,
+    [TENANT_HEADER]: tenantSlug,
+  };
 }
 
 let client = null;
@@ -23,6 +53,28 @@ function conversationTopic(conversationId) {
   return `/topic/tenant/${tenantSlug}/conversation/${conversationId}`;
 }
 
+function createClient() {
+  const stompClient = new Client({
+    // Edge proxy strips Upgrade and buffers long-lived streams — xhr-polling only.
+    webSocketFactory: () =>
+      new SockJS(getChatSocketUrl(), null, {
+        transports: ['xhr-polling'],
+      }),
+    // Refreshed on every CONNECT so reconnects after the 15m access-token TTL succeed.
+    beforeConnect: async () => {
+      stompClient.connectHeaders = await buildConnectHeaders();
+    },
+    reconnectDelay: 5000,
+    onDisconnect: () => {
+      connectPromise = null;
+    },
+    onStompError: () => {
+      connectPromise = null;
+    },
+  });
+  return stompClient;
+}
+
 function ensureClient() {
   if (!canConnect()) {
     return Promise.resolve(null);
@@ -36,33 +88,36 @@ function ensureClient() {
     return connectPromise;
   }
 
-  const token = getAccessToken();
-  const tenantSlug = resolveTenantSlug();
-  client = new Client({
-    // Edge proxy strips Upgrade and buffers long-lived streams — xhr-polling only.
-    webSocketFactory: () =>
-      new SockJS(getChatSocketUrl(), null, {
-        transports: ['xhr-polling'],
-      }),
-    connectHeaders: {
-      Authorization: `Bearer ${token}`,
-      ...(tenantSlug ? { [TENANT_HEADER]: tenantSlug } : {}),
-    },
-    reconnectDelay: 5000,
-    onDisconnect: () => {
-      connectPromise = null;
-    },
-    onStompError: () => {
-      connectPromise = null;
-    },
-  });
+  if (!client) {
+    client = createClient();
+  }
 
   connectPromise = new Promise((resolve) => {
-    client.onConnect = () => resolve(client);
+    client.onConnect = () => {
+      // Re-bind conversation subscriptions after reconnect.
+      conversationSubscriptions.forEach((entry, conversationId) => {
+        if (entry.stompSub) return;
+        entry.stompSub = client.subscribe(conversationTopic(conversationId), (frame) => {
+          try {
+            const payload = JSON.parse(frame.body);
+            dispatchEvent(conversationId, payload);
+          } catch {
+            // ignore malformed frames
+          }
+        });
+      });
+      resolve(client);
+    };
     client.onWebSocketClose = () => {
       connectPromise = null;
+      // SockJS/STOMP session died — drop stomp subs so onConnect re-subscribes.
+      conversationSubscriptions.forEach((entry) => {
+        entry.stompSub = null;
+      });
     };
-    client.activate();
+    if (!client.active) {
+      client.activate();
+    }
   });
 
   return connectPromise;

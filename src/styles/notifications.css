@@ -953,6 +953,12 @@
   border-color: #fecaca;
 }
 
+.webpush-banner--needs_register,
+.webpush-banner--default {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
 @media (min-width: 1024px) {
   .notif-shell {
     height: calc(100vh - var(--header-height, 64px) - 4rem);

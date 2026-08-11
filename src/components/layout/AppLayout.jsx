@@ -5,6 +5,7 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus.js';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import NetworkBanner from './NetworkBanner.jsx';
+import WebPushEnableBanner from '../notifications/WebPushEnableBanner.jsx';
 
 const SIDEBAR_COLLAPSE_KEY = 'ka.sidebar.collapsed';
 /** Collapse rail below this width so map / content pages keep usable main width. */
@@ -79,7 +80,11 @@ export default function AppLayout({ children }) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <NetworkBanner />
         <Header user={user} onMenuClick={() => setSidebarOpen(true)} onLogout={onLogout} />
-        <main className="flex-1 min-w-0 overflow-x-clip overflow-y-auto p-3 sm:p-4 lg:p-6 xl:p-8">{children}</main>
+        <main className="flex-1 min-w-0 overflow-x-clip overflow-y-auto p-3 sm:p-4 lg:p-6 xl:p-8">
+          {/* Post-login: permission prompt / retry when FCM token never landed in localStorage */}
+          {user?.id ? <WebPushEnableBanner compact /> : null}
+          {children}
+        </main>
       </div>
     </div>
   );
