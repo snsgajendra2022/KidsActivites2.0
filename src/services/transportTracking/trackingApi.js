@@ -1,9 +1,21 @@
 import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from '../api/config.js';
 import { getAccessToken } from '../api/tokenStorage.js';
+import { normalizeGpsDevice, normalizeParentLiveSnapshot } from '../../types/transportModels.js';
+import {
+  fixtureAdminFleet,
+  fixtureDriverCurrentTrip,
+  fixtureGpsDevices,
+  fixtureParentLive,
+  fixtureStartTrip,
+  isTransportFixtureMode,
+} from './fixtures.js';
 
 /**
  * Live tracking uses the same Spring Boot API as the rest of the app
  * (`VITE_API_URL`). No separate tracking host is required.
+ *
+ * DEV ONLY: set VITE_TRANSPORT_API_MODE=fixture to use static snapshots.
+ * Production always uses real HTTP (fixture forced off).
  */
 function trackingApiBase() {
   return API_BASE_URL;
@@ -54,47 +66,191 @@ async function trackingFetch(path, { method = 'GET', body, auth = true } = {}) {
   return json && typeof json.success === 'boolean' ? json.data : json;
 }
 
+function asList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
 export async function fetchAdminFleetLive(status = 'all') {
+  if (isTransportFixtureMode()) return fixtureAdminFleet(status);
   const query = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
-  return trackingFetch(`/admin/transport/live${query}`);
+  try {
+    const data = await trackingFetch(`/admin/transport/live${query}`);
+    return asList(data);
+  } catch (err) {
+    // Soft empty when Spring Boot live endpoint is not deployed yet.
+    if (err?.status === 404 || err?.code === 'NOT_FOUND') return [];
+    throw err;
+  }
 }
 
-export async function fetchParentTransportLive() {
-  return trackingFetch('/parent/transport/live');
-}
-
-export async function startTransportTrip(payload) {
-  return trackingFetch('/tracking/trips/start', { method: 'POST', body: payload });
-}
-
-export async function completeTransportTrip(tripId, payload = {}) {
-  return trackingFetch(`/tracking/trips/${tripId}/complete`, { method: 'POST', body: payload });
-}
-
-export async function updateDriverLocation(payload) {
-  return trackingFetch('/tracking/update-location', { method: 'POST', body: payload });
-}
-
-export async function registerGpsDevice(payload) {
-  return trackingFetch('/admin/transport/gps-devices', { method: 'POST', body: payload });
-}
-
-export async function fetchTripHistory(params = {}) {
+export async function fetchParentTransportLive(params = {}) {
+  if (isTransportFixtureMode()) return normalizeParentLiveSnapshot(fixtureParentLive(params));
   const qs = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value != null && value !== '') qs.set(key, value);
   });
   const suffix = qs.toString() ? `?${qs}` : '';
-  return trackingFetch(`/admin/transport/trips${suffix}`);
+  try {
+    const data = await trackingFetch(`/parent/transport/live${suffix}`);
+    return normalizeParentLiveSnapshot(data);
+  } catch (err) {
+    // Soft "no assignment / no trip" — not a hard failure for the parent UI.
+    if (err?.status === 404 || err?.code === 'NOT_FOUND'
+      || /not (found|assigned)|no (active )?trip|no assignment/i.test(err?.message || '')) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+export async function listGpsDevices(params = {}) {
+  if (isTransportFixtureMode()) return fixtureGpsDevices().map(normalizeGpsDevice).filter(Boolean);
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value != null && value !== '') qs.set(key, value);
+  });
+  const suffix = qs.toString() ? `?${qs}` : '';
+  try {
+    const data = await trackingFetch(`/admin/transport/gps-devices${suffix}`);
+    return asList(data).map(normalizeGpsDevice).filter(Boolean);
+  } catch (err) {
+    if (err?.status === 404 || err?.code === 'NOT_FOUND') return [];
+    throw err;
+  }
+}
+
+export async function rotateGpsDeviceToken(deviceId) {
+  if (isTransportFixtureMode()) {
+    return {
+      id: deviceId,
+      deviceToken: `fixture-rotated-${Date.now().toString(36)}`,
+      status: 'active',
+    };
+  }
+  const result = await trackingFetch(`/admin/transport/gps-devices/${deviceId}/rotate-token`, {
+    method: 'POST',
+    body: {},
+  });
+  return normalizeGpsDevice(result) || result;
+}
+
+export async function setGpsDeviceStatus(deviceId, status) {
+  if (isTransportFixtureMode()) {
+    return { id: deviceId, status };
+  }
+  const result = await trackingFetch(`/admin/transport/gps-devices/${deviceId}`, {
+    method: 'PATCH',
+    body: { status },
+  });
+  return normalizeGpsDevice(result) || result;
+}
+
+export async function enableGpsDevice(deviceId) {
+  return setGpsDeviceStatus(deviceId, 'active');
+}
+
+export async function disableGpsDevice(deviceId) {
+  return setGpsDeviceStatus(deviceId, 'disabled');
+}
+
+export async function fetchDriverCurrentTrip() {
+  if (isTransportFixtureMode()) return fixtureDriverCurrentTrip();
+  try {
+    return await trackingFetch('/driver/transport/current-trip');
+  } catch (err) {
+    if (err?.status === 404 || err?.code === 'NOT_FOUND') {
+      try {
+        return await trackingFetch('/driver/transport/assignment');
+      } catch (inner) {
+        if (inner?.status === 404 || inner?.code === 'NOT_FOUND') return null;
+        throw inner;
+      }
+    }
+    throw err;
+  }
+}
+
+export async function startTransportTrip(payload) {
+  if (isTransportFixtureMode()) return fixtureStartTrip(payload);
+  return trackingFetch('/tracking/trips/start', { method: 'POST', body: payload });
+}
+
+export async function completeTransportTrip(tripId, payload = {}) {
+  if (isTransportFixtureMode()) {
+    return { id: tripId, status: 'completed', completedAt: new Date().toISOString() };
+  }
+  return trackingFetch(`/tracking/trips/${tripId}/complete`, { method: 'POST', body: payload });
+}
+
+export async function updateDriverLocation(payload) {
+  if (isTransportFixtureMode()) {
+    return { ok: true, acceptedAt: new Date().toISOString(), ...payload };
+  }
+  return trackingFetch('/tracking/update-location', { method: 'POST', body: payload });
+}
+
+/** Alias used by docs / mobile naming. */
+export async function publishDriverLocation(payload) {
+  return updateDriverLocation(payload);
+}
+
+export async function registerGpsDevice(payload) {
+  if (isTransportFixtureMode()) {
+    const token = payload.deviceToken || `fixture-token-${Date.now().toString(36)}`;
+    return {
+      id: `fixture-gps-${Date.now()}`,
+      vehicleId: payload.vehicleId,
+      imei: payload.imei,
+      provider: payload.provider || 'generic',
+      status: 'active',
+      deviceToken: token,
+    };
+  }
+  const result = await trackingFetch('/admin/transport/gps-devices', {
+    method: 'POST',
+    body: payload,
+  });
+  return normalizeGpsDevice(result) || result;
+}
+
+export async function fetchTripHistory(params = {}) {
+  if (isTransportFixtureMode()) return [];
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value != null && value !== '') qs.set(key, value);
+  });
+  const suffix = qs.toString() ? `?${qs}` : '';
+  try {
+    const data = await trackingFetch(`/admin/transport/trips${suffix}`);
+    return asList(data);
+  } catch (err) {
+    if (err?.status === 404 || err?.code === 'NOT_FOUND') return [];
+    throw err;
+  }
 }
 
 /** WebSocket URL derived from the same Spring Boot host as VITE_API_URL. */
 export function getTrackingWebSocketUrl({ vehicleId } = {}) {
+  if (isTransportFixtureMode()) {
+    // Fixture mode has no live WS — callers should no-op when URL is empty.
+    return '';
+  }
   const api = trackingApiBase().replace(/\/api\/v1\/?$/, '');
   const wsBase = `${api.replace(/^http/, 'ws')}/ws/tracking`;
   const token = getAccessToken();
+  const tenantSlug = resolveTenantSlug();
   const url = new URL(wsBase.includes('://') ? wsBase : `${window.location.origin}${wsBase}`);
   if (token) url.searchParams.set('token', token);
+  if (tenantSlug) {
+    url.searchParams.set('tenant', tenantSlug);
+    url.searchParams.set(TENANT_HEADER, tenantSlug);
+  }
   if (vehicleId) url.searchParams.set('vehicleId', vehicleId);
   return url.toString();
 }
+
+export { isTransportFixtureMode };

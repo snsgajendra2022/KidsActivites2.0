@@ -5,6 +5,7 @@ import {
   transportRouteService,
   transportVehicleService,
 } from '../../services/schoolModules/index.js';
+import { listDrivers } from '../../services/driverService.js';
 
 const vehicleColumns = [
   { key: 'vehicleNumber', label: 'Vehicle', primary: true },
@@ -17,28 +18,45 @@ const vehicleColumns = [
 
 export function TransportVehiclesPage() {
   const [routeOptions, setRouteOptions] = useState([]);
+  const [driverOptions, setDriverOptions] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
-    transportRouteService.list()
-      .then((routes) => {
-        if (cancelled) return;
-        setRouteOptions((routes || []).map((route) => ({
-          value: String(route.id),
-          label: route.name,
-          meta: { routeName: route.name, routeId: route.id },
+    Promise.all([
+      transportRouteService.list().catch(() => []),
+      listDrivers().catch(() => []),
+    ]).then(([routes, drivers]) => {
+      if (cancelled) return;
+      setRouteOptions((routes || []).map((route) => ({
+        value: String(route.id),
+        label: route.name,
+        meta: { routeName: route.name, routeId: route.id },
+      })));
+      setDriverOptions((drivers || [])
+        .filter((driver) => driver.active !== false)
+        .map((driver) => ({
+          value: String(driver.userId || driver.id),
+          label: `${driver.name || 'Driver'}${driver.mobile ? ` · ${driver.mobile}` : ''}`,
+          meta: {
+            driverName: driver.name || '',
+            driverPhone: driver.mobile || '',
+            driverUserId: driver.userId || driver.id,
+          },
         })));
-      })
-      .catch(() => {
-        if (!cancelled) setRouteOptions([]);
-      });
+    });
     return () => { cancelled = true; };
   }, []);
 
   const vehicleFields = useMemo(() => [
     { key: 'vehicleNumber', label: 'Vehicle Number', required: true },
-    { key: 'driverName', label: 'Driver Name', required: true },
-    { key: 'driverPhone', label: 'Driver Phone', required: true },
+    {
+      key: 'driverUserId',
+      label: 'Assigned driver',
+      type: 'select',
+      options: driverOptions,
+      helpText: 'Select a driver account (role=driver). Create drivers under Transport → Drivers.',
+      metaKeys: ['driverName', 'driverPhone'],
+    },
     { key: 'attendantName', label: 'Attendant' },
     {
       key: 'routeId',
@@ -62,26 +80,29 @@ export function TransportVehiclesPage() {
         { value: 'inactive', label: 'Inactive' },
       ],
     },
-  ], [routeOptions]);
+  ], [driverOptions, routeOptions]);
 
   return (
     <ModuleCrudPage
       title="Transport Vehicles"
-      subtitle="Bus details and which route each vehicle serves. Assign students under Student Bus Assignments."
+      subtitle="Bus details, assigned driver account, and which route each vehicle serves. Assign students under Student Bus Assignments."
       service={transportVehicleService}
       columns={vehicleColumns}
       fields={vehicleFields}
       createLabel="Add Vehicle"
       searchKeys={['vehicleNumber', 'driverName', 'routeName', 'status']}
       transformCreate={(form) => {
-        const selected = routeOptions.find((option) => String(option.value) === String(form.routeId));
+        const selectedRoute = routeOptions.find((option) => String(option.value) === String(form.routeId));
+        const selectedDriver = driverOptions.find((option) => String(option.value) === String(form.driverUserId));
         return {
           vehicleNumber: form.vehicleNumber,
-          driverName: form.driverName,
-          driverPhone: form.driverPhone,
+          driverUserId: form.driverUserId || null,
+          // Display-only; backend resolves names from driverUserId.
+          driverName: selectedDriver?.meta?.driverName || form.driverName || '',
+          driverPhone: selectedDriver?.meta?.driverPhone || form.driverPhone || '',
           attendantName: form.attendantName || '',
           routeId: form.routeId,
-          routeName: selected?.label || form.routeName || '',
+          routeName: selectedRoute?.label || form.routeName || '',
           capacity: Number(form.capacity) || 40,
           status: form.status || 'active',
         };

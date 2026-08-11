@@ -11,7 +11,8 @@ const EXTENDED_ROLES = [
   { key: ROLES.ACCOUNTANT, label: ROLE_LABELS[ROLES.ACCOUNTANT], scope: 'Fees & reports' },
   { key: 'receptionist', label: 'Receptionist', scope: 'Admissions desk' },
   { key: 'librarian', label: 'Librarian', scope: 'Library' },
-  { key: 'transport_manager', label: 'Transport Manager', scope: 'Transport' },
+  { key: 'transport_manager', label: 'Transport Manager', scope: 'Transport fleet' },
+  { key: ROLES.DRIVER, label: ROLE_LABELS[ROLES.DRIVER], scope: 'Assigned vehicle / trip only' },
   { key: ROLES.PARENT, label: ROLE_LABELS[ROLES.PARENT], scope: 'Own children' },
   { key: ROLES.STUDENT, label: ROLE_LABELS[ROLES.STUDENT], scope: 'Self' },
   { key: ROLES.ADMISSION_OFFICER, label: ROLE_LABELS[ROLES.ADMISSION_OFFICER], scope: 'Admissions' },
@@ -19,13 +20,13 @@ const EXTENDED_ROLES = [
 ];
 
 const MATRIX = [
-  ['Admissions', 'Full', 'Full', 'View', 'None', 'View', 'Create', 'None', 'None', 'Own', 'None', 'Edit', 'View'],
-  ['Fees', 'Full', 'Full', 'View', 'None', 'Full', 'View', 'None', 'None', 'Own', 'None', 'View', 'None'],
-  ['Attendance', 'Full', 'Full', 'Full', 'Assigned', 'None', 'None', 'None', 'Pickup', 'Own', 'Own', 'None', 'None'],
-  ['Exams', 'Full', 'Full', 'Full', 'Assigned', 'None', 'None', 'None', 'None', 'Own', 'Own', 'None', 'None'],
-  ['Library', 'Full', 'Full', 'View', 'None', 'None', 'None', 'Full', 'None', 'Own', 'Own', 'None', 'None'],
-  ['Transport', 'Full', 'Full', 'View', 'None', 'None', 'None', 'None', 'Full', 'Own', 'None', 'None', 'None'],
-  ['AI / Reports', 'Full', 'Full', 'Full', 'Limited', 'Finance', 'None', 'None', 'None', 'None', 'None', 'None', 'None'],
+  ['Admissions', 'Full', 'Full', 'View', 'None', 'View', 'Create', 'None', 'None', 'None', 'Own', 'None', 'Edit', 'View'],
+  ['Fees', 'Full', 'Full', 'View', 'None', 'Full', 'View', 'None', 'None', 'None', 'Own', 'None', 'View', 'None'],
+  ['Attendance', 'Full', 'Full', 'Full', 'Assigned', 'None', 'None', 'None', 'Pickup', 'None', 'Own', 'Own', 'None', 'None'],
+  ['Exams', 'Full', 'Full', 'Full', 'Assigned', 'None', 'None', 'None', 'None', 'None', 'Own', 'Own', 'None', 'None'],
+  ['Library', 'Full', 'Full', 'View', 'None', 'None', 'None', 'Full', 'None', 'None', 'Own', 'Own', 'None', 'None'],
+  ['Transport', 'Full', 'Full', 'View', 'None', 'None', 'None', 'None', 'Full', 'Assigned trip', 'Own child', 'None', 'None', 'None'],
+  ['AI / Reports', 'Full', 'Full', 'Full', 'Limited', 'Finance', 'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None'],
 ];
 
 export default function RolesPermissionsPage() {
@@ -74,8 +75,8 @@ export default function RolesPermissionsPage() {
             </tbody>
           </table>
           <p className="mt-4 text-xs text-[#667085]">
-            Principal, Receptionist, Librarian, and Transport Manager are product roles ready for backend enforcement.
-            Current runtime auth still uses the core role set in `constants/roles.js`.
+            Principal, Receptionist, Librarian, Transport Manager, and Bus Driver are product roles.
+            Runtime auth includes `driver` in `constants/roles.js`. Teachers do not receive automatic fleet live access.
           </p>
         </section>
       </PageTransition>

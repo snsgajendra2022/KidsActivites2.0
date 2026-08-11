@@ -9,11 +9,15 @@ The frontend is already prepared to consume real tracking data:
 | Client integration | File |
 |--------------------|------|
 | Admin live fleet page | `src/pages/modules/TransportLiveTrackingPage.jsx` |
+| Admin drivers page | `src/pages/modules/TransportDriversPage.jsx` |
 | Parent assigned-bus page | `src/pages/modules/ParentTransportTrackingPage.jsx` |
 | Free OSM live map (Leaflet) | `src/components/transport/LiveBusMap.jsx` |
 | Tracking HTTP client | `src/services/transportTracking/trackingApi.js` |
+| Driver service | `src/services/driverService.js` |
 | Tracking WebSocket client | `src/services/transportTracking/trackingSocket.js` |
 | Driver Expo location publisher | `mobile/src/services/transport/driverLocationPublisher.ts` |
+| Driver trip screen | `mobile/src/screens/transport/DriverTripScreen.tsx` |
+| Full driver/assignment API | [`DRIVER_ASSIGNMENT_LIVE_API.md`](./DRIVER_ASSIGNMENT_LIVE_API.md) |
 
 ## Required Spring Boot modules
 

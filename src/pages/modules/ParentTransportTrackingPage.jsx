@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bus, Clock, MapPin, Signal, SignalZero } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { LoadingState, PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Input from '../../components/ui/Input.jsx';
+import Select from '../../components/ui/Select.jsx';
 import Textarea from '../../components/ui/Textarea.jsx';
 import LiveBusMap from '../../components/transport/LiveBusMap.jsx';
 import { fetchParentTransportLive } from '../../services/transportTracking/trackingApi.js';
@@ -13,16 +14,42 @@ import {
   fetchParentTransportAddress,
   updateParentChildTransportAddress,
 } from '../../services/transportAddressService.js';
+import { getParentChildren } from '../../services/parentService.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
   isTransportAddressComplete,
   normalizeTransportAddress,
 } from '../../utils/transportAddress.js';
+import {
+  resolveParentTrackingState,
+  trackingStateHint,
+  trackingStateLabel,
+  TRACKING_UI_STATES,
+} from '../../utils/transportTrackingState.js';
+import { stopsToMapFeatures } from '../../utils/transportRouteGeo.js';
+import { isNewerLocation } from '../../utils/transportLocationSequence.js';
+import useRoadRoute from '../../hooks/useRoadRoute.js';
+import { WS_EVENT_TYPES } from '../../types/transportModels.js';
+
+function childStudentId(child) {
+  return child?.studentId || child?.enrolledStudentId || child?.id || child?.applicationId || '';
+}
+
+function childLabel(child) {
+  return child?.studentName
+    || child?.fullName
+    || child?.name
+    || child?.student?.fullName
+    || child?.applicationNo
+    || 'Child';
+}
 
 export default function ParentTransportTrackingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [children, setChildren] = useState([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -37,58 +64,140 @@ export default function ParentTransportTrackingPage() {
   });
   const [savingAddress, setSavingAddress] = useState(false);
 
-  const loadAddress = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
+    getParentChildren(user)
+      .then((list) => {
+        if (cancelled) return;
+        const items = Array.isArray(list) ? list : [];
+        setChildren(items);
+        const firstId = childStudentId(items[0]);
+        setSelectedStudentId((current) => current || firstId || '');
+      })
+      .catch(() => {
+        if (!cancelled) setChildren([]);
+      });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const loadLive = useCallback(async (studentId, { silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+      setError('');
+    }
     try {
-      const info = await fetchParentTransportAddress(user);
+      const params = studentId ? { studentId } : {};
+      const result = await fetchParentTransportLive(params);
+      setData(result);
+      if (!silent) setError('');
+    } catch (err) {
+      if (err?.status === 401 || err?.status === 403) {
+        setData(null);
+        setError('You are not authorized to view live tracking. Sign in again or contact the school.');
+      } else if (!silent) {
+        setData(null);
+        setError(err?.message || 'Unable to load live tracking.');
+      }
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
+
+  const loadAddress = useCallback(async (studentId) => {
+    try {
+      const info = await fetchParentTransportAddress(user, studentId || null);
       setAddressInfo(info);
       if (info?.address) setAddressForm(normalizeTransportAddress(info.address));
+      else {
+        setAddressForm({
+          currentAddress: '',
+          city: '',
+          state: '',
+          pinCode: '',
+          country: 'India',
+        });
+      }
     } catch {
       setAddressInfo(null);
     }
   }, [user]);
 
   useEffect(() => {
-    let cancelled = false;
-    fetchParentTransportLive()
-      .then((result) => {
-        if (!cancelled) setData(result);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err?.message || 'Unable to load live tracking.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    void loadAddress();
-    return () => { cancelled = true; };
-  }, [loadAddress]);
+    void loadLive(selectedStudentId);
+    void loadAddress(selectedStudentId);
+  }, [selectedStudentId, loadLive, loadAddress]);
 
   useEffect(() => {
     if (!data?.vehicleId) return undefined;
     const socket = createTrackingSocket({
       vehicleId: data.vehicleId,
-      onStatus: setSocketStatus,
+      onStatus: (status) => {
+        setSocketStatus(status);
+        if (status?.state === 'connected' && status?.reconnect) {
+          void loadLive(selectedStudentId, { silent: true });
+        }
+      },
       onEvent: (event) => {
-        if (event?.type !== 'vehicle.location_updated' || !event.data) return;
-        if (String(event.data.vehicleId || event.data.vehicle_id) !== String(data.vehicleId)) return;
-        setData((current) => ({
-          ...current,
-          lat: event.data.latitude,
-          lng: event.data.longitude,
-          speedKmh: event.data.speedKmh,
-          heading: event.data.heading,
-          status: event.data.trackingStatus || current.status,
-          etaMinutes: event.data.eta?.etaMinutes ?? current.etaMinutes,
-          nextStop: event.data.eta?.nextStopName || current.nextStop,
-          lastStop: event.data.eta?.lastStopName || current.lastStop,
-          updatedAt: event.data.updatedAt || new Date().toISOString(),
-        }));
+        if (!event?.data) return;
+        const eventVehicleId = String(event.data.vehicleId || event.data.vehicle_id || '');
+        if (eventVehicleId && eventVehicleId !== String(data.vehicleId)) return;
+
+        if (event.type === WS_EVENT_TYPES.TRIP_COMPLETED) {
+          setData((current) => (current ? {
+            ...current,
+            tripStatus: 'completed',
+            status: 'completed',
+            stateCode: 'COMPLETED',
+          } : current));
+          return;
+        }
+
+        if (event.type === WS_EVENT_TYPES.TRACKING_WARNING || event.type === WS_EVENT_TYPES.TRACKING_OFFLINE) {
+          setData((current) => (current ? {
+            ...current,
+            status: event.type === WS_EVENT_TYPES.TRACKING_OFFLINE ? 'offline' : 'warning',
+            lat: event.data.latitude ?? current.lat,
+            lng: event.data.longitude ?? current.lng,
+            updatedAt: event.data.updatedAt || event.data.updated_at || current.updatedAt,
+            sequence: event.data.sequence ?? current.sequence,
+          } : current));
+          return;
+        }
+
+        if (event.type !== WS_EVENT_TYPES.LOCATION_UPDATED) return;
+        setData((current) => {
+          if (!current) return current;
+          const incoming = {
+            sequence: event.data.sequence,
+            updatedAt: event.data.updatedAt || event.data.updated_at || new Date().toISOString(),
+            recordedAt: event.data.recordedAt || event.data.recorded_at,
+          };
+          if (!isNewerLocation(current, incoming)) return current;
+          return {
+            ...current,
+            lat: event.data.latitude ?? event.data.lat,
+            lng: event.data.longitude ?? event.data.lng,
+            speedKmh: event.data.speedKmh ?? event.data.speed_kmh,
+            heading: event.data.heading,
+            status: event.data.trackingStatus || event.data.tracking_status || current.status,
+            etaMinutes: event.data.eta?.etaMinutes ?? current.etaMinutes,
+            nextStop: event.data.eta?.nextStopName || current.nextStop,
+            lastStop: event.data.eta?.lastStopName || current.lastStop,
+            sequence: incoming.sequence ?? current.sequence,
+            updatedAt: incoming.updatedAt,
+          };
+        });
       },
     });
     return () => socket.close();
-  }, [data?.vehicleId]);
+  }, [data?.vehicleId, loadLive, selectedStudentId]);
 
-  const mapVehicles = data?.lat != null && data?.lng != null
+  const trackingState = useMemo(() => resolveParentTrackingState(data), [data]);
+
+  const mapStops = useMemo(() => stopsToMapFeatures(data?.stops), [data?.stops]);
+  const roadRoute = useRoadRoute(data?.stops, { enabled: Boolean(mapStops.length) });
+
+  const mapVehicles = Number.isFinite(Number(data?.lat)) && Number.isFinite(Number(data?.lng))
     ? [{
       vehicle_id: data.vehicleId,
       vehicle_number: data.vehicleNumber,
@@ -99,6 +208,16 @@ export default function ParentTransportTrackingPage() {
       updated_at: data.updatedAt,
     }]
     : [];
+
+  const childOptions = useMemo(() => (
+    children
+      .map((child) => {
+        const id = childStudentId(child);
+        if (!id) return null;
+        return { value: String(id), label: childLabel(child) };
+      })
+      .filter(Boolean)
+  ), [children]);
 
   const needsAddress = addressInfo && !addressInfo.addressComplete;
 
@@ -128,6 +247,14 @@ export default function ParentTransportTrackingPage() {
     }
   };
 
+  const showMapShell = [
+    TRACKING_UI_STATES.WAITING_FOR_GPS,
+    TRACKING_UI_STATES.LIVE,
+    TRACKING_UI_STATES.WARNING,
+    TRACKING_UI_STATES.OFFLINE,
+    TRACKING_UI_STATES.ASSIGNED_NO_ACTIVE_TRIP,
+  ].includes(trackingState);
+
   return (
     <AppLayout>
       <PageTransition>
@@ -143,6 +270,17 @@ export default function ParentTransportTrackingPage() {
             </span>
           )}
         />
+
+        {childOptions.length > 1 ? (
+          <div className="mb-4 max-w-sm">
+            <Select
+              label="Child"
+              value={selectedStudentId}
+              options={childOptions}
+              onChange={(event) => setSelectedStudentId(event.target.value)}
+            />
+          </div>
+        ) : null}
 
         {needsAddress && (
           <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -195,47 +333,49 @@ export default function ParentTransportTrackingPage() {
             <p className="mt-2 text-[#667085]">
               If no assignment exists, ask the school to open <strong>Student Bus Assignments</strong> and link your child to a route/stop/vehicle.
             </p>
-            {addressInfo?.addressComplete && (
-              <p className="mt-2 text-sm text-[#344054]">
-                Home address on file: {addressInfo.addressLabel}
-              </p>
-            )}
+          </div>
+        ) : trackingState === TRACKING_UI_STATES.NO_ASSIGNMENT ? (
+          <div className="sb-card p-6 text-sm text-[#344054]">
+            <p className="font-bold text-[#0b1c30]">{trackingStateLabel(trackingState)}</p>
+            <p className="mt-2 text-[#667085]">{trackingStateHint(trackingState)}</p>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-3">
             <div className="sb-card p-5 md:col-span-2">
-              <div className="mb-4 flex items-center gap-2 text-[#0058be]">
-                <Bus size={18} />
-                <h2 className="text-lg font-bold text-[#0b1c30]">{data.routeName || 'Assigned route'}</h2>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-[#0058be]">
+                  <Bus size={18} />
+                  <h2 className="text-lg font-bold text-[#0b1c30]">{data?.routeName || 'Assigned route'}</h2>
+                </div>
+                <span className="rounded-full border border-[#c5c6cd] bg-white px-3 py-1 text-xs font-semibold text-[#344054]">
+                  {trackingStateLabel(trackingState)}
+                </span>
               </div>
+              <p className="mb-4 text-sm text-[#667085]">{trackingStateHint(trackingState)}</p>
               <div className="mb-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Vehicle</p>
-                  <p className="mt-1 font-semibold">{data.vehicleNumber || '—'}</p>
+                  <p className="mt-1 font-semibold">{data?.vehicleNumber || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Assigned stop</p>
-                  <p className="mt-1 font-semibold">{data.assignedStop || data.nextStop || '—'}</p>
+                  <p className="mt-1 font-semibold">{data?.assignedStop || data?.nextStop || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Last stop</p>
-                  <p className="mt-1 font-semibold">{data.lastStop || '—'}</p>
+                  <p className="mt-1 font-semibold">{data?.lastStop || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Next stop</p>
-                  <p className="mt-1 font-semibold">{data.nextStop || '—'}</p>
+                  <p className="mt-1 font-semibold">{data?.nextStop || '—'}</p>
                 </div>
-                {addressInfo?.addressLabel && (
-                  <div className="sm:col-span-2">
-                    <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Home address</p>
-                    <p className="mt-1 font-semibold">{addressInfo.addressLabel}</p>
-                  </div>
-                )}
               </div>
-              {mapVehicles.length ? (
+              {showMapShell ? (
                 <div className="h-[min(50vh,360px)] w-full sm:h-[400px] lg:h-[440px]">
                   <LiveBusMap
                     vehicles={mapVehicles}
+                    stopFeatures={mapStops}
+                    routeGeoJson={roadRoute.geoJson || data?.geometry || null}
                     showSearch={false}
                     className="h-full w-full border border-[#d0d5dd]"
                   />
@@ -243,7 +383,7 @@ export default function ParentTransportTrackingPage() {
               ) : (
                 <div className="rounded-xl border border-dashed border-[#c5d0e0] bg-[#f7f9fc] p-8 text-center text-sm text-[#667085]">
                   <MapPin className="mx-auto mb-2 text-[#0058be]" />
-                  Waiting for the first authenticated GPS fix for this bus.
+                  {trackingStateHint(trackingState)}
                 </div>
               )}
             </div>
@@ -253,16 +393,19 @@ export default function ParentTransportTrackingPage() {
                 <h3 className="font-bold text-[#0b1c30]">ETA</h3>
               </div>
               <p className="mt-4 text-3xl font-black text-[#0b1c30]">
-                {data.etaMinutes != null ? `${data.etaMinutes} min` : '—'}
+                {data?.etaMinutes != null ? `${data.etaMinutes} min` : '—'}
               </p>
               <p className="mt-2 text-sm capitalize text-[#667085]">
-                Status: {String(data.status || 'offline').replace('_', ' ')}
+                Status: {String(data?.status || trackingState).replace(/_/g, ' ')}
               </p>
               <p className="mt-4 text-xs text-[#8a93a3]">
-                {data.updatedAt
+                {data?.updatedAt
                   ? `Updated ${new Date(data.updatedAt).toLocaleTimeString()}`
                   : 'No GPS update yet'}
               </p>
+              <Button className="mt-4" variant="secondary" onClick={() => void loadLive(selectedStudentId)}>
+                Refresh
+              </Button>
             </div>
           </div>
         )}

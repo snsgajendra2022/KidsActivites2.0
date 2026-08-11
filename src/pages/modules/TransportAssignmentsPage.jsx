@@ -23,7 +23,6 @@ import {
   updateStudentTransportAddress,
 } from '../../services/transportAddressService.js';
 import {
-  formatTransportAddress,
   isTransportAddressComplete,
   normalizeTransportAddress,
   suggestNearestStop,
@@ -37,6 +36,7 @@ const EMPTY_FORM = {
   routeId: '',
   stopId: '',
   vehicleId: '',
+  direction: 'both',
   status: 'active',
 };
 
@@ -223,6 +223,7 @@ export default function TransportAssignmentsPage() {
       stopName: stop?.name || item.stopName || '—',
       studentLabel: item.studentName || item.studentId || '—',
       addressLabel: item.pickupAddressLabel || '—',
+      direction: item.direction || 'both',
     };
   }), [items, routeMap, vehicleMap]);
 
@@ -244,6 +245,7 @@ export default function TransportAssignmentsPage() {
     { key: 'vehicleNumber', label: 'Vehicle' },
     { key: 'routeName', label: 'Route' },
     { key: 'stopName', label: 'Pickup stop' },
+    { key: 'direction', label: 'Direction' },
     { key: 'addressLabel', label: 'Home address' },
     { key: 'status', label: 'Status', badge: true },
   ], []);
@@ -275,6 +277,7 @@ export default function TransportAssignmentsPage() {
       routeId: item.routeId || '',
       stopId: item.stopId || '',
       vehicleId: item.vehicleId || '',
+      direction: item.direction || 'both',
       status: item.status || 'active',
     });
     setModalOpen(true);
@@ -338,24 +341,14 @@ export default function TransportAssignmentsPage() {
     setSaving(true);
     try {
       await updateStudentTransportAddress(form.studentId, address);
-      const studentOption = studentOptions.find((option) => String(option.value) === String(form.studentId));
-      const route = routeMap.get(String(form.routeId));
-      const vehicle = vehicleMap.get(String(form.vehicleId));
-      const stop = normalizeRouteStops(route?.stops).find((s) => String(s.id) === String(form.stopId));
       const payload = {
         classId: form.classId,
         studentId: form.studentId,
         routeId: form.routeId,
         stopId: form.stopId,
         vehicleId: form.vehicleId,
+        direction: form.direction || 'both',
         status: form.status || 'active',
-        // Display fields only — relationship keys above are authoritative.
-        studentName: studentOption?.label || studentMeta?.fullName || '',
-        className: classOptions.find((option) => String(option.value) === String(form.classId))?.label || '',
-        routeName: route?.name || '',
-        stopName: stop?.name || '',
-        vehicleNumber: vehicle?.vehicleNumber || vehicle?.vehicle_number || '',
-        pickupAddressLabel: formatTransportAddress(address),
       };
 
       if (editing) {
@@ -581,6 +574,19 @@ export default function TransportAssignmentsPage() {
                   disabled={!form.routeId}
                   onChange={(event) => patchForm('stopId', event.target.value)}
                 />
+                <Select
+                  label="Direction"
+                  value={form.direction}
+                  options={[
+                    { value: 'both', label: 'PICKUP + DROPOFF (both trips)' },
+                    { value: 'morning', label: 'PICKUP only (morning)' },
+                    { value: 'evening', label: 'DROPOFF only (evening)' },
+                  ]}
+                  onChange={(event) => patchForm('direction', event.target.value)}
+                />
+                <p className="md:col-span-2 -mt-1 text-xs text-[#667085]">
+                  Which trip directions this student rides.
+                </p>
                 <Select
                   label="Status"
                   value={form.status}

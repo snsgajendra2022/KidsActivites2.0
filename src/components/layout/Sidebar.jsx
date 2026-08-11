@@ -1,9 +1,10 @@
-import { Link, NavLink } from 'react-router-dom';
-import { useLayoutEffect, useRef } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
+import { buildCollapsedNavGroups } from '../../utils/navUtils.js';
 import PortalLogo from '../brand/PortalLogo.jsx';
 
 /** Survives AppLayout remounts when each page wraps its own shell. */
@@ -18,6 +19,14 @@ function isChatNavItem(item) {
 function formatUnreadBadge(count) {
   if (count > 99) return '99+';
   return String(count);
+}
+
+function pathMatches(pathname, to) {
+  if (!to) return false;
+  const cleanTo = String(to).replace(/\/+$/, '') || '/';
+  const cleanPath = String(pathname).replace(/\/+$/, '') || '/';
+  if (cleanPath === cleanTo) return true;
+  return cleanPath.startsWith(`${cleanTo}/`);
 }
 
 function sidebarLinkClass({ isActive, collapsed }) {
@@ -43,13 +52,30 @@ function sidebarLinkClass({ isActive, collapsed }) {
   ].join(' ');
 }
 
+function flyoutLinkClass({ isActive }) {
+  return [
+    'sidebar-flyout-link',
+    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
+    isActive ? 'sidebar-nav-link-active' : 'sidebar-nav-link',
+  ].join(' ');
+}
+
 export default function Sidebar({ user, open, onClose, collapsed, onToggleCollapse }) {
   const { portalName, school, getNavItems } = usePortalConfig();
   const { roleDashboard } = useTenantPath();
+  const location = useLocation();
   const navItems = getNavItems(user?.role);
   const homePath = roleDashboard(user?.role) || '/';
   const unreadMessageCount = useUnreadMessageCount();
   const navRef = useRef(null);
+  const flyoutRef = useRef(null);
+  const [openSection, setOpenSection] = useState(null);
+  const [flyoutPos, setFlyoutPos] = useState({ top: 0 });
+
+  const collapsedGroups = useMemo(
+    () => (collapsed ? buildCollapsedNavGroups(navItems) : []),
+    [collapsed, navItems],
+  );
 
   useLayoutEffect(() => {
     const el = navRef.current;
@@ -65,9 +91,37 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
     };
   }, []);
 
+  useEffect(() => {
+    if (!openSection || !collapsed) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenSection(null);
+    };
+    const onPointerDown = (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (flyoutRef.current?.contains(target)) return;
+      if (target.closest?.('[data-sidebar-group-trigger="true"]')) return;
+      setOpenSection(null);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousedown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousedown', onPointerDown);
+    };
+  }, [openSection, collapsed]);
+
+  const handleToggleCollapse = () => {
+    setOpenSection(null);
+    onToggleCollapse?.();
+  };
+
   const handleNavClick = () => {
     const el = navRef.current;
     if (el) persistedSidebarNavScrollTop = el.scrollTop;
+    setOpenSection(null);
 
     // Close mobile drawer only; avoid unnecessary desktop state churn.
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
@@ -79,6 +133,118 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
       if (navRef.current) navRef.current.scrollTop = persistedSidebarNavScrollTop;
     });
   };
+
+  const toggleSectionFlyout = (section, triggerEl) => {
+    if (openSection === section) {
+      setOpenSection(null);
+      return;
+    }
+    if (triggerEl) {
+      const rect = triggerEl.getBoundingClientRect();
+      const approxHeight = 280;
+      const top = Math.min(
+        Math.max(12, rect.top),
+        Math.max(12, window.innerHeight - approxHeight),
+      );
+      setFlyoutPos({ top });
+    }
+    setOpenSection(section);
+  };
+
+  const activeFlyoutGroup = collapsedGroups.find(
+    (group) => group.type === 'group' && group.section === openSection,
+  );
+
+  const renderExpandedNav = () =>
+    navItems.map(({ id, to, label, icon: Icon, section }, index) => {
+      const prevSection = navItems[index - 1]?.section;
+      const showSection = section && section !== prevSection;
+      const showUnreadBadge = isChatNavItem({ id, to }) && unreadMessageCount > 0;
+
+      return (
+        <div key={id || to}>
+          {showSection && (
+            <p className="sidebar-nav-section px-2 pb-1 pt-4 text-[10px] font-bold uppercase tracking-widest text-[#6b7a8c]/80 first:pt-2">
+              {section}
+            </p>
+          )}
+          <NavLink
+            to={to}
+            onClick={handleNavClick}
+            className={(props) => sidebarLinkClass({ ...props, collapsed: false })}
+          >
+            <span className="sidebar-nav-icon-wrap relative shrink-0">
+              <Icon size={18} className="transition-colors duration-200" />
+            </span>
+            <span className="min-w-0 flex-1 truncate transition-colors duration-200">{label}</span>
+            {showUnreadBadge && (
+              <span className="sidebar-nav-badge" aria-label={`${unreadMessageCount} unread messages`}>
+                {formatUnreadBadge(unreadMessageCount)}
+              </span>
+            )}
+          </NavLink>
+        </div>
+      );
+    });
+
+  const renderCollapsedNav = () =>
+    collapsedGroups.map((entry) => {
+      if (entry.type === 'link') {
+        const { to, label, icon: Icon } = entry.item;
+        const showUnreadBadge = isChatNavItem(entry.item) && unreadMessageCount > 0;
+        return (
+          <div key={entry.key}>
+            <NavLink
+              to={to}
+              onClick={handleNavClick}
+              className={(props) => sidebarLinkClass({ ...props, collapsed: true })}
+              title={label}
+            >
+              <span className="sidebar-nav-icon-wrap relative shrink-0">
+                <Icon size={18} className="transition-colors duration-200" />
+                {showUnreadBadge && (
+                  <span className="sidebar-nav-badge sidebar-nav-badge--rail" aria-hidden>
+                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  </span>
+                )}
+              </span>
+            </NavLink>
+          </div>
+        );
+      }
+
+      const GroupIcon = entry.icon;
+      const isOpen = openSection === entry.section;
+      const isGroupActive = entry.items.some((item) => pathMatches(location.pathname, item.to));
+      const groupUnread = entry.items.some((item) => isChatNavItem(item)) && unreadMessageCount > 0;
+
+      return (
+        <div key={entry.key} className="relative">
+          <button
+            type="button"
+            data-sidebar-group-trigger="true"
+            title={entry.section}
+            aria-label={`${entry.section} menu`}
+            aria-expanded={isOpen}
+            aria-haspopup="menu"
+            className={[
+              'sidebar-nav-link sidebar-nav-link--rail sidebar-nav-group-btn',
+              isGroupActive || isOpen ? 'sidebar-nav-link-active' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={(event) => toggleSectionFlyout(entry.section, event.currentTarget)}
+          >
+            <span className="sidebar-nav-icon-wrap relative shrink-0">
+              <GroupIcon size={18} className="transition-colors duration-200" />
+              {groupUnread && (
+                <span className="sidebar-nav-badge sidebar-nav-badge--rail" aria-hidden>
+                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                </span>
+              )}
+            </span>
+          </button>
+        </div>
+      );
+    });
 
   return (
     <>
@@ -112,7 +278,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
               </Link>
               <button
                 type="button"
-                onClick={onToggleCollapse}
+                onClick={handleToggleCollapse}
                 className="sidebar-expand-btn hidden lg:inline-flex"
                 aria-label="Expand sidebar"
                 title="Expand sidebar"
@@ -145,7 +311,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
               <div className="absolute right-[2px] top-1/2 flex -translate-y-1/2 items-center gap-1">
                 <button
                   type="button"
-                  onClick={onToggleCollapse}
+                  onClick={handleToggleCollapse}
                   className="sidebar-collapse-btn hidden lg:inline-flex"
                   aria-label="Collapse sidebar"
                   title="Collapse sidebar"
@@ -169,48 +335,46 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           ref={navRef}
           className={`sidebar-nav flex-1 overflow-y-auto ${collapsed ? 'sidebar-nav--collapsed' : 'space-y-1 px-3 py-2'}`}
         >
-          {navItems.map(({ id, to, label, icon: Icon, section }, index) => {
-            const prevSection = navItems[index - 1]?.section;
-            const showSection = !collapsed && section && section !== prevSection;
-            const showUnreadBadge = isChatNavItem({ id, to }) && unreadMessageCount > 0;
-
-            return (
-              <div key={id || to}>
-                {showSection && (
-                  <p className="sidebar-nav-section px-2 pb-1 pt-4 text-[10px] font-bold uppercase tracking-widest text-[#6b7a8c]/80 first:pt-2">
-                    {section}
-                  </p>
-                )}
-                <NavLink
-                  to={to}
-                  onClick={handleNavClick}
-                  className={(props) => sidebarLinkClass({ ...props, collapsed })}
-                  title={collapsed ? label : undefined}
-                >
-                  <span className="sidebar-nav-icon-wrap relative shrink-0">
-                    <Icon size={18} className="transition-colors duration-200" />
-                    {collapsed && showUnreadBadge && (
-                      <span className="sidebar-nav-badge sidebar-nav-badge--rail" aria-hidden>
-                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                      </span>
-                    )}
-                  </span>
-                  {!collapsed && (
-                    <>
-                      <span className="min-w-0 flex-1 truncate transition-colors duration-200">{label}</span>
-                      {showUnreadBadge && (
-                        <span className="sidebar-nav-badge" aria-label={`${unreadMessageCount} unread messages`}>
-                          {formatUnreadBadge(unreadMessageCount)}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              </div>
-            );
-          })}
+          {collapsed ? renderCollapsedNav() : renderExpandedNav()}
         </nav>
       </aside>
+
+      {collapsed && activeFlyoutGroup ? (
+        <div
+          ref={flyoutRef}
+          className="sidebar-flyout"
+          style={{ top: flyoutPos.top }}
+          role="menu"
+          aria-label={activeFlyoutGroup.section}
+        >
+          <div className="sidebar-flyout-header">{activeFlyoutGroup.section}</div>
+          <div className="sidebar-flyout-list">
+            {activeFlyoutGroup.items.map((item) => {
+              const Icon = item.icon;
+              const showUnreadBadge = isChatNavItem(item) && unreadMessageCount > 0;
+              return (
+                <NavLink
+                  key={item.id || item.to}
+                  to={item.to}
+                  role="menuitem"
+                  onClick={handleNavClick}
+                  className={flyoutLinkClass}
+                >
+                  <span className="sidebar-nav-icon-wrap relative shrink-0">
+                    <Icon size={17} className="transition-colors duration-200" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {showUnreadBadge && (
+                    <span className="sidebar-nav-badge" aria-label={`${unreadMessageCount} unread messages`}>
+                      {formatUnreadBadge(unreadMessageCount)}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

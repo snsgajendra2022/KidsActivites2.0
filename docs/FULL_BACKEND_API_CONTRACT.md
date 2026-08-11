@@ -696,11 +696,15 @@ database. Detailed Spring Boot integration requirements are documented in
 ### Master / CRUD resources
 
 ```text
-/admin/transport/vehicles
+/admin/transport/vehicles          # driverUserId + routeId
+/admin/transport/drivers           # role=driver accounts
 /admin/transport/routes
-/admin/transport/assignments
+/admin/transport/assignments       # classId, studentId, routeId, stopId, vehicleId, direction
 /admin/transport/gps-devices
+/driver/transport/current-trip
 ```
+
+See also [`docs/transport/DRIVER_ASSIGNMENT_LIVE_API.md`](./transport/DRIVER_ASSIGNMENT_LIVE_API.md).
 
 ### Vehicle
 

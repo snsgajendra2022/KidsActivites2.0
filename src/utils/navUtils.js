@@ -1,5 +1,6 @@
-import { NAV_BY_ROLE } from '../constants/navigation.js';
+import { NAV_BY_ROLE, NAV_SECTION_ICONS } from '../constants/navigation.js';
 import { resolveMenuIcon } from '../constants/menuIcons.js';
+import { Layers } from 'lucide-react';
 
 export function getAllMenuItemsGrouped() {
   const grouped = {};
@@ -44,6 +45,43 @@ export function sortNavItemsByOrder(items, orderIds = []) {
     const bi = rank.has(b.id) ? rank.get(b.id) : 9999;
     return ai - bi;
   });
+}
+
+/** Resolve the lucide icon for a nav section group (collapsed rail). */
+export function resolveSectionIcon(section) {
+  return NAV_SECTION_ICONS[section] || Layers;
+}
+
+/**
+ * Build rail entries for collapsed sidebar:
+ * - items without a section stay as direct links
+ * - consecutive sectioned items become a group with a flyout
+ */
+export function buildCollapsedNavGroups(items = []) {
+  const groups = [];
+  let current = null;
+
+  for (const item of items) {
+    const section = String(item?.section || '').trim();
+    if (!section) {
+      current = null;
+      groups.push({ type: 'link', key: item.id || item.to, item });
+      continue;
+    }
+    if (!current || current.section !== section) {
+      current = {
+        type: 'group',
+        key: `section:${section}`,
+        section,
+        icon: resolveSectionIcon(section),
+        items: [],
+      };
+      groups.push(current);
+    }
+    current.items.push(item);
+  }
+
+  return groups;
 }
 
 /**

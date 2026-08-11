@@ -448,10 +448,14 @@ export const transportVehicleService = createCrudService({
   idPrefix: 'bus',
   normalizeItem: (item) => {
     if (!item) return item;
+    const driver = item.driver && typeof item.driver === 'object' ? item.driver : {};
     return {
       ...item,
       id: item.id || item.vehicleId,
       vehicleNumber: item.vehicleNumber || item.vehicle_number || item.number || '',
+      driverUserId: item.driverUserId || item.driver_user_id || driver.id || driver.userId || '',
+      driverName: item.driverName || item.driver_name || driver.name || '',
+      driverPhone: item.driverPhone || item.driver_phone || driver.mobile || driver.phone || '',
       routeId: item.routeId || item.route_id || item.route?.id || '',
       routeName: item.routeName || item.route?.name || '',
       status: item.status || 'active',

@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Check, Copy, KeyRound, Power, RefreshCw } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import Button from '../ui/Button.jsx';
 import Input from '../ui/Input.jsx';
 import Select from '../ui/Select.jsx';
-import { registerGpsDevice } from '../../services/transportTracking/trackingApi.js';
+import {
+  disableGpsDevice,
+  enableGpsDevice,
+  listGpsDevices,
+  registerGpsDevice,
+  rotateGpsDeviceToken,
+} from '../../services/transportTracking/trackingApi.js';
 import { transportVehicleService } from '../../services/schoolModules/index.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { API_BASE_URL } from '../../services/api/config.js';
@@ -16,45 +22,48 @@ const PROVIDERS = [
   { value: 'driver_app', label: 'Driver mobile app' },
 ];
 
-function generateDeviceToken() {
-  const bytes = new Uint8Array(24);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
-  }
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 /**
  * Registers a GPS hardware / publisher device against a vehicle.
- * Device token is auto-generated (hidden on the form) and shown once after save.
+ * Plaintext token is shown only after create or rotate (prefer server-returned token).
+ * Also lists devices with enable / disable / rotate actions.
  */
 export default function GpsDeviceSetupModal({ open, onClose }) {
   const { toast } = useToast();
+  const [tab, setTab] = useState('register');
   const [vehicles, setVehicles] = useState([]);
+  const [devices, setDevices] = useState([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [loadingDevices, setLoadingDevices] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [actionId, setActionId] = useState('');
   const [copied, setCopied] = useState(false);
-  const [registered, setRegistered] = useState(null);
+  const [revealedToken, setRevealedToken] = useState(null);
   const [form, setForm] = useState({
     vehicleId: '',
     imei: '',
-    deviceToken: '',
     provider: 'generic',
   });
+
+  const loadDevices = useCallback(async () => {
+    setLoadingDevices(true);
+    try {
+      const items = await listGpsDevices();
+      setDevices(Array.isArray(items) ? items : []);
+    } catch (err) {
+      setDevices([]);
+      toast(err?.message || 'Unable to load GPS devices.', 'warning');
+    } finally {
+      setLoadingDevices(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (!open) return undefined;
     let cancelled = false;
-    setRegistered(null);
+    setRevealedToken(null);
     setCopied(false);
-    setForm({
-      vehicleId: '',
-      imei: '',
-      deviceToken: generateDeviceToken(),
-      provider: 'generic',
-    });
+    setTab('register');
+    setForm({ vehicleId: '', imei: '', provider: 'generic' });
     setLoadingVehicles(true);
     transportVehicleService.list()
       .then((items) => {
@@ -69,8 +78,9 @@ export default function GpsDeviceSetupModal({ open, onClose }) {
       .finally(() => {
         if (!cancelled) setLoadingVehicles(false);
       });
+    void loadDevices();
     return () => { cancelled = true; };
-  }, [open, toast]);
+  }, [open, toast, loadDevices]);
 
   const patch = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -95,27 +105,31 @@ export default function GpsDeviceSetupModal({ open, onClose }) {
       return;
     }
 
-    const deviceToken = (form.deviceToken.trim().length >= 8
-      ? form.deviceToken.trim()
-      : generateDeviceToken());
-
     setSaving(true);
     try {
       const payload = {
         vehicleId: form.vehicleId,
         imei: form.imei.trim(),
-        deviceToken,
         provider: form.provider,
       };
       const result = await registerGpsDevice(payload);
+      const plaintext = result?.deviceToken || result?.device_token || result?.token;
+      if (!plaintext) {
+        toast(
+          'Device registered, but the API did not return a plaintext token. Check backend register response.',
+          'warning',
+        );
+      }
       const vehicleLabel = vehicles.find((v) => String(v.id) === String(form.vehicleId));
-      setRegistered({
-        ...payload,
+      setRevealedToken({
+        source: 'create',
+        deviceToken: plaintext || '',
+        imei: form.imei.trim(),
         vehicleNumber: vehicleLabel?.vehicleNumber || vehicleLabel?.vehicle_number || form.vehicleId,
         deviceId: result?.id || result?.deviceId || null,
       });
-      setForm((current) => ({ ...current, deviceToken }));
       toast('GPS device registered. Save the device token now — it is shown only once.', 'success');
+      await loadDevices();
     } catch (err) {
       toast(err?.message || 'Unable to register GPS device.', 'error');
     } finally {
@@ -123,19 +137,60 @@ export default function GpsDeviceSetupModal({ open, onClose }) {
     }
   };
 
+  const handleRotate = async (device) => {
+    setActionId(device.id);
+    try {
+      const result = await rotateGpsDeviceToken(device.id);
+      const plaintext = result?.deviceToken || result?.device_token || result?.token;
+      if (!plaintext) {
+        toast('Token rotated, but plaintext was not returned by the API.', 'warning');
+        return;
+      }
+      setRevealedToken({
+        source: 'rotate',
+        deviceToken: plaintext,
+        imei: device.imei,
+        vehicleNumber: device.vehicleNumber || device.vehicleId,
+        deviceId: device.id,
+      });
+      setTab('register');
+      toast('New token generated. Save it now — it will not be shown again.', 'success');
+      await loadDevices();
+    } catch (err) {
+      toast(err?.message || 'Unable to rotate token.', 'error');
+    } finally {
+      setActionId('');
+    }
+  };
+
+  const handleToggleStatus = async (device) => {
+    const nextStatus = String(device.status || '').toLowerCase() === 'active' ? 'disabled' : 'active';
+    setActionId(device.id);
+    try {
+      if (nextStatus === 'active') await enableGpsDevice(device.id);
+      else await disableGpsDevice(device.id);
+      toast(nextStatus === 'active' ? 'Device enabled.' : 'Device disabled.', 'success');
+      await loadDevices();
+    } catch (err) {
+      toast(err?.message || 'Unable to update device status.', 'error');
+    } finally {
+      setActionId('');
+    }
+  };
+
   const handleClose = () => {
-    setForm({ vehicleId: '', imei: '', deviceToken: '', provider: 'generic' });
-    setRegistered(null);
+    setForm({ vehicleId: '', imei: '', provider: 'generic' });
+    setRevealedToken(null);
     setCopied(false);
     onClose?.();
   };
 
-  const exampleCurl = registered
+  const exampleCurl = revealedToken?.deviceToken
     ? `curl -X POST "${API_BASE_URL}/tracking/location" \\
   -H "Content-Type: application/json" \\
-  -H "X-Device-Token: ${registered.deviceToken}" \\
+  -H "X-Device-Token: ${revealedToken.deviceToken}" \\
   -d '{
-    "imei": "${registered.imei}",
+    "imei": "${revealedToken.imei}",
     "latitude": 23.2599,
     "longitude": 77.4126,
     "speed": 28,
@@ -152,49 +207,129 @@ export default function GpsDeviceSetupModal({ open, onClose }) {
       onClose={handleClose}
       title="GPS device setup"
       size="lg"
-      footer={registered ? (
-        <Button onClick={handleClose}>Done</Button>
-      ) : (
+      footer={revealedToken ? (
+        <Button onClick={() => { setRevealedToken(null); setCopied(false); }}>Done</Button>
+      ) : tab === 'register' ? (
         <>
           <Button variant="secondary" onClick={handleClose}>Cancel</Button>
           <Button loading={saving} onClick={handleSubmit}>Register device</Button>
         </>
+      ) : (
+        <Button onClick={handleClose}>Close</Button>
       )}
     >
-      {registered ? (
+      <div className="mb-4 flex gap-2">
+        <Button
+          variant={tab === 'register' ? 'primary' : 'secondary'}
+          onClick={() => setTab('register')}
+        >
+          Register
+        </Button>
+        <Button
+          variant={tab === 'manage' ? 'primary' : 'secondary'}
+          onClick={() => { setTab('manage'); void loadDevices(); }}
+        >
+          Manage devices
+        </Button>
+      </div>
+
+      {revealedToken ? (
         <div className="space-y-4">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-            <p className="font-bold text-emerald-950">Device registered</p>
+            <p className="font-bold text-emerald-950">
+              {revealedToken.source === 'rotate' ? 'Token rotated' : 'Device registered'}
+            </p>
             <p className="mt-1 text-sm text-emerald-900">
-              Vehicle <strong>{registered.vehicleNumber}</strong> · IMEI <strong>{registered.imei}</strong>
+              Vehicle <strong>{revealedToken.vehicleNumber}</strong>
+              {revealedToken.imei ? <> · IMEI <strong>{revealedToken.imei}</strong></> : null}
             </p>
             <p className="mt-2 text-xs text-emerald-800">
               Save this device token now. The backend stores only a hash — you cannot view it again.
               Use it as header <code>X-Device-Token</code> on the tracker.
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <code className="flex-1 break-all rounded-lg bg-white px-3 py-2 text-xs text-[#0b1c30]">
-                {registered.deviceToken}
-              </code>
-              <Button variant="secondary" onClick={() => void handleCopyToken(registered.deviceToken)}>
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? 'Copied' : 'Copy token'}
-              </Button>
-            </div>
+            {revealedToken.deviceToken ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <code className="flex-1 break-all rounded-lg bg-white px-3 py-2 text-xs text-[#0b1c30]">
+                  {revealedToken.deviceToken}
+                </code>
+                <Button variant="secondary" onClick={() => void handleCopyToken(revealedToken.deviceToken)}>
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? 'Copied' : 'Copy token'}
+                </Button>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-amber-800">
+                No plaintext token in the API response. Ask backend to return `deviceToken` once on create/rotate.
+              </p>
+            )}
           </div>
 
-          <div className="rounded-xl border border-[#e8ebf2] bg-[#f8fafc] p-4 text-sm text-[#344054]">
-            <p className="font-semibold text-[#0b1c30]">Next: send live GPS points</p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
-              <li>Configure the hardware tracker (or test script) with this IMEI + token.</li>
-              <li>POST locations to <code className="text-xs">/api/v1/tracking/location</code> with header <code className="text-xs">X-Device-Token</code>.</li>
-              <li>Open <strong>Live Bus Tracking</strong> — wait for the first fix, then the bus marker moves.</li>
-              <li>Parent app <strong>Transport</strong> shows the same vehicle after assignment.</li>
-            </ol>
-            <pre className="mt-3 overflow-x-auto rounded-lg bg-[#0b1c30] p-3 text-[11px] leading-5 text-white">
-              {exampleCurl}
-            </pre>
+          {exampleCurl ? (
+            <div className="rounded-xl border border-[#e8ebf2] bg-[#f8fafc] p-4 text-sm text-[#344054]">
+              <p className="font-semibold text-[#0b1c30]">Next: send live GPS points</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
+                <li>Configure the hardware tracker (or test script) with this IMEI + token.</li>
+                <li>POST locations to <code className="text-xs">/api/v1/tracking/location</code> with header <code className="text-xs">X-Device-Token</code>.</li>
+                <li>Open <strong>Live Bus Tracking</strong> — wait for the first fix, then the bus marker moves.</li>
+              </ol>
+              <pre className="mt-3 overflow-x-auto rounded-lg bg-[#0b1c30] p-3 text-[11px] leading-5 text-white">
+                {exampleCurl}
+              </pre>
+            </div>
+          ) : null}
+        </div>
+      ) : tab === 'manage' ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-[#667085]">Enable, disable, or rotate tokens for registered devices.</p>
+            <Button variant="secondary" onClick={() => void loadDevices()}>
+              <RefreshCw size={14} /> Refresh
+            </Button>
           </div>
+          {loadingDevices ? (
+            <p className="text-sm text-[#667085]">Loading devices…</p>
+          ) : !devices.length ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              No GPS devices yet. Register one on the Register tab.
+            </p>
+          ) : (
+            <ul className="divide-y divide-[#eaecf0] rounded-xl border border-[#eaecf0]">
+              {devices.map((device) => {
+                const active = String(device.status || '').toLowerCase() === 'active';
+                const busy = actionId === device.id;
+                return (
+                  <li key={device.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                    <div>
+                      <p className="font-semibold text-[#0b1c30]">
+                        {device.vehicleNumber || device.vehicleId || 'Vehicle'}
+                      </p>
+                      <p className="text-xs text-[#667085]">
+                        IMEI {device.imei || '—'} · {device.provider || 'generic'} · {device.status || 'unknown'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => void handleToggleStatus(device)}
+                      >
+                        <Power size={14} />
+                        {active ? 'Disable' : 'Enable'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => void handleRotate(device)}
+                      >
+                        <KeyRound size={14} />
+                        Rotate token
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -204,8 +339,8 @@ export default function GpsDeviceSetupModal({ open, onClose }) {
               <li>Create the <strong>vehicle</strong> first (Transport → Vehicles) if the list is empty.</li>
               <li>Select that vehicle below.</li>
               <li>Enter the tracker <strong>IMEI</strong> (15 digits from the device label).</li>
-              <li>Click <strong>Register device</strong> — a secure token is created automatically.</li>
-              <li>Copy the token from the success screen into the GPS device as <code className="text-xs">X-Device-Token</code>.</li>
+              <li>Click <strong>Register device</strong> — the backend returns a one-time token.</li>
+              <li>Copy the token into the GPS device as <code className="text-xs">X-Device-Token</code>.</li>
             </ol>
           </div>
 

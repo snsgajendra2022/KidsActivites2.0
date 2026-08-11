@@ -92,7 +92,10 @@ import CoursePlaygroundPage from './pages/lms/CoursePlaygroundPage.jsx';
 import { TransportRoutesPage, TransportVehiclesPage } from './pages/modules/TransportPages.jsx';
 import TransportLiveTrackingPage from './pages/modules/TransportLiveTrackingPage.jsx';
 import TransportAssignmentsPage from './pages/modules/TransportAssignmentsPage.jsx';
+import TransportDriversPage from './pages/modules/TransportDriversPage.jsx';
+import TransportTripHistoryPage from './pages/modules/TransportTripHistoryPage.jsx';
 import ParentTransportTrackingPage from './pages/modules/ParentTransportTrackingPage.jsx';
+import DriverTripGuidePage from './pages/modules/DriverTripGuidePage.jsx';
 import { LibraryBooksPage, LibraryIssuesPage } from './pages/modules/LibraryPages.jsx';
 import {
   CertificatesPage,
@@ -240,9 +243,11 @@ export default function App() {
         <Route path="admin/expenses" element={<ProtectedRoute allowedRoles={FEES_ROLES}><ExpensesPage /></ProtectedRoute>} />
         <Route path="admin/communication" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><CommunicationCenterPage /></ProtectedRoute>} />
         <Route path="admin/transport/vehicles" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportVehiclesPage /></ProtectedRoute>} />
+        <Route path="admin/transport/drivers" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportDriversPage /></ProtectedRoute>} />
         <Route path="admin/transport/routes" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportRoutesPage /></ProtectedRoute>} />
         <Route path="admin/transport/assignments" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportAssignmentsPage /></ProtectedRoute>} />
         <Route path="admin/transport/live" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportLiveTrackingPage /></ProtectedRoute>} />
+        <Route path="admin/transport/trips" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TransportTripHistoryPage /></ProtectedRoute>} />
         <Route path="admin/library/books" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><LibraryBooksPage /></ProtectedRoute>} />
         <Route path="admin/library/issues" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><LibraryIssuesPage /></ProtectedRoute>} />
         <Route path="admin/inventory" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><InventoryPage /></ProtectedRoute>} />
@@ -276,6 +281,9 @@ export default function App() {
         <Route path="parent/lms/:enrollmentId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><CoursePlayerPage layout="app" basePath="/parent/lms" /></ProtectedRoute>} />
         <Route path="parent/leave" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LeaveRequestsPage layout="app" /></ProtectedRoute>} />
         <Route path="parent/transport" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentTransportTrackingPage /></ProtectedRoute>} />
+
+        {/* Driver — trip GPS is mobile-first; web shows setup guidance */}
+        <Route path="driver/trip" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><DriverTripGuidePage /></ProtectedRoute>} />
 
         {/* Teacher routes */}
         <Route path="teacher/dashboard" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherDashboard /></ProtectedRoute>} />

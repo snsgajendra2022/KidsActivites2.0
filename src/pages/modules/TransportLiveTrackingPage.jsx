@@ -28,11 +28,13 @@ import {
   stopsToMapFeatures,
   vehicleMatchesRoute,
 } from '../../utils/transportRouteGeo.js';
+import { isNewerLocation } from '../../utils/transportLocationSequence.js';
 import useRoadRoute from '../../hooks/useRoadRoute.js';
 import {
   formatRouteDistance,
   formatRouteDuration,
 } from '../../services/geocoding/roadRouting.js';
+import { WS_EVENT_TYPES } from '../../types/transportModels.js';
 
 const FILTERS = [
   { value: 'all', label: 'All bus statuses' },
@@ -54,25 +56,37 @@ function upsertVehicle(list, update) {
   if (!id || id === 'undefined') return list;
   const next = [...list];
   const index = next.findIndex((item) => String(item.vehicle_id || item.vehicleId) === id);
+  const current = index >= 0 ? next[index] : null;
+  const incomingMeta = {
+    sequence: update.sequence,
+    updatedAt: update.updatedAt || update.updated_at,
+    recordedAt: update.recordedAt || update.recorded_at,
+  };
+  if (current && (update.latitude != null || update.longitude != null)
+    && !isNewerLocation({
+      sequence: current.sequence,
+      updatedAt: current.updated_at || current.updatedAt,
+    }, incomingMeta)) {
+    return list;
+  }
   const merged = {
-    ...(index >= 0 ? next[index] : {}),
+    ...(current || {}),
     vehicle_id: id,
     vehicle_number: update.vehicleNumber || update.vehicle_number
-      || (index >= 0 ? next[index].vehicle_number : undefined),
-    latitude: update.latitude,
-    longitude: update.longitude,
-    speed_kmh: update.speedKmh ?? update.speed_kmh,
-    heading: update.heading,
-    tracking_status: update.trackingStatus || update.tracking_status,
-    updated_at: update.updatedAt || update.updated_at || new Date().toISOString(),
-    trip_id: update.tripId || update.trip_id,
-    trip_status: update.tripStatus || update.trip_status
-      || (index >= 0 ? next[index].trip_status : undefined),
-    student_count: update.studentCount ?? update.student_count
-      ?? (index >= 0 ? next[index].student_count : undefined),
-    route_id: update.routeId || update.route_id || (index >= 0 ? next[index].route_id : undefined),
-    route_name: update.routeName || update.route_name || (index >= 0 ? next[index].route_name : undefined),
-    eta: update.eta || (index >= 0 ? next[index].eta : null),
+      || current?.vehicle_number,
+    latitude: update.latitude ?? current?.latitude,
+    longitude: update.longitude ?? current?.longitude,
+    speed_kmh: update.speedKmh ?? update.speed_kmh ?? current?.speed_kmh,
+    heading: update.heading ?? current?.heading,
+    tracking_status: update.trackingStatus || update.tracking_status || current?.tracking_status,
+    updated_at: incomingMeta.updatedAt || new Date().toISOString(),
+    sequence: update.sequence ?? current?.sequence,
+    trip_id: update.tripId || update.trip_id || current?.trip_id,
+    trip_status: update.tripStatus || update.trip_status || current?.trip_status,
+    student_count: update.studentCount ?? update.student_count ?? current?.student_count,
+    route_id: update.routeId || update.route_id || current?.route_id,
+    route_name: update.routeName || update.route_name || current?.route_name,
+    eta: update.eta || current?.eta || null,
   };
   if (index >= 0) next[index] = { ...next[index], ...merged };
   else next.push(merged);
@@ -141,47 +155,70 @@ export default function TransportLiveTrackingPage() {
     }
   }, []);
 
-  const loadFleet = useCallback(async () => {
-    setFleetLoading(true);
-    setFleetError('');
+  const loadFleet = useCallback(async (status = 'all', { silent = false } = {}) => {
+    if (!silent) {
+      setFleetLoading(true);
+      setFleetError('');
+    }
     try {
-      const data = await fetchAdminFleetLive('all');
+      const data = await fetchAdminFleetLive(status);
       setVehicles(Array.isArray(data) ? data : []);
+      if (!silent) setFleetError('');
     } catch (err) {
-      setFleetError(err?.message || 'Unable to load live fleet.');
-      setVehicles([]);
+      if (err?.status === 401 || err?.status === 403) {
+        setFleetError('You are not authorized to view the live fleet.');
+        setVehicles([]);
+      } else if (!silent) {
+        setFleetError(err?.message || 'Unable to load live fleet.');
+        setVehicles([]);
+      }
     } finally {
-      setFleetLoading(false);
+      if (!silent) setFleetLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void loadRoutes();
-    void loadFleet();
-  }, [loadRoutes, loadFleet]);
+    void loadFleet(statusFilter);
+  }, [loadRoutes, loadFleet, statusFilter]);
 
   useEffect(() => {
     const socket = createTrackingSocket({
-      onStatus: setSocketStatus,
+      onStatus: (status) => {
+        setSocketStatus(status);
+        if (status?.state === 'connected' && status?.reconnect) {
+          void loadFleet(statusFilter, { silent: true });
+        }
+      },
       onEvent: (event) => {
-        if (event?.type === 'vehicle.location_updated' && event.data) {
+        if (event?.type === WS_EVENT_TYPES.LOCATION_UPDATED && event.data) {
           setVehicles((current) => upsertVehicle(current, event.data));
           return;
         }
-        if (event?.type === 'vehicle.tracking_warning' || event?.type === 'vehicle.tracking_offline') {
+        if (event?.type === WS_EVENT_TYPES.TRACKING_WARNING || event?.type === WS_EVENT_TYPES.TRACKING_OFFLINE) {
           setVehicles((current) => upsertVehicle(current, {
             ...event.data,
-            trackingStatus: event.type === 'vehicle.tracking_offline' ? 'offline' : 'warning',
+            trackingStatus: event.type === WS_EVENT_TYPES.TRACKING_OFFLINE ? 'offline' : 'warning',
             vehicleId: event.data?.vehicle_id || event.data?.vehicleId,
             latitude: event.data?.latitude,
             longitude: event.data?.longitude,
-            updatedAt: event.data?.updated_at,
+            updatedAt: event.data?.updated_at || event.data?.updatedAt,
+            sequence: event.data?.sequence,
+          }));
+          return;
+        }
+        if (event?.type === WS_EVENT_TYPES.TRIP_COMPLETED && event.data) {
+          setVehicles((current) => upsertVehicle(current, {
+            ...event.data,
+            tripStatus: 'completed',
+            trackingStatus: 'completed',
+            vehicleId: event.data?.vehicle_id || event.data?.vehicleId,
           }));
         }
       },
     });
     return () => socket.close();
-  }, []);
+  }, [loadFleet, statusFilter]);
 
   const filteredRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
@@ -273,12 +310,17 @@ export default function TransportLiveTrackingPage() {
                   : <SignalZero size={14} className="text-rose-600" />}
                 {socketStatus.state === 'connected' ? 'Live connected' : `Live ${socketStatus.state}`}
               </span>
-              <Button variant="secondary" onClick={() => { void loadRoutes(); void loadFleet(); }}>
+              <Button variant="secondary" onClick={() => { void loadRoutes(); void loadFleet(statusFilter); }}>
                 <RefreshCw size={14} /> Refresh
               </Button>
               <Button variant="secondary" onClick={() => setGpsOpen(true)}>
                 GPS device setup
               </Button>
+              <Link to="../trips" relative="path">
+                <Button variant="secondary">
+                  <RouteIcon size={14} /> Trip history
+                </Button>
+              </Link>
               <Link to="../assignments" relative="path">
                 <Button variant="secondary">
                   <RouteIcon size={14} /> Student assignments

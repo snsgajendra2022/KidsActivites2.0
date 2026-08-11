@@ -281,10 +281,22 @@ export async function updateParentChildTransportAddress(childId, address) {
   });
 }
 
-/** Parent: resolve child address for transport panel. */
-export async function fetchParentTransportAddress(user) {
+/** Parent: resolve child address for transport panel (selected student when multi-child). */
+export async function fetchParentTransportAddress(user, studentId = null) {
   const children = await getParentChildren(user);
-  const child = (children || [])[0];
+  const list = Array.isArray(children) ? children : [];
+  const wanted = studentId != null && studentId !== '' ? String(studentId) : '';
+  const child = wanted
+    ? list.find((item) => {
+      const ids = [
+        item?.studentId,
+        item?.enrolledStudentId,
+        item?.id,
+        item?.applicationId,
+      ].map((value) => (value != null ? String(value) : '')).filter(Boolean);
+      return ids.includes(wanted);
+    }) || list[0]
+    : list[0];
   if (!child) return null;
   const id = child.studentId || child.applicationId || child.id;
   try {
