@@ -22,7 +22,9 @@ import '../../styles/admin-modules.css';
 function feeStatusKey(status) {
   if (status === 'verified') return 'fee_verified';
   if (status === 'payment_submitted') return 'fee_submitted';
-  if (status === 'fee_pending') return 'fee_pending';
+  if (status === 'fee_pending' || status === 'issued' || status === 'draft' || status === 'partial') {
+    return 'fee_pending';
+  }
   return status;
 }
 
@@ -35,15 +37,29 @@ const FEE_STATUS_OPTIONS = [
 ];
 
 const FEE_COLUMNS = [
-  { key: 'applicationNo', label: 'Application No.', primary: true },
-  { key: 'studentName', label: 'Student' },
+  {
+    key: 'applicationNo',
+    label: 'Reference',
+    primary: true,
+    render: (fee) => fee.applicationNo || fee.invoiceId || fee.id || '—',
+  },
+  {
+    key: 'studentName',
+    label: 'Student',
+    render: (fee) => fee.studentName || fee.studentId || '—',
+  },
   {
     label: 'Class',
-    render: (fee) => fee.classApplying?.toUpperCase() || '—',
+    render: (fee) => (fee.className || fee.classApplying || fee.classId || '—').toString().toUpperCase(),
+  },
+  {
+    label: 'Type',
+    muted: true,
+    render: (fee) => (fee.source === 'invoice' ? 'Invoice' : 'Enrollment'),
   },
   {
     label: 'Total',
-    render: (fee) => `₹${Number(fee.total || 0).toLocaleString('en-IN')}`,
+    render: (fee) => `₹${Number(fee.total || fee.net || 0).toLocaleString('en-IN')}`,
   },
   {
     label: 'Status',
@@ -53,7 +69,7 @@ const FEE_COLUMNS = [
   {
     label: 'Payment',
     muted: true,
-    render: (fee) => fee.payment?.transactionId || '—',
+    render: (fee) => fee.payment?.transactionId || fee.dueDate || '—',
   },
 ];
 
@@ -176,7 +192,8 @@ export default function AdminFees() {
   };
 
   const renderActions = (fee) => {
-    const applicationId = fee.applicationId;
+    const applicationId = fee.applicationId || (fee.source === 'invoice' ? fee.studentId : null);
+    const canVerifyEnrollment = fee.source !== 'invoice' && fee.status === 'payment_submitted';
     return (
     <>
       {applicationId ? (
@@ -191,7 +208,7 @@ export default function AdminFees() {
           View Application
         </TableActionButton>
       )}
-      {fee.status === 'payment_submitted' && (
+      {canVerifyEnrollment && (
         <>
           <TableActionButton
             variant="success"
@@ -253,7 +270,11 @@ export default function AdminFees() {
       {loading ? (
         <div className="sb-card p-8 text-center text-sm text-[#45474c]/70">Loading fee records…</div>
       ) : fees.length === 0 ? (
-        <EmptyState icon={CreditCard} title="No Fee Records Found" description="Fee records will appear here once assigned to applications." />
+        <EmptyState
+          icon={CreditCard}
+          title="No Fee Records Found"
+          description="Enrollment fees and advanced invoices will appear here once assigned or generated."
+        />
       ) : (
         <ResponsiveDataTable
           layout="cards"

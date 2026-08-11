@@ -17,9 +17,14 @@ function normalizeFeeStatus(status) {
     fee_assigned: 'fee_pending',
     awaiting_payment: 'fee_pending',
     payment_pending: 'fee_pending',
+    // Advanced invoice statuses → enrollment vocabulary used by AdminFees filters
+    issued: 'fee_pending',
+    draft: 'fee_pending',
+    partial: 'fee_pending',
     submitted: 'payment_submitted',
     payment_proof_submitted: 'payment_submitted',
     paid: 'verified',
+    settled: 'verified',
     approved: 'verified',
     fee_verified: 'verified',
     unassigned: 'not_assigned',
@@ -47,6 +52,8 @@ function normalizeFee(fee) {
   const applicationId = fee.applicationId
     ?? fee.application_id
     ?? fee.application?.id
+    ?? fee.studentId
+    ?? fee.student_id
     ?? null;
   const applicationNo = fee.applicationNo
     ?? fee.application_no
@@ -60,6 +67,8 @@ function normalizeFee(fee) {
     ?? null;
   const classApplying = fee.classApplying
     ?? fee.class_applying
+    ?? fee.className
+    ?? fee.class_name
     ?? fee.application?.student?.classApplying
     ?? fee.student?.classApplying
     ?? null;
