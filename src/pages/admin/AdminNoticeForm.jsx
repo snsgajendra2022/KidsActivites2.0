@@ -20,6 +20,7 @@ import {
 } from '../../hooks/useNotices.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import { toNoticeDatetimeLocalValue } from '../../services/noticeBoardService.js';
 import '../../styles/notice-board.css';
 
 export default function AdminNoticeForm() {
@@ -47,8 +48,8 @@ export default function AdminNoticeForm() {
         priority: notice.priority,
         status: notice.status,
         audience: notice.audience,
-        publishAt: notice.publishAt || '',
-        expiresAt: notice.expiresAt || '',
+        publishAt: toNoticeDatetimeLocalValue(notice.publishAt),
+        expiresAt: toNoticeDatetimeLocalValue(notice.expiresAt),
         isPinned: notice.isPinned,
         requiresAcknowledgement: notice.requiresAcknowledgement,
         sendPush: notice.sendPush,

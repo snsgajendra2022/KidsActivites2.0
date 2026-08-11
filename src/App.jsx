@@ -76,6 +76,7 @@ import ChatPage from './pages/shared/ChatPage.jsx';
 import Profile from './pages/shared/Profile.jsx';
 
 import HomeworkPage from './pages/modules/HomeworkPage.jsx';
+import ParentHomeworkPage from './pages/parent/ParentHomeworkPage.jsx';
 import ExamsPage from './pages/modules/ExamsPage.jsx';
 import ExamMarksPage from './pages/modules/ExamMarksPage.jsx';
 import LoginHistoryPage from './pages/modules/LoginHistoryPage.jsx';
@@ -267,7 +268,7 @@ export default function App() {
         <Route path="parent/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeDetail backPath="/parent/notice-board" /></ProtectedRoute>} />
         <Route path="parent/notifications" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><NotificationsPage title="Notifications" subtitle="Your enrollment and school notifications." /></ProtectedRoute>} />
         <Route path="parent/attendance" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><StudentAttendanceHistory /></ProtectedRoute>} />
-        <Route path="parent/homework" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><HomeworkPage layout="app" readOnly /></ProtectedRoute>} />
+        <Route path="parent/homework" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentHomeworkPage /></ProtectedRoute>} />
         <Route path="parent/exams" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ExamMarksPage layout="app" readOnly audience="parent" /></ProtectedRoute>} />
         <Route path="parent/timetable" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><TimetablePage layout="app" readOnly audience="parent" /></ProtectedRoute>} />
         <Route path="parent/lms" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyLearningPage layout="app" basePath="/parent/lms" /></ProtectedRoute>} />

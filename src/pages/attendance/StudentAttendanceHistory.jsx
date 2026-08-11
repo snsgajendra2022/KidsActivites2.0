@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { CalendarDays, ClipboardCheck } from 'lucide-react';
+import { CalendarDays, ClipboardCheck, UserRound } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { EmptyState, LoadingState, PageHeader } from '../../components/ui/index.jsx';
@@ -13,7 +13,6 @@ import AttendanceFilters, {
 } from '../../components/attendance/AttendanceFilters.jsx';
 import AttendanceSummaryCards from '../../components/attendance/AttendanceSummaryCards.jsx';
 import AttendanceStatusChip, {
-  ATTENDANCE_STATUS_CODES,
   getAttendanceStatusLabel,
 } from '../../components/attendance/AttendanceStatusChip.jsx';
 import { getStudentAttendanceHistory } from '../../services/attendanceService.js';
@@ -41,6 +40,24 @@ function childLabel(child) {
     || [child?.student?.firstName, child?.student?.lastName].filter(Boolean).join(' ')
     || child?.applicationNo
     || 'Child';
+}
+
+function formatDayLabel(dateValue) {
+  const parsed = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return dateValue;
+  return parsed.toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function formatRangeLabel(from, to) {
+  if (!from && !to) return null;
+  const start = from ? formatDayLabel(from) : '…';
+  const end = to ? formatDayLabel(to) : '…';
+  return `${start} → ${end}`;
 }
 
 export default function StudentAttendanceHistory() {
@@ -132,6 +149,23 @@ export default function StudentAttendanceHistory() {
   const records = history?.records || [];
   const summary = history?.summary || null;
   const student = history?.student || null;
+  const selectedChild = useMemo(
+    () => children.find((child) => resolveChildStudentId(child) === studentId) || null,
+    [children, studentId],
+  );
+
+  const displayName = student?.name
+    || (selectedChild ? childLabel(selectedChild) : '')
+    || '';
+  const displayClass = student?.className
+    || selectedChild?.className
+    || selectedChild?.student?.className
+    || '';
+  const displaySection = student?.sectionName
+    || selectedChild?.sectionName
+    || '';
+  const rangeLabel = formatRangeLabel(history?.from || from, history?.to || to);
+  const percentage = summary?.percentage;
 
   const childOptions = useMemo(
     () => children.map((child) => ({
@@ -151,13 +185,10 @@ export default function StudentAttendanceHistory() {
     }, { replace: true });
   };
 
-  const title = student?.name
-    ? `${student.name} · Attendance`
-    : 'Attendance History';
-
-  const subtitle = student?.className
-    ? `${student.className}${student.sectionName ? ` · ${student.sectionName}` : ''}`
-    : 'View daily attendance status and monthly summary.';
+  const title = displayName ? `${displayName} · Attendance` : 'Attendance History';
+  const subtitle = displayClass
+    ? `${displayClass}${displaySection ? ` · ${displaySection}` : ''}`
+    : 'Daily attendance status and period summary for your child.';
 
   return (
     <DashboardLayout>
@@ -198,12 +229,6 @@ export default function StudentAttendanceHistory() {
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
-          {ATTENDANCE_STATUS_CODES.map((code) => (
-            <AttendanceStatusChip key={code} status={code} label={getAttendanceStatusLabel(code)} />
-          ))}
-        </div>
-
         {!studentId ? (
           <EmptyState
             icon={ClipboardCheck}
@@ -220,6 +245,35 @@ export default function StudentAttendanceHistory() {
           />
         ) : (
           <>
+            <div className="mb-4 overflow-hidden rounded-2xl border border-[#e8ebf2] bg-gradient-to-br from-[#0b1c30] to-[#1a3a5c] p-5 text-white shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10">
+                    <UserRound size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
+                      Attendance overview
+                    </p>
+                    <h2 className="mt-1 text-xl font-bold tracking-tight">
+                      {displayName || 'Student'}
+                    </h2>
+                    <p className="mt-1 text-sm text-white/70">
+                      {[displayClass, displaySection, rangeLabel].filter(Boolean).join(' · ') || 'Selected period'}
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-white/10 px-5 py-3 text-center backdrop-blur-sm">
+                  <p className="text-3xl font-bold tabular-nums">
+                    {percentage != null ? `${Number(percentage).toFixed(0)}%` : '—'}
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-white/60">
+                    Present rate
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {summary && <AttendanceSummaryCards summary={summary} className="mb-4" />}
 
             {records.length === 0 ? (
@@ -230,29 +284,32 @@ export default function StudentAttendanceHistory() {
               />
             ) : (
               <div className="overflow-hidden rounded-xl border border-[#e8ebf2] bg-white">
+                <div className="flex items-center justify-between gap-3 border-b border-[#eef0f5] px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#0b1c30]">Daily records</p>
+                    <p className="text-xs text-[#8a93a3]">
+                      {records.length} day{records.length === 1 ? '' : 's'} in this period
+                    </p>
+                  </div>
+                </div>
                 <ul className="divide-y divide-[#eef0f5]">
                   {records.map((record) => (
                     <li
-                      key={`${record.date}-${record.status}-${record.markedAt || ''}`}
-                      className="flex flex-wrap items-start justify-between gap-3 px-4 py-3"
+                      key={record.recordId || `${record.date}-${record.status}-${record.sessionId || ''}`}
+                      className="flex flex-wrap items-start justify-between gap-3 px-4 py-3.5"
                     >
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold text-[#0b1c30]">
-                          {new Date(record.date).toLocaleDateString(undefined, {
-                            weekday: 'short',
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                          {formatDayLabel(record.date)}
                         </p>
-                        {record.note ? (
-                          <p className="mt-0.5 text-sm text-[#5a6270]">{record.note}</p>
-                        ) : null}
-                        {record.markedAt && (
+                        <p className="mt-0.5 text-sm text-[#5a6270]">
+                          {record.displayNote || getAttendanceStatusLabel(record.status)}
+                        </p>
+                        {record.markedAt ? (
                           <p className="mt-0.5 text-[11px] text-[#8a93a3]">
                             Marked {new Date(record.markedAt).toLocaleString()}
                           </p>
-                        )}
+                        ) : null}
                       </div>
                       <AttendanceStatusChip status={record.status} />
                     </li>

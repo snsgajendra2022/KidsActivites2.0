@@ -1,5 +1,5 @@
 import ModuleCrudPage from '../../components/modules/ModuleCrudPage.jsx';
-import { homeworkService } from '../../services/schoolModules/index.js';
+import { homeworkService, teacherHomeworkService } from '../../services/schoolModules/index.js';
 import {
   loadClassOptions,
   loadStudentOptions,
@@ -12,6 +12,7 @@ const columns = [
   { key: 'title', label: 'Title', primary: true },
   { key: 'subject', label: 'Subject' },
   { key: 'className', label: 'Class' },
+  { key: 'teacherName', label: 'Teacher' },
   { key: 'dueDate', label: 'Due Date' },
   { key: 'assignedCount', label: 'Assigned' },
   { key: 'status', label: 'Status', badge: true },
@@ -88,18 +89,20 @@ function buildFields(user) {
 
 export default function HomeworkPage({ layout = 'dashboard', readOnly = false }) {
   const { user } = useAuth();
+  const isTeacher = user?.role === ROLES.TEACHER;
+  const service = isTeacher ? teacherHomeworkService : homeworkService;
 
   return (
     <ModuleCrudPage
       title="Homework & Assignments"
       subtitle="Select a class, optionally choose students, pick a subject, then assign homework by ID."
-      service={homeworkService}
+      service={service}
       columns={columns}
       fields={buildFields(user)}
       createLabel="Create Homework"
       layout={layout}
       readOnly={readOnly}
-      searchKeys={['title', 'subject', 'className', 'status']}
+      searchKeys={['title', 'subject', 'className', 'teacherName', 'status', 'description']}
       emptyTitle="No homework yet"
       emptyDescription="Create homework by selecting an existing class and subject. Student names are never typed manually."
       transformCreate={(form, editing, { user: currentUser }) => {

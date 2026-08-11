@@ -9,8 +9,8 @@ const CHANNELS = [
   { name: 'In-app Chat', status: 'Live', detail: 'Teacher-parent direct messaging with attachments.' },
   { name: 'Notice Board / Circulars', status: 'Live', detail: 'School and class announcements with acknowledgements.' },
   { name: 'Email', status: 'Configured', detail: 'Delivery depends on backend mail provider settings.' },
-  { name: 'SMS', status: 'Configured', detail: 'Attendance and fee reminders via SMS gateway.' },
-  { name: 'WhatsApp', status: 'Ready', detail: 'Template-based WhatsApp Business integration hooks.' },
+  // { name: 'SMS', status: 'Configured', detail: 'Attendance and fee reminders via SMS gateway.' },
+  // { name: 'WhatsApp', status: 'Ready', detail: 'Template-based WhatsApp Business integration hooks.' },
 ];
 
 export default function CommunicationCenterPage() {

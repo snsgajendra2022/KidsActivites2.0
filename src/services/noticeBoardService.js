@@ -36,6 +36,49 @@ const ROLE_MAP = {
   SUPER_ADMIN: 'super_admin',
 };
 
+/**
+ * datetime-local gives "2026-08-10T17:20" (no seconds).
+ * Backend Instant/OffsetDateTime needs full ISO, e.g. "2026-08-10T17:20:00.000Z".
+ */
+export function toNoticeApiDateTime(value) {
+  if (value == null) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(raw)) {
+    return raw;
+  }
+  // datetime-local: YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss
+  const local = raw.length === 16 ? `${raw}:00` : raw;
+  const parsed = new Date(local);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new ApiError(`Invalid datetime: ${raw}`, 400, 'VALIDATION_ERROR');
+  }
+  return parsed.toISOString();
+}
+
+/** Convert API ISO datetime to datetime-local input value (YYYY-MM-DDTHH:mm). */
+export function toNoticeDatetimeLocalValue(value) {
+  if (value == null || value === '') return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    const raw = String(value);
+    return raw.length >= 16 ? raw.slice(0, 16) : raw;
+  }
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+}
+
+function normalizeNoticeWritePayload(payload = {}) {
+  const next = { ...payload };
+  if ('publishAt' in next) {
+    next.publishAt = toNoticeApiDateTime(next.publishAt);
+  }
+  if ('expiresAt' in next) {
+    next.expiresAt = toNoticeApiDateTime(next.expiresAt);
+  }
+  return next;
+}
+
 function readNoticesStore() {
   return getStore(NOTICES_KEY, INITIAL_NOTICES);
 }
@@ -303,7 +346,7 @@ export async function createNotice(payload, actor) {
       }
       return entry;
     },
-    apiFn: () => api.post('/notices', payload),
+    apiFn: () => api.post('/notices', normalizeNoticeWritePayload(payload)),
   });
 }
 
@@ -331,7 +374,7 @@ export async function updateNotice(noticeId, payload, actor) {
       appendAudit(noticeId, 'UPDATED', actor?.id);
       return notices[idx];
     },
-    apiFn: () => api.put(`/notices/${noticeId}`, payload),
+    apiFn: () => api.put(`/notices/${noticeId}`, normalizeNoticeWritePayload(payload)),
   });
 }
 

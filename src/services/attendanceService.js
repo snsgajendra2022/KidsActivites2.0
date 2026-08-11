@@ -69,7 +69,90 @@ export async function reopenAttendanceSession(sessionId, { reason }) {
 
 /** GET /attendance/students/{id}/history?from=&to= */
 export async function getStudentAttendanceHistory(studentId, { from, to } = {}) {
-  return api.get(`/attendance/students/${studentId}/history`, { from, to });
+  const data = await api.get(`/attendance/students/${studentId}/history`, { from, to });
+  return normalizeStudentAttendanceHistory(data);
+}
+
+/**
+ * Live API may return flat fields (studentId, studentName, days[]) instead of
+ * the nested { student, records } contract. Normalize for the history UI.
+ */
+export function normalizeStudentAttendanceHistory(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const recordsSource = Array.isArray(raw.records) && raw.records.length
+    ? raw.records
+    : (Array.isArray(raw.days) ? raw.days : []);
+
+  const records = recordsSource
+    .map((item) => normalizeHistoryRecord(item))
+    .filter(Boolean)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+  const student = {
+    id: raw.student?.id || raw.studentId || '',
+    name: raw.student?.name || raw.studentName || '',
+    className: raw.student?.className || raw.className || '',
+    sectionName: raw.student?.sectionName || raw.sectionName || '',
+  };
+
+  const summary = raw.summary
+    ? {
+        ...raw.summary,
+        total: raw.summary.total ?? raw.summary.totalDays ?? records.length,
+        totalDays: raw.summary.totalDays ?? raw.summary.total ?? records.length,
+      }
+    : null;
+
+  return {
+    ...raw,
+    student,
+    summary,
+    records,
+    from: raw.from || null,
+    to: raw.to || null,
+  };
+}
+
+function normalizeHistoryRecord(item) {
+  if (!item || typeof item !== 'object') return null;
+  const date = item.date || item.attendanceDate || '';
+  if (!date) return null;
+  return {
+    ...item,
+    date,
+    status: String(item.status || '').toUpperCase(),
+    note: item.note || '',
+    recordId: item.recordId || item.id || null,
+    sessionId: item.sessionId || null,
+    classId: item.classId || null,
+    markedAt: item.markedAt || item.updatedAt || item.createdAt || null,
+    displayNote: formatAttendanceNote(item.note),
+  };
+}
+
+/** Turn "[mode=daily][time=09:15]" into "Daily · 09:15". */
+export function formatAttendanceNote(note) {
+  const raw = String(note || '').trim();
+  if (!raw) return '';
+
+  const tags = {};
+  const tagRe = /\[([^=\]]+)=([^\]]*)\]/g;
+  let match;
+  while ((match = tagRe.exec(raw)) !== null) {
+    tags[String(match[1]).trim().toLowerCase()] = String(match[2]).trim();
+  }
+
+  if (Object.keys(tags).length) {
+    const mode = tags.mode
+      ? String(tags.mode).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      : '';
+    const time = tags.time || '';
+    const parts = [mode, time].filter(Boolean);
+    if (parts.length) return parts.join(' · ');
+  }
+
+  return raw;
 }
 
 /** GET /attendance/reports/summary?... */
