@@ -91,6 +91,7 @@ export function fixtureAdminFleet(status = 'all') {
       speed_kmh: 22,
       tracking_status: 'running',
       trip_status: 'active',
+      trip_id: FIXTURE_TRIP_ID,
       student_count: 12,
       sequence: 42,
       updated_at: new Date().toISOString(),
@@ -155,4 +156,210 @@ export function fixtureStartTrip(payload = {}) {
     status: 'active',
     startedAt: new Date().toISOString(),
   };
+}
+
+/** In-memory fixture state for pickup/dropoff + parent approval (DEV only). */
+const fixtureAttendanceByTrip = new Map();
+
+function fixtureStudentsForStop(stopId) {
+  const byStop = {
+    'fixture-stop-1': [
+      {
+        studentId: 'fixture-student-1',
+        studentName: 'John Smith',
+        classId: 'fixture-class-1',
+        className: 'Class A',
+        sectionName: 'A',
+        stopId: 'fixture-stop-1',
+        stopName: 'Stop A',
+      },
+      {
+        studentId: 'fixture-student-2',
+        studentName: 'Sarah Jones',
+        classId: 'fixture-class-1',
+        className: 'Class A',
+        sectionName: 'A',
+        stopId: 'fixture-stop-1',
+        stopName: 'Stop A',
+      },
+    ],
+    'fixture-stop-2': [
+      {
+        studentId: 'fixture-student-3',
+        studentName: 'Mike Brown',
+        classId: 'fixture-class-2',
+        className: 'Class B',
+        sectionName: 'B',
+        stopId: 'fixture-stop-2',
+        stopName: 'Stop B',
+      },
+    ],
+    'fixture-stop-3': [],
+  };
+  return byStop[stopId] || [];
+}
+
+function ensureFixtureAttendance(tripId) {
+  const key = String(tripId || FIXTURE_TRIP_ID);
+  if (!fixtureAttendanceByTrip.has(key)) {
+    const map = new Map();
+    [...fixtureStudentsForStop('fixture-stop-1'), ...fixtureStudentsForStop('fixture-stop-2')]
+      .forEach((student) => {
+        map.set(student.studentId, {
+          ...student,
+          pickup: { status: 'PENDING', markedAt: null, parentApprovalStatus: null },
+          dropoff: { status: 'PENDING', markedAt: null, parentApprovalStatus: null },
+        });
+      });
+    fixtureAttendanceByTrip.set(key, map);
+  }
+  return fixtureAttendanceByTrip.get(key);
+}
+
+export function fixtureTripStopStudents(tripId, stopId) {
+  const attendance = ensureFixtureAttendance(tripId);
+  const stop = FIXTURE_STOPS.find((item) => item.id === stopId) || {
+    id: stopId,
+    name: 'Stop',
+    sequence: 1,
+  };
+  const students = fixtureStudentsForStop(stopId).map((base) => {
+    const current = attendance.get(base.studentId) || base;
+    return {
+      ...base,
+      pickup: current.pickup,
+      dropoff: current.dropoff,
+    };
+  });
+  return {
+    tripId: tripId || FIXTURE_TRIP_ID,
+    stop: {
+      stopId: stop.id,
+      stopName: stop.name,
+      displaySequence: stop.sequence,
+      sequence: stop.sequence,
+      lat: stop.lat,
+      lng: stop.lng,
+    },
+    students,
+    direction: 'morning',
+  };
+}
+
+export function fixtureMarkStudentPickup({ tripId, studentId, stopId, status }) {
+  const attendance = ensureFixtureAttendance(tripId);
+  const current = attendance.get(studentId) || {
+    studentId,
+    studentName: 'Student',
+    stopId,
+    pickup: { status: 'PENDING' },
+    dropoff: { status: 'PENDING' },
+  };
+  current.pickup = {
+    status: status || 'PICKED_UP',
+    stopId,
+    markedAt: new Date().toISOString(),
+    markedByDriverId: 'fixture-driver-1',
+    parentApprovalStatus: status === 'PICKED_UP' ? 'PENDING' : null,
+  };
+  attendance.set(studentId, current);
+  return { studentId, tripId: tripId || FIXTURE_TRIP_ID, pickup: current.pickup };
+}
+
+export function fixtureMarkStudentDropoff({ tripId, studentId, stopId, status }) {
+  const attendance = ensureFixtureAttendance(tripId);
+  const current = attendance.get(studentId) || {
+    studentId,
+    studentName: 'Student',
+    stopId,
+    pickup: { status: 'PENDING' },
+    dropoff: { status: 'PENDING' },
+  };
+  current.dropoff = {
+    status: status || 'DROPPED_OFF',
+    stopId,
+    markedAt: new Date().toISOString(),
+    markedByDriverId: 'fixture-driver-1',
+    parentApprovalStatus: status === 'DROPPED_OFF' ? 'PENDING' : null,
+  };
+  attendance.set(studentId, current);
+  return { studentId, tripId: tripId || FIXTURE_TRIP_ID, dropoff: current.dropoff };
+}
+
+export function fixtureParentStudentTripStatus(tripId, studentId) {
+  const attendance = ensureFixtureAttendance(tripId);
+  const current = attendance.get(studentId) || {
+    studentId,
+    studentName: studentId === 'fixture-student-1' ? 'John Smith' : 'Student',
+    stopId: 'fixture-stop-1',
+    stopName: 'Stop A',
+    pickup: { status: 'PENDING', markedAt: null, parentApprovalStatus: null },
+    dropoff: { status: 'PENDING', markedAt: null, parentApprovalStatus: null },
+  };
+  return {
+    studentId,
+    studentName: current.studentName || 'Student',
+    tripId: tripId || FIXTURE_TRIP_ID,
+    direction: 'morning',
+    pickup: {
+      ...current.pickup,
+      stopId: current.pickup?.stopId || current.stopId || 'fixture-stop-1',
+      stopName: current.pickup?.stopName || current.stopName || 'Stop A',
+    },
+    dropoff: current.dropoff,
+    timeline: [
+      { at: new Date(Date.now() - 30 * 60000).toISOString(), label: 'Trip started', type: 'trip_started' },
+      current.pickup?.markedAt
+        ? { at: current.pickup.markedAt, label: `${current.studentName || 'Student'} marked picked up`, type: 'picked_up' }
+        : null,
+      current.pickup?.parentApprovedAt
+        ? {
+          at: current.pickup.parentApprovedAt,
+          label: current.pickup.parentApprovalStatus === 'APPROVED'
+            ? 'You confirmed pickup'
+            : 'You reported a pickup issue',
+          type: 'pickup_approval',
+        }
+        : null,
+    ].filter(Boolean),
+  };
+}
+
+export function fixtureApproveStudentPickup({ tripId, studentId, approved, reason }) {
+  const attendance = ensureFixtureAttendance(tripId);
+  const current = attendance.get(studentId) || { studentId, pickup: { status: 'PICKED_UP' }, dropoff: {} };
+  current.pickup = {
+    ...(current.pickup || { status: 'PICKED_UP' }),
+    parentApprovalStatus: approved ? 'APPROVED' : 'REJECTED',
+    parentApprovedAt: new Date().toISOString(),
+    reason: approved ? null : (reason || null),
+  };
+  attendance.set(studentId, current);
+  return { studentId, pickup: current.pickup };
+}
+
+export function fixtureApproveStudentDropoff({ tripId, studentId, approved, reason }) {
+  const attendance = ensureFixtureAttendance(tripId);
+  const current = attendance.get(studentId) || { studentId, pickup: {}, dropoff: { status: 'DROPPED_OFF' } };
+  current.dropoff = {
+    ...(current.dropoff || { status: 'DROPPED_OFF' }),
+    parentApprovalStatus: approved ? 'APPROVED' : 'REJECTED',
+    parentApprovedAt: new Date().toISOString(),
+    reason: approved ? null : (reason || null),
+  };
+  attendance.set(studentId, current);
+  return { studentId, dropoff: current.dropoff };
+}
+
+export function fixtureTripStudentTransportStatuses(tripId) {
+  const attendance = ensureFixtureAttendance(tripId);
+  return Array.from(attendance.values()).map((item) => ({
+    studentId: item.studentId,
+    studentName: item.studentName,
+    className: item.className,
+    stopId: item.stopId,
+    stopName: item.stopName,
+    pickup: item.pickup,
+    dropoff: item.dropoff,
+  }));
 }

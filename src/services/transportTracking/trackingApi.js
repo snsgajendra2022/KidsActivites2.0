@@ -3,12 +3,24 @@ import { getAccessToken } from '../api/tokenStorage.js';
 import { normalizeGpsDevice, normalizeParentLiveSnapshot } from '../../types/transportModels.js';
 import {
   fixtureAdminFleet,
+  fixtureApproveStudentDropoff,
+  fixtureApproveStudentPickup,
   fixtureDriverCurrentTrip,
   fixtureGpsDevices,
+  fixtureMarkStudentDropoff,
+  fixtureMarkStudentPickup,
   fixtureParentLive,
+  fixtureParentStudentTripStatus,
   fixtureStartTrip,
+  fixtureTripStopStudents,
+  fixtureTripStudentTransportStatuses,
   isTransportFixtureMode,
 } from './fixtures.js';
+import {
+  normalizeParentStudentTripStatus,
+  normalizeStopAssignedStudent,
+  normalizeTripStopStudentsPayload,
+} from '../../utils/transportStudentAttendance.js';
 
 /**
  * Live tracking uses the same Spring Boot API as the rest of the app
@@ -227,6 +239,155 @@ export async function fetchTripHistory(params = {}) {
   try {
     const data = await trackingFetch(`/admin/transport/trips${suffix}`);
     return asList(data);
+  } catch (err) {
+    if (err?.status === 404 || err?.code === 'NOT_FOUND') return [];
+    throw err;
+  }
+}
+
+/** Admin/Driver: students assigned to a trip stop (keyed by stopId). */
+export async function getTripStopStudents(tripId, stopId) {
+  if (!tripId || !stopId) {
+    return normalizeTripStopStudentsPayload({ tripId, stop: { stopId }, students: [] });
+  }
+  if (isTransportFixtureMode()) {
+    return normalizeTripStopStudentsPayload(fixtureTripStopStudents(tripId, stopId));
+  }
+  try {
+    const data = await trackingFetch(
+      `/transport/trips/${encodeURIComponent(tripId)}/stops/${encodeURIComponent(stopId)}/students`,
+    );
+    return normalizeTripStopStudentsPayload(data);
+  } catch (err) {
+    if (err?.status === 404 || err?.code === 'NOT_FOUND') {
+      return normalizeTripStopStudentsPayload({
+        tripId,
+        stop: { stopId },
+        students: [],
+      });
+    }
+    throw err;
+  }
+}
+
+/** Driver: mark pickup at a stop. */
+export async function markStudentPickup({
+  tripId,
+  studentId,
+  stopId,
+  status = 'PICKED_UP',
+  deviceTimestamp,
+}) {
+  if (isTransportFixtureMode()) {
+    return fixtureMarkStudentPickup({ tripId, studentId, stopId, status });
+  }
+  return trackingFetch(
+    `/tracking/trips/${encodeURIComponent(tripId)}/students/${encodeURIComponent(studentId)}/pickup`,
+    {
+      method: 'POST',
+      body: {
+        stopId,
+        status,
+        deviceTimestamp: deviceTimestamp || new Date().toISOString(),
+      },
+    },
+  );
+}
+
+/** Driver: mark dropoff at a stop. */
+export async function markStudentDropoff({
+  tripId,
+  studentId,
+  stopId,
+  status = 'DROPPED_OFF',
+  deviceTimestamp,
+}) {
+  if (isTransportFixtureMode()) {
+    return fixtureMarkStudentDropoff({ tripId, studentId, stopId, status });
+  }
+  return trackingFetch(
+    `/tracking/trips/${encodeURIComponent(tripId)}/students/${encodeURIComponent(studentId)}/dropoff`,
+    {
+      method: 'POST',
+      body: {
+        stopId,
+        status,
+        deviceTimestamp: deviceTimestamp || new Date().toISOString(),
+      },
+    },
+  );
+}
+
+/** Parent: own child trip pickup/dropoff + approval status. */
+export async function getParentStudentTripStatus(tripId, studentId) {
+  if (!tripId || !studentId) return null;
+  if (isTransportFixtureMode()) {
+    return normalizeParentStudentTripStatus(fixtureParentStudentTripStatus(tripId, studentId));
+  }
+  try {
+    const data = await trackingFetch(
+      `/parent/transport/trips/${encodeURIComponent(tripId)}/students/${encodeURIComponent(studentId)}/status`,
+    );
+    return normalizeParentStudentTripStatus(data);
+  } catch (err) {
+    if (err?.status === 404 || err?.code === 'NOT_FOUND') return null;
+    throw err;
+  }
+}
+
+/** Parent: approve or reject pickup. */
+export async function approveStudentPickup({
+  tripId,
+  studentId,
+  approved,
+  reason,
+  comment,
+}) {
+  if (isTransportFixtureMode()) {
+    return fixtureApproveStudentPickup({ tripId, studentId, approved, reason });
+  }
+  const body = { approved: Boolean(approved) };
+  if (!approved && reason) body.reason = reason;
+  if (!approved && comment) body.comment = comment;
+  return trackingFetch(
+    `/parent/transport/trips/${encodeURIComponent(tripId)}/students/${encodeURIComponent(studentId)}/pickup/approval`,
+    { method: 'POST', body },
+  );
+}
+
+/** Parent: approve or reject dropoff. */
+export async function approveStudentDropoff({
+  tripId,
+  studentId,
+  approved,
+  reason,
+  comment,
+}) {
+  if (isTransportFixtureMode()) {
+    return fixtureApproveStudentDropoff({ tripId, studentId, approved, reason });
+  }
+  const body = { approved: Boolean(approved) };
+  if (!approved && reason) body.reason = reason;
+  if (!approved && comment) body.comment = comment;
+  return trackingFetch(
+    `/parent/transport/trips/${encodeURIComponent(tripId)}/students/${encodeURIComponent(studentId)}/dropoff/approval`,
+    { method: 'POST', body },
+  );
+}
+
+/** Admin optional: all student transport statuses for a trip. */
+export async function getTripStudentTransportStatuses(tripId) {
+  if (!tripId) return [];
+  if (isTransportFixtureMode()) {
+    return fixtureTripStudentTransportStatuses(tripId)
+      .map(normalizeStopAssignedStudent)
+      .filter(Boolean);
+  }
+  try {
+    const data = await trackingFetch(
+      `/admin/transport/trips/${encodeURIComponent(tripId)}/student-transport-statuses`,
+    );
+    return asList(data).map(normalizeStopAssignedStudent).filter(Boolean);
   } catch (err) {
     if (err?.status === 404 || err?.code === 'NOT_FOUND') return [];
     throw err;

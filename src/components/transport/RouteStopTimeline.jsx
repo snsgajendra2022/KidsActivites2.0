@@ -7,8 +7,36 @@ const TYPE_LABEL = {
   school: 'School',
 };
 
+function prepareTimelineStops(stops) {
+  const raw = Array.isArray(stops) ? stops : [];
+  const hasDisplayOrder = raw.some((stop) => stop?.displaySequence != null);
+  if (!hasDisplayOrder) return normalizeRouteStops(raw);
+
+  // Preserve rotated display order; do not re-sort by original sequence.
+  return raw
+    .map((stop, index) => {
+      if (!stop || typeof stop !== 'object') return null;
+      const lat = Number(stop.lat ?? stop.latitude);
+      const lng = Number(stop.lng ?? stop.longitude);
+      return {
+        id: String(stop.id || stop.stopId || `stop-${index + 1}`),
+        name: String(stop.name || `Stop ${index + 1}`).trim() || `Stop ${index + 1}`,
+        sequence: Number(stop.sequence) || index + 1,
+        displaySequence: Number(stop.displaySequence) || index + 1,
+        lat: Number.isFinite(lat) ? lat : null,
+        lng: Number.isFinite(lng) ? lng : null,
+        stopType: stop.stopType || stop.stop_type || 'pickup',
+        distanceFromBusKm: Number.isFinite(Number(stop.distanceFromBusKm))
+          ? Number(stop.distanceFromBusKm)
+          : null,
+      };
+    })
+    .filter(Boolean);
+}
+
 /**
  * Ordered stop path so admins can read a route at a glance: 1 → 2 → School.
+ * When stops include displaySequence (trip rotation), that order/label is used.
  */
 export default function RouteStopTimeline({
   stops = [],
@@ -16,7 +44,7 @@ export default function RouteStopTimeline({
   title = 'Stop order',
   emptyText = 'No stops on this route yet.',
 }) {
-  const list = normalizeRouteStops(stops);
+  const list = prepareTimelineStops(stops);
 
   if (!list.length) {
     return (
@@ -49,6 +77,10 @@ export default function RouteStopTimeline({
           const mapped = Number.isFinite(stop.lat) && Number.isFinite(stop.lng);
           const isLast = index === list.length - 1;
           const Icon = stop.stopType === 'school' ? School : Flag;
+          const label = stop.displaySequence != null ? stop.displaySequence : index + 1;
+          const kmLabel = Number.isFinite(stop.distanceFromBusKm)
+            ? `${stop.distanceFromBusKm.toFixed(2)} km`
+            : null;
           return (
             <li key={stop.id} className="relative flex gap-3 pb-4 last:pb-0">
               {!isLast && (
@@ -62,13 +94,13 @@ export default function RouteStopTimeline({
                   stop.stopType === 'school' ? 'bg-[#0058be]' : 'bg-[#0b1c30]'
                 }`}
               >
-                {index + 1}
+                {label}
               </span>
               <div className="min-w-0 flex-1 pt-0.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-[#0b1c30]">{stop.name}</p>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-[#667085]">
+                    <p className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-[#667085]">
                       <Icon size={12} />
                       {TYPE_LABEL[stop.stopType] || 'Stop'}
                       {' · '}
@@ -77,6 +109,18 @@ export default function RouteStopTimeline({
                       ) : (
                         <span className="text-amber-700">Needs location</span>
                       )}
+                      {kmLabel ? (
+                        <>
+                          {' · '}
+                          <span className="font-medium text-[#344054]">{kmLabel}</span>
+                        </>
+                      ) : null}
+                      {stop.displaySequence != null && stop.sequence !== stop.displaySequence ? (
+                        <>
+                          {' · '}
+                          <span className="text-[#98a2b3]">route #{stop.sequence}</span>
+                        </>
+                      ) : null}
                     </p>
                   </div>
                 </div>

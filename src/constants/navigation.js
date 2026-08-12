@@ -1,27 +1,69 @@
 import {
-  Award, Banknote, BarChart3, Bell, BookMarked, BookOpen, Bot, Briefcase, Bus,
-  CalendarClock, CalendarOff, CircleDollarSign, ClipboardCheck, ClipboardList,
+  Award, Banknote, BarChart3, Bell, BookMarked, BookOpen, Bot, Briefcase, Building2,
+  Bus, CalendarClock, CalendarOff, CircleDollarSign, ClipboardCheck, ClipboardList,
   Contact, CreditCard, FileBadge, FileInput, FileText, FolderOpen, GraduationCap,
-  History, Home, IdCard, Image, Images, Layers, Library, ListChecks, LogOut,
-  MapPinned, Megaphone, MessageCircle, MonitorPlay, Package, Palette, PenLine,
-  PieChart, Radio, Receipt, Route, School, ScrollText, Settings, Shield,
-  Stamp, UserCheck, UserCog, UsersRound, Wallet,
+  History, Home, IdCard, Image, Images, Landmark, Layers, LayoutGrid, Library, ListChecks,
+  LogOut, MapPinned, Megaphone, MessageCircle, MonitorPlay, MoreHorizontal, Package,
+  Palette, PenLine, PieChart, Radio, Receipt, Route, School, ScrollText, Settings,
+  Shield, Stamp, UserCheck, UserCog, Users, UsersRound, Wallet,
 } from 'lucide-react';
 import { ROLES } from './roles.js';
 
-/** Section header icons used by the collapsed sidebar rail + flyout. */
+/**
+ * Section header icons for the collapsed sidebar rail + flyout.
+ * Keys are display section titles (exact match, case-insensitive via resolveSectionIcon).
+ * Keep every icon unique so rail groups never look identical.
+ */
 export const NAV_SECTION_ICONS = {
+  // Canonical short titles (local / mock nav)
   School: School,
-  Classroom: GraduationCap,
+  Classroom: BookOpen,
   Transport: Bus,
   Finance: Wallet,
-  Communication: MessageCircle,
+  Communication: Megaphone,
   Settings: Settings,
-  Family: Home,
-  Account: UserCheck,
-  Platform: Layers,
-  More: Layers,
+  Family: Users,
+  Account: Contact,
+  Platform: LayoutGrid,
+  More: MoreHorizontal,
+
+  // API / portal display titles (admin especially)
+  'School Setup': Building2,
+  'Students & Classes': UsersRound,
+  Students: GraduationCap,
+  Academics: MonitorPlay,
+  Operations: Briefcase,
+  Library: Library,
+  Media: Images,
+  // Legacy / API aliases → same icon as Finance (normalized to "Finance" in navUtils)
+  'Fees & Finance': Wallet,
+  Reports: Wallet,
+  HR: UserCog,
+  Security: Shield,
 };
+
+/** Menu ids that always belong under the Finance sidebar group. */
+export const FINANCE_NAV_IDS = [
+  'admin_fees',
+  'admin_fees_advanced',
+  'admin_accounting',
+  'admin_expenses',
+  'admin_payroll',
+  'admin_reports',
+  'admin_reports_hub',
+];
+
+/** Stable palette when a section title is unknown — prefer icons unused above. */
+export const NAV_SECTION_FALLBACK_ICONS = [
+  Layers,
+  FolderOpen,
+  Package,
+  ListChecks,
+  Radio,
+  Stamp,
+  Palette,
+  Bot,
+];
 
 export const PORTAL_BRANDING_NAV = {
   id: 'admin_portal_settings',
@@ -77,10 +119,10 @@ const ADMIN_CORE_NAV = [
   { id: 'admin_transport_live', to: '/admin/transport/live', label: 'Live Tracking', icon: MapPinned, iconName: 'MapPinned', section: 'Transport' },
   { id: 'admin_transport_trips', to: '/admin/transport/trips', label: 'Trip History', icon: History, iconName: 'History', section: 'Transport' },
 
-  // Finance — money + reports
+  // Finance — fees, accounting, payroll, reports hub
   { id: 'admin_fees', to: '/admin/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Finance' },
   { id: 'admin_fees_advanced', to: '/admin/fees-advanced', label: 'Advanced Fees', icon: CircleDollarSign, iconName: 'CircleDollarSign', section: 'Finance' },
-  { id: 'admin_accounting', to: '/admin/accounting', label: 'Accounting Dashboard', icon: Wallet, iconName: 'Wallet', section: 'Finance' },
+  { id: 'admin_accounting', to: '/admin/accounting', label: 'Accounting Dashboard', icon: Landmark, iconName: 'Landmark', section: 'Finance' },
   { id: 'admin_expenses', to: '/admin/expenses', label: 'Expenses', icon: Receipt, iconName: 'Receipt', section: 'Finance' },
   { id: 'admin_payroll', to: '/admin/payroll', label: 'Payroll', icon: Banknote, iconName: 'Banknote', section: 'Finance' },
   { id: 'admin_reports', to: '/admin/reports', label: 'Reports', icon: BarChart3, iconName: 'BarChart3', section: 'Finance' },
@@ -188,9 +230,11 @@ export const TEACHER_NAV = [
 export const ACCOUNTANT_NAV = [
   { id: 'admin_fees', to: '/admin/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Finance' },
   { id: 'admin_fees_advanced', to: '/admin/fees-advanced', label: 'Advanced Fees', icon: CircleDollarSign, iconName: 'CircleDollarSign', section: 'Finance' },
-  { id: 'admin_accounting', to: '/admin/accounting', label: 'Accounting', icon: Wallet, iconName: 'Wallet', section: 'Finance' },
+  { id: 'admin_accounting', to: '/admin/accounting', label: 'Accounting Dashboard', icon: Landmark, iconName: 'Landmark', section: 'Finance' },
+  { id: 'admin_expenses', to: '/admin/expenses', label: 'Expenses', icon: Receipt, iconName: 'Receipt', section: 'Finance' },
   { id: 'admin_payroll', to: '/admin/payroll', label: 'Payroll', icon: Banknote, iconName: 'Banknote', section: 'Finance' },
   { id: 'admin_reports', to: '/admin/reports', label: 'Reports', icon: BarChart3, iconName: 'BarChart3', section: 'Finance' },
+  { id: 'admin_reports_hub', to: '/admin/reports-hub', label: 'Reports Hub', icon: PieChart, iconName: 'PieChart', section: 'Finance' },
   { id: 'admin_notice_board', to: '/admin/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
   { id: 'admin_notifications', to: '/admin/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell', section: 'Communication' },
 ];

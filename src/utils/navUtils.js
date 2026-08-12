@@ -1,6 +1,10 @@
-import { NAV_BY_ROLE, NAV_SECTION_ICONS } from '../constants/navigation.js';
+import {
+  FINANCE_NAV_IDS,
+  NAV_BY_ROLE,
+  NAV_SECTION_FALLBACK_ICONS,
+  NAV_SECTION_ICONS,
+} from '../constants/navigation.js';
 import { resolveMenuIcon } from '../constants/menuIcons.js';
-import { Layers } from 'lucide-react';
 
 export function getAllMenuItemsGrouped() {
   const grouped = {};
@@ -8,6 +12,59 @@ export function getAllMenuItemsGrouped() {
     grouped[role] = items;
   });
   return grouped;
+}
+
+const NAV_SECTION_ICON_BY_LOWER = Object.fromEntries(
+  Object.entries(NAV_SECTION_ICONS).map(([key, icon]) => [key.toLowerCase(), icon]),
+);
+
+const FINANCE_NAV_ID_SET = new Set(FINANCE_NAV_IDS);
+
+/** Display aliases that should collapse into the Finance sidebar group. */
+const FINANCE_SECTION_ALIASES = new Set([
+  'finance',
+  'fees & finance',
+  'fees and finance',
+  'finance & fees',
+  'finance and fees',
+  'reports',
+]);
+
+/**
+ * Canonicalize sidebar section titles so finance items never split across
+ * "Fees & Finance" / "Reports" / "Finance".
+ */
+export function normalizeNavSection(section, itemId) {
+  if (itemId && FINANCE_NAV_ID_SET.has(itemId)) return 'Finance';
+  const key = String(section || '').trim();
+  if (!key) return key;
+  if (FINANCE_SECTION_ALIASES.has(key.toLowerCase())) return 'Finance';
+  return key;
+}
+
+/** Keyword → icon for API section titles that aren't exact map keys. */
+const SECTION_ICON_KEYWORDS = [
+  [/students?\s*&?\s*classes?|students?/, NAV_SECTION_ICONS['Students & Classes']],
+  [/school\s*setup|setup/, NAV_SECTION_ICONS['School Setup']],
+  [/classroom|academics?|learning|lms/, NAV_SECTION_ICONS.Classroom],
+  [/transport|bus|fleet/, NAV_SECTION_ICONS.Transport],
+  [/finance|fees?|payroll|accounting|money|reports?/, NAV_SECTION_ICONS.Finance],
+  [/communicat|message|notice|notif/, NAV_SECTION_ICONS.Communication],
+  [/settings?|config|admin|security/, NAV_SECTION_ICONS.Settings],
+  [/family|parent|home/, NAV_SECTION_ICONS.Family],
+  [/account|profile/, NAV_SECTION_ICONS.Account],
+  [/platform|operator/, NAV_SECTION_ICONS.Platform],
+  [/\bschool\b/, NAV_SECTION_ICONS.School],
+  [/more|other/, NAV_SECTION_ICONS.More],
+];
+
+function hashSectionKey(section) {
+  let hash = 0;
+  for (let i = 0; i < section.length; i += 1) {
+    hash = ((hash << 5) - hash) + section.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
 }
 
 /** Unique built-in menu items across all roles (by id). */
@@ -49,7 +106,19 @@ export function sortNavItemsByOrder(items, orderIds = []) {
 
 /** Resolve the lucide icon for a nav section group (collapsed rail). */
 export function resolveSectionIcon(section) {
-  return NAV_SECTION_ICONS[section] || Layers;
+  const key = String(section || '').trim();
+  if (!key) return NAV_SECTION_FALLBACK_ICONS[0];
+
+  const exact = NAV_SECTION_ICONS[key] || NAV_SECTION_ICON_BY_LOWER[key.toLowerCase()];
+  if (exact) return exact;
+
+  const lower = key.toLowerCase();
+  for (const [pattern, icon] of SECTION_ICON_KEYWORDS) {
+    if (pattern.test(lower)) return icon;
+  }
+
+  const palette = NAV_SECTION_FALLBACK_ICONS;
+  return palette[hashSectionKey(lower) % palette.length];
 }
 
 /**
@@ -194,6 +263,7 @@ export function resolveNavItemsForRole(role, config = {}) {
         ...item,
         label: custom?.label?.trim() || item.label,
         icon: resolveMenuIcon(custom?.icon, item.icon),
+        section: normalizeNavSection(item.section, item.id),
       };
     });
 
@@ -204,7 +274,7 @@ export function resolveNavItemsForRole(role, config = {}) {
       to: item.to,
       label: item.label,
       icon: resolveMenuIcon(item.icon),
-      section: item.section || 'More',
+      section: normalizeNavSection(item.section || 'More', item.id),
       custom: true,
     }));
 

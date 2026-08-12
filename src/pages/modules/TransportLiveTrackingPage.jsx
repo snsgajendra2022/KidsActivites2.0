@@ -17,7 +17,13 @@ import Select from '../../components/ui/Select.jsx';
 import LiveBusMap from '../../components/transport/LiveBusMap.jsx';
 import GpsDeviceSetupModal from '../../components/transport/GpsDeviceSetupModal.jsx';
 import RouteStopTimeline from '../../components/transport/RouteStopTimeline.jsx';
-import { fetchAdminFleetLive } from '../../services/transportTracking/trackingApi.js';
+import StopDetailsModal from '../../components/transport/StopDetailsModal.jsx';
+import TripStudentStatusTable from '../../components/transport/TripStudentStatusTable.jsx';
+import {
+  fetchAdminFleetLive,
+  getTripStopStudents,
+  getTripStudentTransportStatuses,
+} from '../../services/transportTracking/trackingApi.js';
 import { createTrackingSocket } from '../../services/transportTracking/trackingSocket.js';
 import { transportRouteService } from '../../services/schoolModules/index.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
@@ -30,11 +36,18 @@ import {
 } from '../../utils/transportRouteGeo.js';
 import { isNewerLocation } from '../../utils/transportLocationSequence.js';
 import useRoadRoute from '../../hooks/useRoadRoute.js';
+import useTripStopRotation from '../../hooks/useTripStopRotation.js';
 import {
   formatRouteDistance,
   formatRouteDuration,
 } from '../../services/geocoding/roadRouting.js';
 import { WS_EVENT_TYPES } from '../../types/transportModels.js';
+import {
+  applyStudentTransportWsEvent,
+  friendlyTransportError,
+  isStudentTransportWsEvent,
+} from '../../utils/transportStudentAttendance.js';
+import { useToast } from '../../context/ToastContext.jsx';
 
 const FILTERS = [
   { value: 'all', label: 'All bus statuses' },
@@ -109,6 +122,7 @@ function Panel({ step, title, children, className = '' }) {
 
 export default function TransportLiveTrackingPage() {
   const { config } = usePortalConfig();
+  const { toast } = useToast();
   const schoolAddress = config?.school?.address || '';
 
   const [statusFilter, setStatusFilter] = useState('all');
@@ -123,6 +137,13 @@ export default function TransportLiveTrackingPage() {
   const [selectedId, setSelectedId] = useState('');
   const [gpsOpen, setGpsOpen] = useState(false);
   const [schoolCenter, setSchoolCenter] = useState(null);
+  const [selectedStop, setSelectedStop] = useState(null);
+  const [stopStudents, setStopStudents] = useState([]);
+  const [stopCounts, setStopCounts] = useState(null);
+  const [stopLoading, setStopLoading] = useState(false);
+  const [stopError, setStopError] = useState('');
+  const [tripStatuses, setTripStatuses] = useState([]);
+  const [tripStatusesLoading, setTripStatusesLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,6 +212,11 @@ export default function TransportLiveTrackingPage() {
         }
       },
       onEvent: (event) => {
+        if (isStudentTransportWsEvent(event?.type)) {
+          setStopStudents((current) => applyStudentTransportWsEvent(current, event));
+          setTripStatuses((current) => applyStudentTransportWsEvent(current, event));
+          return;
+        }
         if (event?.type === WS_EVENT_TYPES.LOCATION_UPDATED && event.data) {
           setVehicles((current) => upsertVehicle(current, event.data));
           return;
@@ -241,22 +267,6 @@ export default function TransportLiveTrackingPage() {
 
   const roadRoute = useRoadRoute(selectedStops, { enabled: Boolean(selectedRoute) });
 
-  const stopFeatures = useMemo(() => {
-    if (!selectedRoute) return [];
-    return stopsToMapFeatures(selectedRoute.stops);
-  }, [selectedRoute]);
-
-  const routingLabel = useMemo(() => {
-    if (roadRoute.loading) return 'Building on-road path…';
-    const distance = formatRouteDistance(roadRoute.distanceMeters);
-    const duration = formatRouteDuration(roadRoute.durationSeconds);
-    if (roadRoute.source === 'osrm' && (distance || duration)) {
-      return `On-road · ${[distance, duration].filter(Boolean).join(' · ')}`;
-    }
-    if (roadRoute.source === 'straight') return 'Straight path (road router unavailable)';
-    return '';
-  }, [roadRoute]);
-
   const filteredVehicles = useMemo(() => {
     let list = vehicles;
     if (selectedRoute) {
@@ -272,6 +282,70 @@ export default function TransportLiveTrackingPage() {
     () => filteredVehicles.find((v) => String(v.vehicle_id || v.vehicleId) === String(selectedId)) || null,
     [filteredVehicles, selectedId],
   );
+
+  const rotationBus = useMemo(() => {
+    if (selected) return selected;
+    return filteredVehicles.find((vehicle) => {
+      const lat = Number(vehicle.latitude ?? vehicle.lat);
+      const lng = Number(vehicle.longitude ?? vehicle.lng);
+      return Number.isFinite(lat) && Number.isFinite(lng);
+    }) || null;
+  }, [selected, filteredVehicles]);
+
+  const rotationTripStatus = String(
+    rotationBus?.trip_status || rotationBus?.tripStatus || '',
+  ).toLowerCase();
+  const rotationTrackingStatus = String(
+    rotationBus?.tracking_status || rotationBus?.trackingStatus || '',
+  ).toLowerCase();
+  const adminTripActive = Boolean(rotationBus)
+    && rotationTripStatus !== 'completed'
+    && rotationTrackingStatus !== 'completed';
+
+  const rotationTripKey = rotationBus?.trip_id
+    || rotationBus?.tripId
+    || (adminTripActive && (rotationBus?.vehicle_id || rotationBus?.vehicleId)
+      ? `vehicle-${rotationBus.vehicle_id || rotationBus.vehicleId}`
+      : null);
+
+  const { displayStops, isRotationLocked } = useTripStopRotation({
+    tripKey: rotationTripKey,
+    stops: selectedRoute?.stops,
+    busLat: rotationBus?.latitude ?? rotationBus?.lat,
+    busLng: rotationBus?.longitude ?? rotationBus?.lng,
+    tripActive: adminTripActive,
+    resetToken: selectedRouteId || null,
+  });
+
+  const stopFeatures = useMemo(() => {
+    if (!selectedRoute) return [];
+    if (displayStops.length) return displayStops;
+    return stopsToMapFeatures(selectedRoute.stops);
+  }, [selectedRoute, displayStops]);
+
+  const timelineStops = isRotationLocked && displayStops.length
+    ? displayStops.map((stop) => ({
+      id: stop.id,
+      name: stop.name,
+      sequence: stop.sequence,
+      displaySequence: stop.displaySequence,
+      lat: stop.latitude,
+      lng: stop.longitude,
+      stopType: stop.stopType || stop.stop_type,
+      distanceFromBusKm: stop.distanceFromBusKm,
+    }))
+    : selectedStops;
+
+  const routingLabel = useMemo(() => {
+    if (roadRoute.loading) return 'Building on-road path…';
+    const distance = formatRouteDistance(roadRoute.distanceMeters);
+    const duration = formatRouteDuration(roadRoute.durationSeconds);
+    if (roadRoute.source === 'osrm' && (distance || duration)) {
+      return `On-road · ${[distance, duration].filter(Boolean).join(' · ')}`;
+    }
+    if (roadRoute.source === 'straight') return 'Straight path (road router unavailable)';
+    return '';
+  }, [roadRoute]);
 
   useEffect(() => {
     if (selectedId && !filteredVehicles.some((v) => String(v.vehicle_id || v.vehicleId) === String(selectedId))) {
@@ -295,6 +369,50 @@ export default function TransportLiveTrackingPage() {
   const mappedStopCount = selectedStops.filter(
     (stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lng),
   ).length;
+
+  const activeTripId = selected?.trip_id || selected?.tripId || rotationBus?.trip_id || rotationBus?.tripId || '';
+
+  const openStopDetails = useCallback(async (stop) => {
+    setSelectedStop(stop);
+    setStopError('');
+    setStopStudents([]);
+    setStopCounts(null);
+    if (!activeTripId) {
+      setStopError('Select a bus with an active trip to load students for this stop.');
+      return;
+    }
+    setStopLoading(true);
+    try {
+      const result = await getTripStopStudents(activeTripId, stop.id);
+      setStopStudents(result.students || []);
+      setStopCounts(result.counts || null);
+    } catch (err) {
+      setStopError(friendlyTransportError(err));
+      toast(friendlyTransportError(err), 'error');
+    } finally {
+      setStopLoading(false);
+    }
+  }, [activeTripId, toast]);
+
+  useEffect(() => {
+    if (!activeTripId) {
+      setTripStatuses([]);
+      return undefined;
+    }
+    let cancelled = false;
+    setTripStatusesLoading(true);
+    getTripStudentTransportStatuses(activeTripId)
+      .then((list) => {
+        if (!cancelled) setTripStatuses(list || []);
+      })
+      .catch(() => {
+        if (!cancelled) setTripStatuses([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTripStatusesLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [activeTripId]);
 
   return (
     <DashboardLayout>
@@ -468,17 +586,29 @@ export default function TransportLiveTrackingPage() {
                     selectedVehicleId={selectedId}
                     routeGeoJson={roadRoute.geoJson}
                     stopFeatures={stopFeatures}
-                    fitToken={`${selectedRouteId}:${roadRoute.source}:${roadRoute.distanceMeters}:${stopFeatures.map((stop) => `${stop.id}:${stop.latitude}:${stop.longitude}`).join('|')}`}
+                    fitToken={`${selectedRouteId}:${rotationTripKey || ''}:${roadRoute.source}:${roadRoute.distanceMeters}:${stopFeatures.map((stop) => `${stop.id}:${stop.latitude}:${stop.longitude}:${stop.displaySequence ?? stop.sequence ?? ''}`).join('|')}`}
                     defaultCenter={schoolCenter}
                     searchBias={searchBias}
                     routingLabel={routingLabel}
                     onSelectVehicle={(vehicle) => setSelectedId(String(vehicle.vehicle_id || vehicle.vehicleId))}
+                    onSelectStop={(stop) => void openStopDetails(stop)}
                     emptyTitle={selectedRoute ? `${selectedRoute.name} needs map locations` : 'Select a route'}
-                    emptyHint="Open Manage routes, search each stop, save, then refresh this page."
+                    emptyHint="Open Manage routes, search each stop, save, then refresh this page. Tap a stop marker for assigned students."
                     className="h-full w-full border-0"
                   />
                 </div>
               </div>
+
+              {activeTripId ? (
+                <div className="sb-card overflow-hidden p-4">
+                  <h3 className="mb-3 text-sm font-bold text-[#0b1c30]">Trip student transport status</h3>
+                  <TripStudentStatusTable
+                    students={tripStatuses}
+                    loading={tripStatusesLoading}
+                    emptyText="No student pickup/drop-off marks for this trip yet (or API not deployed)."
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div className="flex max-h-none flex-col gap-4 2xl:max-h-[min(70vh,720px)]">
@@ -494,7 +624,8 @@ export default function TransportLiveTrackingPage() {
                     </div>
                     <div className="min-h-0 max-h-[240px] flex-1 overflow-y-auto 2xl:max-h-none">
                       <RouteStopTimeline
-                        stops={selectedStops}
+                        stops={timelineStops}
+                        title={isRotationLocked ? 'Stop order (from nearest)' : 'Stop order'}
                         emptyText="This route has no stops. Add them under Manage routes."
                       />
                     </div>
@@ -572,6 +703,18 @@ export default function TransportLiveTrackingPage() {
         )}
 
         <GpsDeviceSetupModal open={gpsOpen} onClose={() => setGpsOpen(false)} />
+        <StopDetailsModal
+          open={Boolean(selectedStop)}
+          onClose={() => setSelectedStop(null)}
+          stop={selectedStop}
+          students={stopStudents}
+          counts={stopCounts}
+          routeName={selectedRoute?.name || selected?.route_name || selected?.routeName}
+          direction={selected?.direction || 'morning'}
+          loading={stopLoading}
+          error={stopError}
+          viewerRole="admin"
+        />
       </PageTransition>
     </DashboardLayout>
   );

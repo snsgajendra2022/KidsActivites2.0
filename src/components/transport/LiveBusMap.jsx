@@ -35,16 +35,25 @@ function createBusIcon(status = 'running', selected = false) {
   });
 }
 
-function createStopIcon(stopType, sequence) {
+function createStopIcon(stopType, sequence, studentCount) {
   const color = stopType === 'school' ? '#0058be' : '#111827';
   const label = sequence != null ? String(sequence) : '';
+  const count = Number(studentCount);
+  const badge = Number.isFinite(count) && count > 0
+    ? `<span style="
+        position:absolute;top:-6px;right:-8px;min-width:16px;height:16px;padding:0 4px;
+        border-radius:999px;background:#0B6E4F;color:#fff;font-size:9px;font-weight:700;
+        display:grid;place-items:center;border:1px solid #fff;
+      ">${count > 9 ? '9+' : count}</span>`
+    : '';
   return L.divIcon({
     className: 'live-stop-marker',
     html: `<div style="
-      min-width:${label ? 22 : 12}px;height:${label ? 22 : 12}px;padding:0 ${label ? 5 : 0}px;
+      position:relative;min-width:${label ? 22 : 12}px;height:${label ? 22 : 12}px;padding:0 ${label ? 5 : 0}px;
       border-radius:999px;background:${color};color:#fff;font-size:11px;font-weight:700;
       display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);
-    ">${label}</div>`,
+      cursor:pointer;
+    ">${label}${badge}</div>`,
     iconSize: [label ? 22 : 12, label ? 22 : 12],
     iconAnchor: [label ? 11 : 6, label ? 11 : 6],
   });
@@ -132,6 +141,7 @@ export default function LiveBusMap({
   routeGeoJson = null,
   stopFeatures = [],
   onSelectVehicle,
+  onSelectStop,
   className = '',
   fitToken = '',
   defaultCenter = null,
@@ -252,18 +262,32 @@ export default function LiveBusMap({
       if (!Number.isFinite(stop.latitude) || !Number.isFinite(stop.longitude)) return;
       seen.add(id);
 
+      const markerSeq = stop.displaySequence != null ? stop.displaySequence : stop.sequence;
+      const stopType = stop.stop_type || stop.stopType;
+      const studentCount = stop.assignedStudentCount ?? stop.studentCount;
+      const kmLabel = Number.isFinite(Number(stop.distanceFromBusKm))
+        ? ` · ${Number(stop.distanceFromBusKm).toFixed(2)} km`
+        : '';
+      const countLabel = Number.isFinite(Number(studentCount)) && Number(studentCount) > 0
+        ? ` · ${Number(studentCount)} student${Number(studentCount) === 1 ? '' : 's'}`
+        : '';
+      const popup = `${stop.name || 'Stop'}${markerSeq != null ? ` #${markerSeq}` : ''}${kmLabel}${countLabel}`;
+
       let marker = markersRef.current.get(id);
       if (!marker) {
         marker = L.marker([stop.latitude, stop.longitude], {
-          icon: createStopIcon(stop.stop_type, stop.sequence),
+          icon: createStopIcon(stopType, markerSeq, studentCount),
         })
-          .bindPopup(stop.name || 'Stop')
+          .bindPopup(popup)
+          .on('click', () => onSelectStop?.(stop))
           .addTo(layer);
         markersRef.current.set(id, marker);
       } else {
         marker.setLatLng([stop.latitude, stop.longitude]);
-        marker.setIcon(createStopIcon(stop.stop_type, stop.sequence));
-        marker.setPopupContent(stop.name || 'Stop');
+        marker.setIcon(createStopIcon(stopType, markerSeq, studentCount));
+        marker.setPopupContent(popup);
+        marker.off('click');
+        marker.on('click', () => onSelectStop?.(stop));
       }
     });
 
@@ -312,6 +336,7 @@ export default function LiveBusMap({
     stopFeatures,
     routeGeoJson,
     onSelectVehicle,
+    onSelectStop,
     fitToken,
   ]);
 

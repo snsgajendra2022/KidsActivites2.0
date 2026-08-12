@@ -1,3 +1,45 @@
+function toRad(value) {
+  return (value * Math.PI) / 180;
+}
+
+/** Great-circle distance in meters (aligned with mobile transportRouteGeo). */
+export function haversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Normalize and sort mapped stops that have valid coordinates.
+ * Used by nearest-stop rotation (same rules as mobile).
+ */
+export function normalizeMappedStops(stops) {
+  if (!Array.isArray(stops)) return [];
+  return stops
+    .map((stop, index) => {
+      if (!stop || typeof stop !== 'object') return null;
+      const lat = Number(stop.lat ?? stop.latitude);
+      const lng = Number(stop.lng ?? stop.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return {
+        id: String(stop.id || `stop-${index + 1}`),
+        name: String(stop.name || `Stop ${index + 1}`).trim() || `Stop ${index + 1}`,
+        lat,
+        lng,
+        sequence: Number(stop.sequence) || index + 1,
+        stopType: String(
+          stop.stopType || stop.stop_type || (index === stops.length - 1 ? 'school' : 'pickup'),
+        ),
+        radiusMeters: Number(stop.radiusMeters) > 0 ? Number(stop.radiusMeters) : 80,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.sequence - b.sequence);
+}
+
 /** Normalize route stops from API (array) or legacy comma-separated string. */
 export function normalizeRouteStops(stops) {
   if (Array.isArray(stops)) {

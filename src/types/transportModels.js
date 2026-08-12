@@ -183,7 +183,49 @@ export const WS_EVENT_TYPES = Object.freeze({
   TRIP_STARTED: 'transport.trip_started',
   TRIP_COMPLETED: 'transport.trip_completed',
   GEOFENCE: 'transport.geofence',
+  STUDENT_PICKED_UP: 'transport.student_picked_up',
+  STUDENT_DROPPED_OFF: 'transport.student_dropped_off',
+  PICKUP_PARENT_APPROVED: 'transport.pickup_parent_approved',
+  PICKUP_PARENT_REJECTED: 'transport.pickup_parent_rejected',
+  DROPOFF_PARENT_APPROVED: 'transport.dropoff_parent_approved',
+  DROPOFF_PARENT_REJECTED: 'transport.dropoff_parent_rejected',
 });
+
+/**
+ * @typedef {'PENDING'|'PICKED_UP'|'DROPPED_OFF'|'NOT_PRESENT'|'SKIPPED'|'PARENT_CONFIRMED'|'PARENT_REJECTED'|string} StudentTransportActionStatus
+ * @typedef {'PENDING'|'APPROVED'|'REJECTED'|null|string} ParentApprovalStatus
+ *
+ * @typedef {object} StudentActionBlock
+ * @property {StudentTransportActionStatus} status
+ * @property {string|null} [markedAt]
+ * @property {string|null} [markedByDriverId]
+ * @property {ParentApprovalStatus} [parentApprovalStatus]
+ * @property {string|null} [parentApprovedAt]
+ * @property {string|null} [stopId]
+ * @property {string|null} [stopName]
+ * @property {string|null} [reason]
+ *
+ * @typedef {object} StopAssignedStudent
+ * @property {string} studentId
+ * @property {string} studentName
+ * @property {string|null} [profileImageUrl]
+ * @property {string|null} [classId]
+ * @property {string|null} [className]
+ * @property {string|null} [sectionId]
+ * @property {string|null} [sectionName]
+ * @property {string|null} [parentName]
+ * @property {string|null} [assignmentId]
+ * @property {string|null} [stopId]
+ * @property {string|null} [stopName]
+ * @property {StudentActionBlock|null} [pickup]
+ * @property {StudentActionBlock|null} [dropoff]
+ *
+ * @typedef {object} StudentTripAttendance
+ * @property {string} studentId
+ * @property {string} tripId
+ * @property {StudentActionBlock} [pickup]
+ * @property {StudentActionBlock} [dropoff]
+ */
 
 function asRecord(value) {
   return value && typeof value === 'object' ? value : {};

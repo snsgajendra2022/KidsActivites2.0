@@ -45,10 +45,12 @@ Frontend fixture mode (DEV ONLY):
 | AdminFleet | vehicle array | Admin live |
 | TrackingStatus | `running` \| `stopped` \| `warning` \| `offline` \| `completed` | Filters + badges |
 | TrackingUiState | `NO_ASSIGNMENT` … `COMPLETED` / `TRIP_COMPLETED` | `transportTrackingState` |
-| WS events | see §9 | sockets |
+| StopAssignedStudent | `studentId`, names, class IDs, `pickup`/`dropoff` action blocks | Stop details + driver marks |
+| StudentTripAttendance | separate pickup/dropoff + `parentApprovalStatus` | Parent approval + admin table |
+| WS events | see §3 | sockets |
 
-Web types: `src/types/transportModels.js`  
-Mobile types: `src/types/erp.ts` + `src/api/transportApi.ts`
+Web types: `src/types/transportModels.js` + `src/utils/transportStudentAttendance.js`  
+Mobile types: `src/types/erp.ts` + `src/api/transportApi.ts` + `src/utils/transportStudentAttendance.ts`
 
 ---
 
@@ -195,6 +197,92 @@ Status: **FRONTEND READY** / **BACKEND REQUIRED**.
 Start body: `{ vehicle_id, route_id?, direction }`.  
 Status: **FRONTEND READY** / **BACKEND REQUIRED**.
 
+### 2.11 Trip stop students (Admin / Driver)
+
+| Field | Value |
+|-------|-------|
+| Method / path | `GET /transport/trips/{tripId}/stops/{stopId}/students` |
+| Role | `school_admin` / `transport_manager` / `driver` (own trip) |
+| Auth | JWT + tenant |
+| Path params | `tripId`, `stopId` (students keyed by **stopId**, never displaySequence) |
+| Response | `{ tripId, stop: { stopId, stopName, displaySequence? }, students: StopAssignedStudent[] }` |
+| Errors | `401`/`403`; soft `404` → empty students list |
+| Frontend fn | Web/Mobile `getTripStopStudents(tripId, stopId)` |
+| Consumers | Admin live stop modal; Driver stop sheet; **not** Parent (privacy) |
+| Status | **FRONTEND READY** / **BACKEND REQUIRED** |
+
+`StopAssignedStudent` includes `studentId`, `studentName`, optional `classId`/`className`, and separate `pickup` / `dropoff` action blocks (`status`, `markedAt`, `markedByDriverId`, `parentApprovalStatus`, `parentApprovedAt`).
+
+### 2.12 Driver mark pickup
+
+| Field | Value |
+|-------|-------|
+| Method / path | `POST /tracking/trips/{tripId}/students/{studentId}/pickup` |
+| Role | `driver` (assigned trip) |
+| Auth | JWT + tenant |
+| Body | `{ stopId, status: "PICKED_UP"\|"NOT_PRESENT"\|"SKIPPED", deviceTimestamp }` |
+| Response | `{ studentId, tripId, pickup: { status, stopId, markedAt, markedByDriverId, parentApprovalStatus } }` |
+| Errors | see §7 transport codes (`TRANSPORT_PICKUP_ALREADY_MARKED`, …) |
+| Frontend fn | Web/Mobile `markStudentPickup` |
+| Consumers | Driver mobile stop sheet |
+| Status | **FRONTEND READY** / **BACKEND REQUIRED** |
+
+On `PICKED_UP`, backend should set `parentApprovalStatus: PENDING` and emit `transport.student_picked_up`.
+
+### 2.13 Driver mark dropoff
+
+| Field | Value |
+|-------|-------|
+| Method / path | `POST /tracking/trips/{tripId}/students/{studentId}/dropoff` |
+| Role | `driver` |
+| Auth | JWT + tenant |
+| Body | `{ stopId, status: "DROPPED_OFF"\|"SKIPPED"?, deviceTimestamp }` |
+| Response | `{ studentId, tripId, dropoff: { … } }` |
+| Frontend fn | Web/Mobile `markStudentDropoff` |
+| Consumers | Driver mobile stop sheet (evening / DROPOFF direction only) |
+| Status | **FRONTEND READY** / **BACKEND REQUIRED** |
+
+### 2.14 Parent student trip status
+
+| Field | Value |
+|-------|-------|
+| Method / path | `GET /parent/transport/trips/{tripId}/students/{studentId}/status` |
+| Role | `parent` (linked child only) |
+| Auth | JWT + tenant |
+| Response | `{ studentId, studentName, tripId, pickup?, dropoff?, timeline? }` |
+| Errors | `403 TRANSPORT_PARENT_NOT_AUTHORIZED`; soft `404` → null |
+| Frontend fn | Web/Mobile `getParentStudentTripStatus` |
+| Consumers | Parent web/mobile live + approval card |
+| Status | **FRONTEND READY** / **BACKEND REQUIRED** |
+
+### 2.15 Parent pickup / dropoff approval
+
+| Method | Path | Body |
+|--------|------|------|
+| POST | `/parent/transport/trips/{tripId}/students/{studentId}/pickup/approval` | `{ approved: true }` or `{ approved: false, reason?, comment? }` |
+| POST | `/parent/transport/trips/{tripId}/students/{studentId}/dropoff/approval` | same |
+
+Role: `parent` (linked child).  
+Response keeps driver status intact and sets `parentApprovalStatus` to `APPROVED` / `REJECTED` + `parentApprovedAt`.  
+Frontend: `approveStudentPickup` / `approveStudentDropoff`.  
+WS: `transport.pickup_parent_approved|rejected`, `transport.dropoff_parent_approved|rejected`.  
+Status: **FRONTEND READY** / **BACKEND REQUIRED**.
+
+### 2.16 Admin trip student transport statuses (optional)
+
+| Field | Value |
+|-------|-------|
+| Method / path | `GET /admin/transport/trips/{tripId}/student-transport-statuses` |
+| Role | admin / transport_manager |
+| Response | `StopAssignedStudent[]` (all students on trip) |
+| Soft 404 | empty array |
+| Frontend fn | Web/Mobile `getTripStudentTransportStatuses` |
+| Consumers | Admin live status table |
+| Status | **FRONTEND READY** / **BACKEND REQUIRED** |
+
+Future correction (not implemented in UI):  
+`PATCH /tracking/trips/{tripId}/students/{studentId}/transport-status` with audit — **BACKEND REQUIRED** later.
+
 ---
 
 ## 3. WebSocket
@@ -203,9 +291,11 @@ Status: **FRONTEND READY** / **BACKEND REQUIRED**.
 |-------|-------|
 | URL | `ws(s)://{API_HOST}/ws/tracking?token={JWT}&vehicleId={optional}&tenant={slug}` |
 | Frontend | Web `createTrackingSocket` / `getTrackingWebSocketUrl`; Mobile `createTrackingSocket` |
-| Events | `vehicle.location_updated`, `vehicle.tracking_warning`, `vehicle.tracking_offline`, `transport.trip_started`, `transport.trip_completed`, geofence enter/leave |
-| Client rules | Ignore stale `sequence`/`updatedAt`; on reconnect (`connected` + `reconnect:true`) REST-resync snapshot; cleanup on unmount |
+| Events | `vehicle.location_updated`, `vehicle.tracking_warning`, `vehicle.tracking_offline`, `transport.trip_started`, `transport.trip_completed`, geofence enter/leave, **`transport.student_picked_up`**, **`transport.student_dropped_off`**, **`transport.pickup_parent_approved`**, **`transport.pickup_parent_rejected`**, **`transport.dropoff_parent_approved`**, **`transport.dropoff_parent_rejected`** |
+| Client rules | Ignore stale `sequence`/`updatedAt`; on reconnect (`connected` + `reconnect:true`) REST-resync snapshot; cleanup on unmount; **ignore unknown event types without crashing** |
 | Status | **FRONTEND READY** / **BACKEND REQUIRED** |
+
+Student event `data` includes: `tripId`, `studentId`, `studentName?`, `stopId`, `stopName?`, `status`, `parentApprovalStatus`, `markedAt`.
 
 Optional future: `POST /tracking/ws-ticket` — **BACKEND REQUIRED** (clients keep JWT query today).
 
@@ -226,8 +316,14 @@ Optional future: `POST /tracking/ws-ticket` — **BACKEND REQUIRED** (clients ke
 | Current trip | `fetchDriverCurrentTrip` | `getDriverCurrentTrip` |
 | Trip history | `fetchTripHistory` | `getTripHistory` |
 | Publish GPS | `publishDriverLocation` | `DriverLocationPublisher` / `publishDriverLocation` |
+| Stop students | `getTripStopStudents` | `getTripStopStudents` |
+| Mark pickup/dropoff | `markStudentPickup` / `markStudentDropoff` | same |
+| Parent child status | `getParentStudentTripStatus` | same |
+| Parent approval | `approveStudentPickup` / `approveStudentDropoff` | same |
+| Admin trip statuses | `getTripStudentTransportStatuses` | same |
 | UI state | `transportTrackingState.js` | `transportTrackingState.ts` |
 | Stale guard | `transportLocationSequence.js` | `transportLocationSequence.ts` |
+| Attendance helpers | `utils/transportStudentAttendance.js` | `utils/transportStudentAttendance.ts` |
 
 ---
 
@@ -235,23 +331,31 @@ Optional future: `POST /tracking/ws-ticket` — **BACKEND REQUIRED** (clients ke
 
 | Screen | Platform | Status | Notes |
 |--------|----------|--------|-------|
-| Parent live tracking | Web | **COMPLETE** | Multi-child, states, road path, WS stale+resync |
-| Admin live fleet | Web | **COMPLETE** | Filters, fleet map, GPS modal entry |
+| Parent live tracking | Web | **COMPLETE** | Multi-child, states, road path, WS, stop tap (own children), pickup/dropoff approval |
+| Admin live fleet | Web | **COMPLETE** | Filters, fleet map, stop students modal, trip status table, GPS modal |
 | Route manage | Web | **COMPLETE** | Stops reorder, coords, school stop, preview |
 | Vehicles + driverUserId | Web | **COMPLETE** | |
 | Drivers page | Web | **COMPLETE** | |
 | Student assignments | Web | **COMPLETE** | IDs-only write; PICKUP/DROPOFF labels |
 | GPS device modal | Web | **COMPLETE** | Create + list/rotate/enable/disable; token once |
-| Parent live | Mobile | **COMPLETE** | Child selector, states, WS |
-| Admin fleet | Mobile | **COMPLETE** | Status filters, stale+resync |
-| Driver trip | Mobile | **COMPLETE** | Permissions UX, offline queue, adaptive publish, auto-resume |
+| Parent live | Mobile | **COMPLETE** | Child selector, states, WS, stop tap privacy, approval card |
+| Admin fleet | Mobile | **COMPLETE** | Status filters, stop students sheet, stale+resync |
+| Driver trip | Mobile | **COMPLETE** | GPS publisher + stop students pickup/dropoff marks + parent approval display |
 | Driver tabs | Mobile | **COMPLETE** | |
 | Transport assignments | Mobile | **COMPLETE** | Stop + direction; menu enabled |
 | Trip history UI | Web/Mobile | **COMPLETE** | Web `/admin/transport/trips`; mobile admin live screen history section; soft-empty on 404 |
 | Driver web landing | Web | **COMPLETE** | `/driver/trip` guides drivers to mobile GPS (no blank login redirect) |
-| Fixture mode | Both | **COMPLETE** | DEV only |
+| Fixture mode | Both | **COMPLETE** | DEV only (includes student attendance fixtures) |
 
 Frontend is **ready for backend integration** using this document without redesign.
+
+**Privacy (frontend enforced; backend must enforce):**
+
+- Admin: all students on tenant trip/stop
+- Driver: students on own active trip
+- Parent: own linked children only — parent UI does **not** call stop-students admin/driver API
+
+**Stop rotation:** `displaySequence` is display-only; student lists always load by `stopId`.
 
 ---
 
@@ -271,17 +375,44 @@ Implement / verify in Spring Boot:
 10. WebSocket `/ws/tracking` with listed events + sequence monotonicity
 11. ETA + trackingStatus transitions (`warning` ~5m, `offline` ~15m)
 12. Tenant/role authorization (parent child scope; driver vehicle scope; no teacher fleet)
-
+13. `GET /transport/trips/{tripId}/stops/{stopId}/students`
+14. `POST /tracking/trips/{tripId}/students/{studentId}/pickup`
+15. `POST /tracking/trips/{tripId}/students/{studentId}/dropoff`
+16. `GET /parent/transport/trips/{tripId}/students/{studentId}/status`
+17. `POST .../pickup/approval` + `POST .../dropoff/approval`
+18. `GET /admin/transport/trips/{tripId}/student-transport-statuses`
+19. WS student pickup/dropoff + parent approval events
+20. Keep driver action + parent approval as separate facts (rejection must not erase driver mark)
+21 also fixed this {
+    "success": false,
+    "error": {
+        "code": "FORBIDDEN",
+        "message": "Access denied",
+        "timestamp": "2026-08-12T12:34:37.751508394Z",
+        "path": "/api/v1/tracking/update-location",
+        "requestId": "req_48eb9cd1"
+    }
+}
 ---
 
 ## 7. Error contract (clients already handle)
 
-| HTTP | Client behavior |
-|------|-----------------|
+| HTTP / code | Client behavior |
+|-------------|-----------------|
 | 401 / 403 | Unauthorized message on live pages |
 | 404 parent live | Soft empty → `NO_ASSIGNMENT` |
 | 404 driver current-trip | Try aliases → empty assignment UI |
+| 404 stop students / trip statuses / parent status | Soft empty list / null |
 | 409 trip conflict | Surface API message |
+| `TRANSPORT_STUDENT_NOT_ON_TRIP` | Friendly error toast |
+| `TRANSPORT_STUDENT_NOT_AT_STOP` | Friendly error toast |
+| `TRANSPORT_PICKUP_ALREADY_MARKED` | Friendly; UI already disables duplicate taps |
+| `TRANSPORT_DROPOFF_ALREADY_MARKED` | Friendly; UI disables duplicate taps |
+| `TRANSPORT_PICKUP_NOT_MARKED` | Friendly (approval before mark) |
+| `TRANSPORT_DROPOFF_NOT_MARKED` | Friendly |
+| `TRANSPORT_PARENT_NOT_AUTHORIZED` | Friendly |
+| `TRANSPORT_DRIVER_NOT_AUTHORIZED` | Friendly |
+| `TRANSPORT_PARENT_APPROVAL_ALREADY_SUBMITTED` | Friendly |
 | Network offline | Driver queues GPS; live pages keep last snapshot + reconnect |
 
 ---

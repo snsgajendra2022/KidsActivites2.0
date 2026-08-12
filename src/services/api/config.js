@@ -24,7 +24,7 @@ const RAW_API_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL || '');
 
 function isLocalhostHost(hostname) {
   const h = (hostname ?? '').toLowerCase();
-  return h === 'localhost' || h === '127.0.0.1';
+  return h === 'localhost' || h === '127.0.0.1' || h === '192.168.1.58' || h === '192.168.31.108';
 }
 
 function apiUrlPointsToLocalhost(apiUrl) {

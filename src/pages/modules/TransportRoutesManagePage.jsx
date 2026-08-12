@@ -173,10 +173,10 @@ export default function TransportRoutesManagePage() {
     try {
       if (editing) {
         await transportRouteService.update(editing.id, payload);
-        toast('Route updated.', 'success');
+        toast('Route updated. Mobile maps refresh within about 30 seconds (or reopen the live screen).', 'success');
       } else {
         await transportRouteService.create(payload);
-        toast('Route created.', 'success');
+        toast('Route created. Mobile maps refresh within about 30 seconds when open.', 'success');
       }
       setModalOpen(false);
       await load();

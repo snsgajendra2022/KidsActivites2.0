@@ -8,7 +8,14 @@ import Input from '../../components/ui/Input.jsx';
 import Select from '../../components/ui/Select.jsx';
 import Textarea from '../../components/ui/Textarea.jsx';
 import LiveBusMap from '../../components/transport/LiveBusMap.jsx';
-import { fetchParentTransportLive } from '../../services/transportTracking/trackingApi.js';
+import ParentTransportApprovalCard from '../../components/transport/ParentTransportApprovalCard.jsx';
+import StopDetailsModal from '../../components/transport/StopDetailsModal.jsx';
+import {
+  approveStudentDropoff,
+  approveStudentPickup,
+  fetchParentTransportLive,
+  getParentStudentTripStatus,
+} from '../../services/transportTracking/trackingApi.js';
 import { createTrackingSocket } from '../../services/transportTracking/trackingSocket.js';
 import {
   fetchParentTransportAddress,
@@ -30,7 +37,14 @@ import {
 import { stopsToMapFeatures } from '../../utils/transportRouteGeo.js';
 import { isNewerLocation } from '../../utils/transportLocationSequence.js';
 import useRoadRoute from '../../hooks/useRoadRoute.js';
+import useTripStopRotation from '../../hooks/useTripStopRotation.js';
 import { WS_EVENT_TYPES } from '../../types/transportModels.js';
+import {
+  applyStudentTransportWsEvent,
+  friendlyTransportError,
+  isStudentTransportWsEvent,
+  normalizeParentStudentTripStatus,
+} from '../../utils/transportStudentAttendance.js';
 
 function childStudentId(child) {
   return child?.studentId || child?.enrolledStudentId || child?.id || child?.applicationId || '';
@@ -63,6 +77,13 @@ export default function ParentTransportTrackingPage() {
     country: 'India',
   });
   const [savingAddress, setSavingAddress] = useState(false);
+  const [childTripStatus, setChildTripStatus] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [approvalSubmitting, setApprovalSubmitting] = useState(false);
+  const [selectedStop, setSelectedStop] = useState(null);
+  const [stopStudents, setStopStudents] = useState([]);
+  const [stopLoading, setStopLoading] = useState(false);
+  const [stopError, setStopError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +148,122 @@ export default function ParentTransportTrackingPage() {
     void loadAddress(selectedStudentId);
   }, [selectedStudentId, loadLive, loadAddress]);
 
+  const activeTripId = data?.activeTripId || data?.active_trip_id || data?.tripId || data?.trip_id || '';
+
+  const loadChildStatus = useCallback(async (tripId, studentId, { silent = false } = {}) => {
+    if (!tripId || !studentId) {
+      setChildTripStatus(null);
+      return;
+    }
+    if (!silent) setStatusLoading(true);
+    try {
+      const result = await getParentStudentTripStatus(tripId, studentId);
+      setChildTripStatus(result);
+    } catch {
+      if (!silent) setChildTripStatus(null);
+    } finally {
+      if (!silent) setStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadChildStatus(activeTripId, selectedStudentId);
+  }, [activeTripId, selectedStudentId, loadChildStatus]);
+
+  const openStopDetails = useCallback((stop) => {
+    setSelectedStop(stop);
+    setStopError('');
+    setStopLoading(false);
+    // Parent privacy: never call admin/driver stop-students API.
+    const ownChildren = [];
+    children.forEach((child) => {
+      const id = childStudentId(child);
+      if (!id) return;
+      const isSelected = String(id) === String(selectedStudentId);
+      const status = isSelected ? childTripStatus : null;
+      const pickupStop = status?.pickup?.stopId;
+      const dropoffStop = status?.dropoff?.stopId;
+      const matchesStop = String(pickupStop || '') === String(stop.id)
+        || String(dropoffStop || '') === String(stop.id)
+        || (isSelected && String(data?.assignedStopId || '') === String(stop.id))
+        || (isSelected && String(data?.assignedStop || '').toLowerCase() === String(stop.name || '').toLowerCase());
+      if (!matchesStop) return;
+      ownChildren.push({
+        studentId: String(id),
+        studentName: childLabel(child),
+        pickup: status?.pickup || { status: 'PENDING' },
+        dropoff: status?.dropoff || { status: 'PENDING' },
+        stopId: stop.id,
+        stopName: stop.name,
+      });
+    });
+    setStopStudents(ownChildren);
+  }, [
+    childTripStatus,
+    children,
+    data?.assignedStop,
+    data?.assignedStopId,
+    selectedStudentId,
+  ]);
+
+  const submitPickupApproval = async (approved, extra = {}) => {
+    if (!activeTripId || !selectedStudentId) return;
+    setApprovalSubmitting(true);
+    try {
+      const result = approved
+        ? await approveStudentPickup({ tripId: activeTripId, studentId: selectedStudentId, approved: true })
+        : await approveStudentPickup({
+          tripId: activeTripId,
+          studentId: selectedStudentId,
+          approved: false,
+          reason: extra.reason,
+          comment: extra.comment,
+        });
+      setChildTripStatus((current) => normalizeParentStudentTripStatus({
+        ...(current || {}),
+        studentId: selectedStudentId,
+        tripId: activeTripId,
+        pickup: result?.pickup || result?.data?.pickup || current?.pickup,
+        dropoff: current?.dropoff,
+      }));
+      toast(approved ? 'Pickup confirmed.' : 'Pickup issue reported.', approved ? 'success' : 'warning');
+      void loadChildStatus(activeTripId, selectedStudentId, { silent: true });
+    } catch (err) {
+      toast(friendlyTransportError(err), 'error');
+    } finally {
+      setApprovalSubmitting(false);
+    }
+  };
+
+  const submitDropoffApproval = async (approved, extra = {}) => {
+    if (!activeTripId || !selectedStudentId) return;
+    setApprovalSubmitting(true);
+    try {
+      const result = approved
+        ? await approveStudentDropoff({ tripId: activeTripId, studentId: selectedStudentId, approved: true })
+        : await approveStudentDropoff({
+          tripId: activeTripId,
+          studentId: selectedStudentId,
+          approved: false,
+          reason: extra.reason,
+          comment: extra.comment,
+        });
+      setChildTripStatus((current) => normalizeParentStudentTripStatus({
+        ...(current || {}),
+        studentId: selectedStudentId,
+        tripId: activeTripId,
+        pickup: current?.pickup,
+        dropoff: result?.dropoff || result?.data?.dropoff || current?.dropoff,
+      }));
+      toast(approved ? 'Drop-off confirmed.' : 'Drop-off issue reported.', approved ? 'success' : 'warning');
+      void loadChildStatus(activeTripId, selectedStudentId, { silent: true });
+    } catch (err) {
+      toast(friendlyTransportError(err), 'error');
+    } finally {
+      setApprovalSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     if (!data?.vehicleId) return undefined;
     const socket = createTrackingSocket({
@@ -141,6 +278,25 @@ export default function ParentTransportTrackingPage() {
         if (!event?.data) return;
         const eventVehicleId = String(event.data.vehicleId || event.data.vehicle_id || '');
         if (eventVehicleId && eventVehicleId !== String(data.vehicleId)) return;
+
+        if (isStudentTransportWsEvent(event.type)) {
+          const eventStudentId = String(event.data.studentId || event.data.student_id || '');
+          if (eventStudentId && selectedStudentId && eventStudentId !== String(selectedStudentId)) return;
+          setChildTripStatus((current) => {
+            const base = current || {
+              studentId: selectedStudentId,
+              studentName: childLabel(children.find((c) => String(childStudentId(c)) === String(selectedStudentId)))
+                || 'Student',
+              tripId: activeTripId,
+              pickup: { status: 'PENDING' },
+              dropoff: { status: 'PENDING' },
+            };
+            const nextList = applyStudentTransportWsEvent([base], event);
+            return normalizeParentStudentTripStatus(nextList[0] || base);
+          });
+          setStopStudents((current) => applyStudentTransportWsEvent(current, event));
+          return;
+        }
 
         if (event.type === WS_EVENT_TYPES.TRIP_COMPLETED) {
           setData((current) => (current ? {
@@ -190,12 +346,34 @@ export default function ParentTransportTrackingPage() {
       },
     });
     return () => socket.close();
-  }, [data?.vehicleId, loadLive, selectedStudentId]);
+  }, [activeTripId, children, data?.vehicleId, loadLive, selectedStudentId]);
 
   const trackingState = useMemo(() => resolveParentTrackingState(data), [data]);
 
   const mapStops = useMemo(() => stopsToMapFeatures(data?.stops), [data?.stops]);
   const roadRoute = useRoadRoute(data?.stops, { enabled: Boolean(mapStops.length) });
+
+  const parentTripActive = trackingState !== TRACKING_UI_STATES.COMPLETED
+    && trackingState !== TRACKING_UI_STATES.NO_ASSIGNMENT
+    && trackingState !== TRACKING_UI_STATES.ASSIGNED_NO_ACTIVE_TRIP
+    && trackingState !== TRACKING_UI_STATES.TRIP_COMPLETED;
+
+  const rotationTripKey = data?.activeTripId
+    || data?.active_trip_id
+    || data?.tripId
+    || data?.trip_id
+    || (parentTripActive && data?.vehicleId ? `vehicle-${data.vehicleId}` : null);
+
+  const { displayStops } = useTripStopRotation({
+    tripKey: rotationTripKey,
+    stops: data?.stops,
+    busLat: data?.lat,
+    busLng: data?.lng,
+    tripActive: parentTripActive,
+    resetToken: selectedStudentId || null,
+  });
+
+  const mapStopsForDisplay = displayStops.length ? displayStops : mapStops;
 
   const mapVehicles = Number.isFinite(Number(data?.lat)) && Number.isFinite(Number(data?.lng))
     ? [{
@@ -374,10 +552,12 @@ export default function ParentTransportTrackingPage() {
                 <div className="h-[min(50vh,360px)] w-full sm:h-[400px] lg:h-[440px]">
                   <LiveBusMap
                     vehicles={mapVehicles}
-                    stopFeatures={mapStops}
+                    stopFeatures={mapStopsForDisplay}
                     routeGeoJson={roadRoute.geoJson || data?.geometry || null}
+                    fitToken={`${rotationTripKey || ''}:${mapStopsForDisplay.map((s) => `${s.id}:${s.displaySequence ?? s.sequence}`).join('|')}`}
                     showSearch={false}
                     className="h-full w-full border border-[#d0d5dd]"
+                    onSelectStop={(stop) => void openStopDetails(stop)}
                   />
                 </div>
               ) : (
@@ -387,28 +567,53 @@ export default function ParentTransportTrackingPage() {
                 </div>
               )}
             </div>
-            <div className="sb-card p-5">
-              <div className="flex items-center gap-2 text-[#0058be]">
-                <Clock size={18} />
-                <h3 className="font-bold text-[#0b1c30]">ETA</h3>
+            <div className="space-y-4">
+              <div className="sb-card p-5">
+                <div className="flex items-center gap-2 text-[#0058be]">
+                  <Clock size={18} />
+                  <h3 className="font-bold text-[#0b1c30]">ETA</h3>
+                </div>
+                <p className="mt-4 text-3xl font-black text-[#0b1c30]">
+                  {data?.etaMinutes != null ? `${data.etaMinutes} min` : '—'}
+                </p>
+                <p className="mt-2 text-sm capitalize text-[#667085]">
+                  Status: {String(data?.status || trackingState).replace(/_/g, ' ')}
+                </p>
+                <p className="mt-4 text-xs text-[#8a93a3]">
+                  {data?.updatedAt
+                    ? `Updated ${new Date(data.updatedAt).toLocaleTimeString()}`
+                    : 'No GPS update yet'}
+                </p>
+                <Button className="mt-4" variant="secondary" onClick={() => void loadLive(selectedStudentId)}>
+                  Refresh
+                </Button>
               </div>
-              <p className="mt-4 text-3xl font-black text-[#0b1c30]">
-                {data?.etaMinutes != null ? `${data.etaMinutes} min` : '—'}
-              </p>
-              <p className="mt-2 text-sm capitalize text-[#667085]">
-                Status: {String(data?.status || trackingState).replace(/_/g, ' ')}
-              </p>
-              <p className="mt-4 text-xs text-[#8a93a3]">
-                {data?.updatedAt
-                  ? `Updated ${new Date(data.updatedAt).toLocaleTimeString()}`
-                  : 'No GPS update yet'}
-              </p>
-              <Button className="mt-4" variant="secondary" onClick={() => void loadLive(selectedStudentId)}>
-                Refresh
-              </Button>
+
+              <ParentTransportApprovalCard
+                status={childTripStatus}
+                studentName={childOptions.find((c) => c.value === selectedStudentId)?.label}
+                loading={statusLoading}
+                submitting={approvalSubmitting}
+                onApprovePickup={() => submitPickupApproval(true)}
+                onRejectPickup={(extra) => submitPickupApproval(false, extra)}
+                onApproveDropoff={() => submitDropoffApproval(true)}
+                onRejectDropoff={(extra) => submitDropoffApproval(false, extra)}
+              />
             </div>
           </div>
         )}
+
+        <StopDetailsModal
+          open={Boolean(selectedStop)}
+          onClose={() => setSelectedStop(null)}
+          stop={selectedStop}
+          students={stopStudents}
+          routeName={data?.routeName}
+          direction={data?.direction || childTripStatus?.direction || 'morning'}
+          loading={stopLoading}
+          error={stopError}
+          viewerRole="parent"
+        />
       </PageTransition>
     </AppLayout>
   );

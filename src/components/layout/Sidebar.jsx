@@ -10,6 +10,9 @@ import PortalLogo from '../brand/PortalLogo.jsx';
 /** Survives AppLayout remounts when each page wraps its own shell. */
 let persistedSidebarNavScrollTop = 0;
 
+const FLYOUT_VIEWPORT_MARGIN = 12;
+const FLYOUT_MIN_HEIGHT = 120;
+
 function isChatNavItem(item) {
   const id = item?.id || '';
   const to = item?.to || '';
@@ -69,12 +72,20 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
   const unreadMessageCount = useUnreadMessageCount();
   const navRef = useRef(null);
   const flyoutRef = useRef(null);
+  const flyoutAnchorTopRef = useRef(0);
   const [openSection, setOpenSection] = useState(null);
-  const [flyoutPos, setFlyoutPos] = useState({ top: 0 });
+  const [flyoutPos, setFlyoutPos] = useState({ top: 0, maxHeight: undefined });
 
   const collapsedGroups = useMemo(
     () => (collapsed ? buildCollapsedNavGroups(navItems) : []),
     [collapsed, navItems],
+  );
+
+  const activeFlyoutGroup = useMemo(
+    () => collapsedGroups.find(
+      (group) => group.type === 'group' && group.section === openSection,
+    ),
+    [collapsedGroups, openSection],
   );
 
   useLayoutEffect(() => {
@@ -90,6 +101,41 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
       el.removeEventListener('scroll', onScroll);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (!openSection || !collapsed || !activeFlyoutGroup) return undefined;
+
+    const updateFlyoutPosition = () => {
+      const el = flyoutRef.current;
+      if (!el) return;
+
+      const margin = FLYOUT_VIEWPORT_MARGIN;
+      const viewportH = window.innerHeight;
+      const maxAvailable = Math.max(FLYOUT_MIN_HEIGHT, viewportH - margin * 2);
+
+      // Cap height so we can measure the clamped panel, then shift up if needed.
+      el.style.maxHeight = `${maxAvailable}px`;
+      const height = el.getBoundingClientRect().height;
+
+      let top = flyoutAnchorTopRef.current;
+      if (top + height > viewportH - margin) {
+        top = viewportH - margin - height;
+      }
+      top = Math.max(margin, top);
+
+      const maxHeight = Math.min(maxAvailable, viewportH - margin - top);
+
+      setFlyoutPos((prev) => (
+        prev.top === top && prev.maxHeight === maxHeight
+          ? prev
+          : { top, maxHeight }
+      ));
+    };
+
+    updateFlyoutPosition();
+    window.addEventListener('resize', updateFlyoutPosition);
+    return () => window.removeEventListener('resize', updateFlyoutPosition);
+  }, [openSection, collapsed, activeFlyoutGroup]);
 
   useEffect(() => {
     if (!openSection || !collapsed) return undefined;
@@ -140,20 +186,18 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
       return;
     }
     if (triggerEl) {
-      const rect = triggerEl.getBoundingClientRect();
-      const approxHeight = 280;
-      const top = Math.min(
-        Math.max(12, rect.top),
-        Math.max(12, window.innerHeight - approxHeight),
+      const preferredTop = Math.max(
+        FLYOUT_VIEWPORT_MARGIN,
+        triggerEl.getBoundingClientRect().top,
       );
-      setFlyoutPos({ top });
+      flyoutAnchorTopRef.current = preferredTop;
+      setFlyoutPos({
+        top: preferredTop,
+        maxHeight: Math.max(FLYOUT_MIN_HEIGHT, window.innerHeight - FLYOUT_VIEWPORT_MARGIN * 2),
+      });
     }
     setOpenSection(section);
   };
-
-  const activeFlyoutGroup = collapsedGroups.find(
-    (group) => group.type === 'group' && group.section === openSection,
-  );
 
   const renderExpandedNav = () =>
     navItems.map(({ id, to, label, icon: Icon, section }, index) => {
@@ -343,7 +387,10 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
         <div
           ref={flyoutRef}
           className="sidebar-flyout"
-          style={{ top: flyoutPos.top }}
+          style={{
+            top: flyoutPos.top,
+            ...(flyoutPos.maxHeight != null ? { maxHeight: flyoutPos.maxHeight } : {}),
+          }}
           role="menu"
           aria-label={activeFlyoutGroup.section}
         >

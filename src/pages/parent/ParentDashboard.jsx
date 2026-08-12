@@ -145,12 +145,33 @@ export default function ParentDashboard() {
   const { tenantPath } = useTenantPath();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     getParentDashboard(user.id, user.schoolId, user)
-      .then(setData)
-      .finally(() => setLoading(false));
+      .then((next) => {
+        if (!cancelled) setData(next);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setData(null);
+          setError(err?.message || 'Could not load your dashboard.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const quickLinks = useMemo(
@@ -162,6 +183,35 @@ export default function ParentDashboard() {
     return (
       <AppLayout>
         <LoadingState message="Loading your dashboard…" />
+      </AppLayout>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <AppLayout>
+        <div className="premium-page-header">
+          <h1 className="premium-page-title">Parent Dashboard</h1>
+          <p className="premium-page-subtitle">{error}</p>
+        </div>
+        <button
+          type="button"
+          className="premium-btn premium-btn-primary"
+          onClick={() => {
+            if (!user?.id) return;
+            setLoading(true);
+            setError(null);
+            getParentDashboard(user.id, user.schoolId, user)
+              .then(setData)
+              .catch((err) => {
+                setData(null);
+                setError(err?.message || 'Could not load your dashboard.');
+              })
+              .finally(() => setLoading(false));
+          }}
+        >
+          Try again
+        </button>
       </AppLayout>
     );
   }

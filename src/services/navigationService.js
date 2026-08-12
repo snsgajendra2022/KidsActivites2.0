@@ -2,7 +2,11 @@ import { api } from './api/client.js';
 import { routeRequest } from './api/routeRequest.js';
 import { NAV_BY_ROLE } from '../constants/navigation.js';
 import { resolveMenuIcon } from '../constants/menuIcons.js';
-import { mergeMissingBuiltinNavItems, resolveNavItemsForRole } from '../utils/navUtils.js';
+import {
+  mergeMissingBuiltinNavItems,
+  normalizeNavSection,
+  resolveNavItemsForRole,
+} from '../utils/navUtils.js';
 import { getStoredUser } from './api/demoMode.js';
 
 function findBuiltinItem(role, id) {
@@ -19,7 +23,7 @@ function mapApiNavItem(item, role) {
       typeof item.icon === 'string' ? item.icon : item.iconName,
       builtin?.icon,
     ),
-    section: item.section || builtin?.section,
+    section: normalizeNavSection(item.section || builtin?.section, item.id),
     custom: item.custom === true,
   };
 }
