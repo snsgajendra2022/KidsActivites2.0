@@ -812,6 +812,43 @@
   opacity: .72;
 }
 
+.messages-attachment__file--broken {
+  display: flex;
+  gap: .55rem;
+  align-items: center;
+  padding: .6rem .7rem;
+  background: rgb(255 255 255 / .15);
+  border: 1px dashed rgb(255 255 255 / .38);
+  border-radius: .75rem;
+}
+
+.messages-bubble--received .messages-attachment__file--broken {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.messages-attachment__file--broken span {
+  display: grid;
+  min-width: 0;
+}
+
+.messages-attachment__file--broken strong {
+  overflow: hidden;
+  font-size: .75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messages-attachment__file--broken small {
+  font-size: .625rem;
+  opacity: .78;
+}
+
+.messages-attachment__download {
+  flex: none;
+  opacity: .7;
+}
+
 .messages-bubble__edited {
   font-size: .625rem;
   opacity: .72;
@@ -1229,6 +1266,15 @@
   background: transparent;
   border: 0;
   cursor: pointer;
+}
+
+.messages-compose__attachments > span.is-uploading {
+  color: #4338ca;
+  background: #eef2ff;
+}
+
+.messages-compose__attachments > span.is-uploading small {
+  opacity: .75;
 }
 
 .messages-compose-readonly {

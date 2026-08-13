@@ -5,14 +5,14 @@
 | Doc | Purpose |
 |-----|---------|
 | **[FULL_BACKEND_API_CONTRACT.md](./FULL_BACKEND_API_CONTRACT.md)** | APIs required only by the newly added Student Profile and School ERP work |
-| **[courseAndLocation.md](./courseAndLocation.md)** | Outstanding backend work for LMS course/quiz/certificates and transport map location / live GPS / stop rosters |
+| **[NEW.1.0/CourseAndLocationAndChat.md](./NEW.1.0/CourseAndLocationAndChat.md)** | Outstanding backend work for LMS course/quiz/certificates, transport map location / live GPS / stop rosters, and chat attachments / unread counts / realtime. Supersedes and extends `courseAndLocation.md` |
 | **[transport/LIVE_BUS_TRACKING.md](./transport/LIVE_BUS_TRACKING.md)** | Production live bus GPS tracking architecture and deployment |
 
 ## Specialized domain contracts
 
 | Doc | Domain |
 |-----|--------|
-| [CHAT_API_CONTRACT.md](./CHAT_API_CONTRACT.md) | Chat HTTP + STOMP |
+| [CHAT_API_CONTRACT.md](./CHAT_API_CONTRACT.md) | Chat HTTP + STOMP (corrections tracked in [NEW.1.0/CourseAndLocationAndChat.md](./NEW.1.0/CourseAndLocationAndChat.md) section 3) |
 | [NOTICE_BOARD_API_CONTRACT.md](./NOTICE_BOARD_API_CONTRACT.md) | Notice board API |
 | [NOTICE_BOARD_REQUIREMENTS.md](./NOTICE_BOARD_REQUIREMENTS.md) | Notice product requirements |
 | [NOTICE_BOARD_DATABASE_SCHEMA.md](./NOTICE_BOARD_DATABASE_SCHEMA.md) | Notice DB schema |

@@ -36,6 +36,8 @@ import {
   getConversationUnread,
   patchConversationUnread,
 } from '../../utils/chatUnread.js';
+import { attachmentPreviewText, normalizeChatMessage } from '../../utils/chatAttachments.js';
+import ChatAttachmentView from '../../components/chat/ChatAttachmentView.jsx';
 import {
   Send, MessageCircle, Search, ArrowLeft, Shield, Plus, X, Check, CheckCheck,
   Paperclip, FileText, Pencil, Trash2, RefreshCw, LoaderCircle,
@@ -198,14 +200,8 @@ function reactionsForDisplay(reactions = {}, currentUserId) {
   return next;
 }
 
-function formatFileSize(bytes = 0) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function isImageAttachment(attachment) {
-  return attachment?.mimeType?.startsWith('image/');
+function conversationPreview(message) {
+  return message?.text || attachmentPreviewText(message);
 }
 
 export default function ChatPage() {
@@ -232,6 +228,7 @@ export default function ChatPage() {
   const [olderCursor, setOlderCursor] = useState(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const [pendingUploads, setPendingUploads] = useState([]);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingText, setEditingText] = useState('');
@@ -351,6 +348,7 @@ export default function ChatPage() {
     const timer = window.setTimeout(() => {
       setMessages([]);
       setAttachments([]);
+      setPendingUploads([]);
       setEditingMessageId(null);
       setSelectedIds([]);
       setPendingDeleteIds([]);
@@ -387,7 +385,7 @@ export default function ChatPage() {
     const conversationIds = conversationIdsKey.split(',');
     const unsubs = conversationIds.map((conversationId) => subscribeToConversation(conversationId, (payload) => {
       if (payload?.event === 'message:new' && payload.message) {
-        const msg = payload.message;
+        const msg = normalizeChatMessage(payload.message);
         const isActive = activeRef.current === conversationId;
 
         if (isActive) {
@@ -407,7 +405,7 @@ export default function ChatPage() {
           return patchConversationUnread(
             {
               ...c,
-              lastMessage: msg.text,
+              lastMessage: conversationPreview(msg),
               lastMessageAt: msg.sentAt,
               lastMessageSenderId: msg.senderId,
             },
@@ -420,7 +418,7 @@ export default function ChatPage() {
       }
 
       if (['message:updated', 'message:deleted', 'message:reaction'].includes(payload?.event)) {
-        const nextMessage = payload.message;
+        const nextMessage = normalizeChatMessage(payload.message);
         if (nextMessage && activeRef.current === conversationId) {
           setMessages((prev) => prev.map((message) => (
             message.id === nextMessage.id ? { ...message, ...nextMessage } : message
@@ -650,18 +648,33 @@ export default function ChatPage() {
   }, []);
 
   const handleAttachment = async (event) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
     event.target.value = '';
-    if (!file || !active || !featureSupport.attachments) return;
+    const conversationId = active;
+    if (!files.length || !conversationId || !featureSupport.attachments) return;
+
+    const queued = files.map((file, index) => ({ key: `${Date.now()}-${index}`, name: file.name }));
     setUploadingAttachment(true);
+    setPendingUploads(queued);
     try {
-      const uploaded = await uploadChatAttachment(active, file);
-      setAttachments((current) => [...current, uploaded]);
-    } catch (error) {
-      syncFeatureSupport(error);
-      toast(error?.message || 'Unable to upload attachment.', 'error');
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        try {
+          const uploaded = await uploadChatAttachment(conversationId, file);
+          // The user may have opened another thread while this file was uploading.
+          if (activeRef.current !== conversationId) return;
+          setAttachments((current) => [...current, uploaded]);
+        } catch (error) {
+          syncFeatureSupport(error);
+          toast(`${file.name}: ${error?.message || 'Unable to upload attachment.'}`, 'error');
+          if (error?.code === 'CHAT_FEATURE_UNAVAILABLE') return;
+        } finally {
+          setPendingUploads((current) => current.filter((item) => item.key !== queued[index].key));
+        }
+      }
     } finally {
       setUploadingAttachment(false);
+      setPendingUploads([]);
     }
   };
 
@@ -787,11 +800,18 @@ export default function ChatPage() {
     event?.stopPropagation?.();
 
     if (sendLockRef.current) return;
+    // Pressing Enter mid-upload would otherwise send the message without the file.
+    if (uploadingAttachment) {
+      toast('Wait for the attachment to finish uploading.', 'info');
+      return;
+    }
 
     const body = (inputValueRef.current || text).trim();
     if ((!body && attachments.length === 0) || !active || !user?.id || !canSendMessages) return;
 
-    const fingerprint = `${active}:${body}`;
+    // Attachment-only messages share an empty body, so the guard must also key on the files.
+    const attachmentKey = attachments.map((attachment) => attachment.id).join('|');
+    const fingerprint = `${active}:${body}:${attachmentKey}`;
     const now = Date.now();
     if (
       lastSendFingerprintRef.current.key === fingerprint
@@ -817,7 +837,7 @@ export default function ChatPage() {
       ));
       setConversations((prev) => prev.map((c) => (
         c.id === active
-          ? { ...c, lastMessage: msg.text, lastMessageAt: msg.sentAt }
+          ? { ...c, lastMessage: conversationPreview(msg), lastMessageAt: msg.sentAt }
           : c
       )));
     } catch (err) {
@@ -1083,14 +1103,11 @@ export default function ChatPage() {
                               {item.message.text && <p className="messages-bubble__text">{item.message.text}</p>}
                               {item.message.attachments?.length > 0 && (
                                 <div className="messages-bubble__attachments">
-                                  {item.message.attachments.map((attachment) => (
-                                    <a key={attachment.id || attachment.url} href={attachment.url} target="_blank" rel="noreferrer" className="messages-attachment" onClick={(event) => event.stopPropagation()}>
-                                      {isImageAttachment(attachment) ? (
-                                        <img src={attachment.url} alt={attachment.name || 'Shared image'} />
-                                      ) : (
-                                        <span className="messages-attachment__file"><FileText size={18} /><span><strong>{attachment.name || 'Attachment'}</strong><small>{formatFileSize(attachment.size)}</small></span></span>
-                                      )}
-                                    </a>
+                                  {item.message.attachments.map((attachment, attachmentIndex) => (
+                                    <ChatAttachmentView
+                                      key={attachment.id || attachment.url || attachmentIndex}
+                                      attachment={attachment}
+                                    />
                                   ))}
                                 </div>
                               )}
@@ -1184,17 +1201,20 @@ export default function ChatPage() {
                   <form className="messages-compose" onSubmit={handleSend} noValidate>
                     {featureSupport.attachments && (
                       <>
-                        <input ref={fileInputRef} type="file" className="sr-only" accept={CHAT_ATTACHMENT_ACCEPT} onChange={handleAttachment} />
+                        <input ref={fileInputRef} type="file" multiple className="sr-only" accept={CHAT_ATTACHMENT_ACCEPT} onChange={handleAttachment} />
                         <button type="button" className="messages-compose__attach" onClick={() => fileInputRef.current?.click()} disabled={sending || uploadingAttachment} aria-label="Attach a file">
                           {uploadingAttachment ? <LoaderCircle size={18} className="is-spinning" /> : <Paperclip size={18} />}
                         </button>
                       </>
                     )}
                     <div className="messages-compose__field">
-                      {attachments.length > 0 && (
+                      {(attachments.length > 0 || pendingUploads.length > 0) && (
                         <div className="messages-compose__attachments" aria-label="Attachments ready to send">
                           {attachments.map((attachment, index) => (
                             <span key={attachment.id || index}><FileText size={13} />{attachment.name}<button type="button" onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${attachment.name}`}><X size={12} /></button></span>
+                          ))}
+                          {pendingUploads.map((pending) => (
+                            <span key={pending.key} className="is-uploading"><LoaderCircle size={13} className="is-spinning" />{pending.name}<small>Uploading…</small></span>
                           ))}
                         </div>
                       )}
