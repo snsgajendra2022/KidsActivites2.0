@@ -152,22 +152,88 @@ export function normalizeChatMessages(messages) {
   return messages.map((message) => normalizeChatMessage(message));
 }
 
+function pageOrigin() {
+  return typeof window === 'undefined' ? '' : window.location.origin;
+}
+
 export function getApiOrigin() {
   if (!API_BASE_URL) return '';
   try {
-    return new URL(API_BASE_URL, window.location.origin).origin;
+    return new URL(API_BASE_URL, pageOrigin() || 'http://localhost').origin;
   } catch {
     return '';
   }
 }
 
-/** Server paths are relative to the API host, not to the single-page app origin. */
-export function toAbsoluteAttachmentUrl(url) {
-  if (!url) return '';
-  if (/^(?:data:|blob:|https?:\/\/)/i.test(url)) return url;
-  if (url.startsWith('//')) return `${window.location.protocol}${url}`;
-  const origin = getApiOrigin() || window.location.origin;
-  return `${origin}${url.startsWith('/') ? '' : '/'}${url}`;
+/** Absolute API base including its path prefix (e.g. `https://host/api/v1`). */
+export function getApiBaseUrl() {
+  if (!API_BASE_URL) return '';
+  try {
+    const parsed = new URL(API_BASE_URL, pageOrigin() || 'http://localhost');
+    return `${parsed.origin}${parsed.pathname.replace(/\/$/, '')}`;
+  } catch {
+    return '';
+  }
+}
+
+/** Paths served straight off the host root rather than from under the API prefix. */
+const STATIC_PATH_PATTERN = /^\/(?:uploads?|files?|media|static|public|storage|assets|images?|img)\//i;
+
+/**
+ * Absolute URLs to try for a server-provided attachment path, most likely first.
+ *
+ * A relative path can be rooted either at the host (`/uploads/2.png`) or under the
+ * API prefix (`/chat/attachments/x/download` returned by an `/api/v1` endpoint), and
+ * the response body never says which. Joining only to the origin silently drops the
+ * `/api/v1` prefix and 404s, so every plausible base is offered and the caller probes
+ * them in order.
+ */
+export function attachmentUrlCandidates(url, options = {}) {
+  const raw = String(url || '').trim();
+  if (!raw) return [];
+  if (isLocalAttachmentUrl(raw) || /^https?:\/\//i.test(raw)) return [raw];
+
+  const {
+    apiBaseUrl = getApiBaseUrl(),
+    origin = pageOrigin(),
+    protocol = typeof window === 'undefined' ? 'https:' : window.location.protocol,
+  } = options;
+
+  if (raw.startsWith('//')) return [`${protocol}${raw}`];
+
+  const path = raw.startsWith('/') ? raw : `/${raw}`;
+  let apiOrigin = '';
+  let apiPath = '';
+  if (apiBaseUrl) {
+    try {
+      const parsed = new URL(apiBaseUrl);
+      apiOrigin = parsed.origin;
+      apiPath = parsed.pathname.replace(/\/$/, '');
+    } catch {
+      apiOrigin = '';
+    }
+  }
+
+  const bases = [];
+  const hasApiPrefix = Boolean(apiPath) && path.startsWith(`${apiPath}/`);
+  if (hasApiPrefix || STATIC_PATH_PATTERN.test(path)) {
+    if (apiOrigin) bases.push(apiOrigin);
+    if (apiPath && !hasApiPrefix) bases.push(`${apiOrigin}${apiPath}`);
+  } else {
+    if (apiPath) bases.push(`${apiOrigin}${apiPath}`);
+    if (apiOrigin) bases.push(apiOrigin);
+  }
+  if (origin) bases.push(origin);
+
+  const seen = new Set();
+  return bases
+    .filter(Boolean)
+    .map((base) => `${base}${path}`)
+    .filter((candidate) => {
+      if (seen.has(candidate)) return false;
+      seen.add(candidate);
+      return true;
+    });
 }
 
 export function isApiHostedUrl(url) {
@@ -175,10 +241,32 @@ export function isApiHostedUrl(url) {
   return Boolean(origin && url && url.startsWith(origin));
 }
 
+const IMAGE_EXTENSIONS = new Set([
+  'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', 'heif', 'avif', 'svg',
+]);
+
+/**
+ * Servers frequently label uploads `application/octet-stream`, so the file
+ * extension has to be trusted when the reported MIME type is not an image.
+ */
 export function isImageAttachment(attachment) {
   if (!attachment) return false;
-  const mimeType = attachment.mimeType || inferMimeTypeFromName(attachment.name);
-  return mimeType.startsWith('image/');
+  if (String(attachment.mimeType || '').toLowerCase().startsWith('image/')) return true;
+  const extension = String(attachment.name || '').split('.').pop()?.toLowerCase();
+  return Boolean(extension && IMAGE_EXTENSIONS.has(extension));
+}
+
+export function isPdfAttachment(attachment) {
+  if (!attachment) return false;
+  if (String(attachment.mimeType || '').toLowerCase() === 'application/pdf') return true;
+  return String(attachment.name || '').toLowerCase().endsWith('.pdf');
+}
+
+/** Inline preview is only attempted for types the browser can actually render. */
+export function attachmentPreviewKind(attachment) {
+  if (isImageAttachment(attachment)) return 'image';
+  if (isPdfAttachment(attachment)) return 'pdf';
+  return '';
 }
 
 export function formatAttachmentSize(bytes) {

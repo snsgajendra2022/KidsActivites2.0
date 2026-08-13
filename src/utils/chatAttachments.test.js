@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  attachmentPreviewKind,
   attachmentPreviewText,
+  attachmentUrlCandidates,
   formatAttachmentSize,
   hasChatAttachmentSource,
   isImageAttachment,
@@ -102,6 +104,65 @@ describe('normalizeChatMessage', () => {
   it('leaves text-only messages untouched', () => {
     const message = { id: 'm-2', text: 'Hello' };
     expect(normalizeChatMessage(message)).toBe(message);
+  });
+});
+
+describe('attachmentUrlCandidates', () => {
+  const options = {
+    apiBaseUrl: 'https://api.example.com/api/v1',
+    origin: 'https://app.example.com',
+    protocol: 'https:',
+  };
+
+  it('leaves absolute and session-local URLs alone', () => {
+    expect(attachmentUrlCandidates('https://cdn.example.com/2.png', options))
+      .toEqual(['https://cdn.example.com/2.png']);
+    expect(attachmentUrlCandidates('data:image/png;base64,AAAA', options))
+      .toEqual(['data:image/png;base64,AAAA']);
+  });
+
+  it('keeps the API path prefix for a path relative to the API base', () => {
+    expect(attachmentUrlCandidates('/chat/attachments/att-1/download', options)).toEqual([
+      'https://api.example.com/api/v1/chat/attachments/att-1/download',
+      'https://api.example.com/chat/attachments/att-1/download',
+      'https://app.example.com/chat/attachments/att-1/download',
+    ]);
+  });
+
+  it('prefers the bare host for a static upload path', () => {
+    expect(attachmentUrlCandidates('/uploads/chat/3_kids.png', options)[0])
+      .toBe('https://api.example.com/uploads/chat/3_kids.png');
+  });
+
+  it('does not double the API prefix when the path already carries it', () => {
+    expect(attachmentUrlCandidates('/api/v1/chat/attachments/att-1/download', options))
+      .toEqual([
+        'https://api.example.com/api/v1/chat/attachments/att-1/download',
+        'https://app.example.com/api/v1/chat/attachments/att-1/download',
+      ]);
+  });
+
+  it('returns nothing for an empty value', () => {
+    expect(attachmentUrlCandidates('', options)).toEqual([]);
+  });
+});
+
+describe('attachmentPreviewKind', () => {
+  it('treats an image extension as an image despite a generic mime type', () => {
+    const attachment = { name: '3_kids.png', mimeType: 'application/octet-stream' };
+    expect(isImageAttachment(attachment)).toBe(true);
+    expect(attachmentPreviewKind(attachment)).toBe('image');
+  });
+
+  it('recognises every supported image extension', () => {
+    ['a.png', 'b.jpg', 'c.jpeg', 'd.gif', 'e.webp', 'f.svg', 'g.bmp', 'h.heic'].forEach((name) => {
+      expect(isImageAttachment({ name })).toBe(true);
+    });
+  });
+
+  it('detects PDFs and leaves other documents without a preview', () => {
+    expect(attachmentPreviewKind({ name: 'report.pdf' })).toBe('pdf');
+    expect(attachmentPreviewKind({ name: 'fees.xlsx' })).toBe('');
   });
 });
 

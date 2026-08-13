@@ -1651,25 +1651,33 @@ and the `isServerStoredAttachment()` pre-send guard.
 
 The web client cannot render a tenant-authorized image through a plain
 `<img src>`, because the browser will not attach the bearer token. So
-`ChatAttachmentView.jsx` has an `onError` retry that re-fetches the same URL with
-`Authorization: Bearer …` + `X-Tenant-Slug`, converts the response to a blob and
-swaps in an object URL:
+`ChatAttachmentView.jsx` fetches any API-hosted file itself with
+`Authorization: Bearer …` + `X-Tenant-Slug` and renders the response as an object
+URL. The fetch is now made up front for images rather than only after an
+`<img>` error, because the error path cost every image a guaranteed-failed request
+first.
 
-```js
-async function fetchAsObjectUrl(url) {
-  const response = await fetch(url, { headers: buildAuthHeaders() });
-  if (!response.ok) throw new Error(`Attachment request failed (${response.status})`);
-  return URL.createObjectURL(await response.blob());
-}
-```
+A **relative** attachment path is ambiguous: it can be rooted at the host
+(`/uploads/chat/3_kids.png`) or under the API prefix
+(`/chat/attachments/att-1/download` returned by an `/api/v1` route), and nothing in
+the response says which. Joining it to the API *origin* silently drops `/api/v1`
+and 404s. `attachmentUrlCandidates()` therefore builds every plausible absolute URL
+and the component probes them in order, then falls back to the signed-URL endpoint,
+then to one plain `<img>` attempt in case cross-origin rules blocked the fetch on a
+file the browser could have loaded itself. Responses are also content-type checked:
+a single-page-app host answers an unknown path with `index.html` and an API answers
+a rejected download with JSON, both as `200 OK`, and either one previously became a
+"successfully fetched" broken image.
 
-The same authenticated fetch is used for non-image downloads, falling back to
-`window.open` if it fails. When the payload carried only a key, the client
-resolves it through the documents module —
-`getDocumentDownloadUrl(fileKey)` → `GET /documents/{fileKey}/download`, reading
-`downloadUrl` or `url` off the response — and each `/`-separated segment of the
-key is URL-encoded individually, so the route must accept a multi-segment key
+When the payload carried only a key, the client resolves it through the documents
+module — `getDocumentDownloadUrl(fileKey)` → `GET /documents/{fileKey}/download`,
+reading `downloadUrl` or `url` off the response — and each `/`-separated segment of
+the key is URL-encoded individually, so the route must accept a multi-segment key
 path.
+
+Images open in a lightbox (`ChatAttachmentLightbox.jsx`) with download and
+open-in-new-tab actions; PDFs resolve on demand and render in an iframe. Non-previewable
+types show name, size and download only.
 
 **Mobile has no equivalent escape hatch.** `MessageBubble.tsx` renders
 `<Image source={{ uri }} />`, which cannot send an `Authorization` header at all.
@@ -1710,6 +1718,14 @@ Rules:
 5. If header auth is kept, say so explicitly in the contract and accept that
    mobile image previews stay broken until a mobile-side fetch-to-base64 path is
    built.
+6. **Return an absolute URL, or a path that already includes the API prefix.** A
+   bare relative path forces the client to guess the base and issue up to three
+   probe requests per attachment. `https://…/api/v1/chat/attachments/att-1/download`
+   or `/api/v1/chat/attachments/att-1/download` are both unambiguous;
+   `/chat/attachments/att-1/download` is not.
+7. Never answer a download route with `text/html` or a JSON error body under
+   `200 OK`. Use the real status code, so an expired or unauthorized file is
+   distinguishable from a file that is simply not an image.
 
 ### Error cases
 
@@ -1720,9 +1736,10 @@ Rules:
 | Attachment id not in tenant | 404 | `NOT_FOUND` |
 | Key not found in storage | 404 | Client renders the broken-file card |
 
-Removable once shipped: the `onError` authenticated-fetch retry and the object-URL
-juggling in `ChatAttachmentView.jsx`, plus the `isApiHostedUrl()` branch on
-download.
+Removable once shipped: the authenticated fetch and object-URL juggling in
+`ChatAttachmentView.jsx`, the `isApiHostedUrl()` branch on download, the
+multi-base probing in `attachmentUrlCandidates()`, and the content-type sniffing
+guard.
 
 ---
 
@@ -2178,7 +2195,7 @@ Removable once shipped: the `xhr-polling` transport pin.
 | [L10](#l10-parent-live-snapshot-needs-direction-and-assignedstopid) | Pickup-direction default; name-based stop matching | parent live screens |
 | [L11](#l11-parent-scoped-stop-roster) | Client-side merge of live snapshot + per-child status + linked children; `academic.className` with `—` | parent transport list |
 | [CH1](#ch1-attachment-upload-response-must-have-one-canonical-key) | URL/key alias tables, envelope flattening, `isServerStoredAttachment()` pre-send guard | `src/utils/chatAttachments.js`, mobile `src/utils/chatAttachments.ts` |
-| [CH2](#ch2-attachment-serving-and-auth-model) | `onError` authenticated-fetch retry, object-URL swap, `isApiHostedUrl()` download branch | `src/components/chat/ChatAttachmentView.jsx` |
+| [CH2](#ch2-attachment-serving-and-auth-model) | Authenticated-fetch to object URL, multi-base URL probing (`attachmentUrlCandidates()`), HTML/JSON content-type sniffing, `isApiHostedUrl()` download branch | `src/components/chat/ChatAttachmentView.jsx`, `src/utils/chatAttachments.js` |
 | [CH4](#ch4-send-message-must-echo-attachments) | "Echo the attachments back myself" patch after send | `src/services/chatService.js`, mobile `src/api/chatApi.ts` |
 | [CH5](#ch5-unread-counts) | Unread alias chain, last-sender heuristic, `Math.max` of three sources, four `/chat/unread-count` shapes, whole of `localChatRead.js` | `src/utils/chatUnread.js`, `src/hooks/useUnreadMessageCount.js`, `src/utils/localChatRead.js` |
 | [CH7](#ch7-realtime-transport-and-event-payloads) | `transports: ['xhr-polling']` pin; 20 s sidebar unread poll | `src/services/chatRealtime.js`, `src/hooks/useUnreadMessageCount.js` |
@@ -2219,6 +2236,8 @@ Chat:
 - [ ] Uploading a 12 MB file returns `413`, and the paper-clip is still enabled afterwards
 - [ ] Uploading a `.exe` renamed to `.pdf` returns `415` (signature checked, not just the extension)
 - [ ] A conversation the caller is not a member of returns `403` on the attachment route, not `404`
+- [ ] `url` is absolute, or a path that already includes the `/api/v1` prefix — never a bare path whose base has to be guessed
+- [ ] A download route never returns `text/html` or a JSON error body with status `200`
 - [ ] An image attachment renders inline on **mobile** without any client-side auth plumbing
 - [ ] A file link still resolves after a page reload, and after the original signed URL has expired
 - [ ] `POST /chat/conversations/{id}/messages` with `attachments` returns the persisted message with a fully populated `attachments[]`
