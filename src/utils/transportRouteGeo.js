@@ -12,6 +12,28 @@ export function haversineMeters(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+/** Stops built from a student's enrollment address use this id prefix. */
+export const STUDENT_HOME_STOP_PREFIX = 'stu-';
+
+/**
+ * Student bound to a stop created from that student's home address.
+ * Such a stop has no transport assignment row of its own, so the roster must be
+ * resolved by `studentId` instead of `stopId`.
+ */
+export function studentIdFromStop(stop) {
+  if (!stop || typeof stop !== 'object') return '';
+  for (const value of [stop.studentId, stop.student_id]) {
+    if (value == null || value === '') continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  const id = String(stop.id ?? stop.stopId ?? stop.stop_id ?? '').trim();
+  if (id.startsWith(STUDENT_HOME_STOP_PREFIX)) {
+    return id.slice(STUDENT_HOME_STOP_PREFIX.length).trim();
+  }
+  return '';
+}
+
 /**
  * Normalize and sort mapped stops that have valid coordinates.
  * Used by nearest-stop rotation (same rules as mobile).
@@ -24,6 +46,7 @@ export function normalizeMappedStops(stops) {
       const lat = Number(stop.lat ?? stop.latitude);
       const lng = Number(stop.lng ?? stop.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      const studentId = studentIdFromStop(stop);
       return {
         id: String(stop.id || `stop-${index + 1}`),
         name: String(stop.name || `Stop ${index + 1}`).trim() || `Stop ${index + 1}`,
@@ -34,6 +57,7 @@ export function normalizeMappedStops(stops) {
           stop.stopType || stop.stop_type || (index === stops.length - 1 ? 'school' : 'pickup'),
         ),
         radiusMeters: Number(stop.radiusMeters) > 0 ? Number(stop.radiusMeters) : 80,
+        ...(studentId ? { studentId } : {}),
       };
     })
     .filter(Boolean)
@@ -120,6 +144,7 @@ export function stopsToMapFeatures(stops, { idPrefix = '' } = {}) {
       longitude: stop.lng,
       stop_type: stop.stopType,
       sequence: stop.sequence,
+      ...(stop.studentId ? { studentId: stop.studentId } : {}),
     }));
 }
 

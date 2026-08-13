@@ -25,6 +25,7 @@ function toRotatedStop(stop, distanceFromBusKm, displaySequence) {
     longitude: stop.lng,
     distanceFromBusKm,
     stopType: stop.stopType,
+    ...(stop.studentId ? { studentId: stop.studentId } : {}),
   };
 }
 
