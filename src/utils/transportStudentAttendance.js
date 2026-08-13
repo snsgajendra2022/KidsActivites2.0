@@ -71,6 +71,56 @@ function pickString(...values) {
   return undefined;
 }
 
+export function sameStopId(left, right) {
+  const a = String(left || '').trim();
+  const b = String(right || '').trim();
+  return Boolean(a && b && a.toLowerCase() === b.toLowerCase());
+}
+
+export function assignmentMatchesDirection(tripDirection, assignmentDirection) {
+  const assigned = String(assignmentDirection || 'both').toLowerCase();
+  const trip = String(tripDirection || '').toLowerCase();
+  if (!trip || assigned === 'both' || assigned === 'all') return true;
+  if (isPickupDirection(trip)) {
+    return assigned === 'morning' || assigned === 'pickup' || assigned === 'am' || assigned === 'both';
+  }
+  if (isDropoffDirection(trip)) {
+    return assigned === 'evening' || assigned === 'dropoff' || assigned === 'drop' || assigned === 'pm' || assigned === 'both';
+  }
+  return assigned === trip;
+}
+
+/** Pull student/assignment rows from trip, list, or Spring page payloads. */
+export function extractStudentRows(data) {
+  if (Array.isArray(data)) return data;
+  const raw = asRecord(data);
+  const stop = asRecord(raw.stop);
+  const candidates = [
+    raw.students,
+    raw.assignments,
+    raw.items,
+    raw.content,
+    raw.data,
+    stop.students,
+    stop.assignedStudents,
+    stop.assigned_students,
+  ];
+  for (const value of candidates) {
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+}
+
+export function filterStudentsForStop(students, stopId, { trustMissingStopId = false } = {}) {
+  const wanted = String(stopId || '').trim();
+  if (!wanted) return [];
+  return (Array.isArray(students) ? students : []).filter((student) => {
+    if (!student?.studentId) return false;
+    if (!student.stopId) return Boolean(trustMissingStopId);
+    return sameStopId(student.stopId, wanted);
+  });
+}
+
 function normalizeActionBlock(raw) {
   const block = asRecord(raw);
   if (!Object.keys(block).length && raw == null) return null;
@@ -133,16 +183,27 @@ export function normalizeStopAssignedStudent(item) {
   };
 }
 
-export function normalizeTripStopStudentsPayload(data) {
+export function normalizeTripStopStudentsPayload(data, options = {}) {
   const raw = asRecord(data);
   const stop = asRecord(raw.stop);
-  const students = (Array.isArray(raw.students) ? raw.students : [])
-    .map(normalizeStopAssignedStudent)
-    .filter(Boolean);
+  const stopId = pickString(
+    options.stopId,
+    stop.stopId,
+    stop.stop_id,
+    stop.id,
+    raw.stopId,
+    raw.stop_id,
+  ) || '';
+  const students = filterStudentsForStop(
+    extractStudentRows(data).map(normalizeStopAssignedStudent).filter(Boolean),
+    stopId,
+    { trustMissingStopId: options.trustMissingStopId ?? true },
+  );
+  const direction = pickString(options.direction, raw.direction);
   return {
     tripId: pickString(raw.tripId, raw.trip_id) || '',
     stop: {
-      stopId: pickString(stop.stopId, stop.stop_id, stop.id, raw.stopId) || '',
+      stopId,
       stopName: pickString(stop.stopName, stop.stop_name, stop.name, raw.stopName) || 'Stop',
       displaySequence: Number(stop.displaySequence ?? stop.display_sequence ?? stop.sequence) || null,
       sequence: Number(stop.sequence) || null,
@@ -150,7 +211,7 @@ export function normalizeTripStopStudentsPayload(data) {
       longitude: Number(stop.lng ?? stop.longitude) || null,
     },
     students,
-    counts: computeStudentCounts(students, raw.direction),
+    counts: computeStudentCounts(students, direction),
   };
 }
 

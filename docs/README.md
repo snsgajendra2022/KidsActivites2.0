@@ -5,6 +5,7 @@
 | Doc | Purpose |
 |-----|---------|
 | **[FULL_BACKEND_API_CONTRACT.md](./FULL_BACKEND_API_CONTRACT.md)** | APIs required only by the newly added Student Profile and School ERP work |
+| **[courseAndLocation.md](./courseAndLocation.md)** | Outstanding backend work for LMS course/quiz/certificates and transport map location / live GPS / stop rosters |
 | **[transport/LIVE_BUS_TRACKING.md](./transport/LIVE_BUS_TRACKING.md)** | Production live bus GPS tracking architecture and deployment |
 
 ## Specialized domain contracts

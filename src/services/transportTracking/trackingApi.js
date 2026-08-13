@@ -22,10 +22,16 @@ import {
   isTransportFixtureMode,
 } from './fixtures.js';
 import {
+  assignmentMatchesDirection,
+  computeStudentCounts,
+  extractStudentRows,
   normalizeParentStudentTripStatus,
   normalizeStopAssignedStudent,
   normalizeTripStopStudentsPayload,
+  sameStopId,
 } from '../../utils/transportStudentAttendance.js';
+import { studentIdFromStop } from '../../utils/transportRouteGeo.js';
+import { getStudentForRelationship } from '../studentDirectoryService.js';
 
 /**
  * Live tracking uses the same Spring Boot API as the rest of the app
@@ -250,29 +256,197 @@ export async function fetchTripHistory(params = {}) {
   }
 }
 
-/** Admin/Driver: students assigned to a trip stop (keyed by stopId). */
-export async function getTripStopStudents(tripId, stopId) {
-  if (!tripId || !stopId) {
-    return normalizeTripStopStudentsPayload({ tripId, stop: { stopId }, students: [] });
-  }
-  if (isTransportFixtureMode()) {
-    return normalizeTripStopStudentsPayload(fixtureTripStopStudents(tripId, stopId));
-  }
+/** Soft-null for endpoints a role cannot reach or a backend has not deployed. */
+async function tryTrackingGet(path, params) {
+  const qs = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value != null && value !== '') qs.set(key, value);
+  });
+  const suffix = qs.toString() ? `?${qs}` : '';
   try {
-    const data = await trackingFetch(
-      `/transport/trips/${encodeURIComponent(tripId)}/stops/${encodeURIComponent(stopId)}/students`,
-    );
-    return normalizeTripStopStudentsPayload(data);
+    return await trackingFetch(`${path}${suffix}`);
   } catch (err) {
-    if (err?.status === 404 || err?.code === 'NOT_FOUND') {
-      return normalizeTripStopStudentsPayload({
-        tripId,
-        stop: { stopId },
-        students: [],
-      });
-    }
+    if (err?.status === 404 || err?.status === 403 || err?.code === 'NOT_FOUND') return null;
     throw err;
   }
+}
+
+function assignmentMeta(row) {
+  const raw = row && typeof row === 'object' ? row : {};
+  const route = raw.route && typeof raw.route === 'object' ? raw.route : {};
+  const vehicle = raw.vehicle && typeof raw.vehicle === 'object' ? raw.vehicle : {};
+  return {
+    assignmentId: raw.id || raw.assignmentId || raw.assignment_id || null,
+    routeId: raw.routeId || raw.route_id || route.id || null,
+    vehicleId: raw.vehicleId || raw.vehicle_id || vehicle.id || null,
+    direction: raw.direction || null,
+    status: raw.status || null,
+  };
+}
+
+const INACTIVE_ASSIGNMENT_STATUSES = ['inactive', 'disabled', 'cancelled', 'deleted'];
+
+/**
+ * A standing assignment counts for this stop when it targets the same stopId, or
+ * when it targets the same student for a student-home stop that has no stopId.
+ */
+function keepStandingAssignment(student, meta, opts, trustMissingStopId) {
+  if (!student?.studentId) return false;
+  const matchesStop = student.stopId
+    ? sameStopId(student.stopId, opts.stopId)
+    : trustMissingStopId;
+  const matchesStudent = Boolean(opts.studentId)
+    && String(student.studentId) === String(opts.studentId);
+  if (!matchesStop && !matchesStudent) return false;
+  if (opts.routeId && meta.routeId && String(meta.routeId) !== String(opts.routeId)) return false;
+  if (opts.vehicleId && meta.vehicleId && String(meta.vehicleId) !== String(opts.vehicleId)) return false;
+  if (INACTIVE_ASSIGNMENT_STATUSES.includes(String(meta.status || 'active').toLowerCase())) return false;
+  return assignmentMatchesDirection(opts.direction, meta.direction);
+}
+
+function assignmentsToStopStudents(rows, opts, trustMissingStopId) {
+  const students = [];
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const student = normalizeStopAssignedStudent(row);
+    const meta = assignmentMeta(row);
+    if (!keepStandingAssignment(student, meta, opts, trustMissingStopId)) return;
+    students.push({
+      ...student,
+      assignmentId: student.assignmentId || meta.assignmentId,
+      stopId: student.stopId || opts.stopId,
+    });
+  });
+  return students;
+}
+
+/**
+ * Standing assignments for a stop. Tried in role order so admin, driver and
+ * parent portals all reach a roster without a trip-scoped endpoint.
+ */
+async function listAssignedStudentsForStop(opts) {
+  const params = { stopId: opts.stopId, status: 'active' };
+  if (opts.routeId) params.routeId = opts.routeId;
+  if (opts.vehicleId) params.vehicleId = opts.vehicleId;
+  if (opts.direction) params.direction = opts.direction;
+
+  const attempts = [
+    opts.routeId
+      ? {
+        path: `/transport/routes/${encodeURIComponent(opts.routeId)}/stops/${encodeURIComponent(opts.stopId)}/students`,
+        trustMissingStopId: true,
+      }
+      : null,
+    { path: '/admin/transport/assignments', trustMissingStopId: false },
+    { path: '/transport/assignments', trustMissingStopId: false },
+  ].filter(Boolean);
+
+  for (const attempt of attempts) {
+    const data = await tryTrackingGet(attempt.path, params);
+    if (data == null) continue;
+    const students = assignmentsToStopStudents(
+      extractStudentRows(data),
+      opts,
+      attempt.trustMissingStopId,
+    );
+    if (students.length) return students;
+  }
+
+  // Student-home stops carry no stopId on the assignment row, so retry the
+  // assignment lists filtered by the bound student instead. Rows are re-checked
+  // locally because a backend that ignores `studentId` would return the whole list.
+  if (opts.studentId) {
+    const studentParams = { studentId: opts.studentId, status: 'active' };
+    if (opts.routeId) studentParams.routeId = opts.routeId;
+    for (const path of ['/admin/transport/assignments', '/transport/assignments']) {
+      const data = await tryTrackingGet(path, studentParams);
+      if (data == null) continue;
+      const students = assignmentsToStopStudents(extractStudentRows(data), opts, true)
+        .filter((student) => String(student.studentId) === String(opts.studentId));
+      if (students.length) return students;
+    }
+  }
+
+  return [];
+}
+
+/**
+ * Last resort for a stop created from a student's home address: bind that one
+ * student from the student catalog and overlay this trip's pickup/dropoff state.
+ */
+async function studentHomeStopRoster({ tripId, stopId, studentId }) {
+  const relationship = await getStudentForRelationship(studentId).catch(() => null);
+  if (!relationship) return [];
+
+  let attendance = null;
+  if (tripId) {
+    const statuses = await getTripStudentTransportStatuses(tripId).catch(() => []);
+    attendance = statuses.find((item) => String(item.studentId) === String(studentId)) || null;
+  }
+
+  const student = normalizeStopAssignedStudent({
+    studentId: relationship.studentId,
+    studentName: relationship.studentName,
+    classId: relationship.classId,
+    className: relationship.className,
+    sectionId: relationship.sectionId,
+    sectionName: relationship.sectionName,
+    parentName: relationship.parentName,
+    stopId,
+    pickup: attendance?.pickup,
+    dropoff: attendance?.dropoff,
+  });
+  return student ? [student] : [];
+}
+
+/**
+ * Admin/Driver: students at a trip stop.
+ *
+ * Resolution order: trip roster by stopId → standing assignments by stopId →
+ * standing assignments by the stop's bound studentId → the bound student itself.
+ * The last two steps exist because a stop created from a student's home address
+ * has no assignment row pointing at its id.
+ */
+export async function getTripStopStudents(tripId, stopId, options = {}) {
+  const studentId = options.studentId || studentIdFromStop({ id: stopId });
+  const opts = {
+    stopId,
+    studentId,
+    routeId: options.routeId,
+    vehicleId: options.vehicleId,
+    direction: options.direction,
+  };
+
+  if (!stopId) {
+    return normalizeTripStopStudentsPayload({ tripId, stop: { stopId }, students: [] }, opts);
+  }
+  if (isTransportFixtureMode()) {
+    return normalizeTripStopStudentsPayload(fixtureTripStopStudents(tripId, stopId), {
+      ...opts,
+      trustMissingStopId: true,
+    });
+  }
+
+  if (tripId) {
+    const data = await tryTrackingGet(
+      `/transport/trips/${encodeURIComponent(tripId)}/stops/${encodeURIComponent(stopId)}/students`,
+    );
+    if (data != null) {
+      const parsed = normalizeTripStopStudentsPayload(data, { ...opts, trustMissingStopId: true });
+      if (parsed.students.length) return parsed;
+    }
+  }
+
+  let students = await listAssignedStudentsForStop(opts);
+  if (!students.length && studentId) {
+    students = await studentHomeStopRoster({ tripId, stopId, studentId });
+  }
+
+  return {
+    tripId: tripId || '',
+    stop: { stopId, stopName: 'Stop' },
+    students,
+    counts: computeStudentCounts(students, opts.direction),
+  };
 }
 
 /** Driver: mark pickup at a stop. */

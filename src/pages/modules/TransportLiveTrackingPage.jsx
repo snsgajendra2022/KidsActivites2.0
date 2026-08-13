@@ -33,6 +33,7 @@ import {
   normalizeRouteStops,
   routeHasMappedStops,
   stopsToMapFeatures,
+  studentIdFromStop,
   vehicleMatchesRoute,
 } from '../../utils/transportRouteGeo.js';
 import { isNewerLocation } from '../../utils/transportLocationSequence.js';
@@ -454,27 +455,37 @@ export default function TransportLiveTrackingPage() {
 
   const activeTripId = selected?.trip_id || selected?.tripId || rotationBus?.trip_id || rotationBus?.tripId || '';
 
+  const stopLookupScope = useMemo(() => ({
+    routeId: selectedRoute?.id || selected?.route_id || selected?.routeId || '',
+    vehicleId: selected?.vehicle_id || selected?.vehicleId || '',
+    direction: selected?.direction || '',
+  }), [selectedRoute, selected]);
+
   const openStopDetails = useCallback(async (stop) => {
     setSelectedStop(stop);
     setStopError('');
     setStopStudents([]);
     setStopCounts(null);
-    if (!activeTripId) {
-      setStopError('Select a bus with an active trip to load students for this stop.');
-      return;
-    }
     setStopLoading(true);
     try {
-      const result = await getTripStopStudents(activeTripId, stop.id);
+      // Standing assignments resolve without a trip, so a student-home stop still
+      // lists its student when no bus is running.
+      const result = await getTripStopStudents(activeTripId, stop.id, {
+        ...stopLookupScope,
+        studentId: studentIdFromStop(stop),
+      });
       setStopStudents(result.students || []);
       setStopCounts(result.counts || null);
+      if (!activeTripId && !result.students?.length) {
+        setStopError('Select a bus with an active trip to load students for this stop.');
+      }
     } catch (err) {
       setStopError(friendlyTransportError(err));
       toast(friendlyTransportError(err), 'error');
     } finally {
       setStopLoading(false);
     }
-  }, [activeTripId, toast]);
+  }, [activeTripId, stopLookupScope, toast]);
 
   useEffect(() => {
     if (!activeTripId) {

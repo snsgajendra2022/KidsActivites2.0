@@ -37,7 +37,7 @@ import {
   trackingStateLabel,
   TRACKING_UI_STATES,
 } from '../../utils/transportTrackingState.js';
-import { stopsToMapFeatures } from '../../utils/transportRouteGeo.js';
+import { stopsToMapFeatures, studentIdFromStop } from '../../utils/transportRouteGeo.js';
 import { isNewerLocation } from '../../utils/transportLocationSequence.js';
 import useRoadRoute from '../../hooks/useRoadRoute.js';
 import useTripStopRotation from '../../hooks/useTripStopRotation.js';
@@ -51,6 +51,19 @@ import {
 
 function childStudentId(child) {
   return resolveParentStudentId(child);
+}
+
+/** Every id a child record may be keyed by (enrolled student vs application). */
+function childIdCandidates(child) {
+  return [
+    childStudentId(child),
+    child?.studentId,
+    child?.enrolledStudentId,
+    child?.applicationId,
+    child?.id,
+  ]
+    .map((value) => (value != null ? String(value).trim() : ''))
+    .filter(Boolean);
 }
 
 function childLabel(child) {
@@ -178,6 +191,7 @@ export default function ParentTransportTrackingPage() {
     setStopError('');
     setStopLoading(false);
     // Parent privacy: never call admin/driver stop-students API.
+    const stopStudentId = studentIdFromStop(stop);
     const ownChildren = [];
     children.forEach((child) => {
       const id = childStudentId(child);
@@ -186,7 +200,9 @@ export default function ParentTransportTrackingPage() {
       const status = isSelected ? childTripStatus : null;
       const pickupStop = status?.pickup?.stopId;
       const dropoffStop = status?.dropoff?.stopId;
-      const matchesStop = String(pickupStop || '') === String(stop.id)
+      // A stop built from this child's home address binds the child directly.
+      const matchesStop = (stopStudentId && childIdCandidates(child).includes(String(stopStudentId)))
+        || String(pickupStop || '') === String(stop.id)
         || String(dropoffStop || '') === String(stop.id)
         || (isSelected && String(data?.assignedStopId || '') === String(stop.id))
         || (isSelected && String(data?.assignedStop || '').toLowerCase() === String(stop.name || '').toLowerCase());

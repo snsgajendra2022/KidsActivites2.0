@@ -69,49 +69,70 @@ function exitElementFullscreen() {
   return Promise.resolve();
 }
 
-const BUS_MARKER_SIZE = 52;
+const BUS_MARKER_SIZE = 54;
 
-/** Full side-view school bus (faces east). Heading rotates with heading - 90. */
+const BUS_BODY_PATH = 'M16 6 H62 Q72 6 78 13 Q84 20 84 29 V32 Q84 38 78 38 H14 Q7 38 7 31 V14 Q7 6 16 6 Z';
+
+/**
+ * Cartoon sticker school bus, side view facing east.
+ * Layer order builds the sticker look: white die-cut halo, dark-outlined body,
+ * painted details, then wheels on top. Heading rotates with heading - 90.
+ */
 function busGlyphSvg() {
-  return `<svg class="live-bus-glyph" viewBox="0 0 80 42" width="46" height="24" aria-hidden="true" focusable="false">
-    <ellipse cx="40" cy="40.2" rx="30" ry="1.8" fill="#0b1c30" opacity=".22"/>
-    <rect x="2" y="23" width="4.5" height="7" rx="1" fill="#4B5563" stroke="#111827" stroke-width="1"/>
-    <rect x="5" y="10" width="58" height="21" rx="3.2" fill="#F5C400" stroke="#111827" stroke-width="1.7"/>
-    <path d="M63 15.5 h8.5 a3.4 3.4 0 0 1 3.4 3.4 v8.7 a3.2 3.2 0 0 1-3.2 3.2 H63 V15.5z" fill="#F5C400" stroke="#111827" stroke-width="1.7" stroke-linejoin="round"/>
-    <rect x="12" y="4.8" width="46" height="6.4" rx="2.2" fill="#E2B000" stroke="#111827" stroke-width="1.35"/>
-    <circle cx="16.5" cy="6.2" r="1.55" fill="#F97316" stroke="#111827" stroke-width=".75"/>
-    <circle cx="53.5" cy="6.2" r="1.55" fill="#EF4444" stroke="#111827" stroke-width=".75"/>
-    <rect x="8.5" y="12.4" width="50" height="8.2" rx="1.3" fill="#16324F"/>
-    <rect x="17.8" y="12.4" width="1.5" height="8.2" fill="#F5C400"/>
-    <rect x="27.4" y="12.4" width="1.5" height="8.2" fill="#F5C400"/>
-    <rect x="37" y="12.4" width="1.5" height="8.2" fill="#F5C400"/>
-    <rect x="46.6" y="12.4" width="1.5" height="8.2" fill="#F5C400"/>
-    <rect x="9.8" y="13.2" width="6" height="1.9" rx=".4" fill="#fff" opacity=".32"/>
-    <rect x="19.6" y="13.2" width="6" height="1.9" rx=".4" fill="#fff" opacity=".32"/>
-    <rect x="29.2" y="13.2" width="6" height="1.9" rx=".4" fill="#fff" opacity=".32"/>
-    <rect x="38.8" y="13.2" width="6" height="1.9" rx=".4" fill="#fff" opacity=".32"/>
-    <path d="M58.8 12.4 h5.4 l4.8 8.2 H58.8z" fill="#7DD3FC"/>
-    <rect x="6.2" y="23.2" width="66" height="2.6" fill="#111827"/>
-    <rect x="67.5" y="21.8" width="5.6" height="5.6" rx=".9" fill="#374151"/>
-    <rect x="68.4" y="23" width="3.8" height=".65" fill="#D1D5DB"/>
-    <rect x="68.4" y="24.2" width="3.8" height=".65" fill="#D1D5DB"/>
-    <rect x="68.4" y="25.4" width="3.8" height=".65" fill="#D1D5DB"/>
-    <circle cx="76.2" cy="25.2" r="2.15" fill="#FEF9C3" stroke="#111827" stroke-width=".9"/>
-    <rect x="6.4" y="26.2" width="2.8" height="3.2" rx=".6" fill="#DC2626"/>
-    <circle cx="20" cy="34.2" r="6.6" fill="#111827"/>
-    <circle cx="20" cy="34.2" r="3.6" fill="#E5E7EB"/>
-    <circle cx="20" cy="34.2" r="1.5" fill="#4B5563"/>
-    <circle cx="54" cy="34.2" r="6.6" fill="#111827"/>
-    <circle cx="54" cy="34.2" r="3.6" fill="#E5E7EB"/>
-    <circle cx="54" cy="34.2" r="1.5" fill="#4B5563"/>
+  return `<svg class="live-bus-glyph" viewBox="0 0 92 52" width="48" height="27" aria-hidden="true" focusable="false">
+    <g fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round">
+      <circle cx="25" cy="40" r="6.8"/>
+      <circle cx="67" cy="40" r="6.8"/>
+      <path d="${BUS_BODY_PATH}"/>
+    </g>
+    <path d="${BUS_BODY_PATH}" fill="#FFC42E" stroke="#1D2233" stroke-width="3.2" stroke-linejoin="round"/>
+    <rect x="24" y="8.2" width="30" height="2.6" rx="1.3" fill="#FFFFFF" opacity=".42"/>
+    <g fill="#BCE3FF" stroke="#1D2233" stroke-width="2.2" stroke-linejoin="round">
+      <rect x="12.5" y="11.6" width="13.5" height="12.4" rx="4"/>
+      <rect x="29.5" y="11.6" width="13.5" height="12.4" rx="4"/>
+      <rect x="46.5" y="11.6" width="11" height="12.4" rx="4"/>
+      <path d="M62 11.6 H64.6 Q70.6 11.6 74.6 15.6 Q78.3 19.3 78.7 22.6 Q78.9 24 77.4 24 H62 Q60.6 24 60.6 22.6 V13 Q60.6 11.6 62 11.6 Z"/>
+    </g>
+    <g fill="#FFFFFF" opacity=".6">
+      <rect x="14.6" y="13.6" width="5.4" height="2.3" rx="1.15"/>
+      <rect x="31.6" y="13.6" width="5.4" height="2.3" rx="1.15"/>
+      <rect x="48.6" y="13.6" width="4.6" height="2.3" rx="1.15"/>
+      <rect x="62.8" y="13.6" width="5.4" height="2.3" rx="1.15"/>
+    </g>
+    <rect x="12.5" y="27" width="57" height="3.2" rx="1.6" fill="#1D2233" opacity=".82"/>
+    <rect x="7.8" y="27" width="3.6" height="6" rx="1.4" fill="#F04438" stroke="#1D2233" stroke-width="1.1"/>
+    <rect x="72.6" y="31.4" width="7.6" height="4.2" rx="2.1" fill="#3A4255" stroke="#1D2233" stroke-width="1.1"/>
+    <circle cx="79.4" cy="27.6" r="3.2" fill="#FFF3B8" stroke="#1D2233" stroke-width="1.6"/>
+    <g fill="#2C3242" stroke="#1D2233" stroke-width="3.2">
+      <circle cx="25" cy="40" r="6.8"/>
+      <circle cx="67" cy="40" r="6.8"/>
+    </g>
+    <g fill="#F5F7FC" stroke="#1D2233" stroke-width="1.8">
+      <circle cx="25" cy="40" r="3.1"/>
+      <circle cx="67" cy="40" r="3.1"/>
+    </g>
+    <g fill="#8891A6">
+      <circle cx="25" cy="40" r="1"/>
+      <circle cx="67" cy="40" r="1"/>
+    </g>
   </svg>`;
+}
+
+/**
+ * The sticker is drawn facing east, so it rotates by heading - 90. Westward
+ * headings are mirrored instead of rotated past vertical to keep it upright.
+ */
+function busHeadingTransform(heading) {
+  const degrees = ((Number(heading) % 360) + 360) % 360;
+  const mirrored = degrees > 180 && degrees < 360;
+  return `rotate(${degrees - 90}deg)${mirrored ? ' scaleY(-1)' : ''}`;
 }
 
 function createBusIcon(status = 'running', selected = false) {
   const color = STATUS_COLORS[status] || STATUS_COLORS.running;
   return L.divIcon({
     className: 'live-bus-marker',
-    html: `<div class="live-bus-marker-body${selected ? ' is-selected' : ''}" style="--bus-ring:${color}">${busGlyphSvg()}</div>`,
+    html: `<div class="live-bus-marker-body${selected ? ' is-selected' : ''}" style="--bus-ring:${color}">${busGlyphSvg()}<span class="live-bus-status"></span></div>`,
     iconSize: [BUS_MARKER_SIZE, BUS_MARKER_SIZE],
     iconAnchor: [BUS_MARKER_SIZE / 2, BUS_MARKER_SIZE / 2],
   });
@@ -399,7 +420,7 @@ export default function LiveBusMap({
 
       if (vehicle.heading != null && Number.isFinite(Number(vehicle.heading))) {
         const el = marker.getElement()?.querySelector('.live-bus-glyph');
-        if (el) el.style.transform = `rotate(${Number(vehicle.heading) - 90}deg)`;
+        if (el) el.style.transform = busHeadingTransform(vehicle.heading);
       }
     });
 
@@ -553,24 +574,47 @@ export default function LiveBusMap({
           overflow: visible !important;
         }
         .live-bus-marker-body {
-          width: 52px;
-          height: 52px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.94);
-          border: 2.5px solid #fff;
-          box-shadow: 0 0 0 2.5px var(--bus-ring, #0B6E4F), 0 3px 10px rgba(0, 0, 0, 0.42);
+          position: relative;
+          width: 54px;
+          height: 54px;
           display: grid;
           place-items: center;
+          filter: drop-shadow(0 3px 4px rgba(11, 18, 32, 0.45));
+          transition: transform 0.2s ease;
+        }
+        .live-bus-marker-body::before {
+          content: '';
+          position: absolute;
+          inset: 2px;
+          border-radius: 999px;
+          border: 3px solid transparent;
+          transition: border-color 0.2s ease, background 0.2s ease;
         }
         .live-bus-marker-body.is-selected {
-          transform: scale(1.1);
-          box-shadow: 0 0 0 2.5px var(--bus-ring, #0B6E4F), 0 0 0 5px #0058be, 0 4px 12px rgba(0, 0, 0, 0.45);
+          transform: scale(1.12);
+        }
+        .live-bus-marker-body.is-selected::before {
+          border-color: #0058be;
+          background: rgba(0, 88, 190, 0.16);
+          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92);
         }
         .live-bus-glyph {
+          position: relative;
+          z-index: 1;
           display: block;
           transform-origin: center center;
-          filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.28));
           transition: transform 0.35s ease;
+        }
+        .live-bus-status {
+          position: absolute;
+          top: 0;
+          right: 0;
+          z-index: 2;
+          width: 11px;
+          height: 11px;
+          border-radius: 999px;
+          background: var(--bus-ring, #0B6E4F);
+          border: 2.5px solid #fff;
         }
       `}</style>
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] flex flex-col gap-1.5 p-1.5 sm:flex-row sm:items-start sm:justify-between sm:p-2">

@@ -11,6 +11,7 @@ Related docs:
 - [`LIVE_BUS_TRACKING.md`](./LIVE_BUS_TRACKING.md) — Spring Boot entity / package guidance
 - [`DRIVER_ASSIGNMENT_LIVE_API.md`](./DRIVER_ASSIGNMENT_LIVE_API.md) — relationship + acceptance criteria
 - [`LIVE_TRACKING.md`](./LIVE_TRACKING.md) — operator / parent how-to
+- [`../courseAndLocation.md`](../courseAndLocation.md) — outstanding backend gaps for live location and stop rosters
 - Mobile mirror: `mobile/LIVE_TRACKING.md`
 
 **Status legend**
