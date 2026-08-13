@@ -86,6 +86,7 @@ import LmsCoursesPage from './pages/lms/LmsCoursesPage.jsx';
 import LmsCourseEditorPage from './pages/lms/LmsCourseEditorPage.jsx';
 import LmsEnrollmentsPage from './pages/lms/LmsEnrollmentsPage.jsx';
 import LmsCertificatesPage from './pages/lms/LmsCertificatesPage.jsx';
+import LmsEnrollmentProgressPage from './pages/lms/LmsEnrollmentProgressPage.jsx';
 import MyLearningPage from './pages/lms/MyLearningPage.jsx';
 import CoursePlayerPage from './pages/lms/CoursePlayerPage.jsx';
 import CoursePlaygroundPage from './pages/lms/CoursePlaygroundPage.jsx';
@@ -237,7 +238,8 @@ export default function App() {
         <Route path="admin/lms/courses/:courseId/playground" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><CoursePlaygroundPage /></ProtectedRoute>} />
         <Route path="admin/lms/courses/:courseId" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><LmsCourseEditorPage /></ProtectedRoute>} />
         <Route path="admin/lms/enrollments" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><LmsEnrollmentsPage /></ProtectedRoute>} />
-        <Route path="admin/lms/certificates" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><LmsCertificatesPage backPath="/admin/lms" /></ProtectedRoute>} />
+        <Route path="admin/lms/enrollments/:enrollmentId" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><LmsEnrollmentProgressPage /></ProtectedRoute>} />
+        <Route path="admin/lms/certificates" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><LmsCertificatesPage audience="admin" backPath="/admin/lms" /></ProtectedRoute>} />
         <Route path="admin/fees-advanced" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdvancedFeesPage /></ProtectedRoute>} />
         <Route path="admin/accounting" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AccountingDashboardPage /></ProtectedRoute>} />
         <Route path="admin/expenses" element={<ProtectedRoute allowedRoles={FEES_ROLES}><ExpensesPage /></ProtectedRoute>} />
@@ -277,8 +279,11 @@ export default function App() {
         <Route path="parent/exams" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ExamMarksPage layout="app" readOnly audience="parent" /></ProtectedRoute>} />
         <Route path="parent/timetable" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><TimetablePage layout="app" readOnly audience="parent" /></ProtectedRoute>} />
         <Route path="parent/lms" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyLearningPage layout="app" basePath="/parent/lms" /></ProtectedRoute>} />
-        <Route path="parent/lms/certificates" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LmsCertificatesPage layout="app" backPath="/parent/lms" /></ProtectedRoute>} />
+        <Route path="parent/lms/certificates" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LmsCertificatesPage layout="app" audience="parent" backPath="/parent/lms" /></ProtectedRoute>} />
         <Route path="parent/lms/:enrollmentId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><CoursePlayerPage layout="app" basePath="/parent/lms" /></ProtectedRoute>} />
+        <Route path="parent/learning" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyLearningPage layout="app" basePath="/parent/lms" /></ProtectedRoute>} />
+        <Route path="parent/learning/certificates" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LmsCertificatesPage layout="app" audience="parent" backPath="/parent/lms" /></ProtectedRoute>} />
+        <Route path="parent/learning/:enrollmentId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><CoursePlayerPage layout="app" basePath="/parent/lms" /></ProtectedRoute>} />
         <Route path="parent/leave" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LeaveRequestsPage layout="app" /></ProtectedRoute>} />
         <Route path="parent/transport" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentTransportTrackingPage /></ProtectedRoute>} />
 
@@ -304,7 +309,9 @@ export default function App() {
         <Route path="teacher/lms/courses/new" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><LmsCourseEditorPage layout="app" basePath="/teacher/lms" /></ProtectedRoute>} />
         <Route path="teacher/lms/courses/:courseId/playground" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><CoursePlaygroundPage layout="app" basePath="/teacher/lms" /></ProtectedRoute>} />
         <Route path="teacher/lms/courses/:courseId" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><LmsCourseEditorPage layout="app" basePath="/teacher/lms" /></ProtectedRoute>} />
-        <Route path="teacher/lms/certificates" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><LmsCertificatesPage layout="app" backPath="/teacher/lms" /></ProtectedRoute>} />
+        <Route path="teacher/lms/enrollments" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><LmsEnrollmentsPage layout="app" basePath="/teacher/lms" /></ProtectedRoute>} />
+        <Route path="teacher/lms/enrollments/:enrollmentId" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><LmsEnrollmentProgressPage layout="app" basePath="/teacher/lms" /></ProtectedRoute>} />
+        <Route path="teacher/lms/certificates" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><LmsCertificatesPage layout="app" audience="teacher" backPath="/teacher/lms" /></ProtectedRoute>} />
 
         {/* Shared authenticated routes */}
         <Route path="creative-cards" element={<ProtectedRoute allowedRoles={CREATIVE_CARDS_ROLES}><CreativeCardsRoute /></ProtectedRoute>} />

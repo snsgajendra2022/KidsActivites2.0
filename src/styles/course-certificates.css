@@ -1,0 +1,708 @@
+/* Course Certificates — printed-paper templates */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Great+Vibes&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,700;0,800;1,600&display=swap');
+
+.cert-settings {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.cert-settings__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cert-settings__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--sb-secondary, #334155) 72%, transparent);
+  line-height: 1.45;
+  max-width: 42rem;
+}
+
+.cert-settings__grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 1100px) {
+  .cert-settings__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-items: start;
+  }
+}
+
+.cert-settings__panel {
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--sb-secondary, #334155) 10%, transparent);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem 1.15rem;
+  box-shadow: 0 10px 30px -24px rgba(15, 23, 42, 0.45);
+}
+
+.cert-settings__panel-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--sb-secondary, #0f172a);
+}
+
+.cert-settings__panel-desc {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--sb-secondary, #334155) 65%, transparent);
+}
+
+.cert-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+@media (min-width: 720px) {
+  .cert-template-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.cert-template-card {
+  appearance: none;
+  border: 1.5px solid color-mix(in srgb, var(--sb-secondary, #334155) 12%, transparent);
+  border-radius: 0.85rem;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.cert-template-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--sb-primary, #c9a227) 55%, transparent);
+  box-shadow: 0 12px 24px -18px rgba(15, 23, 42, 0.55);
+}
+
+.cert-template-card--active {
+  border-color: var(--sb-primary, #c9a227);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sb-primary, #c9a227) 28%, transparent);
+}
+
+.cert-template-card__swatch {
+  height: 5.1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.cert-template-card__swatch .cert-sheet {
+  transform: scale(0.42);
+  transform-origin: top center;
+  width: 238%;
+  margin-left: -69%;
+  pointer-events: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.cert-template-card__meta {
+  padding: 0.5rem 0.65rem 0.65rem;
+}
+
+.cert-template-card__name {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--sb-secondary, #0f172a);
+}
+
+.cert-template-card__tag {
+  margin: 0.12rem 0 0;
+  font-size: 0.66rem;
+  color: color-mix(in srgb, var(--sb-secondary, #334155) 62%, transparent);
+  line-height: 1.3;
+}
+
+.cert-template-card__family {
+  display: inline-block;
+  margin-top: 0.3rem;
+  font-size: 0.6rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--sb-primary, #c9a227) 90%, #0f172a);
+}
+
+.cert-fields {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.cert-fields__row {
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (min-width: 560px) {
+  .cert-fields__row--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.cert-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--sb-secondary, #334155) 10%, transparent);
+  background: color-mix(in srgb, var(--sb-secondary, #334155) 3%, #fff);
+}
+
+.cert-toggle-row__label {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--sb-secondary, #0f172a);
+}
+
+.cert-toggle-row__hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--sb-secondary, #334155) 62%, transparent);
+}
+
+.cert-placeholder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.cert-placeholder-chip {
+  appearance: none;
+  border: 1px dashed color-mix(in srgb, var(--sb-secondary, #334155) 22%, transparent);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--sb-secondary, #334155);
+  cursor: pointer;
+}
+
+.cert-placeholder-chip:hover {
+  border-color: var(--sb-primary, #c9a227);
+  color: var(--sb-secondary, #0f172a);
+}
+
+.cert-preview-wrap {
+  position: sticky;
+  top: 1rem;
+}
+
+.cert-preview-stage {
+  border-radius: 1.1rem;
+  padding: 1.1rem 1rem 1.2rem;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(201, 162, 39, 0.16), transparent 55%),
+    linear-gradient(180deg, #2a2418 0%, #1a1610 100%);
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cert-preview-stage__label {
+  margin: 0 0 0.7rem;
+  text-align: center;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(248, 241, 220, 0.62);
+}
+
+/* ——— Printed certificate sheet ——— */
+
+.cert-sheet {
+  --cert-accent: #c9a227;
+  --cert-ink: #3b2f1a;
+  --cert-paper: #f7f0de;
+  --cert-title: 'Cinzel', 'Palatino Linotype', serif;
+  --cert-body: 'Cormorant Garamond', Georgia, serif;
+  --cert-script: 'Great Vibes', 'Palatino Linotype', cursive;
+  position: relative;
+  aspect-ratio: 1.414 / 1;
+  width: 100%;
+  overflow: hidden;
+  color: var(--cert-ink);
+  background: var(--cert-paper);
+  border-radius: 4px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 28px 50px -24px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.cert-sheet__grain,
+.cert-sheet__vignette,
+.cert-sheet__ornament,
+.cert-sheet__frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cert-sheet__grain {
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(80, 50, 20, 0.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(80, 50, 20, 0.03) 0 1px, transparent 1px 4px);
+}
+
+.cert-sheet__vignette {
+  background: radial-gradient(ellipse at center, transparent 42%, rgba(40, 24, 8, 0.18) 100%);
+}
+
+.cert-sheet__frame {
+  inset: 3.2%;
+  border: 1.5px solid color-mix(in srgb, var(--cert-accent) 75%, transparent);
+  box-shadow:
+    inset 0 0 0 5px color-mix(in srgb, var(--cert-paper) 70%, #fff),
+    inset 0 0 0 6.5px color-mix(in srgb, var(--cert-accent) 55%, transparent);
+}
+
+.cert-sheet__corner {
+  position: absolute;
+  width: 1.55rem;
+  height: 1.55rem;
+  pointer-events: none;
+  z-index: 2;
+  border-color: var(--cert-accent);
+}
+
+.cert-sheet__corner--tl { top: 4.4%; left: 4.4%; border-top: 2px solid; border-left: 2px solid; }
+.cert-sheet__corner--tr { top: 4.4%; right: 4.4%; border-top: 2px solid; border-right: 2px solid; }
+.cert-sheet__corner--bl { bottom: 4.4%; left: 4.4%; border-bottom: 2px solid; border-left: 2px solid; }
+.cert-sheet__corner--br { bottom: 4.4%; right: 4.4%; border-bottom: 2px solid; border-right: 2px solid; }
+
+.cert-sheet__flourish {
+  font-size: clamp(0.7rem, 1.6vw, 1rem);
+  letter-spacing: 0.35em;
+  color: var(--cert-accent);
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.cert-sheet__content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7.5% 9% 5.5%;
+  text-align: center;
+}
+
+.cert-sheet__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
+  width: 100%;
+}
+
+.cert-sheet__logo {
+  width: 2.85rem;
+  height: 2.85rem;
+  object-fit: contain;
+  border-radius: 0.2rem;
+  background: rgba(255, 255, 255, 0.45);
+  padding: 0.12rem;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+
+.cert-sheet__logo-fallback {
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-family: var(--cert-title);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--cert-accent);
+  border: 1.5px solid color-mix(in srgb, var(--cert-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--cert-paper) 70%, #fff);
+}
+
+.cert-sheet__school {
+  margin: 0.15rem 0 0;
+  font-family: var(--cert-title);
+  font-size: clamp(0.62rem, 1.45vw, 0.82rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.cert-sheet__title {
+  margin: 0.45rem 0 0;
+  font-family: var(--cert-title);
+  font-size: clamp(1.15rem, 3.1vw, 1.72rem);
+  font-weight: 700;
+  line-height: 1.12;
+  color: var(--cert-accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cert-sheet__subtitle {
+  margin: 0.4rem 0 0;
+  font-family: var(--cert-body);
+  font-size: clamp(0.78rem, 1.7vw, 0.98rem);
+  font-style: italic;
+  opacity: 0.88;
+}
+
+.cert-sheet__student {
+  margin: 0.2rem 0 0;
+  font-family: var(--cert-script);
+  font-size: clamp(1.35rem, 3.4vw, 2.05rem);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--cert-ink);
+}
+
+.cert-sheet__name-rule {
+  width: min(62%, 16rem);
+  height: 1px;
+  margin: 0.15rem auto 0;
+  background: linear-gradient(90deg, transparent, var(--cert-accent), transparent);
+  opacity: 0.7;
+}
+
+.cert-sheet__body {
+  margin: 0.4rem 0 0;
+  max-width: 36rem;
+  font-family: var(--cert-body);
+  font-size: clamp(0.72rem, 1.5vw, 0.92rem);
+  line-height: 1.5;
+  opacity: 0.94;
+}
+
+.cert-sheet__date {
+  margin: 0.35rem 0 0;
+  font-family: var(--cert-body);
+  font-size: clamp(0.62rem, 1.2vw, 0.74rem);
+  letter-spacing: 0.06em;
+  opacity: 0.72;
+}
+
+.cert-sheet__footer-block {
+  width: 100%;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cert-sheet__signs {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.45rem;
+  align-items: end;
+  width: 100%;
+}
+
+.cert-sheet__sign { min-width: 0; }
+
+.cert-sheet__sign-line {
+  height: 1px;
+  background: color-mix(in srgb, var(--cert-ink) 38%, transparent);
+  margin: 0 auto 0.28rem;
+  width: 78%;
+}
+
+.cert-sheet__sign-name {
+  margin: 0;
+  font-family: var(--cert-script);
+  font-size: clamp(0.85rem, 1.7vw, 1.05rem);
+  font-weight: 400;
+}
+
+.cert-sheet__sign-title {
+  margin: 0.05rem 0 0;
+  font-family: var(--cert-title);
+  font-size: clamp(0.48rem, 1vw, 0.58rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.cert-sheet__seal {
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 3px solid color-mix(in srgb, var(--cert-accent) 70%, #fff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cert-accent) 30%, transparent);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cert-sheet__seal-fallback {
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--cert-accent);
+  box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--cert-accent) 25%, transparent);
+  font-family: var(--cert-title);
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cert-accent);
+  background:
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--cert-accent) 18%, transparent), transparent 55%),
+    color-mix(in srgb, var(--cert-paper) 80%, #fff);
+}
+
+.cert-sheet__footnote {
+  margin: 0;
+  font-family: var(--cert-body);
+  font-size: clamp(0.52rem, 1.05vw, 0.64rem);
+  letter-spacing: 0.08em;
+  opacity: 0.68;
+}
+
+.cert-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* ——— Unique paper backgrounds ——— */
+
+.cert-paper--classic-gold {
+  --cert-title: 'Cinzel', serif;
+  --cert-body: 'Cormorant Garamond', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(232, 200, 114, 0.28), transparent 46%),
+    radial-gradient(ellipse at 20% 80%, rgba(180, 130, 40, 0.12), transparent 40%),
+    linear-gradient(180deg, #fbf6e6 0%, #f3e6c4 48%, #ead7a4 100%);
+}
+
+.cert-paper--classic-gold .cert-sheet__ornament {
+  background:
+    radial-gradient(circle at 8% 12%, transparent 0 18px, color-mix(in srgb, var(--cert-accent) 18%, transparent) 19px 20px, transparent 21px),
+    radial-gradient(circle at 92% 12%, transparent 0 18px, color-mix(in srgb, var(--cert-accent) 18%, transparent) 19px 20px, transparent 21px),
+    radial-gradient(circle at 8% 88%, transparent 0 18px, color-mix(in srgb, var(--cert-accent) 18%, transparent) 19px 20px, transparent 21px),
+    radial-gradient(circle at 92% 88%, transparent 0 18px, color-mix(in srgb, var(--cert-accent) 18%, transparent) 19px 20px, transparent 21px);
+}
+
+.cert-paper--modern-minimal {
+  --cert-title: 'Playfair Display', serif;
+  --cert-body: 'Libre Baskerville', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f7f5f0 100%);
+}
+
+.cert-paper--modern-minimal .cert-sheet__frame {
+  border-width: 1px;
+  box-shadow: inset 0 0 0 8px #fff, inset 0 0 0 9px #0f172a;
+}
+
+.cert-paper--modern-minimal .cert-sheet__grain { opacity: 0.08; }
+
+.cert-paper--royal-emerald {
+  --cert-title: 'Cinzel', serif;
+  --cert-body: 'Cormorant Garamond', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(ellipse at 50% 30%, #1a5c45 0%, transparent 55%),
+    linear-gradient(160deg, #0c3327 0%, #14543c 45%, #0a241c 100%);
+}
+
+.cert-paper--royal-emerald .cert-sheet__grain {
+  mix-blend-mode: overlay;
+  opacity: 0.18;
+}
+
+.cert-paper--royal-emerald .cert-sheet__vignette {
+  background: radial-gradient(ellipse at center, transparent 38%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+.cert-paper--midnight-navy {
+  --cert-title: 'Cinzel', serif;
+  --cert-body: 'Cormorant Garamond', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(ellipse at 70% 10%, rgba(232, 200, 114, 0.16), transparent 42%),
+    radial-gradient(circle at 20% 80%, rgba(80, 110, 170, 0.18), transparent 40%),
+    linear-gradient(165deg, #071526 0%, #123050 52%, #0a1a30 100%);
+}
+
+.cert-paper--midnight-navy .cert-sheet__vignette {
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+.cert-paper--pastel-bloom {
+  --cert-title: 'Playfair Display', serif;
+  --cert-body: 'Cormorant Garamond', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(ellipse at 12% 18%, rgba(244, 180, 196, 0.45), transparent 42%),
+    radial-gradient(ellipse at 88% 12%, rgba(216, 180, 230, 0.4), transparent 40%),
+    radial-gradient(ellipse at 80% 88%, rgba(255, 210, 190, 0.4), transparent 38%),
+    linear-gradient(180deg, #fff8f6 0%, #fde8ee 100%);
+}
+
+.cert-paper--pastel-bloom .cert-sheet__frame {
+  border-radius: 18px;
+  box-shadow:
+    inset 0 0 0 6px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 7.5px color-mix(in srgb, var(--cert-accent) 40%, transparent);
+}
+
+.cert-paper--academic-scholar {
+  --cert-title: 'Cinzel', serif;
+  --cert-body: 'Libre Baskerville', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(180, 130, 60, 0.18), transparent 45%),
+    linear-gradient(180deg, #f8ecd0 0%, #ead3a0 55%, #d9b97a 100%);
+}
+
+.cert-paper--academic-scholar .cert-sheet__grain { opacity: 0.32; }
+
+.cert-paper--academic-scholar .cert-sheet__frame {
+  box-shadow:
+    inset 0 0 0 4px #f6e8c8,
+    inset 0 0 0 6px #8b5a2b,
+    inset 0 0 0 10px #f3e0b8,
+    inset 0 0 0 11.5px #c9a227;
+}
+
+.cert-paper--ocean-azure {
+  --cert-title: 'Playfair Display', serif;
+  --cert-body: 'Cormorant Garamond', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(90, 180, 210, 0.28), transparent 50%),
+    linear-gradient(180deg, #f7fcfe 0%, #e4f3f8 48%, #cfe8f2 100%);
+}
+
+.cert-paper--ocean-azure .cert-sheet__ornament {
+  background:
+    linear-gradient(180deg, transparent 72%, rgba(26, 107, 138, 0.1) 100%),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 18px,
+      rgba(26, 107, 138, 0.05) 18px 19px
+    );
+  mask-image: linear-gradient(180deg, transparent 55%, #000 100%);
+}
+
+.cert-paper--sunset-coral {
+  --cert-title: 'Playfair Display', serif;
+  --cert-body: 'Cormorant Garamond', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(ellipse at 80% 0%, rgba(255, 170, 90, 0.35), transparent 42%),
+    radial-gradient(ellipse at 10% 100%, rgba(232, 120, 80, 0.22), transparent 40%),
+    linear-gradient(165deg, #fff7ee 0%, #f8d7b4 55%, #f0b98a 100%);
+}
+
+.cert-paper--geometric-modern {
+  --cert-title: 'Playfair Display', serif;
+  --cert-body: 'Libre Baskerville', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    linear-gradient(135deg, rgba(67, 56, 202, 0.08) 0 18%, transparent 18% 82%, rgba(67, 56, 202, 0.08) 82%),
+    linear-gradient(180deg, #fbfaff 0%, #ece8ff 100%);
+}
+
+.cert-paper--geometric-modern .cert-sheet__frame {
+  border-width: 2px;
+  box-shadow: inset 0 0 0 10px #fff, inset 0 0 0 12px var(--cert-accent);
+}
+
+.cert-paper--geometric-modern .cert-sheet__ornament {
+  background:
+    linear-gradient(90deg, var(--cert-accent) 0 10px, transparent 10px) top left / 28% 6px no-repeat,
+    linear-gradient(90deg, transparent calc(100% - 10px), var(--cert-accent) 0) top right / 28% 6px no-repeat,
+    linear-gradient(90deg, var(--cert-accent) 0 10px, transparent 10px) bottom left / 28% 6px no-repeat,
+    linear-gradient(90deg, transparent calc(100% - 10px), var(--cert-accent) 0) bottom right / 28% 6px no-repeat;
+  opacity: 0.55;
+}
+
+.cert-paper--forest-sage {
+  --cert-title: 'Cinzel', serif;
+  --cert-body: 'Cormorant Garamond', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(150, 180, 110, 0.28), transparent 40%),
+    radial-gradient(ellipse at 90% 90%, rgba(90, 120, 70, 0.18), transparent 38%),
+    linear-gradient(180deg, #f6f8ef 0%, #e4ead4 100%);
+}
+
+.cert-paper--platinum-elite {
+  --cert-title: 'Cinzel', serif;
+  --cert-body: 'Libre Baskerville', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #e8eaee 38%, #f7f8fa 62%, #d9dde3 100%);
+}
+
+.cert-paper--platinum-elite .cert-sheet__frame {
+  border-color: #9aa3af;
+  box-shadow:
+    inset 0 0 0 5px #f4f5f7,
+    inset 0 0 0 6.5px #c5cbd3;
+}
+
+.cert-paper--celebration-festive {
+  --cert-title: 'Playfair Display', serif;
+  --cert-body: 'Cormorant Garamond', serif;
+  --cert-script: 'Great Vibes', cursive;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(253, 224, 71, 0.35) 0 8px, transparent 9px),
+    radial-gradient(circle at 86% 22%, rgba(244, 114, 182, 0.28) 0 7px, transparent 8px),
+    radial-gradient(circle at 18% 82%, rgba(192, 38, 211, 0.18) 0 9px, transparent 10px),
+    radial-gradient(circle at 78% 78%, rgba(251, 191, 36, 0.28) 0 6px, transparent 7px),
+    linear-gradient(145deg, #fffaf2 0%, #fde7f3 48%, #ffe8c8 100%);
+}
+
+.cert-paper--celebration-festive .cert-sheet__frame {
+  border-radius: 10px;
+}
+
+.cert-template-card__swatch .cert-sheet__content {
+  padding: 8% 8% 6%;
+}
+
+.cert-template-card__swatch .cert-sheet__body,
+.cert-template-card__swatch .cert-sheet__date,
+.cert-template-card__swatch .cert-sheet__footer-block,
+.cert-template-card__swatch .cert-sheet__logo,
+.cert-template-card__swatch .cert-sheet__logo-fallback,
+.cert-template-card__swatch .cert-sheet__subtitle,
+.cert-template-card__swatch .cert-sheet__flourish,
+.cert-template-card__swatch .cert-sheet__name-rule {
+  display: none;
+}
+
+.cert-template-card__swatch .cert-sheet__title {
+  font-size: 1.6rem;
+}
+
+.cert-template-card__swatch .cert-sheet__student {
+  font-size: 1.8rem;
+}

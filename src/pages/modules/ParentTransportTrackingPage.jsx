@@ -22,9 +22,12 @@ import {
   updateParentChildTransportAddress,
 } from '../../services/transportAddressService.js';
 import { getParentChildren } from '../../services/parentService.js';
+import { resolveParentStudentId } from '../../services/schoolModules/relationshipOptions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import {
+  extractAddressFromApplication,
+  formatTransportAddress,
   isTransportAddressComplete,
   normalizeTransportAddress,
 } from '../../utils/transportAddress.js';
@@ -47,7 +50,7 @@ import {
 } from '../../utils/transportStudentAttendance.js';
 
 function childStudentId(child) {
-  return child?.studentId || child?.enrolledStudentId || child?.id || child?.applicationId || '';
+  return resolveParentStudentId(child);
 }
 
 function childLabel(child) {
@@ -275,12 +278,13 @@ export default function ParentTransportTrackingPage() {
         }
       },
       onEvent: (event) => {
-        if (!event?.data) return;
-        const eventVehicleId = String(event.data.vehicleId || event.data.vehicle_id || '');
+        const payload = event?.data || event?.payload || event?.body;
+        if (!payload) return;
+        const eventVehicleId = String(payload.vehicleId || payload.vehicle_id || '');
         if (eventVehicleId && eventVehicleId !== String(data.vehicleId)) return;
 
-        if (isStudentTransportWsEvent(event.type)) {
-          const eventStudentId = String(event.data.studentId || event.data.student_id || '');
+        if (isStudentTransportWsEvent(event.type || event.event)) {
+          const eventStudentId = String(payload.studentId || payload.student_id || '');
           if (eventStudentId && selectedStudentId && eventStudentId !== String(selectedStudentId)) return;
           setChildTripStatus((current) => {
             const base = current || {
@@ -291,14 +295,14 @@ export default function ParentTransportTrackingPage() {
               pickup: { status: 'PENDING' },
               dropoff: { status: 'PENDING' },
             };
-            const nextList = applyStudentTransportWsEvent([base], event);
+            const nextList = applyStudentTransportWsEvent([base], { ...event, data: payload });
             return normalizeParentStudentTripStatus(nextList[0] || base);
           });
-          setStopStudents((current) => applyStudentTransportWsEvent(current, event));
+          setStopStudents((current) => applyStudentTransportWsEvent(current, { ...event, data: payload }));
           return;
         }
 
-        if (event.type === WS_EVENT_TYPES.TRIP_COMPLETED) {
+        if ((event.type || event.event) === WS_EVENT_TYPES.TRIP_COMPLETED) {
           setData((current) => (current ? {
             ...current,
             tripStatus: 'completed',
@@ -312,10 +316,10 @@ export default function ParentTransportTrackingPage() {
           setData((current) => (current ? {
             ...current,
             status: event.type === WS_EVENT_TYPES.TRACKING_OFFLINE ? 'offline' : 'warning',
-            lat: event.data.latitude ?? current.lat,
-            lng: event.data.longitude ?? current.lng,
-            updatedAt: event.data.updatedAt || event.data.updated_at || current.updatedAt,
-            sequence: event.data.sequence ?? current.sequence,
+            lat: payload.latitude ?? current.lat,
+            lng: payload.longitude ?? current.lng,
+            updatedAt: payload.updatedAt || payload.updated_at || current.updatedAt,
+            sequence: payload.sequence ?? current.sequence,
           } : current));
           return;
         }
@@ -324,21 +328,21 @@ export default function ParentTransportTrackingPage() {
         setData((current) => {
           if (!current) return current;
           const incoming = {
-            sequence: event.data.sequence,
-            updatedAt: event.data.updatedAt || event.data.updated_at || new Date().toISOString(),
-            recordedAt: event.data.recordedAt || event.data.recorded_at,
+            sequence: payload.sequence,
+            updatedAt: payload.updatedAt || payload.updated_at || new Date().toISOString(),
+            recordedAt: payload.recordedAt || payload.recorded_at,
           };
           if (!isNewerLocation(current, incoming)) return current;
           return {
             ...current,
-            lat: event.data.latitude ?? event.data.lat,
-            lng: event.data.longitude ?? event.data.lng,
-            speedKmh: event.data.speedKmh ?? event.data.speed_kmh,
-            heading: event.data.heading,
-            status: event.data.trackingStatus || event.data.tracking_status || current.status,
-            etaMinutes: event.data.eta?.etaMinutes ?? current.etaMinutes,
-            nextStop: event.data.eta?.nextStopName || current.nextStop,
-            lastStop: event.data.eta?.lastStopName || current.lastStop,
+            lat: payload.latitude ?? payload.lat,
+            lng: payload.longitude ?? payload.lng,
+            speedKmh: payload.speedKmh ?? payload.speed_kmh ?? payload.speed,
+            heading: payload.heading,
+            status: 'running',
+            etaMinutes: payload.eta?.etaMinutes ?? current.etaMinutes,
+            nextStop: payload.eta?.nextStopName || current.nextStop,
+            lastStop: payload.eta?.lastStopName || current.lastStop,
             sequence: incoming.sequence ?? current.sequence,
             updatedAt: incoming.updatedAt,
           };
@@ -396,6 +400,41 @@ export default function ParentTransportTrackingPage() {
       })
       .filter(Boolean)
   ), [children]);
+
+  const selectedChild = useMemo(
+    () => children.find((child) => String(childStudentId(child)) === String(selectedStudentId)) || null,
+    [children, selectedStudentId],
+  );
+
+  const selectedChildName = childOptions.find((c) => c.value === selectedStudentId)?.label
+    || childLabel(selectedChild)
+    || 'Your child';
+
+  const enrollmentAddressLabel = useMemo(() => {
+    if (addressInfo?.addressLabel && addressInfo.addressLabel !== 'Address missing') {
+      return addressInfo.addressLabel;
+    }
+    const fromChild = formatTransportAddress(
+      extractAddressFromApplication(selectedChild || {}),
+    );
+    return fromChild || '';
+  }, [addressInfo, selectedChild]);
+
+  const assignedStopLabel = data?.assignedStop
+    || data?.nextStop
+    || (enrollmentAddressLabel ? `${enrollmentAddressLabel} (from enrollment)` : '');
+
+  const displayTripStatus = childTripStatus || (
+    activeTripId && selectedStudentId
+      ? {
+        studentId: selectedStudentId,
+        studentName: selectedChildName,
+        tripId: activeTripId,
+        pickup: { status: 'PENDING' },
+        dropoff: { status: 'PENDING' },
+      }
+      : null
+  );
 
   const needsAddress = addressInfo && !addressInfo.addressComplete;
 
@@ -514,7 +553,11 @@ export default function ParentTransportTrackingPage() {
           </div>
         ) : trackingState === TRACKING_UI_STATES.NO_ASSIGNMENT ? (
           <div className="sb-card p-6 text-sm text-[#344054]">
-            <p className="font-bold text-[#0b1c30]">{trackingStateLabel(trackingState)}</p>
+            <p className="font-bold text-[#0b1c30]">{selectedChildName}</p>
+            {enrollmentAddressLabel ? (
+              <p className="mt-1 text-sm text-[#475467]">{enrollmentAddressLabel}</p>
+            ) : null}
+            <p className="mt-3 font-bold text-[#0b1c30]">{trackingStateLabel(trackingState)}</p>
             <p className="mt-2 text-[#667085]">{trackingStateHint(trackingState)}</p>
           </div>
         ) : (
@@ -532,12 +575,20 @@ export default function ParentTransportTrackingPage() {
               <p className="mb-4 text-sm text-[#667085]">{trackingStateHint(trackingState)}</p>
               <div className="mb-4 grid gap-4 sm:grid-cols-2">
                 <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Child</p>
+                  <p className="mt-1 font-semibold">{selectedChildName}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Home / pickup address</p>
+                  <p className="mt-1 font-semibold">{enrollmentAddressLabel || '—'}</p>
+                </div>
+                <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Vehicle</p>
                   <p className="mt-1 font-semibold">{data?.vehicleNumber || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Assigned stop</p>
-                  <p className="mt-1 font-semibold">{data?.assignedStop || data?.nextStop || '—'}</p>
+                  <p className="mt-1 font-semibold">{assignedStopLabel || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Last stop</p>
@@ -590,8 +641,8 @@ export default function ParentTransportTrackingPage() {
               </div>
 
               <ParentTransportApprovalCard
-                status={childTripStatus}
-                studentName={childOptions.find((c) => c.value === selectedStudentId)?.label}
+                status={displayTripStatus}
+                studentName={selectedChildName}
                 loading={statusLoading}
                 submitting={approvalSubmitting}
                 onApprovePickup={() => submitPickupApproval(true)}

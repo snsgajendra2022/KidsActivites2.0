@@ -247,6 +247,182 @@ function pickNumber(...values) {
   return undefined;
 }
 
+/**
+ * Map backend trip/tracking labels onto the admin live filter values.
+ *
+ * Trip start sets tracking_status=stopped until GPS. Many backends also keep
+ * `stopped` when speed is 0 (desk testing / traffic light). Fresh coordinates
+ * mean the driver is sharing — show running, not stopped.
+ */
+export function isFreshGpsTimestamp(updatedAt, maxAgeMs = 3 * 60 * 1000) {
+  if (!updatedAt) return false;
+  const t = new Date(updatedAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  const age = Date.now() - t;
+  return age >= -60 * 1000 && age <= maxAgeMs;
+}
+
+export function normalizeTrackingStatus(status, {
+  hasCoords = false,
+  tripStatus = '',
+  updatedAt = '',
+} = {}) {
+  const trip = String(tripStatus || '').toLowerCase().replace(/[\s-]+/g, '_');
+  if (['completed', 'complete', 'finished', 'cancelled', 'canceled'].includes(trip)) {
+    return TRACKING_STATUS.COMPLETED;
+  }
+
+  const s = String(status || '').toLowerCase().replace(/[\s-]+/g, '_');
+  if (['completed', 'complete', 'finished', 'cancelled', 'canceled'].includes(s)) {
+    return TRACKING_STATUS.COMPLETED;
+  }
+
+  const fresh = hasCoords && (isFreshGpsTimestamp(updatedAt) || !updatedAt);
+  if (fresh) return TRACKING_STATUS.RUNNING;
+
+  if (hasCoords) {
+    if (isFreshGpsTimestamp(updatedAt, 15 * 60 * 1000)) return TRACKING_STATUS.WARNING;
+    return TRACKING_STATUS.OFFLINE;
+  }
+
+  if (['running', 'live', 'in_progress', 'inprogress', 'active', 'moving', 'started'].includes(s)) {
+    return TRACKING_STATUS.RUNNING;
+  }
+  if (['warning', 'stale'].includes(s)) return TRACKING_STATUS.WARNING;
+  if (['offline'].includes(s)) return TRACKING_STATUS.OFFLINE;
+  if (['stopped', 'idle', 'halted', 'parked'].includes(s)) return TRACKING_STATUS.STOPPED;
+  if (['active', 'running', 'in_progress', 'started'].includes(trip)) return TRACKING_STATUS.STOPPED;
+  return s || TRACKING_STATUS.OFFLINE;
+}
+
+/** Unwrap REST list payloads (`items` / `vehicles` / `fleet` / nested `data`). */
+export function listFromTrackingPayload(data) {
+  if (Array.isArray(data)) return data;
+  if (!data || typeof data !== 'object') return [];
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.content)) return data.content;
+  if (Array.isArray(data.vehicles)) return data.vehicles;
+  if (Array.isArray(data.fleet)) return data.fleet;
+  if (Array.isArray(data.liveVehicles)) return data.liveVehicles;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+}
+
+/**
+ * WS frames vary: `{ type, data }`, `{ type, payload }`, or the location object itself.
+ */
+export function unwrapTrackingEventData(event) {
+  if (!event || typeof event !== 'object') return null;
+  const nested = event.data || event.payload || event.body || event.location;
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) return nested;
+  if (
+    event.vehicleId != null
+    || event.vehicle_id != null
+    || event.latitude != null
+    || event.lat != null
+  ) {
+    return event;
+  }
+  return null;
+}
+
+export function trackingEventType(event) {
+  if (!event || typeof event !== 'object') return '';
+  return String(event.type || event.event || event.eventType || event.event_type || '');
+}
+
+/** @returns {AdminFleetVehicle|null} */
+export function normalizeAdminFleetVehicle(item) {
+  if (!item) return null;
+  const raw = asRecord(item);
+  const eta = asRecord(raw.eta);
+  const location = asRecord(raw.location || raw.currentLocation || raw.current_location);
+  const route = asRecord(raw.route);
+  const vehicle = asRecord(raw.vehicle);
+  const trip = asRecord(raw.trip || raw.activeTrip || raw.active_trip);
+  const id = pickString(raw.vehicle_id, raw.vehicleId, raw.id, vehicle.id, vehicle.vehicleId);
+  if (!id) return null;
+
+  const lat = pickNumber(raw.latitude, raw.lat, location.latitude, location.lat);
+  const lng = pickNumber(raw.longitude, raw.lng, location.longitude, location.lng);
+  const tripStatus = pickString(raw.trip_status, raw.tripStatus, trip.status) || '';
+  const updatedAt = pickString(
+    raw.updated_at,
+    raw.updatedAt,
+    location.updatedAt,
+    location.recordedAt,
+    location.timestamp,
+    raw.timestamp,
+    raw.recordedAt,
+    raw.recorded_at,
+  ) || '';
+  const tracking = normalizeTrackingStatus(
+    pickString(
+      raw.tracking_status,
+      raw.trackingStatus,
+      raw.status,
+      location.trackingStatus,
+      location.tracking_status,
+    ),
+    { hasCoords: lat != null && lng != null, tripStatus, updatedAt },
+  );
+  const number = pickString(
+    raw.vehicle_number,
+    raw.vehicleNumber,
+    vehicle.vehicleNumber,
+    vehicle.number,
+    vehicle.vehicle_number,
+  ) || '';
+  const routeId = pickString(raw.route_id, raw.routeId, route.id, route.routeId) || '';
+  const routeName = pickString(raw.route_name, raw.routeName, route.name, route.routeName) || '';
+  const tripId = pickString(
+    raw.trip_id,
+    raw.tripId,
+    raw.activeTripId,
+    raw.active_trip_id,
+    trip.id,
+    trip.tripId,
+  ) || '';
+
+  return {
+    vehicle_id: id,
+    vehicleId: id,
+    vehicle_number: number,
+    vehicleNumber: number,
+    route_id: routeId,
+    routeId,
+    route_name: routeName,
+    routeName,
+    driver_name: pickString(raw.driver_name, raw.driverName, asRecord(raw.driver).name) || '',
+    latitude: lat,
+    longitude: lng,
+    lat,
+    lng,
+    heading: pickNumber(raw.heading, location.heading),
+    speed_kmh: pickNumber(
+      raw.speed_kmh,
+      raw.speedKmh,
+      location.speedKmh,
+      location.speed_kmh,
+      location.speed,
+      raw.speed,
+    ),
+    tracking_status: tracking,
+    trackingStatus: tracking,
+    trip_status: tripStatus,
+    tripStatus,
+    trip_id: tripId,
+    tripId,
+    student_count: pickNumber(raw.student_count, raw.studentCount),
+    sequence: pickNumber(raw.sequence, location.sequence),
+    updated_at: updatedAt,
+    eta: raw.eta || null,
+    etaMinutes: pickNumber(raw.etaMinutes, eta.etaMinutes),
+    nextStop: pickString(raw.nextStop, raw.next_stop, eta.nextStopName),
+    lastStop: pickString(raw.lastStop, raw.last_stop, eta.lastStopName),
+  };
+}
+
 /** @returns {TransportStop[]} */
 export function normalizeStops(stops) {
   if (!Array.isArray(stops)) return [];

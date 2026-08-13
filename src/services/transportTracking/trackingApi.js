@@ -1,6 +1,11 @@
 import { API_BASE_URL, resolveTenantSlug, TENANT_HEADER } from '../api/config.js';
 import { getAccessToken } from '../api/tokenStorage.js';
-import { normalizeGpsDevice, normalizeParentLiveSnapshot } from '../../types/transportModels.js';
+import {
+  listFromTrackingPayload,
+  normalizeAdminFleetVehicle,
+  normalizeGpsDevice,
+  normalizeParentLiveSnapshot,
+} from '../../types/transportModels.js';
 import {
   fixtureAdminFleet,
   fixtureApproveStudentDropoff,
@@ -79,19 +84,19 @@ async function trackingFetch(path, { method = 'GET', body, auth = true } = {}) {
 }
 
 function asList(data) {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.items)) return data.items;
-  if (Array.isArray(data?.content)) return data.content;
-  if (Array.isArray(data?.data)) return data.data;
-  return [];
+  return listFromTrackingPayload(data);
 }
 
-export async function fetchAdminFleetLive(status = 'all') {
-  if (isTransportFixtureMode()) return fixtureAdminFleet(status);
-  const query = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+export async function fetchAdminFleetLive(_status = 'all') {
+  if (isTransportFixtureMode()) {
+    return (fixtureAdminFleet(_status) || []).map(normalizeAdminFleetVehicle).filter(Boolean);
+  }
+  // Always request the full fleet. Status is filtered in the UI after
+  // normalizing trackingStatus / nested location — `?status=running` on the
+  // backend often disagrees with driver GPS pings and would hide the bus.
   try {
-    const data = await trackingFetch(`/admin/transport/live${query}`);
-    return asList(data);
+    const data = await trackingFetch('/admin/transport/live');
+    return asList(data).map(normalizeAdminFleetVehicle).filter(Boolean);
   } catch (err) {
     // Soft empty when Spring Boot live endpoint is not deployed yet.
     if (err?.status === 404 || err?.code === 'NOT_FOUND') return [];

@@ -32,85 +32,88 @@ async function resolveApplicationAddress(studentId) {
     };
   }
 
-  // 1) Enrollment application (primary source for address forms)
+  let profile = null;
+  try {
+    profile = await getStudentProfile(studentId);
+  } catch {
+    profile = null;
+  }
+
+  const applicationId = profile?.applicationId || studentId;
+
+  const tryExtract = (payload, source, extra = {}) => {
+    if (!payload) return null;
+    const address = extractAddressFromApplication(payload);
+    return {
+      address,
+      source: isTransportAddressComplete(address) ? source : `${source}-incomplete`,
+      applicationId: extra.applicationId || payload.applicationId || payload.id || applicationId,
+      fullName: extra.fullName
+        || payload.fullName
+        || payload.student?.fullName
+        || profile?.fullName
+        || '',
+      classId: extra.classId || payload.classId || payload.student?.classId || profile?.classId || '',
+      className: extra.className
+        || payload.classApplying
+        || payload.className
+        || payload.student?.classApplying
+        || profile?.classApplying
+        || profile?.className
+        || '',
+    };
+  };
+
+  // 1) Student profile (enrolled student id) — address may be nested.
+  if (profile) {
+    const fromProfile = tryExtract(
+      {
+        ...profile,
+        address: profile.address || profile.enrollmentAddress || profile.homeAddress,
+        student: profile.student || profile,
+      },
+      'profile',
+      { applicationId },
+    );
+    if (fromProfile && isTransportAddressComplete(fromProfile.address)) return fromProfile;
+
+    if (applicationId && String(applicationId) !== String(studentId)) {
+      try {
+        const app = await getApplication(applicationId);
+        const fromLinked = tryExtract(app, 'application-linked', {
+          applicationId,
+          fullName: profile.fullName,
+          classId: profile.classId,
+        });
+        if (fromLinked && (isTransportAddressComplete(fromLinked.address) || fromProfile)) {
+          return isTransportAddressComplete(fromLinked.address) ? fromLinked : (fromProfile || fromLinked);
+        }
+      } catch {
+        /* fall through */
+      }
+    }
+    if (fromProfile) return fromProfile;
+  }
+
+  // 2) Enrollment application by the same id (some tenants use application id as student id).
   try {
     const app = await getApplication(studentId);
     if (app) {
-      const address = extractAddressFromApplication(app);
-      if (isTransportAddressComplete(address)) {
-        return {
-          address,
-          source: 'application',
-          applicationId: app.id || studentId,
-          fullName: app.student?.fullName || app.fullName || '',
-          classId: app.student?.classId || '',
-          className: app.student?.classApplying || '',
-        };
-      }
-      return {
-        address,
-        source: 'application-incomplete',
-        applicationId: app.id || studentId,
-        fullName: app.student?.fullName || app.fullName || '',
-        classId: app.student?.classId || '',
-        className: app.student?.classApplying || '',
-      };
+      const fromApp = tryExtract(app, 'application');
+      if (fromApp) return fromApp;
     }
   } catch {
     /* fall through */
   }
 
-  // 2) Student profile may embed address / applicationId
-  try {
-    const profile = await getStudentProfile(studentId);
-    const applicationId = profile.applicationId || profile.id || studentId;
-    if (profile.address || profile.enrollmentAddress) {
-      const address = normalizeTransportAddress(profile.address || profile.enrollmentAddress);
-      if (isTransportAddressComplete(address)) {
-        return {
-          address,
-          source: 'profile',
-          applicationId,
-          fullName: profile.fullName || '',
-          classId: profile.classId || '',
-          className: profile.classApplying || profile.className || '',
-        };
-      }
-    }
-    if (applicationId && String(applicationId) !== String(studentId)) {
-      try {
-        const app = await getApplication(applicationId);
-        const address = extractAddressFromApplication(app);
-        return {
-          address,
-          source: 'application-linked',
-          applicationId,
-          fullName: profile.fullName || app?.student?.fullName || '',
-          classId: profile.classId || '',
-          className: profile.classApplying || '',
-        };
-      } catch {
-        /* ignore */
-      }
-    }
-    return {
-      address: normalizeTransportAddress(override || {}),
-      source: 'empty',
-      applicationId,
-      fullName: profile.fullName || '',
-      classId: profile.classId || '',
-      className: profile.classApplying || profile.className || '',
-    };
-  } catch {
-    return {
-      address: normalizeTransportAddress(override || {}),
-      source: 'empty',
-      applicationId: studentId,
-      fullName: '',
-      classId: '',
-      className: '',
-    };
-  }
+  return {
+    address: normalizeTransportAddress(override || {}),
+    source: 'empty',
+    applicationId,
+    fullName: profile?.fullName || '',
+    classId: profile?.classId || '',
+    className: profile?.classApplying || profile?.className || '',
+  };
 }
 
 /**

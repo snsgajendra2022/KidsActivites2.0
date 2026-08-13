@@ -50,7 +50,7 @@ export function resolveParentTrackingState(snapshot) {
 export function trackingStateLabel(state) {
   switch (state) {
     case TRACKING_UI_STATES.NO_ASSIGNMENT:
-      return 'No bus assignment';
+      return 'No bus stop assigned yet';
     case TRACKING_UI_STATES.ASSIGNED_NO_ACTIVE_TRIP:
       return 'Assigned — waiting for trip';
     case TRACKING_UI_STATES.WAITING_FOR_GPS:
@@ -72,7 +72,7 @@ export function trackingStateLabel(state) {
 export function trackingStateHint(state) {
   switch (state) {
     case TRACKING_UI_STATES.NO_ASSIGNMENT:
-      return 'Ask the school to assign this child under Student Bus Assignments.';
+      return 'No bus stop assigned yet. Ask the school to link this child under Student Bus Assignments.';
     case TRACKING_UI_STATES.ASSIGNED_NO_ACTIVE_TRIP:
       return 'Your child is on a bus route. The live map appears when the driver starts the trip.';
     case TRACKING_UI_STATES.WAITING_FOR_GPS:

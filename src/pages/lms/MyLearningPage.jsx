@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Award, BookOpen, CheckCircle2, Play, Sparkles, Download,
@@ -11,9 +11,19 @@ import Button from '../../components/ui/Button.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { lmsApi } from '../../services/lmsService.js';
 import { getParentChildren, getParentDashboard } from '../../services/parentService.js';
+import { mergeCourseCertificateConfig } from '../../data/defaultCourseCertificateConfig.js';
+import { openLmsCertificatePreview } from '../../utils/courseCertificateHtml.js';
+import { mergeCertificateRecords } from '../../utils/courseCertificateFields.js';
+import {
+  enrollmentQuizOutcome,
+  hasEarnedCertificate,
+} from '../../utils/lmsEnrollmentOutcome.js';
+import LmsOutcomeFooter from '../../components/lms/LmsOutcomeFooter.jsx';
+import '../../styles/lms-learning.css';
 
 function ProgressRing({ pct, size = 48, stroke = 4 }) {
   const r = (size - stroke) / 2;
@@ -36,38 +46,54 @@ function ProgressRing({ pct, size = 48, stroke = 4 }) {
   );
 }
 
+async function resolveParentChildIds(user) {
+  let children = [];
+  try {
+    const dashboard = await getParentDashboard(user?.id, user?.schoolId, user);
+    children = dashboard.children || [];
+  } catch {
+    try {
+      children = await getParentChildren(user);
+    } catch {
+      children = [];
+    }
+  }
+  const studentIds = children
+    .map((child) => child.studentId || child.enrolledStudentId || child.student?.id)
+    .filter(Boolean);
+  const classIds = children
+    .map((child) => child.classId || child.assignedClassId || child.student?.classId)
+    .filter(Boolean);
+  return { studentIds, classIds };
+}
+
 export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms' }) {
   const Layout = layout === 'dashboard' ? DashboardLayout : AppLayout;
   const { user } = useAuth();
   const { tenantPath } = useTenantPath();
   const { toast } = useToast();
+  const { config, portalName, school, branding } = usePortalConfig();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('continue');
+
+  const portalSnapshot = useMemo(
+    () => ({
+      ...config,
+      portalName,
+      school: school || config?.school,
+      branding: branding || config?.branding,
+      courseCertificates: mergeCourseCertificateConfig(config?.courseCertificates),
+    }),
+    [config, portalName, school, branding],
+  );
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       try {
-        let children = [];
-        try {
-          const dashboard = await getParentDashboard(user?.id, user?.schoolId, user);
-          children = dashboard.children || [];
-        } catch {
-          try {
-            children = await getParentChildren(user);
-          } catch {
-            children = [];
-          }
-        }
-
-        const studentIds = children
-          .map((child) => child.studentId || child.enrolledStudentId || child.student?.id)
-          .filter(Boolean);
-        const classIds = children
-          .map((child) => child.classId || child.assignedClassId || child.student?.classId)
-          .filter(Boolean);
-
+        const { studentIds, classIds } = await resolveParentChildIds(user);
         const data = await lmsApi.myLearning({ studentIds, classIds });
         if (!cancelled) setItems(data.items || []);
       } catch (err) {
@@ -82,26 +108,46 @@ export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms
     return () => { cancelled = true; };
   }, [user?.id, user?.schoolId, toast]);
 
-  const openCertificate = async (certificateId) => {
+  const openCertificate = async (item) => {
+    if (!hasEarnedCertificate(item)) return;
     try {
-      const data = await lmsApi.certificateHtml(certificateId);
-      const win = window.open('', '_blank');
-      if (!win) {
-        toast('Pop-up blocked. Allow pop-ups to view the certificate.', 'error');
-        return;
-      }
-      win.document.write(data.renderedHtml || '<p>Certificate unavailable.</p>');
-      win.document.close();
+      const cert = mergeCertificateRecords(item, item?.certificate, {
+        id: item.certificateId || item.certificate?.id || item.id,
+        learnerName: item.learnerName || item.studentName,
+        courseTitle: item.courseTitle || item.title,
+        issuedAt: item.issuedAt || item.certificate?.issuedAt || item.completedAt,
+        certificateNumber: item.certificateNumber || item.certificate?.certificateNumber,
+      });
+      await openLmsCertificatePreview({
+        cert,
+        certificateId: cert.id,
+        portalConfig: portalSnapshot,
+        fetchCertificate: (id) => lmsApi.resolveCertificate(id, cert),
+        fetchCertificateHtml: (id) => lmsApi.certificateHtml(id),
+        onBlocked: () => toast('Pop-up blocked. Allow pop-ups to view the certificate.', 'error'),
+        onError: (msg) => toast(msg || 'Unable to open certificate.', 'error'),
+      });
     } catch (err) {
       toast(err?.message || 'Unable to open certificate.', 'error');
     }
   };
 
+  const isCompleted = (enrollment) => {
+    const outcome = enrollmentQuizOutcome(enrollment);
+    if (enrollment.status === 'completed') return true;
+    if (outcome.attempted && outcome.passed === false) return false;
+    return Number(enrollment.progressPct || 0) >= 100;
+  };
+
+  const continueItems = items.filter((item) => !isCompleted(item));
+  const completedItems = items.filter((item) => isCompleted(item));
+  const visible = tab === 'continue' ? continueItems : tab === 'completed' ? completedItems : items;
+
   return (
     <Layout>
       <PageTransition>
         <PageHeader
-          title="Digital Classroom"
+          title="My Learning"
           subtitle="Courses enrolled for your children (by class or student)."
           actions={(
             <Link to={tenantPath(`${basePath}/certificates`)}>
@@ -109,6 +155,18 @@ export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms
             </Link>
           )}
         />
+
+        <div className="lms-tabs">
+          <button type="button" className={`lms-tab ${tab === 'continue' ? 'is-active' : ''}`} onClick={() => setTab('continue')}>
+            Continue ({continueItems.length})
+          </button>
+          <button type="button" className={`lms-tab ${tab === 'completed' ? 'is-active' : ''}`} onClick={() => setTab('completed')}>
+            Completed ({completedItems.length})
+          </button>
+          <button type="button" className={`lms-tab ${tab === 'all' ? 'is-active' : ''}`} onClick={() => setTab('all')}>
+            All ({items.length})
+          </button>
+        </div>
 
         {loading ? (
           <LoadingState message="Loading your classroom…" />
@@ -118,20 +176,29 @@ export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms
             title="No courses yet"
             description="After the school enrolls your child’s class (or student) in a published Digital Classroom course, it will show here."
           />
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={tab === 'completed' ? Award : Play}
+            title={tab === 'completed' ? 'No completed courses yet' : 'You are all caught up'}
+            description={tab === 'completed'
+              ? 'Finish lessons and pass the required quiz to earn a certificate.'
+              : 'Every enrolled course is complete. Review them from Completed or Certificates.'}
+          />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {items.map((enrollment) => {
+            {visible.map((enrollment) => {
               const pct = enrollment.progressPct || 0;
-              const completed = enrollment.status === 'completed' || pct >= 100;
-              const resumeLabel = completed ? 'Review' : (pct > 0 ? 'Continue' : 'Start');
+              const completed = isCompleted(enrollment);
+              const outcome = enrollmentQuizOutcome(enrollment);
+              const earned = hasEarnedCertificate(enrollment);
+              const resumeLabel = completed && outcome.passed !== false
+                ? 'Review'
+                : (pct > 0 ? 'Continue' : 'Start');
               return (
-                <article
-                  key={enrollment.id}
-                  className="overflow-hidden rounded-2xl border border-[#e4e7ec] bg-white shadow-sm"
-                >
-                  <div className="relative flex h-28 items-center justify-center bg-gradient-to-br from-[#0b1b33] to-[#16365f]">
+                <article key={enrollment.id} className="lms-card-kid">
+                  <div className="lms-card-kid__banner">
                     <BookOpen size={34} className="text-[#f5b400]" />
-                    {completed && (
+                    {completed && outcome.passed !== false && (
                       <div className="absolute inset-0 flex items-center justify-center bg-[#12b76a]/20">
                         <CheckCircle2 size={34} className="text-[#027a48]" />
                       </div>
@@ -154,17 +221,22 @@ export default function MyLearningPage({ layout = 'app', basePath = '/parent/lms
                       </div>
                     </div>
                     <StatusBadge status={enrollment.status} />
+                    {outcome.attempted ? (
+                      <LmsOutcomeFooter outcome={outcome} />
+                    ) : earned ? (
+                      <LmsOutcomeFooter outcome={{ attempted: true, passed: true, technical: 'PASS', headline: 'Great Job!', percentage: outcome.percentage }} />
+                    ) : null}
                     <div className="flex flex-wrap gap-2">
                       <Link to={tenantPath(`${basePath}/${enrollment.id}`)}>
-                        <Button size="sm">
+                        <Button size="sm" className="lms-btn-lg">
                           <Play size={14} /> {resumeLabel}
                         </Button>
                       </Link>
-                      {enrollment.certificateId && (
+                      {earned && (
                         <Button
                           size="sm"
                           variant="secondary"
-                          onClick={() => openCertificate(enrollment.certificateId)}
+                          onClick={() => openCertificate(enrollment)}
                         >
                           <Download size={14} /> Certificate
                         </Button>

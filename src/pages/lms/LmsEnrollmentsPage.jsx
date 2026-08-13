@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Eye, Plus, Trash2, Users } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
+import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { EmptyState, LoadingState, PageHeader } from '../../components/ui/index.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -14,8 +15,10 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { lmsApi } from '../../services/lmsService.js';
 import { loadClassOptions, loadStudentOptions } from '../../services/schoolModules/relationshipOptions.js';
+import { enrollmentQuizOutcome } from '../../utils/lmsEnrollmentOutcome.js';
 
-export default function LmsEnrollmentsPage() {
+export default function LmsEnrollmentsPage({ layout = 'dashboard', basePath = '/admin/lms' }) {
+  const Layout = layout === 'app' ? AppLayout : DashboardLayout;
   const { tenantPath } = useTenantPath();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -124,14 +127,14 @@ export default function LmsEnrollmentsPage() {
   };
 
   return (
-    <DashboardLayout>
+    <Layout>
       <PageTransition>
         <PageHeader
-          title="LMS Enrollments"
-          subtitle="Assign published courses to students or whole classes."
+          title="Learner progress"
+          subtitle="Enrollments, course progress, and quiz results from the LMS APIs."
           actions={(
             <div className="flex flex-wrap gap-2">
-              <Link to={tenantPath('/admin/lms')}>
+              <Link to={tenantPath(basePath)}>
                 <Button variant="secondary"><ArrowLeft size={16} /> Courses</Button>
               </Link>
               <Button onClick={() => setOpen(true)}><Plus size={16} /> Enroll</Button>
@@ -140,7 +143,7 @@ export default function LmsEnrollmentsPage() {
         />
 
         {loading ? (
-          <LoadingState label="Loading enrollments…" />
+          <LoadingState message="Loading enrollments…" />
         ) : items.length === 0 ? (
           <EmptyState
             icon={Users}
@@ -164,13 +167,31 @@ export default function LmsEnrollmentsPage() {
                 label: 'Status',
                 render: (row) => <StatusBadge status={row.status} />,
               },
+              {
+                key: 'quiz',
+                label: 'Quiz',
+                render: (row) => {
+                  const outcome = enrollmentQuizOutcome(row);
+                  if (!outcome.attempted && outcome.passed == null) return '—';
+                  const pct = outcome.percentage != null ? `${Math.round(Number(outcome.percentage))}%` : '';
+                  const label = outcome.technical || (outcome.passed ? 'PASS' : 'FAIL');
+                  return [pct, label].filter(Boolean).join(' · ');
+                },
+              },
             ]}
             data={items}
             minWidth={720}
             renderActions={(row) => (
-              <TableActionButton variant="danger" onClick={() => setDeleteId(row.id)}>
-                <Trash2 size={14} />
-              </TableActionButton>
+              <div className="flex gap-1">
+                <Link to={tenantPath(`${basePath}/enrollments/${row.id}`)}>
+                  <TableActionButton>
+                    <Eye size={14} />
+                  </TableActionButton>
+                </Link>
+                <TableActionButton variant="danger" onClick={() => setDeleteId(row.id)}>
+                  <Trash2 size={14} />
+                </TableActionButton>
+              </div>
             )}
           />
         )}
@@ -226,6 +247,6 @@ export default function LmsEnrollmentsPage() {
           onClose={() => setDeleteId(null)}
         />
       </PageTransition>
-    </DashboardLayout>
+    </Layout>
   );
 }

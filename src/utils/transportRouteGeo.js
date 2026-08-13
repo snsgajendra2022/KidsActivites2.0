@@ -189,12 +189,49 @@ export function collectMapLatLngs({ stops = [], vehicles = [], geoJson = null } 
 export function vehicleMatchesRoute(vehicle, route) {
   if (!vehicle || !route) return false;
   const routeId = String(route.id || route.routeId || '');
-  const routeName = String(route.name || route.routeName || '').toLowerCase();
+  const routeName = String(route.name || route.routeName || '').trim().toLowerCase();
   const vehicleRouteId = String(vehicle.route_id || vehicle.routeId || '');
-  const vehicleRouteName = String(vehicle.route_name || vehicle.routeName || '').toLowerCase();
+  const vehicleRouteName = String(vehicle.route_name || vehicle.routeName || '').trim().toLowerCase();
+  const vehicleId = String(vehicle.vehicle_id || vehicle.vehicleId || vehicle.id || '');
+  const routeVehicleId = String(route.vehicleId || route.vehicle_id || route.vehicle?.id || '');
   if (routeId && vehicleRouteId && routeId === vehicleRouteId) return true;
   if (routeName && vehicleRouteName && routeName === vehicleRouteName) return true;
+  // Driver GPS pings often omit route_id. Match the route's assigned vehicle.
+  if (vehicleId && routeVehicleId && vehicleId === routeVehicleId) return true;
   return false;
+}
+
+/**
+ * Fill route_id / vehicle_number from the vehicle catalog and route.vehicleId
+ * when the live snapshot / WS event does not include them.
+ */
+export function attachRouteToLiveVehicle(vehicle, { routes = [], vehicles = [] } = {}) {
+  if (!vehicle) return vehicle;
+  const vid = String(vehicle.vehicle_id || vehicle.vehicleId || vehicle.id || '');
+  const catalog = (vehicles || []).find((item) => (
+    String(item.id || item.vehicleId) === vid
+  ));
+  const byRouteId = (routes || []).find((route) => {
+    const id = String(route.id || route.routeId || '');
+    const liveRouteId = String(vehicle.route_id || vehicle.routeId || catalog?.routeId || '');
+    return id && liveRouteId && id === liveRouteId;
+  });
+  const byAssignedVehicle = (routes || []).find((route) => (
+    vid && String(route.vehicleId || route.vehicle_id || route.vehicle?.id || '') === vid
+  ));
+  const route = byRouteId || byAssignedVehicle;
+  const routeId = String(vehicle.route_id || vehicle.routeId || catalog?.routeId || route?.id || '');
+  const routeName = vehicle.route_name || vehicle.routeName || catalog?.routeName || route?.name || '';
+  const number = vehicle.vehicle_number || vehicle.vehicleNumber || catalog?.vehicleNumber || '';
+  return {
+    ...vehicle,
+    route_id: routeId,
+    routeId,
+    route_name: routeName,
+    routeName,
+    vehicle_number: number,
+    vehicleNumber: number,
+  };
 }
 
 export function payloadStopsForApi(stops) {

@@ -1,4 +1,5 @@
 import { DEFAULT_PORTAL_CONFIG } from '../data/defaultPortalConfig.js';
+import { mergeCourseCertificateConfig } from '../data/defaultCourseCertificateConfig.js';
 import { mergeFooterConfig } from '../data/defaultFooterConfig.js';
 import { mergeLandingPage } from '../data/defaultLandingPage.js';
 import { DEFAULT_ENROLLMENT_FORM, cloneEnrollmentFormConfig } from '../data/defaultEnrollmentFormConfig.js';
@@ -257,6 +258,9 @@ function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID, schoolFromApi = null)
       stored.footer,
       stored.school?.name || defaults.school?.name,
       stored.footerText || defaults.footerText,
+    ),
+    courseCertificates: mergeCourseCertificateConfig(
+      stored.courseCertificates || defaults.courseCertificates,
     ),
     landingPageDraft: stored.landingPageDraft || null,
     landingPagePublished: stored.landingPagePublished || null,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, KeyRound, Layout, Menu, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode, Home, PanelBottom } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode, Home, PanelBottom, Award } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -19,6 +19,8 @@ import { cloneEnrollmentFormConfig, DEFAULT_ENROLLMENT_FORM } from '../../data/d
 import { DEFAULT_PORTAL_CONFIG } from '../../data/defaultPortalConfig.js';
 import { mergeLandingPage } from '../../data/defaultLandingPage.js';
 import FooterSettings from '../../components/admin/FooterSettings.jsx';
+import CourseCertificateSettings from '../../components/admin/CourseCertificateSettings.jsx';
+import { mergeCourseCertificateConfig } from '../../data/defaultCourseCertificateConfig.js';
 import { mergeFooterConfig } from '../../data/defaultFooterConfig.js';
 import LandingBuilder from '../../landing-builder/admin/LandingBuilder.jsx';
 
@@ -31,6 +33,7 @@ const TABS = [
   { id: 'school', label: 'School Details', icon: Menu, desc: 'Contact information' },
   { id: 'footer', label: 'Footer', icon: PanelBottom, desc: 'Contact, socials & links' },
   { id: 'images', label: 'Logo & Images', icon: Image, desc: 'Logos & hero images' },
+  { id: 'certificates', label: 'Course Certificates', icon: Award, desc: 'Certificate templates' },
   { id: 'landing', label: 'Landing Page', icon: Home, desc: 'Homepage sections & content' },
 ];
 
@@ -299,6 +302,7 @@ export default function PortalSettings() {
           config.school?.name,
           config.footerText,
         ),
+        courseCertificates: mergeCourseCertificateConfig(config.courseCertificates),
       });
     }
   }, [config, activeSchoolId]);
@@ -436,7 +440,7 @@ export default function PortalSettings() {
   return (
     <AppLayout>
       <PageTransition>
-        <div className={tab === 'landing' ? 'portal-settings_landing' : 'portal-settings'}>
+        <div className={tab === 'landing' || tab === 'certificates' ? 'portal-settings_landing' : 'portal-settings'}>
         <PageHeader
           title="Portal Branding & Configuration"
           subtitle={
@@ -1049,6 +1053,17 @@ export default function PortalSettings() {
               />
             </div>
           </div>
+        )}
+
+        {tab === 'certificates' && (
+          <CourseCertificateSettings
+            value={form.courseCertificates}
+            onChange={(courseCertificates) => setForm((f) => ({ ...f, courseCertificates }))}
+            schoolName={form.school?.name}
+            portalName={form.portalName}
+            academicYear={form.school?.academicYear}
+            logoUrl={form.branding?.logoUrl || form.branding?.logoIconUrl}
+          />
         )}
 
         {tab === 'landing' && (

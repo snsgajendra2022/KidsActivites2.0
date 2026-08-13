@@ -100,16 +100,12 @@ export default function LmsCoursesPage({ layout = 'dashboard', basePath = '/admi
           subtitle="Create courses, lessons, and quizzes for your classes."
           actions={(
             <div className="flex flex-wrap gap-2">
-              {layout !== 'app' && (
-                <>
-                  <Link to={tenantPath(`${basePath}/enrollments`)}>
-                    <Button variant="secondary"><Users size={16} /> Enrollments</Button>
-                  </Link>
-                  <Link to={tenantPath(`${basePath}/certificates`)}>
-                    <Button variant="secondary"><Award size={16} /> Certificates</Button>
-                  </Link>
-                </>
-              )}
+              <Link to={tenantPath(`${basePath}/enrollments`)}>
+                <Button variant="secondary"><Users size={16} /> Progress</Button>
+              </Link>
+              <Link to={tenantPath(`${basePath}/certificates`)}>
+                <Button variant="secondary"><Award size={16} /> Certificates</Button>
+              </Link>
               <Link to={tenantPath(`${basePath}/courses/new`)}>
                 <Button><Plus size={16} /> New Course</Button>
               </Link>
@@ -128,7 +124,7 @@ export default function LmsCoursesPage({ layout = 'dashboard', basePath = '/admi
         </div>
 
         {loading ? (
-          <LoadingState label="Loading courses…" />
+          <LoadingState message="Loading courses…" />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={Sparkles}
