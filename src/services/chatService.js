@@ -1,5 +1,14 @@
 import { INITIAL_CONVERSATIONS, INITIAL_MESSAGES } from '../data/mockChat.js';
 import { normalizeConversations } from '../utils/chatUnread.js';
+import {
+  attachmentPreviewText,
+  hasChatAttachmentSource,
+  isServerStoredAttachment,
+  normalizeChatAttachment,
+  normalizeChatAttachments,
+  normalizeChatMessage,
+  normalizeChatMessages,
+} from '../utils/chatAttachments.js';
 import { FILE_RULES, validateFile } from '../utils/uploadValidation.js';
 import { delay, getStore, setStore } from './mockApi.js';
 import { ApiError, api } from './api/client.js';
@@ -45,7 +54,7 @@ function normalizeMessagePage(data, meta = {}) {
         : [];
   const pageMeta = data?.meta || meta || {};
   return {
-    items,
+    items: normalizeChatMessages(items),
     hasMore: Boolean(data?.hasMore ?? pageMeta.hasMore ?? pageMeta.nextCursor),
     nextCursor: data?.nextCursor ?? pageMeta.nextCursor ?? null,
   };
@@ -201,7 +210,7 @@ export async function getMessages(conversationId, { limit = 30, before } = {}) {
         : all.length;
       const start = Math.max(0, end - limit);
       return {
-        items: all.slice(start, end),
+        items: normalizeChatMessages(all.slice(start, end)),
         hasMore: start > 0,
         nextCursor: start > 0 ? all[start].id : null,
       };
@@ -217,6 +226,11 @@ export async function getMessages(conversationId, { limit = 30, before } = {}) {
 }
 
 export async function sendMessage(conversationId, senderId, text, attachments = []) {
+  const outgoing = normalizeChatAttachments(attachments).filter(hasChatAttachmentSource);
+  if (attachments.length && outgoing.length !== attachments.length) {
+    throw new Error('An attachment failed to upload. Remove it and try again.');
+  }
+
   return routeRequest({
     mockFn: async () => {
       await delay(300);
@@ -226,7 +240,7 @@ export async function sendMessage(conversationId, senderId, text, attachments = 
         id: `m-${Date.now()}`,
         senderId,
         text,
-        attachments,
+        attachments: outgoing,
         reactions: {},
         sentAt: new Date().toISOString(),
       };
@@ -238,7 +252,7 @@ export async function sendMessage(conversationId, senderId, text, attachments = 
       const idx = convs.findIndex((c) => c.id === conversationId);
       if (idx >= 0) {
         const conv = convs[idx];
-        conv.lastMessage = text || (attachments[0]?.name ? `Attachment: ${attachments[0].name}` : '');
+        conv.lastMessage = text || attachmentPreviewText(msg);
         conv.lastMessageAt = msg.sentAt;
         conv.lastMessageSenderId = senderId;
         conv.unread = { ...(conv.unread || {}) };
@@ -251,10 +265,20 @@ export async function sendMessage(conversationId, senderId, text, attachments = 
       }
       return msg;
     },
-    apiFn: () => {
+    apiFn: async () => {
+      if (!outgoing.every(isServerStoredAttachment)) {
+        throw new Error('An attachment was not stored on the server. Remove it and attach it again.');
+      }
       // Documented live contract is `{ text }`; only include attachments when present.
-      const body = attachments.length ? { text, attachments } : { text };
-      return api.post(`/chat/conversations/${conversationId}/messages`, body);
+      const body = outgoing.length ? { text, attachments: outgoing } : { text };
+      const message = normalizeChatMessage(
+        await api.post(`/chat/conversations/${conversationId}/messages`, body),
+      );
+      // Some servers persist attachments but echo the message without them.
+      if (outgoing.length && !message?.attachments?.length) {
+        return { ...message, attachments: outgoing };
+      }
+      return message;
     },
   });
 }
@@ -264,22 +288,35 @@ export async function uploadChatAttachment(conversationId, file) {
   const validation = validateFile(file, 'chatAttachment');
   if (!validation.valid) throw new Error(validation.error);
 
-  return routeRequest({
-    mockFn: async () => {
-      await delay(250);
-      return {
-        id: `att-${Date.now()}`,
-        name: file.name,
-        mimeType: file.type,
-        size: file.size,
-        url: await fileToDataUrl(file),
-      };
-    },
-    apiFn: () => withFeatureSupport('attachments', async () => {
-      const formData = new FormData();
-      formData.append('file', file);
-      return api.post(`/chat/conversations/${conversationId}/attachments`, formData);
-    }),
+  // Deliberately not routed through `routeRequest`: its mock fallback would hand back an
+  // inline data URL that the server never stored, and that message would send a dead file.
+  if (isForceMock() || !isApiEnabled()) {
+    await delay(250);
+    return {
+      id: `att-${Date.now()}`,
+      name: file.name,
+      mimeType: file.type,
+      size: file.size,
+      url: await fileToDataUrl(file),
+    };
+  }
+
+  return withFeatureSupport('attachments', async () => {
+    const formData = new FormData();
+    // `Content-Type` is intentionally left unset so the browser adds the multipart boundary.
+    formData.append('file', file);
+    const uploaded = normalizeChatAttachment(
+      await api.post(`/chat/conversations/${conversationId}/attachments`, formData),
+    );
+    if (!hasChatAttachmentSource(uploaded) || !isServerStoredAttachment(uploaded)) {
+      throw new Error('The server did not return a link for this file. Please try again.');
+    }
+    return {
+      ...uploaded,
+      name: uploaded.name === 'Attachment' ? file.name : uploaded.name,
+      mimeType: uploaded.mimeType || file.type,
+      size: uploaded.size || file.size,
+    };
   });
 }
 

@@ -54,7 +54,8 @@ export function createTrackingSocket({
     socket.addEventListener('message', (event) => {
       try {
         const payload = JSON.parse(event.data);
-        onEvent?.(payload);
+        const type = payload?.type || payload?.event || payload?.eventType;
+        onEvent?.(type ? { ...payload, type } : payload);
       } catch {
         // ignore non-JSON frames
       }

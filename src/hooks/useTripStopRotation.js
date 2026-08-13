@@ -13,6 +13,7 @@ function toLiveMapStop(stop) {
     distanceFromBusKm: stop.distanceFromBusKm,
     stopType: stop.stopType,
     stop_type: stop.stopType,
+    ...(stop.studentId ? { studentId: stop.studentId } : {}),
   };
 }
 
@@ -25,6 +26,7 @@ function defaultDisplayStops(stops) {
     sequence: stop.sequence,
     stopType: stop.stopType,
     stop_type: stop.stopType,
+    ...(stop.studentId ? { studentId: stop.studentId } : {}),
   }));
 }
 

@@ -561,6 +561,10 @@ Dedicated course LMS (ported from BuildFlow My Learning + certificates).
 Legacy ERP stub CRUD at `/admin/lms` (erp_records) remains for backward
 compatibility but the portal UI uses `/api/v1/lms/*`.
 
+Outstanding gaps (certificate-on-fail, certificate display fields, parent
+scoping, quiz submit payload, attempt history) are specified in
+[`courseAndLocation.md`](./courseAndLocation.md) section 1.
+
 ### Courses
 
 ```text
@@ -673,6 +677,11 @@ Quiz submit body: `{ "answers": [{ "questionId", "selectedOptionId" }] }`.
 Completion requires all lessons completed and every required quiz either passed
 or attempts exhausted. Completing issues a course certificate (`CERT-YYYY-####`).
 
+> Correction pending: both clients treat *attempts exhausted* as a failure and
+> refuse to show a certificate for a failed quiz. See
+> [`courseAndLocation.md`](./courseAndLocation.md) C1 and C5 for the required
+> behavior.
+
 ### Course certificates
 
 ```text
@@ -705,6 +714,11 @@ database. Detailed Spring Boot integration requirements are documented in
 ```
 
 See also [`docs/transport/DRIVER_ASSIGNMENT_LIVE_API.md`](./transport/DRIVER_ASSIGNMENT_LIVE_API.md).
+
+Outstanding gaps (tracking status at 0 km/h, stale-ping rejection, live payload
+fields, stop rosters, student-home stops, parent scoping, pickup approval
+lifecycle, standing assignments vs per-day trips) are specified in
+[`courseAndLocation.md`](./courseAndLocation.md) section 2.
 
 ### Vehicle
 

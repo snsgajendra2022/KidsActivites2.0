@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle2, Eye, Image, LayoutTemplate, Palette, Printer, RotateCcw, Save, Send, Sparkles, Type } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CardDownload from './CardDownload.jsx';
 import CardPreview from './CardPreview.jsx';
 import ColorPicker from './ColorPicker.jsx';
@@ -17,6 +17,20 @@ const TABS = [
   { id: 'stickers', label: 'Stickers', icon: Sparkles },
   { id: 'photos', label: 'Photos', icon: Image },
 ];
+
+// Shared constant so an omitted `students` prop keeps a stable identity across renders.
+const EMPTY_STUDENTS = [];
+
+const toStudentOptions = (options) => {
+  const list = (options || []).map((option) => ({
+    id: option.id || option.value,
+    label: option.label || option.name || option.fullName,
+  }));
+  return list.length ? list : EMPTY_STUDENTS;
+};
+
+const sameStudentOptions = (a, b) => a.length === b.length
+  && a.every((item, index) => item.id === b[index].id && item.label === b[index].label);
 
 const initialState = (card, template) => ({
   id: card?.id,
@@ -48,7 +62,7 @@ export default function CardEditor({
   template: templateProp,
   initialCard,
   classes = [],
-  students = [],
+  students = EMPTY_STUDENTS,
   loadStudents,
   albumImages = [],
   onBack,
@@ -68,39 +82,44 @@ export default function CardEditor({
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
-  const [resolvedStudents, setResolvedStudents] = useState(students);
+  const [resolvedStudents, setResolvedStudents] = useState(() => toStudentOptions(students));
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [studentsError, setStudentsError] = useState('');
   const previewRef = useRef(null);
   const update = (key, value) => setCard((current) => ({ ...current, [key]: value }));
+  // Keeps the same array instance when the roster is unchanged, so a re-run of the
+  // effect below can never schedule a render that would re-trigger the effect.
+  const applyStudents = useCallback((options) => {
+    const next = toStudentOptions(options);
+    setResolvedStudents((current) => (sameStudentOptions(current, next) ? current : next));
+  }, []);
 
+  const { classId } = card;
   useEffect(() => {
+    setStudentsError('');
+    if (!classId || typeof loadStudents !== 'function') {
+      applyStudents(students);
+      setStudentsLoading(false);
+      return undefined;
+    }
     let active = true;
+    applyStudents(EMPTY_STUDENTS);
+    setStudentsLoading(true);
     Promise.resolve()
-      .then(() => {
-        setResolvedStudents([]);
-        setStudentsError('');
-        if (!card.classId || typeof loadStudents !== 'function') return students;
-        setStudentsLoading(true);
-        return loadStudents(card.classId);
-      })
+      .then(() => loadStudents(classId))
       .then((options) => {
-        if (!active) return;
-        setResolvedStudents((options || []).map((option) => ({
-          id: option.id || option.value,
-          label: option.label || option.name || option.fullName,
-        })));
+        if (active) applyStudents(options);
       })
       .catch((error) => {
         if (!active) return;
-        setResolvedStudents([]);
+        applyStudents(EMPTY_STUDENTS);
         setStudentsError(error?.message || 'Unable to load students for this class.');
       })
       .finally(() => {
         if (active) setStudentsLoading(false);
       });
     return () => { active = false; };
-  }, [card.classId, loadStudents, students]);
+  }, [applyStudents, classId, loadStudents, students]);
   const validate = () => {
     const next = {};
     if (!card.templateId) next.templateId = 'Oops! Choose a magical template first 😊';

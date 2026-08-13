@@ -12,6 +12,28 @@ export function haversineMeters(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+/** Stops built from a student's enrollment address use this id prefix. */
+export const STUDENT_HOME_STOP_PREFIX = 'stu-';
+
+/**
+ * Student bound to a stop created from that student's home address.
+ * Such a stop has no transport assignment row of its own, so the roster must be
+ * resolved by `studentId` instead of `stopId`.
+ */
+export function studentIdFromStop(stop) {
+  if (!stop || typeof stop !== 'object') return '';
+  for (const value of [stop.studentId, stop.student_id]) {
+    if (value == null || value === '') continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  const id = String(stop.id ?? stop.stopId ?? stop.stop_id ?? '').trim();
+  if (id.startsWith(STUDENT_HOME_STOP_PREFIX)) {
+    return id.slice(STUDENT_HOME_STOP_PREFIX.length).trim();
+  }
+  return '';
+}
+
 /**
  * Normalize and sort mapped stops that have valid coordinates.
  * Used by nearest-stop rotation (same rules as mobile).
@@ -24,6 +46,7 @@ export function normalizeMappedStops(stops) {
       const lat = Number(stop.lat ?? stop.latitude);
       const lng = Number(stop.lng ?? stop.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      const studentId = studentIdFromStop(stop);
       return {
         id: String(stop.id || `stop-${index + 1}`),
         name: String(stop.name || `Stop ${index + 1}`).trim() || `Stop ${index + 1}`,
@@ -34,6 +57,7 @@ export function normalizeMappedStops(stops) {
           stop.stopType || stop.stop_type || (index === stops.length - 1 ? 'school' : 'pickup'),
         ),
         radiusMeters: Number(stop.radiusMeters) > 0 ? Number(stop.radiusMeters) : 80,
+        ...(studentId ? { studentId } : {}),
       };
     })
     .filter(Boolean)
@@ -120,6 +144,7 @@ export function stopsToMapFeatures(stops, { idPrefix = '' } = {}) {
       longitude: stop.lng,
       stop_type: stop.stopType,
       sequence: stop.sequence,
+      ...(stop.studentId ? { studentId: stop.studentId } : {}),
     }));
 }
 
@@ -189,12 +214,49 @@ export function collectMapLatLngs({ stops = [], vehicles = [], geoJson = null } 
 export function vehicleMatchesRoute(vehicle, route) {
   if (!vehicle || !route) return false;
   const routeId = String(route.id || route.routeId || '');
-  const routeName = String(route.name || route.routeName || '').toLowerCase();
+  const routeName = String(route.name || route.routeName || '').trim().toLowerCase();
   const vehicleRouteId = String(vehicle.route_id || vehicle.routeId || '');
-  const vehicleRouteName = String(vehicle.route_name || vehicle.routeName || '').toLowerCase();
+  const vehicleRouteName = String(vehicle.route_name || vehicle.routeName || '').trim().toLowerCase();
+  const vehicleId = String(vehicle.vehicle_id || vehicle.vehicleId || vehicle.id || '');
+  const routeVehicleId = String(route.vehicleId || route.vehicle_id || route.vehicle?.id || '');
   if (routeId && vehicleRouteId && routeId === vehicleRouteId) return true;
   if (routeName && vehicleRouteName && routeName === vehicleRouteName) return true;
+  // Driver GPS pings often omit route_id. Match the route's assigned vehicle.
+  if (vehicleId && routeVehicleId && vehicleId === routeVehicleId) return true;
   return false;
+}
+
+/**
+ * Fill route_id / vehicle_number from the vehicle catalog and route.vehicleId
+ * when the live snapshot / WS event does not include them.
+ */
+export function attachRouteToLiveVehicle(vehicle, { routes = [], vehicles = [] } = {}) {
+  if (!vehicle) return vehicle;
+  const vid = String(vehicle.vehicle_id || vehicle.vehicleId || vehicle.id || '');
+  const catalog = (vehicles || []).find((item) => (
+    String(item.id || item.vehicleId) === vid
+  ));
+  const byRouteId = (routes || []).find((route) => {
+    const id = String(route.id || route.routeId || '');
+    const liveRouteId = String(vehicle.route_id || vehicle.routeId || catalog?.routeId || '');
+    return id && liveRouteId && id === liveRouteId;
+  });
+  const byAssignedVehicle = (routes || []).find((route) => (
+    vid && String(route.vehicleId || route.vehicle_id || route.vehicle?.id || '') === vid
+  ));
+  const route = byRouteId || byAssignedVehicle;
+  const routeId = String(vehicle.route_id || vehicle.routeId || catalog?.routeId || route?.id || '');
+  const routeName = vehicle.route_name || vehicle.routeName || catalog?.routeName || route?.name || '';
+  const number = vehicle.vehicle_number || vehicle.vehicleNumber || catalog?.vehicleNumber || '';
+  return {
+    ...vehicle,
+    route_id: routeId,
+    routeId,
+    route_name: routeName,
+    routeName,
+    vehicle_number: number,
+    vehicleNumber: number,
+  };
 }
 
 export function payloadStopsForApi(stops) {

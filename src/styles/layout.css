@@ -86,36 +86,60 @@
   justify-content: center;
 }
 
+/*
+ * Unread count pill. Text colour tracks the nav selection: black on the amber
+ * pill while the link is idle, white on the near-black pill once it is active.
+ * Each pill background is paired with its text colour to keep contrast high.
+ */
 .sidebar-nav-badge {
   flex-shrink: 0;
-  min-width: 1.25rem;
-  height: 1.25rem;
-  padding: 0 0.35rem;
+  box-sizing: border-box;
+  min-width: max(22px, 1.375rem);
+  height: max(22px, 1.375rem);
+  padding: 0 0.4rem;
   border-radius: 999px;
-  background: var(--sb-gold, #fbbf24);
-  color: var(--sb-navy, #0f172a);
+  background: var(--sb-accent, var(--sb-gold, #fbbf24));
+  color: #000000;
   font-size: 0.6875rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--sb-navy) 24%, transparent);
 }
 
-.sidebar-nav-link-active .sidebar-nav-badge {
-  background: var(--sb-gold, #fbbf24);
-  color: var(--sb-navy, #0f172a);
+/* `!important` beats the `.sidebar-nav-link span` colour rules, including the
+   more specific `.portal-shell` overrides further down this file. */
+.app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) .sidebar-nav-badge,
+.sidebar-flyout-link:not(.sidebar-nav-link-active) .sidebar-nav-badge {
+  background: var(--sb-accent, var(--sb-gold, #fbbf24));
+  color: #000000 !important;
+}
+
+.sidebar-nav-link-active .sidebar-nav-badge,
+.sidebar-flyout-link.sidebar-nav-link-active .sidebar-nav-badge {
+  background: color-mix(in srgb, var(--sb-navy, #0f172a) 76%, #000000);
+  color: #ffffff !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ffffff 55%, transparent);
 }
 
 .sidebar-nav-badge--rail {
   position: absolute;
   top: -0.35rem;
   right: -0.4rem;
-  min-width: 1rem;
-  height: 1rem;
-  padding: 0 0.2rem;
+  min-width: max(18px, 1.125rem);
+  height: max(18px, 1.125rem);
+  padding: 0 0.25rem;
   font-size: 0.5625rem;
   border: 2px solid var(--sb-surface, #ffffff);
+}
+
+/* The rail pill already carries a light border, so skip the extra ring. */
+.sidebar-nav-link-active .sidebar-nav-badge--rail {
+  box-shadow: none;
 }
 
 .app-sidebar .sidebar-collapse-btn {

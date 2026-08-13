@@ -24,6 +24,15 @@ function formatUnreadBadge(count) {
   return String(count);
 }
 
+/** Compact form for the collapsed rail, where the pill overlaps the icon. */
+function formatUnreadRailBadge(count) {
+  return count > 9 ? '9+' : String(count);
+}
+
+function unreadBadgeLabel(count) {
+  return `${count} unread ${count === 1 ? 'message' : 'messages'}`;
+}
+
 function pathMatches(pathname, to) {
   if (!to) return false;
   const cleanTo = String(to).replace(/\/+$/, '') || '/';
@@ -222,7 +231,11 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
             </span>
             <span className="min-w-0 flex-1 truncate transition-colors duration-200">{label}</span>
             {showUnreadBadge && (
-              <span className="sidebar-nav-badge" aria-label={`${unreadMessageCount} unread messages`}>
+              <span
+                className="sidebar-nav-badge"
+                title={unreadBadgeLabel(unreadMessageCount)}
+                aria-label={unreadBadgeLabel(unreadMessageCount)}
+              >
                 {formatUnreadBadge(unreadMessageCount)}
               </span>
             )}
@@ -242,13 +255,13 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
               to={to}
               onClick={handleNavClick}
               className={(props) => sidebarLinkClass({ ...props, collapsed: true })}
-              title={label}
+              title={showUnreadBadge ? `${label} — ${unreadBadgeLabel(unreadMessageCount)}` : label}
             >
               <span className="sidebar-nav-icon-wrap relative shrink-0">
                 <Icon size={18} className="transition-colors duration-200" />
                 {showUnreadBadge && (
                   <span className="sidebar-nav-badge sidebar-nav-badge--rail" aria-hidden>
-                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                    {formatUnreadRailBadge(unreadMessageCount)}
                   </span>
                 )}
               </span>
@@ -267,8 +280,12 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
           <button
             type="button"
             data-sidebar-group-trigger="true"
-            title={entry.section}
-            aria-label={`${entry.section} menu`}
+            title={groupUnread ? `${entry.section} — ${unreadBadgeLabel(unreadMessageCount)}` : entry.section}
+            aria-label={
+              groupUnread
+                ? `${entry.section} menu, ${unreadBadgeLabel(unreadMessageCount)}`
+                : `${entry.section} menu`
+            }
             aria-expanded={isOpen}
             aria-haspopup="menu"
             className={[
@@ -281,7 +298,7 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
               <GroupIcon size={18} className="transition-colors duration-200" />
               {groupUnread && (
                 <span className="sidebar-nav-badge sidebar-nav-badge--rail" aria-hidden>
-                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  {formatUnreadRailBadge(unreadMessageCount)}
                 </span>
               )}
             </span>
@@ -412,7 +429,11 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
                   </span>
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {showUnreadBadge && (
-                    <span className="sidebar-nav-badge" aria-label={`${unreadMessageCount} unread messages`}>
+                    <span
+                      className="sidebar-nav-badge"
+                      title={unreadBadgeLabel(unreadMessageCount)}
+                      aria-label={unreadBadgeLabel(unreadMessageCount)}
+                    >
                       {formatUnreadBadge(unreadMessageCount)}
                     </span>
                   )}

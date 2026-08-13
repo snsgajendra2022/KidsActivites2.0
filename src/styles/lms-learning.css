@@ -1,0 +1,250 @@
+.lms-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, #fff6d8 0%, #ffe8a3 42%, #c8f0d8 100%);
+  border: 1px solid #f5e6b0;
+}
+
+.lms-hero__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0b1b33;
+}
+
+.lms-hero__meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: #475467;
+}
+
+.lms-hero__pct {
+  margin-left: auto;
+  min-width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #0b1b33;
+  color: #f5b400;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.lms-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.lms-tab {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: #f2f4f7;
+  color: #344054;
+  cursor: pointer;
+}
+
+.lms-tab.is-active {
+  background: #0b1b33;
+  color: #fff;
+}
+
+.lms-card-kid {
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 1px solid #e4e7ec;
+  background: #fff;
+  box-shadow: 0 8px 24px -18px rgba(11, 27, 51, 0.45);
+}
+
+.lms-card-kid__banner {
+  position: relative;
+  display: flex;
+  height: 7rem;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0b1b33, #1f4d8a);
+}
+
+.lms-btn-lg {
+  min-height: 2.75rem;
+  padding: 0.7rem 1.1rem !important;
+  font-size: 0.95rem !important;
+  border-radius: 999px !important;
+}
+
+.lms-quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  border: 2px solid #e4e7ec;
+  background: #fff;
+  text-align: left;
+  font-size: 1rem;
+  color: #0b1b33;
+  cursor: pointer;
+}
+
+.lms-quiz-option.is-selected {
+  border-color: #f5b400;
+  background: #fff8e1;
+}
+
+.lms-result {
+  text-align: center;
+  padding: 1.5rem 1rem 1rem;
+  border-radius: 1.5rem;
+}
+
+.lms-result--success {
+  background: linear-gradient(180deg, #d9fbe8, #fff);
+}
+
+.lms-result--practice {
+  background: linear-gradient(180deg, #fff3d6, #fff);
+}
+
+.lms-result__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.lms-result__score {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: #0b1b33;
+  line-height: 1;
+}
+
+.lms-review-row {
+  border: 1px solid #eef0f4;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.lms-review-row.is-correct {
+  border-color: #aaefc6;
+  background: #f3fef8;
+}
+
+.lms-review-row.is-wrong {
+  border-color: #fecdca;
+  background: #fff7f6;
+}
+
+.lms-flash {
+  min-height: 9rem;
+  border-radius: 1.25rem;
+  border: 2px dashed #f5b400;
+  background: #fffdf5;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  text-align: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0b1b33;
+}
+
+.lms-match-chip {
+  border: 2px solid #d0d5dd;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lms-match-chip.is-active {
+  border-color: #f5b400;
+  background: #fff8e1;
+}
+
+.lms-match-chip.is-used {
+  opacity: 0.45;
+}
+
+.lms-celebrate {
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+  text-align: center;
+  background: linear-gradient(135deg, #fff3c4, #c9f7dd);
+  border: 1px solid #f5e08a;
+}
+
+.lms-outcome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eef0f4;
+}
+
+.lms-outcome--empty {
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eef0f4;
+  font-size: 0.75rem;
+  color: #98a2b3;
+}
+
+.lms-outcome__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.lms-outcome--pass .lms-outcome__badge {
+  background: #12b76a;
+  color: #fff;
+}
+
+.lms-outcome--fail .lms-outcome__badge {
+  background: #f04438;
+  color: #fff;
+}
+
+.lms-outcome__copy {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #344054;
+}
+
+.lms-outcome__pct {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0b1b33;
+}
+
+.lms-outcome--fail .lms-outcome__copy {
+  color: #b42318;
+}

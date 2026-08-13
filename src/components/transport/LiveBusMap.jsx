@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import PlaceSearchInput from './PlaceSearchInput.jsx';
@@ -17,21 +17,124 @@ const STATUS_COLORS = {
 
 const FALLBACK_CENTER = [22.9734, 78.6569];
 const FALLBACK_ZOOM = 5;
-const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const MAP_TYPE_STORAGE_KEY = 'transport-live-map-type';
+const MAP_TILES = {
+  default: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
+    maxZoom: 19,
+  },
+};
+
+function readStoredMapType() {
+  try {
+    const stored = window.localStorage?.getItem(MAP_TYPE_STORAGE_KEY);
+    if (stored === 'satellite' || stored === 'default') return stored;
+  } catch {
+    // ignore private-mode / storage errors
+  }
+  return 'default';
+}
+
+function writeStoredMapType(nextType) {
+  try {
+    window.localStorage?.setItem(MAP_TYPE_STORAGE_KEY, nextType);
+  } catch {
+    // ignore private-mode / storage errors
+  }
+}
+
+function getFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function canRequestFullscreen(el) {
+  return Boolean(el && (el.requestFullscreen || el.webkitRequestFullscreen));
+}
+
+function requestElementFullscreen(el) {
+  if (el.requestFullscreen) return el.requestFullscreen();
+  if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+  return Promise.reject(new Error('Fullscreen API unavailable'));
+}
+
+function exitElementFullscreen() {
+  if (document.exitFullscreen) return document.exitFullscreen();
+  if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+  return Promise.resolve();
+}
+
+const BUS_MARKER_SIZE = 54;
+
+const BUS_BODY_PATH = 'M16 6 H62 Q72 6 78 13 Q84 20 84 29 V32 Q84 38 78 38 H14 Q7 38 7 31 V14 Q7 6 16 6 Z';
+
+/**
+ * Cartoon sticker school bus, side view facing east.
+ * Layer order builds the sticker look: white die-cut halo, dark-outlined body,
+ * painted details, then wheels on top. Heading rotates with heading - 90.
+ */
+function busGlyphSvg() {
+  return `<svg class="live-bus-glyph" viewBox="0 0 92 52" width="48" height="27" aria-hidden="true" focusable="false">
+    <g fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round">
+      <circle cx="25" cy="40" r="6.8"/>
+      <circle cx="67" cy="40" r="6.8"/>
+      <path d="${BUS_BODY_PATH}"/>
+    </g>
+    <path d="${BUS_BODY_PATH}" fill="#FFC42E" stroke="#1D2233" stroke-width="3.2" stroke-linejoin="round"/>
+    <rect x="24" y="8.2" width="30" height="2.6" rx="1.3" fill="#FFFFFF" opacity=".42"/>
+    <g fill="#BCE3FF" stroke="#1D2233" stroke-width="2.2" stroke-linejoin="round">
+      <rect x="12.5" y="11.6" width="13.5" height="12.4" rx="4"/>
+      <rect x="29.5" y="11.6" width="13.5" height="12.4" rx="4"/>
+      <rect x="46.5" y="11.6" width="11" height="12.4" rx="4"/>
+      <path d="M62 11.6 H64.6 Q70.6 11.6 74.6 15.6 Q78.3 19.3 78.7 22.6 Q78.9 24 77.4 24 H62 Q60.6 24 60.6 22.6 V13 Q60.6 11.6 62 11.6 Z"/>
+    </g>
+    <g fill="#FFFFFF" opacity=".6">
+      <rect x="14.6" y="13.6" width="5.4" height="2.3" rx="1.15"/>
+      <rect x="31.6" y="13.6" width="5.4" height="2.3" rx="1.15"/>
+      <rect x="48.6" y="13.6" width="4.6" height="2.3" rx="1.15"/>
+      <rect x="62.8" y="13.6" width="5.4" height="2.3" rx="1.15"/>
+    </g>
+    <rect x="12.5" y="27" width="57" height="3.2" rx="1.6" fill="#1D2233" opacity=".82"/>
+    <rect x="7.8" y="27" width="3.6" height="6" rx="1.4" fill="#F04438" stroke="#1D2233" stroke-width="1.1"/>
+    <rect x="72.6" y="31.4" width="7.6" height="4.2" rx="2.1" fill="#3A4255" stroke="#1D2233" stroke-width="1.1"/>
+    <circle cx="79.4" cy="27.6" r="3.2" fill="#FFF3B8" stroke="#1D2233" stroke-width="1.6"/>
+    <g fill="#2C3242" stroke="#1D2233" stroke-width="3.2">
+      <circle cx="25" cy="40" r="6.8"/>
+      <circle cx="67" cy="40" r="6.8"/>
+    </g>
+    <g fill="#F5F7FC" stroke="#1D2233" stroke-width="1.8">
+      <circle cx="25" cy="40" r="3.1"/>
+      <circle cx="67" cy="40" r="3.1"/>
+    </g>
+    <g fill="#8891A6">
+      <circle cx="25" cy="40" r="1"/>
+      <circle cx="67" cy="40" r="1"/>
+    </g>
+  </svg>`;
+}
+
+/**
+ * The sticker is drawn facing east, so it rotates by heading - 90. Westward
+ * headings are mirrored instead of rotated past vertical to keep it upright.
+ */
+function busHeadingTransform(heading) {
+  const degrees = ((Number(heading) % 360) + 360) % 360;
+  const mirrored = degrees > 180 && degrees < 360;
+  return `rotate(${degrees - 90}deg)${mirrored ? ' scaleY(-1)' : ''}`;
+}
 
 function createBusIcon(status = 'running', selected = false) {
   const color = STATUS_COLORS[status] || STATUS_COLORS.running;
   return L.divIcon({
     className: 'live-bus-marker',
-    html: `<div style="
-      width:28px;height:28px;border-radius:999px;border:2px solid #fff;
-      box-shadow:0 2px 8px rgba(0,0,0,0.25);background:${color};
-      display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;
-      outline:${selected ? '3px solid #0058be' : 'none'};
-    ">B</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    html: `<div class="live-bus-marker-body${selected ? ' is-selected' : ''}" style="--bus-ring:${color}">${busGlyphSvg()}<span class="live-bus-status"></span></div>`,
+    iconSize: [BUS_MARKER_SIZE, BUS_MARKER_SIZE],
+    iconAnchor: [BUS_MARKER_SIZE / 2, BUS_MARKER_SIZE / 2],
   });
 }
 
@@ -151,14 +254,62 @@ export default function LiveBusMap({
   showSearch = true,
   routingLabel = '',
 }) {
+  const [mapType, setMapType] = useState(readStoredMapType);
+  const [apiFullscreen, setApiFullscreen] = useState(false);
+  const [cssFullscreen, setCssFullscreen] = useState(false);
+  const shellRef = useRef(null);
   const containerRef = useRef(null);
   const mapRef = useRef(null);
+  const isFullscreen = apiFullscreen || cssFullscreen;
   const layerRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const markersRef = useRef(new Map());
   const routeLayerRef = useRef(null);
   const lastFitTokenRef = useRef('');
   const defaultCenterRef = useRef(defaultCenter);
   defaultCenterRef.current = defaultCenter;
+
+  const applyMapType = (nextType) => {
+    if (nextType !== 'default' && nextType !== 'satellite') return;
+    if (nextType === mapType) return;
+    setMapType(nextType);
+    writeStoredMapType(nextType);
+  };
+
+  const invalidateMapSoon = () => {
+    const resize = () => mapRef.current?.invalidateSize({ animate: false });
+    requestAnimationFrame(resize);
+    setTimeout(resize, 80);
+    setTimeout(resize, 280);
+  };
+
+  const exitFullscreen = async () => {
+    setCssFullscreen(false);
+    if (getFullscreenElement()) {
+      try {
+        await exitElementFullscreen();
+      } catch {
+        // browser may already have exited
+      }
+    }
+  };
+
+  const toggleFullscreen = async () => {
+    if (isFullscreen) {
+      await exitFullscreen();
+      return;
+    }
+    const shell = shellRef.current;
+    if (canRequestFullscreen(shell)) {
+      try {
+        await requestElementFullscreen(shell);
+        return;
+      } catch {
+        // iOS Safari / denied permission — CSS overlay fallback
+      }
+    }
+    setCssFullscreen(true);
+  };
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
@@ -171,11 +322,6 @@ export default function LiveBusMap({
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-    L.tileLayer(OSM_TILE_URL, {
-      attribution: OSM_ATTRIBUTION,
-      maxZoom: 19,
-    }).addTo(map);
 
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -203,10 +349,31 @@ export default function LiveBusMap({
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      tileLayerRef.current = null;
       routeLayerRef.current = null;
       lastFitTokenRef.current = '';
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+
+    const tiles = MAP_TILES[mapType] || MAP_TILES.default;
+    const nextLayer = L.tileLayer(tiles.url, {
+      attribution: tiles.attribution,
+      maxZoom: tiles.maxZoom,
+    }).addTo(map);
+    nextLayer.bringToBack();
+    tileLayerRef.current = nextLayer;
+
+    return () => {
+      if (mapRef.current && tileLayerRef.current) {
+        mapRef.current.removeLayer(tileLayerRef.current);
+      }
+      tileLayerRef.current = null;
+    };
+  }, [mapType]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -242,7 +409,7 @@ export default function LiveBusMap({
 
       let marker = markersRef.current.get(id);
       if (!marker) {
-        marker = L.marker([lat, lng], { icon })
+        marker = L.marker([lat, lng], { icon, zIndexOffset: 600 })
           .addTo(layer)
           .on('click', () => onSelectVehicle?.(vehicle));
         markersRef.current.set(id, marker);
@@ -252,8 +419,8 @@ export default function LiveBusMap({
       }
 
       if (vehicle.heading != null && Number.isFinite(Number(vehicle.heading))) {
-        const el = marker.getElement()?.querySelector('div');
-        if (el) el.style.transform = `rotate(${Number(vehicle.heading)}deg)`;
+        const el = marker.getElement()?.querySelector('.live-bus-glyph');
+        if (el) el.style.transform = busHeadingTransform(vehicle.heading);
       }
     });
 
@@ -352,6 +519,34 @@ export default function LiveBusMap({
     map.setView(defaultCenter, 12);
   }, [defaultCenter, stopFeatures, vehicles, routeGeoJson]);
 
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setApiFullscreen(getFullscreenElement() === shellRef.current);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cssFullscreen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setCssFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cssFullscreen]);
+
+  useEffect(() => {
+    invalidateMapSoon();
+  }, [isFullscreen]);
+
   const hasPoints = collectMapLatLngs({
     stops: stopFeatures,
     vehicles,
@@ -359,10 +554,120 @@ export default function LiveBusMap({
   }).length > 0;
 
   return (
-    <div className={`relative z-0 isolate h-full w-full min-h-0 overflow-hidden rounded-xl ${className}`}>
-      {showSearch && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] flex justify-stretch p-2 sm:justify-end sm:p-3">
-          <div className="pointer-events-auto w-full max-w-none rounded-xl border border-[#d0d5dd] bg-white/95 p-2 shadow-md backdrop-blur sm:max-w-sm lg:max-w-md">
+    <div
+      ref={shellRef}
+      className={`live-bus-map-shell relative z-0 isolate h-full w-full min-h-0 overflow-hidden rounded-xl ${
+        cssFullscreen ? 'fixed inset-0 z-[2000] !h-[100dvh] !w-screen !rounded-none bg-[#0b1c30]' : ''
+      } ${className}`}
+    >
+      <style>{`
+        .live-bus-map-shell:fullscreen,
+        .live-bus-map-shell:-webkit-full-screen {
+          width: 100%;
+          height: 100%;
+          border-radius: 0;
+          background: #0b1c30;
+        }
+        .live-bus-marker {
+          background: transparent !important;
+          border: none !important;
+          overflow: visible !important;
+        }
+        .live-bus-marker-body {
+          position: relative;
+          width: 54px;
+          height: 54px;
+          display: grid;
+          place-items: center;
+          filter: drop-shadow(0 3px 4px rgba(11, 18, 32, 0.45));
+          transition: transform 0.2s ease;
+        }
+        .live-bus-marker-body::before {
+          content: '';
+          position: absolute;
+          inset: 2px;
+          border-radius: 999px;
+          border: 3px solid transparent;
+          transition: border-color 0.2s ease, background 0.2s ease;
+        }
+        .live-bus-marker-body.is-selected {
+          transform: scale(1.12);
+        }
+        .live-bus-marker-body.is-selected::before {
+          border-color: #0058be;
+          background: rgba(0, 88, 190, 0.16);
+          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92);
+        }
+        .live-bus-glyph {
+          position: relative;
+          z-index: 1;
+          display: block;
+          transform-origin: center center;
+          transition: transform 0.35s ease;
+        }
+        .live-bus-status {
+          position: absolute;
+          top: 0;
+          right: 0;
+          z-index: 2;
+          width: 11px;
+          height: 11px;
+          border-radius: 999px;
+          background: var(--bus-ring, #0B6E4F);
+          border: 2.5px solid #fff;
+        }
+      `}</style>
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] flex flex-col gap-1.5 p-1.5 sm:flex-row sm:items-start sm:justify-between sm:p-2">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-1 self-start rounded-lg border border-[#d0d5dd] bg-white/95 p-1 shadow-md backdrop-blur">
+          <div className="flex overflow-hidden rounded-md border border-[#d0d5dd]" role="group" aria-label="Map type">
+            {[
+              { id: 'default', label: 'Default' },
+              { id: 'satellite', label: 'Satellite' },
+            ].map((option) => {
+              const active = mapType === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => applyMapType(option.id)}
+                  className={`min-h-8 px-2 text-[11px] font-semibold leading-none ${
+                    active
+                      ? 'bg-[#0058be] text-white'
+                      : 'bg-white text-[#475467] hover:bg-[#f8f9ff]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            aria-pressed={isFullscreen}
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            onClick={() => void toggleFullscreen()}
+            className={`inline-flex min-h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-semibold leading-none ${
+              isFullscreen
+                ? 'border-[#0058be] bg-[#0058be] text-white'
+                : 'border-[#d0d5dd] bg-white text-[#475467] hover:bg-[#f8f9ff]'
+            }`}
+          >
+            {isFullscreen ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M8 3H4a1 1 0 0 0-1 1v4M16 3h4a1 1 0 0 1 1 1v4M8 21H4a1 1 0 0 1-1-1v-4M16 21h4a1 1 0 0 0 1-1v-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+              </svg>
+            )}
+            {isFullscreen ? 'Exit' : 'Full'}
+          </button>
+        </div>
+
+        {showSearch && !isFullscreen ? (
+          <div className="pointer-events-auto w-full max-w-none rounded-lg border border-[#d0d5dd] bg-white/95 p-1.5 shadow-md backdrop-blur sm:max-w-sm lg:max-w-md">
             <PlaceSearchInput
               label=""
               placeholder="Search area to move the map…"
@@ -375,8 +680,8 @@ export default function LiveBusMap({
               }}
             />
           </div>
-        </div>
-      )}
+        ) : null}
+      </div>
 
       {routingLabel ? (
         <div className="pointer-events-none absolute bottom-14 left-2 z-[450] max-w-[min(100%-1rem,220px)] rounded-lg border border-[#d0d5dd] bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold text-[#0b1c30] shadow-md sm:bottom-3 sm:left-3 sm:max-w-xs sm:px-3 sm:text-xs">

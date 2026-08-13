@@ -24,14 +24,57 @@ describe('chat unread helpers', () => {
     expect(getConversationUnread(conversation, 'parent')).toBe(3);
   });
 
-  it('preserves live unread state when a refresh omits unread fields', () => {
+  it('clears unread when the API reports an explicit zero', () => {
+    const previous = patchConversationUnread({ id: 'c1' }, 'parent', 4);
+    const merged = mergeConversationUnread(previous, {
+      id: 'c1',
+      lastMessage: 'Latest update',
+      lastMessageSenderId: 'teacher',
+      unreadCount: 0,
+    }, 'parent');
+
+    expect(getConversationUnread(merged, 'parent')).toBe(0);
+  });
+
+  it('keeps a locally read conversation at zero when a refresh omits unread fields', () => {
+    const previous = patchConversationUnread({
+      id: 'c1',
+      lastMessage: 'Latest update',
+      lastMessageAt: '2026-07-29T10:00:00Z',
+    }, 'parent', 0);
+
+    const merged = mergeConversationUnread(previous, {
+      id: 'c1',
+      lastMessage: 'Latest update',
+      lastMessageAt: '2026-07-29T10:00:00Z',
+      lastMessageSenderId: 'teacher',
+    }, 'parent');
+
+    expect(getConversationUnread(merged, 'parent')).toBe(0);
+  });
+
+  it('never inflates a refreshed count with a stale local count', () => {
     const previous = patchConversationUnread({ id: 'c1' }, 'parent', 4);
     const merged = mergeConversationUnread(previous, {
       id: 'c1',
       lastMessage: 'New message',
+      lastMessageAt: '2026-07-30T10:00:00Z',
+      lastMessageSenderId: 'teacher',
+      unreadCounts: { parent: 1 },
     }, 'parent');
 
-    expect(getConversationUnread(merged, 'parent')).toBe(4);
+    expect(getConversationUnread(merged, 'parent')).toBe(1);
+  });
+
+  it('ignores unread attributed to the signed-in user', () => {
+    const conversation = normalizeConversation({
+      id: 'c1',
+      lastMessage: 'See you tomorrow',
+      lastMessageAt: '2026-07-29T10:00:00Z',
+      lastMessageSenderId: 'parent',
+    }, 'parent');
+
+    expect(getConversationUnread(conversation, 'parent')).toBe(0);
   });
 
   it('sums unread counts without allowing invalid values', () => {

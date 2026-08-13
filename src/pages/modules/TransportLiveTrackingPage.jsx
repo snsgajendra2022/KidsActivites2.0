@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bus,
@@ -25,13 +25,15 @@ import {
   getTripStudentTransportStatuses,
 } from '../../services/transportTracking/trackingApi.js';
 import { createTrackingSocket } from '../../services/transportTracking/trackingSocket.js';
-import { transportRouteService } from '../../services/schoolModules/index.js';
+import { transportRouteService, transportVehicleService } from '../../services/schoolModules/index.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { geocodeAddress } from '../../services/geocoding/placeSearch.js';
 import {
+  attachRouteToLiveVehicle,
   normalizeRouteStops,
   routeHasMappedStops,
   stopsToMapFeatures,
+  studentIdFromStop,
   vehicleMatchesRoute,
 } from '../../utils/transportRouteGeo.js';
 import { isNewerLocation } from '../../utils/transportLocationSequence.js';
@@ -41,7 +43,12 @@ import {
   formatRouteDistance,
   formatRouteDuration,
 } from '../../services/geocoding/roadRouting.js';
-import { WS_EVENT_TYPES } from '../../types/transportModels.js';
+import {
+  WS_EVENT_TYPES,
+  normalizeAdminFleetVehicle,
+  trackingEventType,
+  unwrapTrackingEventData,
+} from '../../types/transportModels.js';
 import {
   applyStudentTransportWsEvent,
   friendlyTransportError,
@@ -64,47 +71,61 @@ const STATUS_DOT = {
   offline: 'bg-slate-400',
 };
 
-function upsertVehicle(list, update) {
-  const id = String(update.vehicleId || update.vehicle_id);
+function upsertVehicle(list, update, catalog = { routes: [], vehicles: [] }) {
+  const normalized = normalizeAdminFleetVehicle({
+    ...(typeof update === 'object' && update ? update : {}),
+  });
+  const id = String(normalized?.vehicle_id || update?.vehicleId || update?.vehicle_id || '');
   if (!id || id === 'undefined') return list;
   const next = [...list];
   const index = next.findIndex((item) => String(item.vehicle_id || item.vehicleId) === id);
   const current = index >= 0 ? next[index] : null;
   const incomingMeta = {
-    sequence: update.sequence,
-    updatedAt: update.updatedAt || update.updated_at,
-    recordedAt: update.recordedAt || update.recorded_at,
+    sequence: normalized?.sequence ?? update?.sequence,
+    updatedAt: normalized?.updated_at || update?.updatedAt || update?.updated_at,
+    recordedAt: update?.recordedAt || update?.recorded_at,
   };
-  if (current && (update.latitude != null || update.longitude != null)
+  const incomingLat = normalized?.latitude ?? update?.latitude ?? update?.lat;
+  const incomingLng = normalized?.longitude ?? update?.longitude ?? update?.lng;
+  if (current && (incomingLat != null || incomingLng != null)
     && !isNewerLocation({
       sequence: current.sequence,
       updatedAt: current.updated_at || current.updatedAt,
     }, incomingMeta)) {
     return list;
   }
-  const merged = {
+  const merged = attachRouteToLiveVehicle({
     ...(current || {}),
+    ...(normalized || {}),
     vehicle_id: id,
-    vehicle_number: update.vehicleNumber || update.vehicle_number
-      || current?.vehicle_number,
-    latitude: update.latitude ?? current?.latitude,
-    longitude: update.longitude ?? current?.longitude,
-    speed_kmh: update.speedKmh ?? update.speed_kmh ?? current?.speed_kmh,
-    heading: update.heading ?? current?.heading,
-    tracking_status: update.trackingStatus || update.tracking_status || current?.tracking_status,
-    updated_at: incomingMeta.updatedAt || new Date().toISOString(),
-    sequence: update.sequence ?? current?.sequence,
-    trip_id: update.tripId || update.trip_id || current?.trip_id,
-    trip_status: update.tripStatus || update.trip_status || current?.trip_status,
-    student_count: update.studentCount ?? update.student_count ?? current?.student_count,
-    route_id: update.routeId || update.route_id || current?.route_id,
-    route_name: update.routeName || update.route_name || current?.route_name,
-    eta: update.eta || current?.eta || null,
-  };
+    vehicleId: id,
+    vehicle_number: normalized?.vehicle_number || current?.vehicle_number || '',
+    latitude: incomingLat ?? current?.latitude,
+    longitude: incomingLng ?? current?.longitude,
+    lat: incomingLat ?? current?.lat,
+    lng: incomingLng ?? current?.lng,
+    speed_kmh: normalized?.speed_kmh ?? current?.speed_kmh,
+    heading: normalized?.heading ?? current?.heading,
+    tracking_status: normalized?.tracking_status || current?.tracking_status,
+    trackingStatus: normalized?.tracking_status || current?.trackingStatus,
+    updated_at: incomingMeta.updatedAt || current?.updated_at || new Date().toISOString(),
+    sequence: incomingMeta.sequence ?? current?.sequence,
+    trip_id: normalized?.trip_id || current?.trip_id,
+    tripId: normalized?.trip_id || current?.tripId,
+    trip_status: normalized?.trip_status || current?.trip_status,
+    student_count: normalized?.student_count ?? current?.student_count,
+    route_id: normalized?.route_id || current?.route_id,
+    routeId: normalized?.routeId || current?.routeId,
+    route_name: normalized?.route_name || current?.route_name,
+    routeName: normalized?.routeName || current?.routeName,
+    eta: update?.eta || current?.eta || null,
+  }, catalog);
   if (index >= 0) next[index] = { ...next[index], ...merged };
   else next.push(merged);
   return next;
 }
+
+const FLEET_POLL_MS = 15000;
 
 function Panel({ step, title, children, className = '' }) {
   return (
@@ -128,6 +149,7 @@ export default function TransportLiveTrackingPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [routeSearch, setRouteSearch] = useState('');
   const [routes, setRoutes] = useState([]);
+  const [vehicleCatalog, setVehicleCatalog] = useState([]);
   const [routesLoading, setRoutesLoading] = useState(true);
   const [selectedRouteId, setSelectedRouteId] = useState('');
   const [vehicles, setVehicles] = useState([]);
@@ -159,9 +181,14 @@ export default function TransportLiveTrackingPage() {
   const loadRoutes = useCallback(async () => {
     setRoutesLoading(true);
     try {
-      const data = await transportRouteService.list();
+      const [data, fleet] = await Promise.all([
+        transportRouteService.list(),
+        transportVehicleService.list().catch(() => []),
+      ]);
       const list = Array.isArray(data) ? data : [];
+      const catalog = Array.isArray(fleet) ? fleet : [];
       setRoutes(list);
+      setVehicleCatalog(catalog);
       setSelectedRouteId((current) => {
         if (current && list.some((route) => String(route.id) === String(current))) return current;
         const firstMapped = list.find(routeHasMappedStops);
@@ -170,20 +197,28 @@ export default function TransportLiveTrackingPage() {
       });
     } catch {
       setRoutes([]);
+      setVehicleCatalog([]);
       setSelectedRouteId('');
     } finally {
       setRoutesLoading(false);
     }
   }, []);
 
-  const loadFleet = useCallback(async (status = 'all', { silent = false } = {}) => {
+  const catalogRef = useRef({ routes: [], vehicles: [] });
+  catalogRef.current = { routes, vehicles: vehicleCatalog };
+
+  const loadFleet = useCallback(async (_status = 'all', { silent = false } = {}) => {
     if (!silent) {
       setFleetLoading(true);
       setFleetError('');
     }
     try {
-      const data = await fetchAdminFleetLive(status);
-      setVehicles(Array.isArray(data) ? data : []);
+      const data = await fetchAdminFleetLive();
+      const catalog = catalogRef.current;
+      const list = (Array.isArray(data) ? data : [])
+        .map((item) => attachRouteToLiveVehicle(item, catalog))
+        .filter(Boolean);
+      setVehicles(list);
       if (!silent) setFleetError('');
     } catch (err) {
       if (err?.status === 401 || err?.status === 403) {
@@ -200,51 +235,70 @@ export default function TransportLiveTrackingPage() {
 
   useEffect(() => {
     void loadRoutes();
-    void loadFleet(statusFilter);
-  }, [loadRoutes, loadFleet, statusFilter]);
+    void loadFleet();
+  }, [loadRoutes, loadFleet]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void loadFleet('all', { silent: true });
+    }, FLEET_POLL_MS);
+    return () => clearInterval(timer);
+  }, [loadFleet]);
 
   useEffect(() => {
     const socket = createTrackingSocket({
       onStatus: (status) => {
         setSocketStatus(status);
         if (status?.state === 'connected' && status?.reconnect) {
-          void loadFleet(statusFilter, { silent: true });
+          void loadFleet('all', { silent: true });
         }
       },
       onEvent: (event) => {
-        if (isStudentTransportWsEvent(event?.type)) {
-          setStopStudents((current) => applyStudentTransportWsEvent(current, event));
-          setTripStatuses((current) => applyStudentTransportWsEvent(current, event));
+        const type = trackingEventType(event);
+        const payload = unwrapTrackingEventData(event);
+        if (isStudentTransportWsEvent(type)) {
+          setStopStudents((current) => applyStudentTransportWsEvent(current, { ...event, type, data: payload }));
+          setTripStatuses((current) => applyStudentTransportWsEvent(current, { ...event, type, data: payload }));
           return;
         }
-        if (event?.type === WS_EVENT_TYPES.LOCATION_UPDATED && event.data) {
-          setVehicles((current) => upsertVehicle(current, event.data));
+        if (type === WS_EVENT_TYPES.LOCATION_UPDATED && payload) {
+          setVehicles((current) => upsertVehicle(current, payload, catalogRef.current));
           return;
         }
-        if (event?.type === WS_EVENT_TYPES.TRACKING_WARNING || event?.type === WS_EVENT_TYPES.TRACKING_OFFLINE) {
+        if (type === WS_EVENT_TYPES.TRACKING_WARNING || type === WS_EVENT_TYPES.TRACKING_OFFLINE) {
           setVehicles((current) => upsertVehicle(current, {
-            ...event.data,
-            trackingStatus: event.type === WS_EVENT_TYPES.TRACKING_OFFLINE ? 'offline' : 'warning',
-            vehicleId: event.data?.vehicle_id || event.data?.vehicleId,
-            latitude: event.data?.latitude,
-            longitude: event.data?.longitude,
-            updatedAt: event.data?.updated_at || event.data?.updatedAt,
-            sequence: event.data?.sequence,
-          }));
+            ...(payload || {}),
+            trackingStatus: type === WS_EVENT_TYPES.TRACKING_OFFLINE ? 'offline' : 'warning',
+            vehicleId: payload?.vehicle_id || payload?.vehicleId,
+            latitude: payload?.latitude ?? payload?.lat,
+            longitude: payload?.longitude ?? payload?.lng,
+            updatedAt: payload?.updated_at || payload?.updatedAt,
+            sequence: payload?.sequence,
+          }, catalogRef.current));
           return;
         }
-        if (event?.type === WS_EVENT_TYPES.TRIP_COMPLETED && event.data) {
+        if (type === WS_EVENT_TYPES.TRIP_STARTED && payload) {
           setVehicles((current) => upsertVehicle(current, {
-            ...event.data,
+            ...payload,
+            tripStatus: payload.tripStatus || payload.trip_status || 'active',
+            trackingStatus: payload.trackingStatus || payload.tracking_status || 'running',
+            vehicleId: payload.vehicle_id || payload.vehicleId,
+          }, catalogRef.current));
+          void loadFleet('all', { silent: true });
+          return;
+        }
+        if (type === WS_EVENT_TYPES.TRIP_COMPLETED && payload) {
+          setVehicles((current) => upsertVehicle(current, {
+            ...payload,
             tripStatus: 'completed',
             trackingStatus: 'completed',
-            vehicleId: event.data?.vehicle_id || event.data?.vehicleId,
-          }));
+            vehicleId: payload.vehicle_id || payload.vehicleId,
+          }, catalogRef.current));
         }
       },
     });
     return () => socket.close();
-  }, [loadFleet, statusFilter]);
+  }, [loadFleet]);
 
   const filteredRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
@@ -268,15 +322,36 @@ export default function TransportLiveTrackingPage() {
   const roadRoute = useRoadRoute(selectedStops, { enabled: Boolean(selectedRoute) });
 
   const filteredVehicles = useMemo(() => {
-    let list = vehicles;
+    let list = vehicles.map((vehicle) => attachRouteToLiveVehicle(vehicle, {
+      routes,
+      vehicles: vehicleCatalog,
+    }));
     if (selectedRoute) {
-      list = list.filter((vehicle) => vehicleMatchesRoute(vehicle, selectedRoute));
+      const matched = list.filter((vehicle) => vehicleMatchesRoute(vehicle, selectedRoute));
+      if (matched.length) {
+        list = matched;
+      } else {
+        // Driver GPS often has no route_id. If this route has a linked vehicle,
+        // keep that bus; if there is exactly one live GPS bus, show it here.
+        const withGps = list.filter((vehicle) => {
+          const lat = Number(vehicle.latitude ?? vehicle.lat);
+          const lng = Number(vehicle.longitude ?? vehicle.lng);
+          return Number.isFinite(lat) && Number.isFinite(lng);
+        });
+        const routeVehicleId = String(selectedRoute.vehicleId || selectedRoute.vehicle_id || '');
+        const linked = routeVehicleId
+          ? withGps.filter((vehicle) => String(vehicle.vehicle_id || vehicle.vehicleId) === routeVehicleId)
+          : [];
+        if (linked.length) list = linked;
+        else if (withGps.length === 1) list = withGps;
+        else list = [];
+      }
     }
     if (statusFilter !== 'all') {
-      list = list.filter((vehicle) => (vehicle.tracking_status || 'offline') === statusFilter);
+      list = list.filter((vehicle) => (vehicle.tracking_status || vehicle.trackingStatus || 'offline') === statusFilter);
     }
     return list;
-  }, [vehicles, selectedRoute, statusFilter]);
+  }, [vehicles, selectedRoute, statusFilter, routes, vehicleCatalog]);
 
   const selected = useMemo(
     () => filteredVehicles.find((v) => String(v.vehicle_id || v.vehicleId) === String(selectedId)) || null,
@@ -348,9 +423,17 @@ export default function TransportLiveTrackingPage() {
   }, [roadRoute]);
 
   useEffect(() => {
-    if (selectedId && !filteredVehicles.some((v) => String(v.vehicle_id || v.vehicleId) === String(selectedId))) {
-      setSelectedId('');
+    if (selectedId && filteredVehicles.some((v) => String(v.vehicle_id || v.vehicleId) === String(selectedId))) {
+      return;
     }
+    const withGps = filteredVehicles.find((vehicle) => {
+      const lat = Number(vehicle.latitude ?? vehicle.lat);
+      const lng = Number(vehicle.longitude ?? vehicle.lng);
+      return Number.isFinite(lat) && Number.isFinite(lng);
+    });
+    setSelectedId(withGps ? String(withGps.vehicle_id || withGps.vehicleId) : (filteredVehicles[0]
+      ? String(filteredVehicles[0].vehicle_id || filteredVehicles[0].vehicleId)
+      : ''));
   }, [filteredVehicles, selectedId]);
 
   const mappedRouteCount = useMemo(
@@ -372,27 +455,37 @@ export default function TransportLiveTrackingPage() {
 
   const activeTripId = selected?.trip_id || selected?.tripId || rotationBus?.trip_id || rotationBus?.tripId || '';
 
+  const stopLookupScope = useMemo(() => ({
+    routeId: selectedRoute?.id || selected?.route_id || selected?.routeId || '',
+    vehicleId: selected?.vehicle_id || selected?.vehicleId || '',
+    direction: selected?.direction || '',
+  }), [selectedRoute, selected]);
+
   const openStopDetails = useCallback(async (stop) => {
     setSelectedStop(stop);
     setStopError('');
     setStopStudents([]);
     setStopCounts(null);
-    if (!activeTripId) {
-      setStopError('Select a bus with an active trip to load students for this stop.');
-      return;
-    }
     setStopLoading(true);
     try {
-      const result = await getTripStopStudents(activeTripId, stop.id);
+      // Standing assignments resolve without a trip, so a student-home stop still
+      // lists its student when no bus is running.
+      const result = await getTripStopStudents(activeTripId, stop.id, {
+        ...stopLookupScope,
+        studentId: studentIdFromStop(stop),
+      });
       setStopStudents(result.students || []);
       setStopCounts(result.counts || null);
+      if (!activeTripId && !result.students?.length) {
+        setStopError('Select a bus with an active trip to load students for this stop.');
+      }
     } catch (err) {
       setStopError(friendlyTransportError(err));
       toast(friendlyTransportError(err), 'error');
     } finally {
       setStopLoading(false);
     }
-  }, [activeTripId, toast]);
+  }, [activeTripId, stopLookupScope, toast]);
 
   useEffect(() => {
     if (!activeTripId) {
@@ -428,7 +521,7 @@ export default function TransportLiveTrackingPage() {
                   : <SignalZero size={14} className="text-rose-600" />}
                 {socketStatus.state === 'connected' ? 'Live connected' : `Live ${socketStatus.state}`}
               </span>
-              <Button variant="secondary" onClick={() => { void loadRoutes(); void loadFleet(statusFilter); }}>
+              <Button variant="secondary" onClick={() => { void loadRoutes(); void loadFleet(); }}>
                 <RefreshCw size={14} /> Refresh
               </Button>
               <Button variant="secondary" onClick={() => setGpsOpen(true)}>
@@ -521,7 +614,12 @@ export default function TransportLiveTrackingPage() {
                   const stops = normalizeRouteStops(route.stops);
                   const mapped = stops.filter((stop) => Number.isFinite(stop.lat) && Number.isFinite(stop.lng)).length;
                   const active = String(selectedRouteId) === String(route.id);
-                  const busCount = vehicles.filter((vehicle) => vehicleMatchesRoute(vehicle, route)).length;
+                  const busCount = vehicles
+                    .map((vehicle) => attachRouteToLiveVehicle(vehicle, {
+                      routes,
+                      vehicles: vehicleCatalog,
+                    }))
+                    .filter((vehicle) => vehicleMatchesRoute(vehicle, route)).length;
                   return (
                     <button
                       key={route.id}
@@ -650,11 +748,18 @@ export default function TransportLiveTrackingPage() {
                   <div className="min-h-0 max-h-[220px] flex-1 space-y-2 overflow-y-auto 2xl:max-h-none">
                     {filteredVehicles.length === 0 ? (
                       <p className="rounded-lg border border-dashed border-[#c5c6cd] bg-[#f8f9ff] px-3 py-3 text-sm text-[#667085]">
-                        No live GPS on this route yet. The blue path still shows from saved stops.
+                        No live GPS on this route yet. When the driver starts sharing location, the bus appears here within a few seconds. The blue path still shows from saved stops.
                       </p>
                     ) : filteredVehicles.map((vehicle) => {
                       const id = String(vehicle.vehicle_id || vehicle.vehicleId);
-                      const status = vehicle.tracking_status || 'offline';
+                      const status = vehicle.tracking_status || vehicle.trackingStatus || 'offline';
+                      const lat = Number(vehicle.latitude ?? vehicle.lat);
+                      const lng = Number(vehicle.longitude ?? vehicle.lng);
+                      const hasGps = Number.isFinite(lat) && Number.isFinite(lng);
+                      const speed = Number(vehicle.speed_kmh);
+                      const speedLabel = Number.isFinite(speed) && speed >= 1
+                        ? ` · ${speed.toFixed(0)} km/h`
+                        : (status === 'running' && hasGps ? ' · live GPS' : '');
                       return (
                         <button
                           key={id}
@@ -673,7 +778,8 @@ export default function TransportLiveTrackingPage() {
                           </div>
                           <p className="mt-1 text-xs capitalize text-[#667085]">
                             {String(status).replace('_', ' ')}
-                            {vehicle.speed_kmh != null ? ` · ${Number(vehicle.speed_kmh).toFixed(0)} km/h` : ''}
+                            {speedLabel}
+                            {!hasGps ? ' · waiting for GPS' : ''}
                           </p>
                         </button>
                       );
