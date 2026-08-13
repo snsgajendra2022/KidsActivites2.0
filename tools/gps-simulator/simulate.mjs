@@ -54,10 +54,21 @@ async function postLocation(payload) {
     body: JSON.stringify(payload),
   });
   const text = await res.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
   if (!res.ok) {
+    // Legacy hard rate-limit — soft-continue so burst runs do not abort.
+    if (res.status === 429 || json?.error?.code === 'RATE_LIMITED') {
+      return { accepted: false, reason: 'throttled', legacyStatus: res.status };
+    }
     throw new Error(`${res.status}: ${text || res.statusText}`);
   }
-  return text;
+  const data = json && typeof json.success === 'boolean' ? json.data : json;
+  return data || { accepted: true };
 }
 
 function sleep(ms) {
@@ -82,8 +93,15 @@ for (let i = 0; i < STEPS; i += 1) {
   };
 
   try {
-    await postLocation(payload);
-    console.log(`[ok] step ${i + 1}/${STEPS} ${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+    const result = await postLocation(payload);
+    if (result && result.accepted === false) {
+      console.log(
+        `[throttled] step ${i + 1}/${STEPS} ${latitude.toFixed(6)},${longitude.toFixed(6)}` +
+          (result.retryAfterMs != null ? ` retryAfterMs=${result.retryAfterMs}` : ''),
+      );
+    } else {
+      console.log(`[ok] step ${i + 1}/${STEPS} ${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+    }
   } catch (err) {
     console.error(`[fail] step ${i + 1}: ${err.message}`);
     if (String(err.message).startsWith('401') || String(err.message).startsWith('403')) {

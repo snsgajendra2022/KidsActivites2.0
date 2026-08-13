@@ -962,6 +962,11 @@
   border-color: #bfdbfe;
 }
 
+.webpush-banner__err {
+  display: inline;
+  color: #b45309;
+}
+
 @media (min-width: 1024px) {
   .notif-shell {
     height: calc(100vh - var(--header-height, 64px) - 4rem);

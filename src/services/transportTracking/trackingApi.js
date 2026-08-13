@@ -198,11 +198,65 @@ export async function completeTransportTrip(tripId, payload = {}) {
   return trackingFetch(`/tracking/trips/${tripId}/complete`, { method: 'POST', body: payload });
 }
 
+/** Spec: ≥3s between accepted GPS updates per vehicle (FULL_BACKEND_API_CONTRACT). */
+export const LOCATION_UPDATE_MIN_INTERVAL_MS = 3000;
+
+const lastClientPublishMsByVehicle = new Map();
+
+function locationVehicleKey(payload) {
+  return String(payload?.vehicle_id || payload?.vehicleId || '_default');
+}
+
+function softThrottledLocationResult(vehicleId, retryAfterMs, extra = {}) {
+  return {
+    accepted: false,
+    reason: 'throttled',
+    vehicleId,
+    vehicle_id: vehicleId,
+    retryAfterMs,
+    message: 'Location updates are rate-limited to once every 3 seconds',
+    ...extra,
+  };
+}
+
+/**
+ * Publish driver GPS. Client-throttles to ≤1 post / 3s per vehicle and treats
+ * server throttle / legacy RATE_LIMITED as soft success so tracking loops continue.
+ */
 export async function updateDriverLocation(payload) {
-  if (isTransportFixtureMode()) {
-    return { ok: true, acceptedAt: new Date().toISOString(), ...payload };
+  const vehicleId = locationVehicleKey(payload);
+  const now = Date.now();
+  const prev = lastClientPublishMsByVehicle.get(vehicleId) || 0;
+  const elapsed = now - prev;
+  if (prev > 0 && elapsed < LOCATION_UPDATE_MIN_INTERVAL_MS) {
+    return softThrottledLocationResult(vehicleId, LOCATION_UPDATE_MIN_INTERVAL_MS - elapsed, {
+      clientThrottled: true,
+    });
   }
-  return trackingFetch('/tracking/update-location', { method: 'POST', body: payload });
+
+  if (isTransportFixtureMode()) {
+    lastClientPublishMsByVehicle.set(vehicleId, now);
+    return { ok: true, accepted: true, acceptedAt: new Date().toISOString(), ...payload };
+  }
+
+  try {
+    const result = await trackingFetch('/tracking/update-location', { method: 'POST', body: payload });
+    if (result && result.accepted === false) {
+      return result;
+    }
+    lastClientPublishMsByVehicle.set(vehicleId, Date.now());
+    return result && typeof result === 'object'
+      ? { accepted: true, ...result }
+      : { accepted: true, data: result };
+  } catch (err) {
+    // Legacy hard 429 / RATE_LIMITED — swallow so UI does not toast or stop GPS.
+    if (err?.status === 429 || err?.code === 'RATE_LIMITED') {
+      return softThrottledLocationResult(vehicleId, LOCATION_UPDATE_MIN_INTERVAL_MS, {
+        message: err.message || 'Location updates are rate-limited to once every 3 seconds',
+      });
+    }
+    throw err;
+  }
 }
 
 /** Alias used by docs / mobile naming. */

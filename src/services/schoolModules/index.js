@@ -486,6 +486,25 @@ export const transportAssignmentService = createCrudService({
   resource: 'transport/assignments',
   seed: TRANSPORT_ASSIGNMENT_SEED,
   idPrefix: 'ta',
+  normalizeItem: (item) => {
+    if (!item) return item;
+    return {
+      ...item,
+      id: item.id || item.assignmentId,
+      classId: item.classId || item.class_id || '',
+      studentId: item.studentId || item.student_id || '',
+      routeId: item.routeId || item.route_id || '',
+      stopId: item.stopId || item.stop_id || '',
+      vehicleId: item.vehicleId || item.vehicle_id || '',
+      direction: item.direction || 'both',
+      status: item.status || 'active',
+      stopName: item.stopName || item.stop_name || item.assignedStop || '',
+      studentName: item.studentName || item.student_name || '',
+      className: item.className || item.class_name || '',
+      routeName: item.routeName || item.route_name || '',
+      vehicleNumber: item.vehicleNumber || item.vehicle_number || '',
+    };
+  },
 });
 
 export const libraryBookService = createCrudService({

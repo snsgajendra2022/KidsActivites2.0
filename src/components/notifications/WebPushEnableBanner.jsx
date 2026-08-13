@@ -29,6 +29,7 @@ export default function WebPushEnableBanner({ compact = false }) {
     message: 'Checking notification support…',
   });
   const [busy, setBusy] = useState(false);
+  const [lastError, setLastError] = useState('');
   const autoRetryGen = useRef(0);
   const busyRef = useRef(false);
   const statusReasonRef = useRef(status.reason);
@@ -56,8 +57,17 @@ export default function WebPushEnableBanner({ compact = false }) {
       setBusy(true);
       busyRef.current = true;
       try {
-        await syncWebPushToken(user);
-        if (!cancelled && gen === autoRetryGen.current) await refresh();
+        const token = await syncWebPushToken(user);
+        if (!cancelled && gen === autoRetryGen.current) {
+          const next = await refresh();
+          if (!token && next.reason === 'needs_register') {
+            setLastError(
+              'Auto-register failed after login. Click Retry — check the browser console for [web-push] details.',
+            );
+          } else if (token) {
+            setLastError('');
+          }
+        }
       } finally {
         if (!cancelled && gen === autoRetryGen.current) {
           setBusy(false);
@@ -102,9 +112,13 @@ export default function WebPushEnableBanner({ compact = false }) {
           const result = await enableWebPushFromUserGesture(user);
           await refresh();
           if (result.ok) {
+            setLastError('');
             toast(result.message, 'success');
           } else if (result.reason === 'denied') {
+            setLastError(result.message);
             toast(result.message, 'error');
+          } else if (result.reason === 'error' || result.reason === 'token_failed') {
+            setLastError(result.message);
           }
           // Dismiss / default: leave banner visible; no error toast spam.
         } finally {
@@ -149,8 +163,10 @@ export default function WebPushEnableBanner({ compact = false }) {
       const result = await enableWebPushFromUserGesture(user);
       await refresh();
       if (result.ok) {
+        setLastError('');
         toast(result.message, 'success');
       } else {
+        setLastError(result.message || '');
         toast(result.message, 'error');
       }
     } finally {
@@ -172,6 +188,12 @@ export default function WebPushEnableBanner({ compact = false }) {
           {status.reason === 'default'
             ? 'Click Allow notifications (or anywhere once) so this browser can receive alerts. Browsers block silent enable on login.'
             : status.message}
+          {lastError && status.reason !== 'default' ? (
+            <>
+              {' '}
+              <span className="webpush-banner__err">{lastError}</span>
+            </>
+          ) : null}
         </p>
       </div>
       {canClickEnable && (

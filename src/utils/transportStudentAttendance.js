@@ -253,6 +253,9 @@ export function friendlyTransportError(error) {
       return 'You are not authorized to mark students on this trip.';
     case TRANSPORT_ERROR_CODES.PARENT_APPROVAL_ALREADY_SUBMITTED:
       return 'You already submitted a confirmation for this action.';
+    case 'RATE_LIMITED':
+      // Location ingest soft-throttles; callers should not toast this.
+      return message || 'Location update skipped (rate limited).';
     default:
       return message || 'Transport request failed.';
   }
