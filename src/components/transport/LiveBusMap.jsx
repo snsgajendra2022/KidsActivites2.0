@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import PlaceSearchInput from './PlaceSearchInput.jsx';
@@ -17,8 +17,37 @@ const STATUS_COLORS = {
 
 const FALLBACK_CENTER = [22.9734, 78.6569];
 const FALLBACK_ZOOM = 5;
-const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const MAP_TYPE_STORAGE_KEY = 'transport-live-map-type';
+const MAP_TILES = {
+  default: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
+    maxZoom: 19,
+  },
+};
+
+function readStoredMapType() {
+  try {
+    const stored = window.localStorage?.getItem(MAP_TYPE_STORAGE_KEY);
+    if (stored === 'satellite' || stored === 'default') return stored;
+  } catch {
+    // ignore private-mode / storage errors
+  }
+  return 'default';
+}
+
+function writeStoredMapType(nextType) {
+  try {
+    window.localStorage?.setItem(MAP_TYPE_STORAGE_KEY, nextType);
+  } catch {
+    // ignore private-mode / storage errors
+  }
+}
 
 function createBusIcon(status = 'running', selected = false) {
   const color = STATUS_COLORS[status] || STATUS_COLORS.running;
@@ -151,14 +180,23 @@ export default function LiveBusMap({
   showSearch = true,
   routingLabel = '',
 }) {
+  const [mapType, setMapType] = useState(readStoredMapType);
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const layerRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const markersRef = useRef(new Map());
   const routeLayerRef = useRef(null);
   const lastFitTokenRef = useRef('');
   const defaultCenterRef = useRef(defaultCenter);
   defaultCenterRef.current = defaultCenter;
+
+  const applyMapType = (nextType) => {
+    if (nextType !== 'default' && nextType !== 'satellite') return;
+    if (nextType === mapType) return;
+    setMapType(nextType);
+    writeStoredMapType(nextType);
+  };
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
@@ -171,11 +209,6 @@ export default function LiveBusMap({
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-    L.tileLayer(OSM_TILE_URL, {
-      attribution: OSM_ATTRIBUTION,
-      maxZoom: 19,
-    }).addTo(map);
 
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -203,10 +236,31 @@ export default function LiveBusMap({
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      tileLayerRef.current = null;
       routeLayerRef.current = null;
       lastFitTokenRef.current = '';
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+
+    const tiles = MAP_TILES[mapType] || MAP_TILES.default;
+    const nextLayer = L.tileLayer(tiles.url, {
+      attribution: tiles.attribution,
+      maxZoom: tiles.maxZoom,
+    }).addTo(map);
+    nextLayer.bringToBack();
+    tileLayerRef.current = nextLayer;
+
+    return () => {
+      if (mapRef.current && tileLayerRef.current) {
+        mapRef.current.removeLayer(tileLayerRef.current);
+      }
+      tileLayerRef.current = null;
+    };
+  }, [mapType]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -360,8 +414,37 @@ export default function LiveBusMap({
 
   return (
     <div className={`relative z-0 isolate h-full w-full min-h-0 overflow-hidden rounded-xl ${className}`}>
-      {showSearch && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] flex justify-stretch p-2 sm:justify-end sm:p-3">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] flex flex-col gap-2 p-2 sm:flex-row sm:items-start sm:justify-between sm:p-3">
+        <div className="pointer-events-auto self-start rounded-xl border border-[#d0d5dd] bg-white/95 p-1.5 shadow-md backdrop-blur">
+          <p className="px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#667085]">
+            Map type
+          </p>
+          <div className="flex overflow-hidden rounded-lg border border-[#d0d5dd]" role="group" aria-label="Map type">
+            {[
+              { id: 'default', label: 'Default' },
+              { id: 'satellite', label: 'Satellite' },
+            ].map((option) => {
+              const active = mapType === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => applyMapType(option.id)}
+                  className={`min-h-10 min-w-[5.5rem] px-3 text-xs font-semibold ${
+                    active
+                      ? 'bg-[#0058be] text-white'
+                      : 'bg-white text-[#475467] hover:bg-[#f8f9ff]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {showSearch ? (
           <div className="pointer-events-auto w-full max-w-none rounded-xl border border-[#d0d5dd] bg-white/95 p-2 shadow-md backdrop-blur sm:max-w-sm lg:max-w-md">
             <PlaceSearchInput
               label=""
@@ -375,8 +458,8 @@ export default function LiveBusMap({
               }}
             />
           </div>
-        </div>
-      )}
+        ) : null}
+      </div>
 
       {routingLabel ? (
         <div className="pointer-events-none absolute bottom-14 left-2 z-[450] max-w-[min(100%-1rem,220px)] rounded-lg border border-[#d0d5dd] bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold text-[#0b1c30] shadow-md sm:bottom-3 sm:left-3 sm:max-w-xs sm:px-3 sm:text-xs">

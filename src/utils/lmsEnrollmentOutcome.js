@@ -43,9 +43,11 @@ export function requiredQuizzes(source) {
 
 export function quizWasAttempted(quiz) {
   if (!quiz || typeof quiz !== 'object') return false;
-  if (typeof quiz.passed === 'boolean') return true;
   if (Number(quiz.attemptCount || quiz.attemptsUsed || 0) > 0) return true;
-  if (quiz.attemptsRemaining != null) return true;
+  if (quiz.attemptsRemaining != null && quiz.maxAttempts != null) {
+    const used = Number(quiz.maxAttempts) - Number(quiz.attemptsRemaining);
+    if (used > 0) return true;
+  }
   if (asList(quiz.attempts).length) return true;
   if (quiz.bestScore != null || quiz.bestPercentage != null || quiz.percentage != null) return true;
   if (quiz.latestAttempt || quiz.bestAttempt) return true;
@@ -176,13 +178,15 @@ export function canCompleteCourse(detail) {
 }
 
 export function isFailedEnrollment(record) {
+  const root = record && typeof record === 'object' ? record : {};
+  if (root.passed === false || root.certificate?.passed === false) return true;
   const outcome = enrollmentQuizOutcome(record);
   if (outcome.attempted && outcome.passed === false) return true;
   const required = requiredQuizzes(record);
   if (required.length && required.some(quizWasAttempted) && !requiredQuizzesPassed(record)) {
     return true;
   }
-  const hints = [record?.result, record?.outcome, record?.quizResult, record?.certificateStatus];
+  const hints = [root.result, root.outcome, root.quizResult, root.certificateStatus];
   return hints.some((value) => /fail/i.test(String(value || '')));
 }
 

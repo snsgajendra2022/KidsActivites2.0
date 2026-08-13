@@ -52,6 +52,10 @@ function normalizeLearningItem(item) {
     status: String(item.status || 'enrolled').toLowerCase(),
     progressPct: Number.isFinite(progressPct) ? Math.round(progressPct) : 0,
     certificateId: item.certificateId || item.certificate?.id || null,
+    quizzes: item.quizzes || item.enrollment?.quizzes,
+    passed: item.passed ?? item.quizzes?.[0]?.passed,
+    bestScore: item.bestScore ?? item.quizzes?.[0]?.bestScore ?? item.quizzes?.[0]?.bestPercentage,
+    quizPercentage: item.quizPercentage ?? item.percentage ?? item.quizzes?.[0]?.percentage,
   };
 }
 
