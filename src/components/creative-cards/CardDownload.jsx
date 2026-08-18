@@ -1,6 +1,27 @@
 import { Download, LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 
+function isGoogleFontStylesheet(href) {
+  return /fonts\.googleapis\.com|fonts\.gstatic\.com/i.test(href || '');
+}
+
+async function loadFontEmbedCSS() {
+  const hrefs = [...document.querySelectorAll('link[rel="stylesheet"]')]
+    .map((link) => link.href)
+    .filter(isGoogleFontStylesheet);
+  if (!hrefs.length) return '';
+
+  const sheets = await Promise.all(hrefs.map(async (href) => {
+    try {
+      const response = await fetch(href, { mode: 'cors' });
+      return response.ok ? await response.text() : '';
+    } catch {
+      return '';
+    }
+  }));
+  return sheets.filter(Boolean).join('\n');
+}
+
 async function downloadCard(node, {
   filename = 'creative-card.png',
   format = 'png',
@@ -9,15 +30,34 @@ async function downloadCard(node, {
 } = {}) {
   if (!node) throw new Error('Card preview is not available.');
   const htmlToImage = await import('html-to-image');
-  const options = { cacheBust: true, pixelRatio, quality };
-  const dataUrl = format === 'jpeg'
-    ? await htmlToImage.toJpeg(node, options)
-    : await htmlToImage.toPng(node, options);
-  const link = document.createElement('a');
-  link.download = filename.replace(/\.(png|jpe?g)$/i, `.${format === 'jpeg' ? 'jpg' : 'png'}`);
-  link.href = dataUrl;
-  link.click();
-  return dataUrl;
+  node.classList.add('cc-card-preview--capture');
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  try {
+    const fontEmbedCSS = await loadFontEmbedCSS();
+    const options = {
+      cacheBust: true,
+      pixelRatio,
+      quality,
+      skipAutoScale: true,
+      skipFonts: true,
+      ...(fontEmbedCSS ? { fontEmbedCSS } : {}),
+      style: {
+        backdropFilter: 'none',
+        webkitBackdropFilter: 'none',
+        filter: 'none',
+      },
+    };
+    const dataUrl = format === 'jpeg'
+      ? await htmlToImage.toJpeg(node, options)
+      : await htmlToImage.toPng(node, options);
+    const link = document.createElement('a');
+    link.download = filename.replace(/\.(png|jpe?g)$/i, `.${format === 'jpeg' ? 'jpg' : 'png'}`);
+    link.href = dataUrl;
+    link.click();
+    return dataUrl;
+  } finally {
+    node.classList.remove('cc-card-preview--capture');
+  }
 }
 
 export default function CardDownload({
