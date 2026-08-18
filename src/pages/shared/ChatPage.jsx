@@ -91,6 +91,7 @@ function buildMessageTimeline(messages) {
 function getPageSubtitle(role) {
   if (role === 'parent' || role === 'student') return 'Chat securely with teachers and school staff';
   if (role === 'teacher') return 'Connect with parents and school administration';
+  if (role === 'driver') return 'Chat with parents and school staff';
   return 'Secure messaging across your school community';
 }
 
@@ -105,6 +106,7 @@ function getOtherParticipant(conv, userId) {
 function roleLabel(role) {
   if (role === 'admin') return 'School administration';
   if (role === 'parent') return 'Parent';
+  if (role === 'driver') return 'Driver';
   return 'Teacher';
 }
 
