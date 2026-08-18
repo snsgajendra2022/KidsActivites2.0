@@ -168,8 +168,55 @@ export const TV_PLAYBACK_DETAILS = [
 ];
 
 export const MOBILE_APP_ROLES = [
-  { role: 'Parent app', screens: 'Home, Photos, Fees, Homework, Exams, Bus tracking, Chat, Enrollment' },
-  { role: 'Teacher app', screens: 'Classes, Attendance, Homework, Photos, Albums, Chat, TV QR' },
-  { role: 'Admin app', screens: 'Applications, Classes, Reports, Transport, Users, Chat, TV Sign-In' },
-  { role: 'Driver app', screens: 'Assigned route, trip start, live GPS, stop checklist' },
+  {
+    role: 'Parent app',
+    description: 'Fees, homework, exams, photos, chat, and live bus tracking.',
+    screens: [
+      { label: 'Home', title: 'Good morning', detail: 'Anaya · Class 3-B', kind: 'home' },
+      { label: 'Photos', title: 'Class album', detail: '12 new photos today', kind: 'photos' },
+      { label: 'Fees', title: 'Term fee', detail: '₹8,200 due this week', kind: 'fees' },
+      { label: 'Homework', title: 'Math worksheet', detail: 'Due tomorrow', kind: 'homework' },
+      { label: 'Exams', title: 'Science result', detail: '92 / 100 published', kind: 'exams' },
+      { label: 'Bus tracking', title: 'Bus 12', detail: '4 min from home', kind: 'bus' },
+      { label: 'Chat', title: 'Ms. Priya', detail: 'Field trip reminder', kind: 'chat' },
+      { label: 'Enrollment', title: 'Application', detail: 'In principal review', kind: 'enroll' },
+    ],
+  },
+  {
+    role: 'Teacher app',
+    description: 'Attendance, homework, photos, albums, chat, and TV QR.',
+    screens: [
+      { label: 'Classes', title: 'Class 3-B', detail: '30 students · Today', kind: 'classes' },
+      { label: 'Attendance', title: 'Marked', detail: '28 present · 2 late', kind: 'attendance' },
+      { label: 'Homework', title: 'To review', detail: '18 of 24 submitted', kind: 'homework' },
+      { label: 'Exams', title: 'Enter marks', detail: 'Science test · 3-B', kind: 'exams' },
+      { label: 'Photos', title: 'Share safely', detail: 'Send to class parents', kind: 'photos' },
+      { label: 'Albums', title: 'Sports Day', detail: 'Ready for lobby TV', kind: 'albums' },
+      { label: 'Chat', title: 'Class message', detail: '28 parents delivered', kind: 'chat' },
+      { label: 'TV QR', title: 'Pair TV', detail: 'Scan to start slideshow', kind: 'tvqr' },
+    ],
+  },
+  {
+    role: 'Admin app',
+    description: 'Applications, reports, transport, users, chat, and TV sign-in.',
+    screens: [
+      { label: 'Applications', title: '3 new admits', detail: 'Ready for review', kind: 'enroll' },
+      { label: 'Classes', title: 'School structure', detail: '12 classes assigned', kind: 'classes' },
+      { label: 'Reports', title: 'This week', detail: 'Fees · Attendance · Audit', kind: 'reports' },
+      { label: 'Transport', title: 'Fleet live', detail: 'Bus 12 on route', kind: 'bus' },
+      { label: 'Users', title: 'Staff & families', detail: 'Invite and manage roles', kind: 'users' },
+      { label: 'Chat', title: 'Office inbox', detail: 'Support + parent threads', kind: 'chat' },
+      { label: 'TV Sign-In', title: 'Lobby TV', detail: 'Authorize playback', kind: 'tvqr' },
+    ],
+  },
+  {
+    role: 'Driver app',
+    description: 'Assigned route, start trip, live GPS, and stop checklist.',
+    screens: [
+      { label: 'Route', title: 'Morning route A', detail: 'Bus 12 · 8 stops', kind: 'route' },
+      { label: 'Start trip', title: 'Ready to go', detail: 'Share GPS with parents', kind: 'trip' },
+      { label: 'Live GPS', title: 'Broadcasting', detail: 'Families can follow', kind: 'gps' },
+      { label: 'Stops', title: 'Next: City Park', detail: '3 of 8 complete', kind: 'stops' },
+    ],
+  },
 ];

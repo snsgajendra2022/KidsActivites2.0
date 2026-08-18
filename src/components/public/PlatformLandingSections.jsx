@@ -575,7 +575,7 @@ export default function PlatformLandingSections() {
     ],
     classroom: toItems(CLASSROOM_MODULES),
     transport: toItems(TRANSPORT_MODULES),
-    mobile: toItems(MOBILE_APP_ROLES, 'role', 'screens'),
+    mobile: toItems(MOBILE_APP_ROLES, 'role', 'description'),
   }), []);
 
   const activeMeta = OVERVIEW_TABS.find((tab) => tab.id === activeTab) || OVERVIEW_TABS[0];

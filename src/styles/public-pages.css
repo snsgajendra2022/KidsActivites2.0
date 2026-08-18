@@ -2699,6 +2699,10 @@
   border: 2px solid color-mix(in srgb, #fff 24%, transparent);
 }
 
+.sb-plat-phone--wide {
+  width: 12.25rem;
+}
+
 .sb-plat-phone__notch {
   width: 2.2rem;
   height: 0.35rem;
@@ -2713,6 +2717,10 @@
   background: color-mix(in srgb, var(--sb-purple-dark) 60%, transparent);
   min-height: 9.5rem;
   color: #fff;
+}
+
+.sb-plat-phone--wide .sb-plat-phone__screen {
+  min-height: 16.5rem;
 }
 
 .sb-plat-mobile-wrap {
@@ -2811,11 +2819,199 @@
   color: color-mix(in srgb, #fff 72%, transparent);
   background: color-mix(in srgb, #fff 8%, transparent);
   border: 1px solid color-mix(in srgb, #fff 16%, transparent);
+  cursor: pointer;
 }
 
 .sb-plat-mobile__screen-list li.is-active {
   background: color-mix(in srgb, var(--sb-gold) 75%, #fff);
   border-color: transparent;
+  color: var(--sb-purple-dark);
+}
+
+.sb-plat-mobile__body {
+  min-height: 6.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.sb-plat-app-scene {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.sb-plat-app-tile {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.45rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, #fff 12%, transparent);
+  border: 1px solid color-mix(in srgb, #fff 16%, transparent);
+  font-size: 0.55rem;
+  font-weight: 600;
+}
+
+.sb-plat-app-tile strong { color: var(--sb-gold); }
+
+.sb-plat-app-photos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.32rem;
+}
+
+.sb-plat-app-photos span {
+  display: grid;
+  place-items: center;
+  height: 2.4rem;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, #fff 12%, transparent);
+  border: 1px solid color-mix(in srgb, #fff 16%, transparent);
+}
+
+.sb-plat-app-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  padding: 0.6rem 0.65rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, #fff 12%, transparent);
+  border: 1px solid color-mix(in srgb, #fff 18%, transparent);
+}
+
+.sb-plat-app-card--row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sb-plat-app-card--center {
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+}
+
+.sb-plat-app-card strong { font-size: 0.68rem; }
+.sb-plat-app-card span {
+  font-size: 0.52rem;
+  color: color-mix(in srgb, #fff 64%, transparent);
+}
+.sb-plat-app-card em {
+  font-style: normal;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--sb-gold);
+}
+
+.sb-plat-app-score {
+  color: var(--sb-gold);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.sb-plat-app-pills {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+
+.sb-plat-app-pills em {
+  padding: 0.12rem 0.32rem;
+  border-radius: 999px;
+  font-size: 0.45rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, #fff 10%, transparent);
+  color: color-mix(in srgb, #fff 60%, transparent);
+}
+
+.sb-plat-app-pills em.is-on {
+  background: var(--sb-gold);
+  color: var(--sb-purple-dark);
+}
+
+.sb-plat-app-bus { display: grid; gap: 0.4rem; }
+
+.sb-plat-app-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+
+.sb-plat-app-chat span {
+  max-width: 85%;
+  padding: 0.32rem 0.45rem;
+  border-radius: 0.55rem 0.55rem 0.55rem 0.2rem;
+  background: color-mix(in srgb, #fff 14%, transparent);
+  font-size: 0.52rem;
+  font-weight: 600;
+}
+
+.sb-plat-app-chat span.is-reply {
+  align-self: flex-end;
+  border-radius: 0.55rem 0.55rem 0.2rem 0.55rem;
+  background: color-mix(in srgb, var(--sb-gold) 28%, transparent);
+}
+
+.sb-plat-app-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.3rem;
+  height: 4.6rem;
+  padding: 0.4rem 0.35rem 0.2rem;
+}
+
+.sb-plat-app-bars span {
+  flex: 1;
+  height: var(--h);
+  border-radius: 0.28rem 0.28rem 0.1rem 0.1rem;
+  background: var(--sb-gold);
+  transform-origin: bottom center;
+}
+
+.sb-plat-app-users {
+  display: flex;
+  justify-content: center;
+  padding: 0.8rem 0;
+}
+
+.sb-plat-app-users i {
+  width: 1.45rem;
+  height: 1.45rem;
+  margin-left: -0.32rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 22%, transparent);
+  border: 2px solid color-mix(in srgb, var(--sb-purple-dark) 70%, #000);
+}
+
+.sb-plat-app-users i:first-child { margin-left: 0; }
+
+.sb-plat-app-stops {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.sb-plat-app-stops div {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.58rem;
+  font-weight: 600;
+}
+
+.sb-plat-app-stops i {
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 0.48rem;
+  background: color-mix(in srgb, #fff 14%, transparent);
+}
+
+.sb-plat-app-stops .is-done i {
+  background: var(--sb-gold);
   color: var(--sb-purple-dark);
 }
 

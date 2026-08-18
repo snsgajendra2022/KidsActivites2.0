@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import {
   BadgeCheck,
   BarChart3,
@@ -162,7 +163,7 @@ function BrowserFrame({ children, title = 'Kids Activities' }) {
 function PhoneFrame({ children }) {
   return (
     <motion.div
-      className="sb-plat-phone"
+      className="sb-plat-phone sb-plat-phone--wide"
       initial={{ opacity: 0, y: 20, rotate: -4 }}
       animate={{ opacity: 1, y: 0, rotate: 0 }}
       transition={{ ...spring, delay: 0.12 }}
@@ -997,13 +998,6 @@ function MediaDemo({ activeIndex = 0 }) {
   );
 }
 
-const MOBILE_PREVIEW = {
-  0: { icon: Heart, title: 'Bus tracking', detail: 'See the bus on the way home' },
-  1: { icon: BookOpen, title: 'Homework', detail: 'Assign and track class work' },
-  2: { icon: ClipboardList, title: 'Applications', detail: 'Review pending admits' },
-  3: { icon: Bus, title: 'Live trip', detail: 'Share GPS with families' },
-};
-
 const CLASS_ROSTER = [
   { name: 'Aarav', status: 'Present' },
   { name: 'Meera', status: 'Present' },
@@ -1339,15 +1333,266 @@ function TransportDemo({ activeIndex = 0 }) {
   );
 }
 
-function MobileDemo({ activeIndex = 0 }) {
-  const role = MOBILE_APP_ROLES[activeIndex] || MOBILE_APP_ROLES[0];
-  const screens = role.screens.split(', ').filter(Boolean);
-  const RoleIcon = MOBILE_ROLE_ICONS[activeIndex] || Smartphone;
-  const preview = MOBILE_PREVIEW[activeIndex] || MOBILE_PREVIEW[0];
-  const PreviewIcon = preview.icon;
+function MobileScreenScene({ screen }) {
+  const kind = screen.kind;
+
+  if (kind === 'home') {
+    return (
+      <div className="sb-plat-app-scene">
+        {[
+          { icon: Bus, label: 'Bus 12', value: '4 min' },
+          { icon: BookOpen, label: 'Homework', value: 'Due' },
+          { icon: Wallet, label: 'Fees', value: '₹8,200' },
+        ].map((tile, i) => {
+          const Icon = tile.icon;
+          return (
+            <motion.div
+              key={tile.label}
+              className="sb-plat-app-tile"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08, duration: 0.32, ease }}
+            >
+              <Icon size={13} />
+              <span>{tile.label}</span>
+              <strong>{tile.value}</strong>
+            </motion.div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (kind === 'photos' || kind === 'albums') {
+    return (
+      <div className="sb-plat-app-photos">
+        {[0, 1, 2, 3].map((i) => (
+          <motion.span
+            key={i}
+            initial={{ opacity: 0, scale: 0.86 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.07, duration: 0.3, ease }}
+          >
+            <Camera size={12} />
+          </motion.span>
+        ))}
+      </div>
+    );
+  }
+
+  if (kind === 'fees') {
+    return (
+      <div className="sb-plat-app-card">
+        <Wallet size={16} />
+        <strong>₹8,200</strong>
+        <span>Term fee due</span>
+        <motion.em
+          animate={{ opacity: [0.55, 1, 0.55] }}
+          transition={{ duration: 1.8, repeat: Infinity }}
+        >
+          Pay now
+        </motion.em>
+      </div>
+    );
+  }
+
+  if (kind === 'homework') {
+    return (
+      <div className="sb-plat-app-card">
+        <BookOpen size={16} />
+        <strong>{screen.title}</strong>
+        <span>{screen.detail}</span>
+        <div className="sb-plat-class__progress">
+          <motion.span
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 0.75 }}
+            transition={{ duration: 0.8, ease }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === 'exams') {
+    return (
+      <div className="sb-plat-app-card">
+        <FileText size={16} />
+        <strong>{screen.title}</strong>
+        <span>{screen.detail}</span>
+        <b className="sb-plat-app-score">92</b>
+      </div>
+    );
+  }
+
+  if (kind === 'bus' || kind === 'gps' || kind === 'route') {
+    return (
+      <div className="sb-plat-app-bus">
+        <div className="sb-plat-app-card sb-plat-app-card--row">
+          <MapPin size={14} />
+          <div>
+            <strong>{screen.title}</strong>
+            <span>{screen.detail}</span>
+          </div>
+        </div>
+        <div className="sb-plat-bus-map sb-plat-bus-map--mini">
+          <span className="sb-plat-bus-map__road" />
+          <motion.div
+            className="sb-plat-bus-map__pin"
+            animate={{ left: ['18%', '70%', '18%'] }}
+            transition={{ duration: 4.8, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Bus size={13} />
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === 'chat') {
+    return (
+      <div className="sb-plat-app-chat">
+        {['Field trip at 9am', 'Noted, thank you'].map((msg, i) => (
+          <motion.span
+            key={msg}
+            className={i === 1 ? 'is-reply' : ''}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.18, duration: 0.32, ease }}
+          >
+            {msg}
+          </motion.span>
+        ))}
+      </div>
+    );
+  }
+
+  if (kind === 'enroll') {
+    return (
+      <div className="sb-plat-app-card">
+        <ClipboardList size={16} />
+        <strong>{screen.title}</strong>
+        <span>{screen.detail}</span>
+        <div className="sb-plat-app-pills">
+          {['Draft', 'Review', 'Fees'].map((pill, i) => (
+            <em key={pill} className={i === 1 ? 'is-on' : ''}>{pill}</em>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === 'classes') {
+    return (
+      <div className="sb-plat-app-card">
+        <School size={16} />
+        <strong>{screen.title}</strong>
+        <span>{screen.detail}</span>
+      </div>
+    );
+  }
+
+  if (kind === 'attendance') {
+    return (
+      <div className="sb-plat-app-card">
+        <Check size={16} />
+        <strong>28 / 30</strong>
+        <span>Class 3-B marked</span>
+      </div>
+    );
+  }
+
+  if (kind === 'reports') {
+    return (
+      <div className="sb-plat-app-bars">
+        {[42, 68, 55, 82].map((h, i) => (
+          <motion.span
+            key={i}
+            style={{ '--h': `${h}%` }}
+            initial={{ scaleY: 0 }}
+            animate={{ scaleY: 1 }}
+            transition={{ delay: i * 0.08, duration: 0.4, ease }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (kind === 'users') {
+    return (
+      <div className="sb-plat-app-users">
+        {[0, 1, 2, 3].map((i) => (
+          <motion.i
+            key={i}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: i * 0.08, type: 'spring', stiffness: 360, damping: 18 }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (kind === 'tvqr') {
+    return (
+      <div className="sb-plat-app-card sb-plat-app-card--center">
+        <QrCode size={36} />
+        <span>{screen.detail}</span>
+      </div>
+    );
+  }
+
+  if (kind === 'trip') {
+    return (
+      <div className="sb-plat-app-card sb-plat-app-card--center">
+        <Bus size={18} />
+        <strong>Start trip</strong>
+        <motion.em
+          className="sb-plat-class__approve"
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          Go live
+        </motion.em>
+      </div>
+    );
+  }
 
   return (
-    <DemoShell label="iOS & Android apps">
+    <div className="sb-plat-app-stops">
+      {['School', 'City Park', 'Home'].map((stop, i) => (
+        <motion.div
+          key={stop}
+          className={i < 2 ? 'is-done' : ''}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: i * 0.1, duration: 0.3, ease }}
+        >
+          <i>{i < 2 ? <Check size={10} strokeWidth={3} /> : i + 1}</i>
+          {stop}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function MobileDemo({ activeIndex = 0 }) {
+  const role = MOBILE_APP_ROLES[activeIndex] || MOBILE_APP_ROLES[0];
+  const screens = role.screens;
+  const RoleIcon = MOBILE_ROLE_ICONS[activeIndex] || Smartphone;
+  const [screenIndex, setScreenIndex] = useState(0);
+  const current = screens[screenIndex] || screens[0];
+
+  useEffect(() => {
+    setScreenIndex(0);
+    if (screens.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setScreenIndex((index) => (index + 1) % screens.length);
+    }, 2400);
+    return () => window.clearInterval(timer);
+  }, [activeIndex, screens.length]);
+
+  return (
+    <DemoShell label="iOS & Android apps" tall>
       <div className="sb-plat-mobile-wrap">
         <PhoneFrame>
           <div className="sb-plat-mobile__app-bar">
@@ -1359,20 +1604,30 @@ function MobileDemo({ activeIndex = 0 }) {
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${activeIndex}-preview`}
+              key={`${activeIndex}-${current.label}`}
               className="sb-plat-mobile__hero-card"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.32, ease }}
+              transition={{ duration: 0.28, ease }}
             >
-              <span className="sb-plat-mobile__hero-icon" aria-hidden>
-                <PreviewIcon size={18} strokeWidth={1.75} />
-              </span>
               <div>
-                <strong>{preview.title}</strong>
-                <span>{preview.detail}</span>
+                <strong>{current.title}</strong>
+                <span>{current.detail}</span>
               </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${activeIndex}-${current.kind}`}
+              className="sb-plat-mobile__body"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.3, ease }}
+            >
+              <MobileScreenScene screen={current} />
             </motion.div>
           </AnimatePresence>
 
@@ -1380,13 +1635,14 @@ function MobileDemo({ activeIndex = 0 }) {
           <ul className="sb-plat-mobile__screen-list">
             {screens.map((screen, i) => (
               <motion.li
-                key={screen}
-                className={i === 0 ? 'is-active' : ''}
+                key={screen.label}
+                className={i === screenIndex ? 'is-active' : ''}
                 initial={{ opacity: 0, x: 6 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04, duration: 0.28 }}
+                transition={{ delay: i * 0.03, duration: 0.24 }}
+                onClick={() => setScreenIndex(i)}
               >
-                {screen}
+                {screen.label}
               </motion.li>
             ))}
           </ul>

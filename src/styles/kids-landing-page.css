@@ -1064,6 +1064,64 @@
   color: #0f172a !important;
 }
 
+.kids-landing .kl-platform-wrap .sb-plat-app-tile,
+.kids-landing .kl-platform-wrap .sb-plat-app-photos span,
+.kids-landing .kl-platform-wrap .sb-plat-app-card,
+.kids-landing .kl-platform-wrap .sb-plat-app-chat span {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, .05);
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-tile strong,
+.kids-landing .kl-platform-wrap .sb-plat-app-card em,
+.kids-landing .kl-platform-wrap .sb-plat-app-score {
+  color: #b45309 !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-card span {
+  color: #64748b !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-pills em {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-pills em.is-on {
+  background: #fbbf24 !important;
+  color: #0f172a !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-chat span.is-reply {
+  background: #fef9c3 !important;
+  border-color: #fde68a !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-bars span {
+  background: #fbbf24 !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-users i {
+  background: #e0f2fe !important;
+  border-color: #fff !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-stops {
+  color: #0f172a !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-stops i {
+  background: #e2e8f0 !important;
+  color: #64748b !important;
+}
+
+.kids-landing .kl-platform-wrap .sb-plat-app-stops .is-done i {
+  background: #fbbf24 !important;
+  color: #0f172a !important;
+}
+
 .kids-landing .kl-platform-wrap .sb-plat-icon,
 .kids-landing .kl-platform-wrap .sb-plat-scene svg,
 .kids-landing .kl-platform-wrap .sb-plat-fees-scene svg,
