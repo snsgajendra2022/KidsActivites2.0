@@ -1,104 +1,100 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
-import { lazy, Suspense, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { probeUploadBandwidth } from './services/uploadBandwidthService.js';
 import { classroomUploadManager } from './utils/classroomUploadQueue.js';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import TenantPathGate from './components/routing/TenantPathGate.jsx';
 import { ROLES } from './constants/roles.js';
+import LoadingState from './components/ui/LoadingState.jsx';
 
 import PlatformHomeGate from './components/routing/PlatformHomeGate.jsx';
 import PlatformLandingGate from './components/routing/PlatformLandingGate.jsx';
 import PlatformLoginGate from './components/routing/PlatformLoginGate.jsx';
 import TenantHomeGate from './components/routing/TenantHomeGate.jsx';
 import CatchAllRedirect from './components/routing/CatchAllRedirect.jsx';
-import RegisterSchool from './pages/public/RegisterSchool.jsx';
-import WorkspaceNew from './pages/public/WorkspaceNew.jsx';
-import WorkspaceConfirm from './pages/public/WorkspaceConfirm.jsx';
-import Enrollment from './pages/public/Enrollment.jsx';
-import PrintableEnrollmentFormPage from './pages/public/PrintableEnrollmentFormPage.jsx';
-import PrintableHtmlEnrollmentFormPage from './pages/public/PrintableHtmlEnrollmentFormPage.jsx';
-import KidzeePrintableFormPage from './pages/enrollment/KidzeePrintableFormPage.jsx';
-import KidzeePrintFormPrintPage from './pages/enrollment/KidzeePrintFormPrintPage.jsx';
-import EnrollmentCorrectionPage from './pages/enrollment/EnrollmentCorrectionPage.jsx';
-import Login from './pages/auth/Login.jsx';
-import ForgotPassword from './pages/auth/ForgotPassword.jsx';
-import ResetPassword from './pages/auth/ResetPassword.jsx';
-import VerifyEmail from './pages/auth/VerifyEmail.jsx';
 import {
+  RegisterSchool,
+  WorkspaceNew,
+  WorkspaceConfirm,
+  Enrollment,
+  PrintableEnrollmentFormPage,
+  PrintableHtmlEnrollmentFormPage,
+  KidzeePrintableFormPage,
+  KidzeePrintFormPrintPage,
+  EnrollmentCorrectionPage,
+  Login,
+  ForgotPassword,
+  ResetPassword,
+  VerifyEmail,
   SecurityPolicy,
   TermsOfUse,
   TermsAndConditions,
   PrivacyPolicy,
   SystemStatus,
   DirectSupport,
-} from './pages/public/FooterPageRoutes.jsx';
-
-import AdminDashboard from './pages/admin/AdminDashboard.jsx';
-import ApplicationsList from './pages/admin/ApplicationsList.jsx';
-import ApplicationReview from './pages/admin/ApplicationReview.jsx';
-import AdminFees from './pages/admin/AdminFees.jsx';
-import AdminStudents from './pages/admin/AdminStudents.jsx';
-import StudentProfile from './pages/admin/StudentProfile.jsx';
-import AdminSettings from './pages/admin/AdminSettings.jsx';
-import AdminClassManagement from './pages/admin/AdminClassManagement.jsx';
-import AdminReports from './pages/admin/AdminReports.jsx';
-import AdminAuditLogs from './pages/admin/AdminAuditLogs.jsx';
-import PortalSettings from './pages/admin/PortalSettings.jsx';
-import AdminUsers from './pages/admin/AdminUsers.jsx';
-import AdminTeachers from './pages/admin/AdminTeachers.jsx';
-import AdminSchools from './pages/admin/AdminSchools.jsx';
-import AdminPhotos from './pages/admin/AdminPhotos.jsx';
-import AdminAlbums from './pages/admin/AdminAlbums.jsx';
-import AdminNoticeBoard from './pages/admin/AdminNoticeBoard.jsx';
-import AdminNoticeForm from './pages/admin/AdminNoticeForm.jsx';
-import AdminNoticeDetail from './pages/admin/AdminNoticeDetail.jsx';
-
-import ParentDashboard from './pages/parent/ParentDashboard.jsx';
-import ParentEnrollmentStatus from './pages/parent/ParentEnrollmentStatus.jsx';
-import ParentFees from './pages/parent/ParentFees.jsx';
-import ParentDocuments from './pages/parent/ParentDocuments.jsx';
-import ParentPhotos from './pages/parent/ParentPhotos.jsx';
-
-import TeacherDashboard from './pages/teacher/TeacherDashboard.jsx';
-import TeacherClasses from './pages/teacher/TeacherClasses.jsx';
-import TeacherStudents from './pages/teacher/TeacherStudents.jsx';
-import SendPhotos from './pages/teacher/SendPhotos.jsx';
-import TeacherClassAlbum from './pages/teacher/TeacherClassAlbum.jsx';
-
-import AttendanceSessionPage from './pages/attendance/AttendanceSessionPage.jsx';
-import AttendanceDashboard from './pages/attendance/AttendanceDashboard.jsx';
-import StudentAttendanceHistory from './pages/attendance/StudentAttendanceHistory.jsx';
-
-import NotificationsPage from './pages/shared/NotificationsPage.jsx';
-import MyNoticeBoard from './pages/shared/MyNoticeBoard.jsx';
-import MyNoticeDetail from './pages/shared/MyNoticeDetail.jsx';
-import ChatPage from './pages/shared/ChatPage.jsx';
-import Profile from './pages/shared/Profile.jsx';
-
-import HomeworkPage from './pages/modules/HomeworkPage.jsx';
-import ParentHomeworkPage from './pages/parent/ParentHomeworkPage.jsx';
-import ExamsPage from './pages/modules/ExamsPage.jsx';
-import ExamMarksPage from './pages/modules/ExamMarksPage.jsx';
-import LoginHistoryPage from './pages/modules/LoginHistoryPage.jsx';
-import TimetablePage from './pages/modules/TimetablePage.jsx';
-import LeaveRequestsPage from './pages/modules/LeaveRequestsPage.jsx';
-import LmsCoursesPage from './pages/lms/LmsCoursesPage.jsx';
-import LmsCourseEditorPage from './pages/lms/LmsCourseEditorPage.jsx';
-import LmsEnrollmentsPage from './pages/lms/LmsEnrollmentsPage.jsx';
-import LmsCertificatesPage from './pages/lms/LmsCertificatesPage.jsx';
-import LmsEnrollmentProgressPage from './pages/lms/LmsEnrollmentProgressPage.jsx';
-import MyLearningPage from './pages/lms/MyLearningPage.jsx';
-import CoursePlayerPage from './pages/lms/CoursePlayerPage.jsx';
-import CoursePlaygroundPage from './pages/lms/CoursePlaygroundPage.jsx';
-import { TransportRoutesPage, TransportVehiclesPage } from './pages/modules/TransportPages.jsx';
-import TransportLiveTrackingPage from './pages/modules/TransportLiveTrackingPage.jsx';
-import TransportAssignmentsPage from './pages/modules/TransportAssignmentsPage.jsx';
-import TransportDriversPage from './pages/modules/TransportDriversPage.jsx';
-import TransportTripHistoryPage from './pages/modules/TransportTripHistoryPage.jsx';
-import ParentTransportTrackingPage from './pages/modules/ParentTransportTrackingPage.jsx';
-import DriverTripGuidePage from './pages/modules/DriverTripGuidePage.jsx';
-import { LibraryBooksPage, LibraryIssuesPage } from './pages/modules/LibraryPages.jsx';
-import {
+  AdminDashboard,
+  ApplicationsList,
+  ApplicationReview,
+  AdminFees,
+  AdminStudents,
+  StudentProfile,
+  AdminSettings,
+  AdminClassManagement,
+  AdminReports,
+  AdminAuditLogs,
+  PortalSettings,
+  AdminUsers,
+  AdminTeachers,
+  AdminSchools,
+  AdminPhotos,
+  AdminAlbums,
+  AdminNoticeBoard,
+  AdminNoticeForm,
+  AdminNoticeDetail,
+  ParentDashboard,
+  ParentEnrollmentStatus,
+  ParentFees,
+  ParentDocuments,
+  ParentPhotos,
+  ParentHomeworkPage,
+  TeacherDashboard,
+  TeacherClasses,
+  TeacherStudents,
+  SendPhotos,
+  TeacherClassAlbum,
+  AttendanceSessionPage,
+  AttendanceDashboard,
+  StudentAttendanceHistory,
+  NotificationsPage,
+  MyNoticeBoard,
+  MyNoticeDetail,
+  ChatPage,
+  Profile,
+  CreativeCardsPage,
+  HomeworkPage,
+  ExamsPage,
+  ExamMarksPage,
+  LoginHistoryPage,
+  TimetablePage,
+  LeaveRequestsPage,
+  LmsCoursesPage,
+  LmsCourseEditorPage,
+  LmsEnrollmentsPage,
+  LmsCertificatesPage,
+  LmsEnrollmentProgressPage,
+  MyLearningPage,
+  CoursePlayerPage,
+  CoursePlaygroundPage,
+  TransportRoutesPage,
+  TransportVehiclesPage,
+  TransportLiveTrackingPage,
+  TransportAssignmentsPage,
+  TransportDriversPage,
+  TransportTripHistoryPage,
+  ParentTransportTrackingPage,
+  DriverTripGuidePage,
+  LibraryBooksPage,
+  LibraryIssuesPage,
   CertificatesPage,
   ExpensesPage,
   HrStaffPage,
@@ -106,17 +102,15 @@ import {
   PayrollPage,
   PerformanceNotesPage,
   SubscriptionPlansPage,
-} from './pages/modules/OpsModulePages.jsx';
-import AccountingDashboardPage from './pages/modules/AccountingDashboardPage.jsx';
-import AiAssistantPage from './pages/modules/AiAssistantPage.jsx';
-import AdvancedAttendancePage from './pages/modules/AdvancedAttendancePage.jsx';
-import AdvancedFeesPage from './pages/modules/AdvancedFeesPage.jsx';
-import RolesPermissionsPage from './pages/modules/RolesPermissionsPage.jsx';
-import SecurityCenterPage from './pages/modules/SecurityCenterPage.jsx';
-import CommunicationCenterPage from './pages/modules/CommunicationCenterPage.jsx';
-import ManagementReportsHubPage from './pages/modules/ManagementReportsHubPage.jsx';
-
-const CreativeCardsPage = lazy(() => import('./pages/shared/CreativeCardsPage.jsx'));
+  AccountingDashboardPage,
+  AiAssistantPage,
+  AdvancedAttendancePage,
+  AdvancedFeesPage,
+  RolesPermissionsPage,
+  SecurityCenterPage,
+  CommunicationCenterPage,
+  ManagementReportsHubPage,
+} from './routes/lazyPages.js';
 
 const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
 const SUPER_ADMIN_ONLY = [ROLES.SUPER_ADMIN];
@@ -143,21 +137,29 @@ function TenantLayout() {
 }
 
 function CreativeCardsRoute() {
-  return (
-    <Suspense fallback={<div className="grid min-h-72 place-items-center text-sm font-semibold text-violet-700">Opening your creative studio…</div>}>
-      <CreativeCardsPage />
-    </Suspense>
-  );
+  return <CreativeCardsPage />;
 }
 
 export default function App() {
   useEffect(() => {
-    void probeUploadBandwidth();
+    const startProbe = () => {
+      void probeUploadBandwidth();
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(startProbe, { timeout: 4000 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+    const timer = window.setTimeout(startProbe, 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     void classroomUploadManager.hydrateFromPersisted();
   }, []);
 
   return (
-    <Routes>
+    <Suspense fallback={<LoadingState message="Loading page…" className="min-h-dvh grid place-items-center" />}>
+      <Routes>
       {/* Platform routes (no tenant prefix) */}
       <Route path="/" element={<PlatformLandingGate />} />
       <Route path="/kids-landing" element={<Navigate to="/" replace />} />
@@ -325,5 +327,6 @@ export default function App() {
 
       <Route path="*" element={<CatchAllRedirect />} />
     </Routes>
+    </Suspense>
   );
 }

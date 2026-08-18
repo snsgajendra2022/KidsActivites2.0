@@ -4,15 +4,19 @@ import {
   ArrowRight,
   BookOpen,
   Building2,
+  Bus,
+  CalendarCheck,
   Check,
   ChevronDown,
   ClipboardCheck,
   DollarSign,
   FileText,
+  GraduationCap,
   Heart,
   Home,
   Image as ImageIcon,
   Layers,
+  Library,
   LogIn,
   Mail,
   MapPin,
@@ -20,6 +24,7 @@ import {
   MessageCircle,
   Phone,
   Play,
+  Search,
   ShieldCheck,
   Star,
   Tv,
@@ -40,8 +45,8 @@ const roleCards = [
     description: 'Run the whole school without switching between spreadsheets and chats.',
     items: [
       'Admissions pipeline & document review',
-      'Classes, sections & staff structure',
-      'Fees, receipts and reports',
+      'Classes, attendance, homework & exams',
+      'Fees, live bus tracking, library & reports',
       'Portal settings and role permissions',
     ],
   },
@@ -51,10 +56,10 @@ const roleCards = [
     title: 'For Teachers',
     description: 'Only what you need for your class—clean, calm and mobile-first.',
     items: [
-      'Assigned classes & rosters',
+      'Assigned classes, rosters & attendance',
+      'Homework, exams, marks and LMS',
       'Share photos and videos safely',
       'Message parents 1:1 or class-wide',
-      'Quick attendance & updates',
     ],
   },
   {
@@ -63,11 +68,56 @@ const roleCards = [
     title: 'For Parents',
     description: "See your child's school day in one warm, simple feed.",
     items: [
-      'Track applications & upload documents',
-      'Fee status and payment history',
-      'Photos and videos of your child',
-      'Direct line to the school office',
+      'Track applications, fees and documents',
+      'Homework, exam results and timetable',
+      'Photos, notices and a line to the office',
+      'Live bus tracking on the way home',
     ],
+  },
+];
+
+const moreModules = [
+  {
+    theme: 'blue',
+    icon: CalendarCheck,
+    eyebrow: 'Daily Rhythm',
+    title: 'Attendance that parents can see',
+    description: 'Teachers mark the class in seconds. Parents get a clear present/absent history without chasing the office.',
+  },
+  {
+    theme: 'yellow',
+    icon: BookOpen,
+    eyebrow: 'Learning',
+    title: 'Homework, exams & timetable',
+    description: 'Assign work, collect submissions, publish marks, and keep the weekly schedule in one place for every role.',
+  },
+  {
+    theme: 'purple',
+    icon: GraduationCap,
+    eyebrow: 'Digital Classroom',
+    title: 'LMS courses & certificates',
+    description: 'Build lessons, track progress, and issue course certificates—from playground drafts to parent-facing learning.',
+  },
+  {
+    theme: 'green',
+    icon: Bus,
+    eyebrow: 'On the Road',
+    title: 'Live bus tracking',
+    description: 'Admins watch the fleet. Drivers share GPS on trip. Parents see their child’s bus on the way home.',
+  },
+  {
+    theme: 'orange',
+    icon: Library,
+    eyebrow: 'School Ops',
+    title: 'Library, leave & Creative Cards',
+    description: 'Issue books, approve leave requests, and send celebration cards—without extra apps or paper logs.',
+  },
+  {
+    theme: 'red',
+    icon: Search,
+    eyebrow: 'Find Fast',
+    title: 'Global search & AI',
+    description: 'Jump to pages, students, fees, and records with ⌘K. Ask the school AI for homework help and report comments.',
   },
 ];
 
@@ -126,21 +176,21 @@ const steps = [
     theme: 'yellow',
     title: 'Set up your school',
     description:
-      'Add classes, sections and staff. Turn on the modules you need—admissions, fees, media, or all of them.',
+      'Add classes, sections and staff. Turn on the modules you need—admissions, classroom, transport, fees, media, or all of them.',
   },
   {
     icon: Users,
     theme: 'blue',
     title: 'Invite teachers & families',
     description:
-      "Teachers get their class dashboards. Parents get a warm, simple app that shows only what's theirs.",
+      "Teachers get class dashboards. Parents get a simple app. Drivers get their assigned route.",
   },
   {
     icon: Layers,
     theme: 'green',
     title: 'Run the day together',
     description:
-      'Approve admissions, send messages, share photos, and stream the lobby TV—all from one workspace.',
+      'Mark attendance, assign homework, collect fees, track the bus, share photos, and stream the lobby TV.',
   },
 ];
 
@@ -169,11 +219,19 @@ const testimonials = [
 const faqs = [
   [
     'Which roles can log in to Kids Activities?',
-    'School administrators, teachers, and parents all have dedicated login portals tailored to their specific needs.',
+    'Administrators, admission officers, accountants, teachers, parents, drivers, and support staff each get a dedicated portal for their work.',
   ],
   [
     "Do parents only see their own child's media?",
     "Yes, safety is our priority. Parents only have access to albums and media explicitly shared with their child's class or account.",
+  ],
+  [
+    'Can parents track the school bus?',
+    'Yes. When a trip is live, parents can follow their child’s assigned bus on the map. Admins see the full fleet; drivers share GPS from the driver app.',
+  ],
+  [
+    'Does it include homework, exams, and a digital classroom?',
+    'Yes. Teachers assign homework and exams, publish marks and timetables, and can run LMS courses with progress tracking and certificates.',
   ],
   [
     'How does the Android TV slideshow work?',
@@ -181,7 +239,7 @@ const faqs = [
   ],
   [
     'Can we start with just admissions or just messaging?',
-    'Absolutely. Our platform is modular, allowing you to enable only the features your school needs right now.',
+    'Absolutely. Our platform is modular, allowing you to enable only the features your school needs right now—including classroom, transport, or media.',
   ],
   [
     'Is our school and family data safe?',
@@ -189,7 +247,7 @@ const faqs = [
   ],
   [
     'Do teachers need a separate app?',
-    'Teachers can use the web dashboard or our mobile app, whichever fits their workflow best.',
+    'Teachers can use the web dashboard or our mobile app, whichever fits their workflow best. Drivers and parents have mobile apps as well.',
   ],
 ];
 
@@ -297,6 +355,7 @@ export default function KidsLandingPage() {
             <a href="#get-started">Get started</a>
             <a href="#roles">Roles</a>
             <a href="#features">Features</a>
+            <a href="#classroom">Classroom</a>
             <a href="#platform-overview">Overview</a>
             <a href="#faq">FAQ</a>
           </div>
@@ -320,6 +379,7 @@ export default function KidsLandingPage() {
             <a href="#get-started" onClick={closeMobileNav}>Get started</a>
             <a href="#roles" onClick={closeMobileNav}>Roles</a>
             <a href="#features" onClick={closeMobileNav}>Features</a>
+            <a href="#classroom" onClick={closeMobileNav}>Classroom</a>
             <a href="#platform-overview" onClick={closeMobileNav}>Overview</a>
             <a href="#faq" onClick={closeMobileNav}>FAQ</a>
           </div>
@@ -340,8 +400,8 @@ export default function KidsLandingPage() {
               </h1>
               <p className="kl-hero__lead">
                 Kids Activities is the friendly, role-based workspace that connects admins,
-                teachers, and parents—from first enrollment form to daily classroom moments and
-                Android TV displays.
+                teachers, parents, and drivers—from first enrollment form to homework, live bus
+                tracking, classroom moments, and Android TV displays.
               </p>
               <div className="kl-actions">
                 <a className="kl-button kl-button--yellow" href="#get-started">
@@ -352,7 +412,7 @@ export default function KidsLandingPage() {
                 </a>
               </div>
               <div className="kl-checks">
-                {['Admissions to alumni', 'Web + Mobile + TV', 'Built for schools'].map((item) => (
+                {['Admissions to classroom', 'Web + Mobile + TV', 'Live bus tracking'].map((item) => (
                   <span key={item}>
                     <Check size={20} strokeWidth={3} /> {item}
                   </span>
@@ -376,15 +436,15 @@ export default function KidsLandingPage() {
                     <span><strong>3 new admissions</strong><small>Ready for principal review</small></span>
                   </div>
                   <div className="kl-dashboard-row kl-dashboard-row--blue">
-                    <div><ImageIcon /></div>
-                    <span><strong>12 new class photos</strong><small>Approved for TV slideshow</small></span>
+                    <div><CalendarCheck /></div>
+                    <span><strong>Attendance 28 / 30</strong><small>Class 3-B marked for today</small></span>
                   </div>
                   <div className="kl-dashboard-row kl-dashboard-row--green">
-                    <div><MessageCircle /></div>
-                    <span><strong>Ms. Priya messaged parents</strong><small>Field trip reminder · 28 delivered</small></span>
+                    <div><Bus /></div>
+                    <span><strong>Bus 12 is 4 min away</strong><small>Parents can follow live GPS</small></span>
                   </div>
                   <div className="kl-dashboard__shortcuts">
-                    <span>Fees</span><span>Reports</span><span>Staff</span>
+                    <span>Homework</span><span>Fees</span><span>LMS</span>
                   </div>
                 </div>
               </div>
@@ -449,8 +509,8 @@ export default function KidsLandingPage() {
           <div className="kl-container">
             <div className="kl-section-heading kl-section-heading--center">
               <SectionBadge icon={Users} theme="blue">Built for every role</SectionBadge>
-              <h2>One school. Three different <br /> views.</h2>
-              <p>Every person in your school gets an experience shaped around what they actually do.</p>
+              <h2>One school. A view for <br /> every role.</h2>
+              <p>Every person in your school gets an experience shaped around what they actually do—including drivers on the route.</p>
             </div>
             <div className="kl-role-grid">
               {roleCards.map((role) => <RoleCard key={role.title} role={role} />)}
@@ -466,12 +526,35 @@ export default function KidsLandingPage() {
             >
               <div>
                 <SectionBadge icon={Layers} theme="red">Everything a school needs</SectionBadge>
-                <h2>Six connected surfaces. <br /> One joyful workspace.</h2>
+                <h2>Connected surfaces. <br /> One joyful workspace.</h2>
               </div>
-              <p>Replace scattered forms, spreadsheets, chats and media folders with a single, role-based experience.</p>
+              <p>Replace scattered forms, spreadsheets, chats, homework books and media folders with a single, role-based experience.</p>
             </div>
             <div className="kl-feature-grid">
               {features.map((feature, index) => (
+                <FeatureCard key={feature.title} feature={feature} index={index} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="kl-section kl-section--muted" id="classroom">
+          <div className="kl-container">
+            <div
+              className="kl-section-heading kl-section-heading--split kl-feature-reveal"
+              style={{ '--kl-reveal-delay': '0ms' }}
+            >
+              <div>
+                <SectionBadge icon={GraduationCap} theme="green">Classroom, transport &amp; more</SectionBadge>
+                <h2>The rest of the school day <br /> lives here too.</h2>
+              </div>
+              <p>
+                Attendance, homework, exams, live GPS, library, leave, and search are part of the
+                same workspace—not extra tools to stitch together.
+              </p>
+            </div>
+            <div className="kl-module-grid">
+              {moreModules.map((feature, index) => (
                 <FeatureCard key={feature.title} feature={feature} index={index} />
               ))}
             </div>
@@ -570,8 +653,8 @@ export default function KidsLandingPage() {
               <SectionBadge icon={Wrench} theme="dark">Let&apos;s Talk</SectionBadge>
               <h2>Ready to bring your school together?</h2>
               <p>
-                Book a 20-minute walkthrough. We&apos;ll show admissions, media, and the Android TV
-                slideshow live—on your school&apos;s real workflow.
+                Book a 20-minute walkthrough. We&apos;ll show admissions, classroom, live bus
+                tracking, media, and the Android TV slideshow live—on your school&apos;s real workflow.
               </p>
               <div className="kl-actions">
                 <a className="kl-button kl-button--yellow" href="#get-started">

@@ -18,6 +18,7 @@ import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
+import LoadingState from '../../components/ui/LoadingState.jsx';
 
 const RECENT_COLUMNS = [
   { key: 'applicationNo', label: 'Application No.', primary: true },
@@ -42,7 +43,7 @@ export default function AdminDashboard() {
   const { tenantSlug } = useTenant();
   const { tenantPath } = useTenantPath();
 
-  const { data } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['admin-dashboard', tenantSlug],
     queryFn: () => getAdminDashboard(5),
     staleTime: 30_000,
@@ -68,6 +69,9 @@ export default function AdminDashboard() {
           </p>
         </div>
 
+        {isPending ? (
+          <LoadingState message="Loading dashboard…" className="py-16" />
+        ) : (
         <div className="bento-grid">
           <WelcomeBanner
             title="Admissions Overview"
@@ -117,6 +121,7 @@ export default function AdminDashboard() {
             />
           </div>
         </div>
+        )}
       </PageTransition>
     </AppLayout>
   );

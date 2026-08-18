@@ -1,11 +1,13 @@
 import { Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { isTenantSubdomainHost, resolveTenantSlug } from '../../services/api/config.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
-import Login from '../../pages/auth/Login.jsx';
 import LoadingState from '../ui/LoadingState.jsx';
 import TenantPathGate from './TenantPathGate.jsx';
 import { authenticatedHomePath } from '../../utils/authRoutes.js';
+
+const Login = lazy(() => import('../../pages/auth/Login.jsx'));
 
 /**
  * Platform `/login`: guests only. Signed-in users go to their dashboard.
@@ -31,9 +33,15 @@ export default function PlatformLoginGate() {
   if (isTenantSubdomainHost() && resolveTenantSlug()) {
     return (
       <TenantPathGate>
-        <Login />
+        <Suspense fallback={<LoadingState message="Loading sign-in…" className="min-h-dvh grid place-items-center" />}>
+          <Login />
+        </Suspense>
       </TenantPathGate>
     );
   }
-  return <Login />;
+  return (
+    <Suspense fallback={<LoadingState message="Loading sign-in…" className="min-h-dvh grid place-items-center" />}>
+      <Login />
+    </Suspense>
+  );
 }

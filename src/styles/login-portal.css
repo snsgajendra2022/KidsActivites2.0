@@ -61,59 +61,27 @@
 /* ─── Split shell ─── */
 .login-portal.sb-editorial-auth .auth-split,
 .login-portal .auth-split {
-  background:
-    radial-gradient(circle at 8% 15%, rgba(254, 249, 195, 0.52), transparent 35%),
-    radial-gradient(circle at 92% 7%, rgba(224, 242, 254, 0.52), transparent 35%),
-    #fff;
+  background: #fcfbf8;
   min-height: 100dvh;
-}
-
-/* Wavy join between visual + form — large smooth omission waves (section edges only) */
-@media (min-width: 901px) {
-  .login-portal .auth-split__visual,
-  .login-portal.sb-editorial-auth .auth-split__visual {
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 0 H86 C98 5 74 11 86 16.5 C98 22 74 28 86 33.5 C98 39 74 45 86 50.5 C98 56 74 62 86 67.5 C98 73 74 79 86 84.5 C98 90 74 96 86 100 H0 Z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 0 H86 C98 5 74 11 86 16.5 C98 22 74 28 86 33.5 C98 39 74 45 86 50.5 C98 56 74 62 86 67.5 C98 73 74 79 86 84.5 C98 90 74 96 86 100 H0 Z'/%3E%3C/svg%3E");
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-  }
-
-  .login-portal .auth-split__form-side,
-  .login-portal.sb-editorial-auth .auth-split__form-side {
-    margin-left: -7%;
-    padding-left: calc(2rem + 7%);
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M14 0 C2 5 26 11 14 16.5 C2 22 26 28 14 33.5 C2 39 26 45 14 50.5 C2 56 26 62 14 67.5 C2 73 26 79 14 84.5 C2 90 26 96 14 100 H100 V0 Z'/%3E%3C/svg%3E");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M14 0 C2 5 26 11 14 16.5 C2 22 26 28 14 33.5 C2 39 26 45 14 50.5 C2 56 26 62 14 67.5 C2 73 26 79 14 84.5 C2 90 26 96 14 100 H100 V0 Z'/%3E%3C/svg%3E");
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-  }
 }
 
 .login-portal.sb-editorial-auth .auth-split__visual,
 .login-portal .auth-split__visual {
-  background: var(--kl-navy);
+  background: linear-gradient(180deg, #111A2B 0%, #142035 100%);
   color: #fff;
 }
 
 .login-portal.sb-editorial-auth .auth-split__visual::before,
 .login-portal .auth-split__visual::before {
-  background:
-    radial-gradient(circle at 18% 22%, rgba(251, 191, 36, 0.22), transparent 42%),
-    radial-gradient(circle at 86% 78%, rgba(224, 242, 254, 0.14), transparent 46%),
-    linear-gradient(160deg, #0f172a 0%, #1e293b 52%, #0f172a 100%);
+  background: linear-gradient(180deg, #111A2B 0%, #142035 100%);
   opacity: 1;
 }
 
 .login-portal .auth-split__visual--has-image::before {
   background: linear-gradient(
-    160deg,
-    color-mix(in srgb, #0f172a 88%, transparent) 0%,
-    color-mix(in srgb, #1e293b 78%, transparent) 50%,
-    color-mix(in srgb, #fbbf24 18%, #0f172a 72%) 100%
+    180deg,
+    color-mix(in srgb, #111A2B 88%, transparent) 0%,
+    color-mix(in srgb, #142035 78%, transparent) 100%
   );
 }
 
@@ -178,6 +146,7 @@
 /* ─── Form card ─── */
 .login-portal .auth-split__form-side {
   padding: 1.5rem 1rem;
+  background: #fcfbf8;
 }
 
 .login-portal .auth-split__card {

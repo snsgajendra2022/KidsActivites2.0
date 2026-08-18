@@ -48,7 +48,7 @@ export default function GlobalSearchLauncher() {
     <>
       <button
         type="button"
-        className="global-search-trigger hidden lg:flex"
+        className="global-search-trigger"
         onClick={onOpen}
         aria-label="Open search (Ctrl+K)"
       >
@@ -59,7 +59,7 @@ export default function GlobalSearchLauncher() {
 
       <button
         type="button"
-        className="global-search-mobile-btn lg:hidden"
+        className="global-search-mobile-btn"
         onClick={onOpen}
         aria-label="Open search"
       >

@@ -3,7 +3,9 @@ import {
   BadgeCheck,
   BarChart3,
   Bell,
+  BookMarked,
   BookOpen,
+  Bus,
   Camera,
   Check,
   ClipboardList,
@@ -13,6 +15,7 @@ import {
   Headphones,
   Heart,
   Images,
+  MapPin,
   MessageCircle,
   Palette,
   QrCode,
@@ -30,6 +33,7 @@ import {
 } from 'lucide-react';
 import {
   ADMISSION_PIPELINE,
+  CLASSROOM_MODULES,
   COMMUNICATION_MEDIA,
   ENROLLMENT_PAGES,
   ENROLLMENT_WORKFLOW,
@@ -38,6 +42,7 @@ import {
   OPERATIONS,
   PLATFORM_FEATURES,
   PLATFORM_ROLES,
+  TRANSPORT_MODULES,
   TV_PLAYBACK_STEPS,
 } from '../../data/platformLandingData.js';
 
@@ -170,15 +175,15 @@ function PhoneFrame({ children }) {
 
 const MODULE_POSITIONS = [
   { label: 'Enroll', icon: ClipboardList, pos: 'tl' },
-  { label: 'Forms', icon: FileText, pos: 'tr' },
+  { label: 'Class', icon: BookOpen, pos: 'tr' },
   { label: 'Fees', icon: Wallet, pos: 'ml' },
-  { label: 'Chat', icon: MessageCircle, pos: 'mr' },
+  { label: 'Bus', icon: Bus, pos: 'mr' },
   { label: 'Photos', icon: Camera, pos: 'bl' },
   { label: 'TV', icon: Tv, pos: 'br' },
 ];
 
 /** Maps each platform feature to its orbit module (-1 = center focus only). */
-const FEATURE_TO_MODULE = [0, 1, 0, 2, 3, 4, 5, -1];
+const FEATURE_TO_MODULE = [0, 0, 0, 2, -1, 4, 5, -1, 1, 1, 1, 3];
 
 function FeaturesDemo({ activeIndex = 0 }) {
   const feature = PLATFORM_FEATURES[activeIndex] || PLATFORM_FEATURES[0];
@@ -385,7 +390,7 @@ const HOW_SCENES = [
     ),
   },
   {
-    title: 'Stay connected',
+    title: 'Run the school day',
     content: (
       <div className="sb-plat-scene sb-plat-scene--connect">
         <motion.div
@@ -463,8 +468,8 @@ function HowDemo({ activeIndex = 0 }) {
   );
 }
 
-const ROLE_ICONS = [Shield, SearchCheck, Wallet, GraduationCap, Heart, Headphones];
-const MOBILE_ROLE_ICONS = [Heart, GraduationCap, Shield];
+const ROLE_ICONS = [Shield, SearchCheck, Wallet, GraduationCap, Heart, Bus, Headphones];
+const MOBILE_ROLE_ICONS = [Heart, GraduationCap, Shield, Bus];
 
 function RolesDemo({ activeIndex = 0 }) {
   const role = PLATFORM_ROLES[activeIndex] || PLATFORM_ROLES[0];
@@ -993,10 +998,346 @@ function MediaDemo({ activeIndex = 0 }) {
 }
 
 const MOBILE_PREVIEW = {
-  0: { icon: Heart, title: 'Enrollment', detail: 'Track admission status' },
-  1: { icon: Camera, title: 'Class photos', detail: 'Share albums with parents' },
+  0: { icon: Heart, title: 'Bus tracking', detail: 'See the bus on the way home' },
+  1: { icon: BookOpen, title: 'Homework', detail: 'Assign and track class work' },
   2: { icon: ClipboardList, title: 'Applications', detail: 'Review pending admits' },
+  3: { icon: Bus, title: 'Live trip', detail: 'Share GPS with families' },
 };
+
+const CLASS_ROSTER = [
+  { name: 'Aarav', status: 'Present' },
+  { name: 'Meera', status: 'Present' },
+  { name: 'Kabir', status: 'Late' },
+  { name: 'Anaya', status: 'Present' },
+];
+
+const CLASS_MARKS = [
+  { subject: 'Science', score: '92' },
+  { subject: 'English', score: '88' },
+  { subject: 'Math', score: '95' },
+];
+
+const CLASS_PERIODS = [
+  { day: 'Mon', subject: 'Math' },
+  { day: 'Tue', subject: 'Art', live: true },
+  { day: 'Wed', subject: 'PE' },
+];
+
+const BUS_FLEET = [
+  { name: 'Bus 12', driver: 'Ravi', status: 'On route' },
+  { name: 'Van 04', driver: 'Sita', status: 'At school' },
+];
+
+const TRIP_STOPS = ['School', 'City Park', 'Home'];
+
+function ClassroomScenes({ step }) {
+  if (step === 0) {
+    return (
+      <div className="sb-plat-class">
+        {CLASS_ROSTER.map((student, i) => (
+          <motion.div
+            key={student.name}
+            className={`sb-plat-class__row${student.status === 'Late' ? ' is-late' : ''}`}
+            initial={{ opacity: 0, x: -14 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.38, delay: i * 0.08, ease }}
+          >
+            <span>{student.name}</span>
+            <motion.em
+              className={`sb-plat-class__mark${student.status === 'Late' ? ' is-late' : ''}`}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.18 + i * 0.08 }}
+            >
+              {student.status === 'Late' ? 'L' : <Check size={11} strokeWidth={3} />}
+            </motion.em>
+            <small>{student.status}</small>
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+
+  if (step === 1) {
+    return (
+      <div className="sb-plat-class sb-plat-class--card">
+        <div className="sb-plat-class__head">
+          <BookOpen size={16} />
+          <div>
+            <strong>Math worksheet</strong>
+            <span>Due tomorrow · Class 3-B</span>
+          </div>
+        </div>
+        <div className="sb-plat-class__meta">
+          <span>18 of 24 submitted</span>
+          <b>75%</b>
+        </div>
+        <div className="sb-plat-class__progress" role="presentation">
+          <motion.span
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 0.75 }}
+            transition={{ duration: 0.9, ease, delay: 0.15 }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <div className="sb-plat-class sb-plat-class--marks">
+        {CLASS_MARKS.map((row, i) => (
+          <motion.div
+            key={row.subject}
+            className="sb-plat-class__row"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.1, ease }}
+          >
+            <span>{row.subject}</span>
+            <strong>{row.score}</strong>
+          </motion.div>
+        ))}
+        <motion.span
+          className="sb-plat-class__stamp"
+          initial={{ scale: 0.6, rotate: -12, opacity: 0 }}
+          animate={{ scale: 1, rotate: -6, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 16, delay: 0.45 }}
+        >
+          Published
+        </motion.span>
+      </div>
+    );
+  }
+
+  if (step === 3) {
+    return (
+      <div className="sb-plat-class__grid">
+        {CLASS_PERIODS.map((cell, i) => (
+          <motion.div
+            key={cell.day}
+            className={`sb-plat-class__cell${cell.live ? ' is-live' : ''}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={cell.live ? { opacity: 1, y: 0, scale: [1, 1.04, 1] } : { opacity: 1, y: 0 }}
+            transition={cell.live
+              ? { opacity: { duration: 0.35, delay: i * 0.1 }, scale: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } }
+              : { duration: 0.35, delay: i * 0.1, ease }}
+          >
+            <small>{cell.day}</small>
+            <strong>{cell.subject}</strong>
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+
+  if (step === 4) {
+    return (
+      <div className="sb-plat-class sb-plat-class--card sb-plat-class--lms">
+        <div className="sb-plat-class__head">
+          <GraduationCap size={16} />
+          <div>
+            <strong>Phonics Level 2</strong>
+            <span>Lesson 8 of 12</span>
+          </div>
+        </div>
+        <div className="sb-plat-class__ring-wrap">
+          <svg className="sb-plat-class__ring" viewBox="0 0 72 72" aria-hidden>
+            <circle cx="36" cy="36" r="28" />
+            <motion.circle
+              cx="36"
+              cy="36"
+              r="28"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 0.72 }}
+              transition={{ duration: 1.05, ease, delay: 0.12 }}
+            />
+          </svg>
+          <b>72%</b>
+        </div>
+        <motion.span
+          className="sb-plat-class__cert"
+          initial={{ y: 8, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.35, ease }}
+        >
+          Certificate ready
+        </motion.span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sb-plat-class sb-plat-class--card">
+      <div className="sb-plat-class__head">
+        <BookMarked size={16} />
+        <div>
+          <strong>Sick leave</strong>
+          <span>Anaya · 1 day · Class 3-B</span>
+        </div>
+      </div>
+      <div className="sb-plat-class__actions">
+        <motion.span
+          className="sb-plat-class__approve"
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 1.7, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Check size={12} strokeWidth={3} /> Approve
+        </motion.span>
+        <span className="sb-plat-class__ghost">Review</span>
+      </div>
+    </div>
+  );
+}
+
+function ClassroomDemo({ activeIndex = 0 }) {
+  const step = activeIndex % CLASSROOM_MODULES.length;
+  const item = CLASSROOM_MODULES[step];
+
+  return (
+    <DemoShell label="Classroom" tall>
+      <BrowserFrame title={item.title}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            className="sb-plat-class-stage"
+            initial={{ opacity: 0, y: 12, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.99 }}
+            transition={{ duration: 0.36, ease }}
+          >
+            <ClassroomScenes step={step} />
+          </motion.div>
+        </AnimatePresence>
+      </BrowserFrame>
+    </DemoShell>
+  );
+}
+
+function TransportScenes({ step }) {
+  if (step === 0) {
+    return (
+      <div className="sb-plat-bus">
+        {BUS_FLEET.map((vehicle, i) => (
+          <motion.div
+            key={vehicle.name}
+            className="sb-plat-bus__card"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.38, delay: i * 0.12, ease }}
+          >
+            <span className="sb-plat-bus__icon"><Bus size={16} /></span>
+            <div>
+              <strong>{vehicle.name}</strong>
+              <small>{vehicle.driver}</small>
+            </div>
+            <em className={i === 0 ? 'is-live' : ''}>{vehicle.status}</em>
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+
+  if (step === 1) {
+    return (
+      <div className="sb-plat-bus-map">
+        <span className="sb-plat-bus-map__road" />
+        <span className="sb-plat-bus-map__road sb-plat-bus-map__road--v" />
+        <motion.div
+          className="sb-plat-bus-map__pin"
+          animate={{ left: ['14%', '72%', '14%'] }}
+          transition={{ duration: 5.6, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <motion.span
+            className="sb-plat-bus-map__ping"
+            animate={{ scale: [0.7, 1.55], opacity: [0.55, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+          />
+          <Bus size={16} />
+          <small>Live</small>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <div className="sb-plat-bus-parent">
+        <div className="sb-plat-bus-parent__eta">
+          <MapPin size={16} />
+          <div>
+            <strong>Bus 12</strong>
+            <span>Arriving in 4 min</span>
+          </div>
+          <motion.b
+            animate={{ scale: [1, 1.08, 1] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            4:12
+          </motion.b>
+        </div>
+        <div className="sb-plat-bus-map sb-plat-bus-map--mini">
+          <span className="sb-plat-bus-map__road" />
+          <motion.div
+            className="sb-plat-bus-map__pin"
+            animate={{ left: ['22%', '64%', '22%'] }}
+            transition={{ duration: 4.8, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Bus size={14} />
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sb-plat-bus-trip">
+      <span className="sb-plat-bus-trip__line" />
+      <motion.span
+        className="sb-plat-bus-trip__fill"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 0.62 }}
+        transition={{ duration: 1.1, ease, delay: 0.12 }}
+      />
+      {TRIP_STOPS.map((stop, i) => (
+        <motion.div
+          key={stop}
+          className={`sb-plat-bus-trip__stop${i === 1 ? ' is-current' : ''}${i === 0 ? ' is-done' : ''}`}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.32, delay: i * 0.12, ease }}
+        >
+          <i>{i === 0 ? <Check size={10} strokeWidth={3} /> : i + 1}</i>
+          <strong>{stop}</strong>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function TransportDemo({ activeIndex = 0 }) {
+  const step = activeIndex % TRANSPORT_MODULES.length;
+  const item = TRANSPORT_MODULES[step];
+
+  return (
+    <DemoShell label="Live transport" tall>
+      <BrowserFrame title={item.title}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            className="sb-plat-bus-stage"
+            initial={{ opacity: 0, y: 12, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.99 }}
+            transition={{ duration: 0.36, ease }}
+          >
+            <TransportScenes step={step} />
+          </motion.div>
+        </AnimatePresence>
+      </BrowserFrame>
+    </DemoShell>
+  );
+}
 
 function MobileDemo({ activeIndex = 0 }) {
   const role = MOBILE_APP_ROLES[activeIndex] || MOBILE_APP_ROLES[0];
@@ -1069,6 +1410,10 @@ export default function PlatformShowcaseVisual({
         return <EnrollmentDemo view={enrollmentView} step={enrollmentStep} />;
       case 'roles':
         return <RolesDemo activeIndex={activeStep} />;
+      case 'classroom':
+        return <ClassroomDemo activeIndex={activeStep} />;
+      case 'transport':
+        return <TransportDemo activeIndex={activeStep} />;
       case 'fees':
         return <FeesDemo activeIndex={activeStep} />;
       case 'media':

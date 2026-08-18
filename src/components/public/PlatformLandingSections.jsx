@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
   BadgeCheck,
+  BookOpen,
+  Bus,
   Camera,
   FileEdit,
   FileSignature,
@@ -28,6 +30,7 @@ import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import PlatformShowcaseVisual from './PlatformShowcaseVisual.jsx';
 import {
   ADMISSION_PIPELINE,
+  CLASSROOM_MODULES,
   COMMUNICATION_MEDIA,
   ENROLLMENT_PAGES,
   ENROLLMENT_WORKFLOW,
@@ -38,17 +41,20 @@ import {
   PLATFORM_FEATURES,
   PLATFORM_PURPOSE,
   PLATFORM_ROLES,
+  TRANSPORT_MODULES,
   TV_PLAYBACK_STEPS,
 } from '../../data/platformLandingData.js';
 
 const OVERVIEW_TABS = [
   { id: 'features', label: 'Features', icon: Sparkles, blurb: 'Core tools schools use every day.' },
-  { id: 'how', label: 'How it works', icon: GraduationCap, blurb: 'From workspace setup to parent connection.' },
+  { id: 'how', label: 'How it works', icon: GraduationCap, blurb: 'From workspace setup to the school day.' },
   { id: 'roles', label: 'Roles', icon: Users, blurb: 'Secure portals for every team member.' },
   { id: 'enrollment', label: 'Enrollment', icon: FileText, blurb: 'Admissions from draft to approval.' },
-  { id: 'fees', label: 'Fees & ops', icon: Wallet, blurb: 'Payments, documents, and school operations.' },
+  { id: 'classroom', label: 'Classroom', icon: BookOpen, blurb: 'Attendance, homework, exams, timetable, and LMS.' },
+  { id: 'transport', label: 'Transport', icon: Bus, blurb: 'Fleet, live GPS, and parent bus tracking.' },
+  { id: 'fees', label: 'Fees & ops', icon: Wallet, blurb: 'Payments, library, search, and school operations.' },
   { id: 'media', label: 'Media & TV', icon: Tv, blurb: 'Photos, chat, and classroom TV playback.' },
-  { id: 'mobile', label: 'Mobile app', icon: Smartphone, blurb: 'iOS and Android for parents, teachers, and admins.' },
+  { id: 'mobile', label: 'Mobile app', icon: Smartphone, blurb: 'iOS and Android for parents, teachers, admins, and drivers.' },
 ];
 
 function padStep(index) {
@@ -66,8 +72,8 @@ function toItems(items, titleKey = 'title', descKey = 'description') {
 
 const tileEase = [0.22, 1, 0.36, 1];
 
-const ROLE_ICONS = [Shield, SearchCheck, Wallet, GraduationCap, Heart, Headphones];
-const MOBILE_ICONS = [Heart, GraduationCap, Shield];
+const ROLE_ICONS = [Shield, SearchCheck, Wallet, GraduationCap, Heart, Bus, Headphones];
+const MOBILE_ICONS = [Heart, GraduationCap, Shield, Bus];
 const HOW_ICONS = [School, Palette, FileText, BadgeCheck, Camera];
 const DEFAULT_IOS_APP_URL = 'https://apps.apple.com/us/app/the-kids-activities-app/id6670396298';
 const DEFAULT_ANDROID_APP_URL =
@@ -460,6 +466,28 @@ function PanelBody({
       />
     );
   }
+  if (activeTab === 'classroom') {
+    return (
+      <SpotlightPanel
+        items={data.classroom}
+        onStepChange={onDetailStepChange}
+        stepPrefix="Module"
+        ariaLabel="Classroom modules"
+        variant="features"
+      />
+    );
+  }
+  if (activeTab === 'transport') {
+    return (
+      <SpotlightPanel
+        items={data.transport}
+        onStepChange={onDetailStepChange}
+        stepPrefix="Module"
+        ariaLabel="Transport modules"
+        variant="features"
+      />
+    );
+  }
   if (activeTab === 'fees') {
     return (
       <GroupedSpotlightPanel
@@ -504,7 +532,7 @@ function PanelBody({
           variant="mobile"
         />
         <div className="sb-plat-mobile-cta">
-          <p>Download the Kids Activities app for parents, teachers, admins, and TV sign-in.</p>
+          <p>Download the Kids Activities app for parents, teachers, admins, drivers, and TV sign-in.</p>
           <div className="sb-app-store-buttons sb-app-store-buttons--after-journey">
             <AppStoreButton label="Download on the App Store" href={iosUrl} />
             <AppStoreButton label="Get it on Google Play" href={androidUrl} />
@@ -545,6 +573,8 @@ export default function PlatformLandingSections() {
       { label: 'Communication & albums', items: toItems(COMMUNICATION_MEDIA) },
       { label: 'TV playback flow', items: toItems(TV_PLAYBACK_STEPS, 'label', 'description') },
     ],
+    classroom: toItems(CLASSROOM_MODULES),
+    transport: toItems(TRANSPORT_MODULES),
     mobile: toItems(MOBILE_APP_ROLES, 'role', 'screens'),
   }), []);
 

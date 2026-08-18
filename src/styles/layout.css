@@ -227,15 +227,15 @@
 .auth-split {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  background: var(--sb-ivory);
+  grid-template-columns: minmax(240px, 30%) minmax(0, 1fr);
+  background: #fcfbf8;
 }
 
 .auth-split__visual {
   position: relative;
-  background: var(--sb-navy);
+  background: linear-gradient(180deg, #111A2B 0%, #142035 100%);
   color: #fff;
-  padding: 3rem;
+  padding: 3rem 2.5rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -262,22 +262,16 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    160deg,
-    var(--sb-navy) 0%,
-    var(--sb-deep-blue) 50%,
-    color-mix(in srgb, var(--sb-gold) 25%, var(--sb-deep-blue)) 100%
-  );
-  opacity: 0.95;
+  background: linear-gradient(180deg, #111A2B 0%, #142035 100%);
+  opacity: 1;
   z-index: 1;
 }
 
 .auth-split__visual--has-image::before {
   background: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--sb-navy) 88%, transparent) 0%,
-    color-mix(in srgb, var(--sb-deep-blue) 82%, transparent) 50%,
-    color-mix(in srgb, var(--sb-gold) 20%, var(--sb-deep-blue) 70%) 100%
+    180deg,
+    color-mix(in srgb, #111A2B 88%, transparent) 0%,
+    color-mix(in srgb, #142035 78%, transparent) 100%
   );
 }
 
@@ -307,6 +301,7 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  background: #fcfbf8;
 }
 
 .auth-split__card {

@@ -2,32 +2,40 @@ import {
   BadgeCheck,
   BarChart3,
   Bell,
+  BookMarked,
   BookOpen,
+  Bus,
+  CalendarCheck,
   Camera,
   ClipboardList,
   FileText,
   FolderOpen,
+  GraduationCap,
   Images,
+  Library,
+  MapPin,
   MessageCircle,
   Palette,
   QrCode,
   Receipt,
   School,
+  Search,
   SearchCheck,
   Smartphone,
+  Sparkles,
   Tv,
   Users,
 } from 'lucide-react';
 
 export const PLATFORM_PURPOSE =
-  'One branded workspace for enrollment, fees, documents, photos, and parent communication.';
+  'One branded workspace for enrollment, classroom work, fees, live bus tracking, photos, and parent communication.';
 
 export const HOW_IT_WORKS = [
   { step: '01', title: 'Create workspace', description: 'Register your school and get a dedicated portal.' },
-  { step: '02', title: 'Configure portal', description: 'Set branding, forms, fees, classes, and login.' },
+  { step: '02', title: 'Configure portal', description: 'Set branding, forms, fees, classes, transport, and login.' },
   { step: '03', title: 'Parents enroll', description: 'Families apply online and upload documents.' },
   { step: '04', title: 'Review & admit', description: 'Verify payments and confirm admission.' },
-  { step: '05', title: 'Stay connected', description: 'Share photos, chat, and send updates.' },
+  { step: '05', title: 'Run the school day', description: 'Attendance, homework, fees, bus tracking, photos, and chat.' },
 ];
 
 export const PLATFORM_FEATURES = [
@@ -35,18 +43,23 @@ export const PLATFORM_FEATURES = [
   { icon: FileText, title: 'Form', description: '5-page printable form and PDF download.' },
   { icon: SearchCheck, title: 'Application Review', description: 'Approve, reject, or request corrections.' },
   { icon: FolderOpen, title: 'Documents & Fees', description: 'Uploads, payment proof, and receipts.' },
-  { icon: MessageCircle, title: 'Chat & Alerts', description: 'Parent communication and notifications.' },
+  { icon: MessageCircle, title: 'Chat & Alerts', description: 'Parent communication, notices, and notifications.' },
   { icon: Camera, title: 'Photos & Albums', description: 'Classroom photos and class albums.' },
-  { icon: Tv, title: 'QR & TV Playback', description: 'Show albums on classroom TVs.' },
-  { icon: Users, title: 'Role-Based Portals', description: 'Admin, teacher, and parent dashboards.' },
+  { icon: Tv, title: 'QR & TV Playback', description: 'Show albums on classroom and lobby TVs.' },
+  { icon: Users, title: 'Role-Based Portals', description: 'Admin, teacher, parent, and driver dashboards.' },
+  { icon: CalendarCheck, title: 'Attendance', description: 'Mark daily attendance and share history with families.' },
+  { icon: BookOpen, title: 'Homework & Exams', description: 'Assign work, collect submissions, and publish marks.' },
+  { icon: GraduationCap, title: 'Digital Classroom', description: 'LMS courses, progress tracking, and certificates.' },
+  { icon: Bus, title: 'Live Bus Tracking', description: 'GPS routes for admins, drivers, and parents.' },
 ];
 
 export const PLATFORM_ROLES = [
-  { title: 'School Admin', items: 'Applications, classes, fees, users, albums, and portal settings.' },
+  { title: 'School Admin', items: 'Applications, classes, fees, transport, library, users, and portal settings.' },
   { title: 'Admission Officer', items: 'Review applications, verify docs, and manage corrections.' },
-  { title: 'Accountant', items: 'Fee records, payment verification, receipts, and reports.' },
-  { title: 'Teacher', items: 'Classes, photos, albums, parent chat, and TV control.' },
-  { title: 'Parent', items: 'Enrollment status, documents, fees, photos, and messages.' },
+  { title: 'Accountant', items: 'Fee records, payment verification, receipts, payroll, and reports.' },
+  { title: 'Teacher', items: 'Attendance, homework, exams, LMS, photos, albums, and parent chat.' },
+  { title: 'Parent', items: 'Enrollment, fees, homework, exams, photos, leave, and live bus tracking.' },
+  { title: 'Driver', items: 'Assigned routes, trip start, and live GPS sharing with the school.' },
   { title: 'Support Staff', items: 'Help families and handle school support chat.' },
 ];
 
@@ -87,12 +100,32 @@ export const FEES_AND_DOCS = [
 export const OPERATIONS = [
   { icon: School, title: 'Class management', description: 'Create classes and assign teachers.' },
   { icon: Users, title: 'User management', description: 'Invite staff and manage roles.' },
-  { icon: Palette, title: 'Portal settings', description: 'Menus, branding, and form builder.' },
-  { icon: BarChart3, title: 'Reports & audit', description: 'Track applications, fees, and actions.' },
+  { icon: Palette, title: 'Portal settings', description: 'Menus, branding, landing page, and form builder.' },
+  { icon: BarChart3, title: 'Reports & audit', description: 'Track applications, fees, attendance, and actions.' },
+  { icon: Library, title: 'Library', description: 'Catalog books and track issues and returns.' },
+  { icon: Search, title: 'Global search', description: 'Find pages, students, fees, and records with ⌘K.' },
+  { icon: Sparkles, title: 'AI assistant', description: 'School Q&A, homework help, and report comments.' },
+  { icon: Palette, title: 'Creative Cards', description: 'Greeting and celebration cards for school moments.' },
+];
+
+export const CLASSROOM_MODULES = [
+  { icon: CalendarCheck, title: 'Daily attendance', description: 'Mark class sessions and share history with parents.' },
+  { icon: BookOpen, title: 'Homework', description: 'Assign work, track submissions, and send reminders.' },
+  { icon: FileText, title: 'Exams & marks', description: 'Create exams, enter marks, and publish results.' },
+  { icon: ClipboardList, title: 'Timetable', description: 'Publish class schedules for teachers and families.' },
+  { icon: GraduationCap, title: 'Digital classroom', description: 'Courses, lessons, progress, and certificates.' },
+  { icon: BookMarked, title: 'Leave requests', description: 'Parents apply; staff review and approve.' },
+];
+
+export const TRANSPORT_MODULES = [
+  { icon: Bus, title: 'Fleet & drivers', description: 'Manage vehicles, drivers, and assigned routes.' },
+  { icon: MapPin, title: 'Live GPS map', description: 'Watch buses in real time from the admin workspace.' },
+  { icon: Smartphone, title: 'Parent bus tracking', description: 'Families see their child’s bus on the way home.' },
+  { icon: ClipboardList, title: 'Trips & history', description: 'Start trips, log stops, and review past runs.' },
 ];
 
 export const COMMUNICATION_MEDIA = [
-  { icon: MessageCircle, title: 'Real-time chat', description: 'Parents, teachers, and staff messaging.' },
+  { icon: MessageCircle, title: 'Real-time chat', description: 'Parents, teachers, drivers, and staff messaging.' },
   { icon: Bell, title: 'Notifications', description: 'Instant alerts for school updates.' },
   { icon: Camera, title: 'Parent photo feed', description: 'Classroom moments shared privately.' },
   { icon: Images, title: 'Teacher sharing', description: 'Send photos to classes or parents.' },
@@ -135,7 +168,8 @@ export const TV_PLAYBACK_DETAILS = [
 ];
 
 export const MOBILE_APP_ROLES = [
-  { role: 'Parent app', screens: 'Home, Photos, Fees, Documents, Chat, Enrollment, Profile' },
-  { role: 'Teacher app', screens: 'Classes, Students, Photos, Albums, Chat, TV QR' },
-  { role: 'Admin app', screens: 'Applications, Classes, Reports, Users, Chat, TV Sign-In' },
+  { role: 'Parent app', screens: 'Home, Photos, Fees, Homework, Exams, Bus tracking, Chat, Enrollment' },
+  { role: 'Teacher app', screens: 'Classes, Attendance, Homework, Photos, Albums, Chat, TV QR' },
+  { role: 'Admin app', screens: 'Applications, Classes, Reports, Transport, Users, Chat, TV Sign-In' },
+  { role: 'Driver app', screens: 'Assigned route, trip start, live GPS, stop checklist' },
 ];

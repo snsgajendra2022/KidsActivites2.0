@@ -1,9 +1,11 @@
 import { Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
-import Landing from '../../pages/public/Landing.jsx';
 import LoadingState from '../ui/LoadingState.jsx';
 import { authenticatedHomePath } from '../../utils/authRoutes.js';
+
+const Landing = lazy(() => import('../../pages/public/Landing.jsx'));
 
 /**
  * Tenant root (/{slug}/): send signed-in users to their role dashboard;
@@ -26,5 +28,9 @@ export default function TenantHomeGate() {
     );
   }
 
-  return <Landing />;
+  return (
+    <Suspense fallback={<LoadingState message="Loading…" className="min-h-dvh grid place-items-center" />}>
+      <Landing />
+    </Suspense>
+  );
 }
