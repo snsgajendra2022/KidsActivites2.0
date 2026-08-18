@@ -1,5 +1,5 @@
 import { ArrowLeft, Edit3, LayoutGrid, Plus, Sparkles } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import {
@@ -15,10 +15,18 @@ import {
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import creativeData from '../../data/kidsCreativeCards.json';
-import { INITIAL_PHOTOS } from '../../data/mockPhotos.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { useClassStudentOptions } from '../../hooks/useClassStudentOptions.js';
 import { loadStudentOptions } from '../../services/schoolModules/relationshipOptions.js';
+import {
+  getPhotoStudioConfig,
+  listPhotoStudioImages,
+} from '../../services/photoStudioService.js';
+import {
+  firstNonThumbnailUrl,
+  getGalleryThumbSrc,
+} from '../../utils/photoStudioProgressive.js';
+import { rewritePhotoStudioUrl } from '../../utils/photoStudioUrls.js';
 import {
   getCreativeCardById,
   getCreativeCards,
@@ -30,6 +38,25 @@ import {
 } from '../../services/creativeCardsStorage.js';
 
 const cardTemplate = (templateId) => creativeData.templates.find((item) => item.id === templateId);
+
+function isVideoPhoto(image) {
+  return image?.mediaType === 'VIDEO' || image?.type === 'video';
+}
+
+function toCardAlbumPhoto(image) {
+  const thumb = getGalleryThumbSrc(image);
+  const full = rewritePhotoStudioUrl(
+    firstNonThumbnailUrl(image.previewUrl, image.downloadUrl, image.imageUrl) || thumb,
+  );
+  const url = full || thumb;
+  if (!url) return null;
+  return {
+    id: image.id,
+    title: image.filename || image.title || 'School photo',
+    imageUrl: url,
+    url,
+  };
+}
 
 function CardViewer({ card, onBack, onEdit }) {
   const previewRef = useRef(null);
@@ -71,6 +98,9 @@ export default function CreativeCardsPage() {
   const [statistics, setStatistics] = useState(() => getCreativeStatistics());
   const [celebrating, setCelebrating] = useState(false);
   const { classOptions } = useClassStudentOptions(user, '', { loadStudents: false });
+  const [albumImages, setAlbumImages] = useState([]);
+  const [albumPhotosLoading, setAlbumPhotosLoading] = useState(true);
+  const [albumPhotosError, setAlbumPhotosError] = useState('');
 
   const refresh = () => {
     setCards(getCreativeCards());
@@ -101,7 +131,38 @@ export default function CreativeCardsPage() {
     (classId) => loadStudentOptions(user, { classId }),
     [user],
   );
-  const albumImages = useMemo(() => INITIAL_PHOTOS.filter((item) => item.imageUrl && item.type !== 'video'), []);
+
+  useEffect(() => {
+    let active = true;
+    setAlbumPhotosLoading(true);
+    setAlbumPhotosError('');
+
+    (async () => {
+      try {
+        const config = await getPhotoStudioConfig();
+        if (!config?.configured) {
+          if (active) setAlbumImages([]);
+          return;
+        }
+        const data = await listPhotoStudioImages({ page: 0, size: 60 });
+        const photos = (data?.images || [])
+          .filter((image) => image && !isVideoPhoto(image))
+          .map(toCardAlbumPhoto)
+          .filter(Boolean);
+        if (active) setAlbumImages(photos);
+      } catch (error) {
+        if (!active) return;
+        setAlbumImages([]);
+        setAlbumPhotosError(error?.message || 'Unable to load school photos.');
+      } finally {
+        if (active) setAlbumPhotosLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   const earnedAchievements = creativeData.achievements.filter((achievement) => Number(statistics[achievement.metric] || 0) >= achievement.threshold).length;
   const dashboardStats = {
     ...statistics,
@@ -143,7 +204,7 @@ export default function CreativeCardsPage() {
 
         {mode === 'dashboard' && <CreativeCardsDashboard recentCards={recentCards} stats={dashboardStats} onCreate={() => go('/creative-cards/templates')} onBrowseTemplates={(categoryId) => go('/creative-cards/templates', categoryId ? { categoryId } : undefined)} onOpenCard={viewCard} onOpenSaved={() => go('/creative-cards/my-cards')} onSelectTemplate={chooseTemplate} />}
         {mode === 'templates' && <TemplateGallery initialCategory={location.state?.categoryId} albumImages={albumImages} favoriteIds={favoriteTemplateIds} onSelect={chooseTemplate} onFavorite={handleFavorite} onCreateBlank={() => chooseTemplate(creativeData.templates[0])} />}
-        {mode === 'create' && <CardEditor template={selectedTemplate} initialCard={location.state?.card ? { ...location.state.card, schoolName: location.state.card.schoolName || schoolName } : { senderName, schoolName, photoUrl: albumImages[0]?.imageUrl || '' }} classes={classes} loadStudents={loadClassStudents} albumImages={albumImages} onBack={() => go('/creative-cards/templates')} onSaved={handleSaved} onDownload={() => toast('Your PNG card has been downloaded!', 'success')} />}
+        {mode === 'create' && <CardEditor template={selectedTemplate} initialCard={location.state?.card ? { ...location.state.card, schoolName: location.state.card.schoolName || schoolName } : { senderName, schoolName }} classes={classes} loadStudents={loadClassStudents} albumImages={albumImages} albumPhotosLoading={albumPhotosLoading} albumPhotosError={albumPhotosError} onBack={() => go('/creative-cards/templates')} onSaved={handleSaved} onDownload={() => toast('Your PNG card has been downloaded!', 'success')} />}
         {mode === 'saved' && <SavedCards cards={recentCards} onCreate={() => go('/creative-cards/templates')} onEdit={editCard} onDownload={viewCard} onCardsChange={refresh} />}
         {mode === 'view' && <CardViewer card={editingCard} onBack={() => go('/creative-cards/my-cards')} onEdit={editCard} />}
         <CelebrationAnimation show={celebrating} />

@@ -21,6 +21,58 @@ const TABS = [
 // Shared constant so an omitted `students` prop keeps a stable identity across renders.
 const EMPTY_STUDENTS = [];
 
+function PhotosPicker({ albumImages, loading, error, value, onChange }) {
+  return (
+    <section aria-labelledby="cc-album-photos">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h3 id="cc-album-photos" className="font-black text-slate-900">School photos</h3>
+          <p className="text-xs font-semibold text-slate-500">Pick a photo from Photo Sharing</p>
+        </div>
+        {value && (
+          <button type="button" onClick={() => onChange('')} className="text-xs font-black text-rose-600">
+            Remove
+          </button>
+        )}
+      </div>
+      {loading && (
+        <p className="rounded-xl bg-violet-50 p-3 text-sm font-semibold text-violet-800">Loading school photos…</p>
+      )}
+      {error && (
+        <p className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>
+      )}
+      {!loading && (
+        <div className="grid grid-cols-2 gap-2">
+          {albumImages.map((photo, index) => {
+            const url = typeof photo === 'string' ? photo : (photo.imageUrl || photo.url);
+            return (
+              <button
+                key={photo.id || url || index}
+                type="button"
+                onClick={() => onChange(url)}
+                aria-pressed={value === url}
+                className={`overflow-hidden rounded-xl border-2 bg-slate-100 p-1 ${value === url ? 'border-violet-500 ring-2 ring-violet-100' : 'border-transparent'}`}
+              >
+                <img
+                  src={url}
+                  alt={photo.title || `School photo ${index + 1}`}
+                  crossOrigin="anonymous"
+                  className="aspect-[4/3] w-full rounded-lg object-cover"
+                />
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {!loading && !error && !albumImages.length && (
+        <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+          No school photos yet. Upload some in Photo Sharing first.
+        </p>
+      )}
+    </section>
+  );
+}
+
 const toStudentOptions = (options) => {
   const list = (options || []).map((option) => ({
     id: option.id || option.value,
@@ -65,6 +117,8 @@ export default function CardEditor({
   students = EMPTY_STUDENTS,
   loadStudents,
   albumImages = [],
+  albumPhotosLoading = false,
+  albumPhotosError = '',
   onBack,
   onSaved,
   onDownload,
@@ -217,7 +271,7 @@ export default function CardEditor({
           <div className="mb-5 grid grid-cols-2 gap-1.5 rounded-2xl bg-slate-100 p-1.5" role="tablist" aria-label="Card editing tools">
             {TABS.map(({ id, label, icon: Icon }) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-bold ${tab === id ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}><Icon size={15} />{label}</button>)}
           </div>
-          <div role="tabpanel">{tab === 'message' && <MessagePicker messages={messages.filter((item) => !template.categoryId || item.categoryId === template.categoryId)} value={card.message} onChange={(value) => update('message', value)} />}{tab === 'style' && <div className="grid gap-6"><ThemePicker value={card.theme} onChange={(id, theme) => setCard((current) => ({ ...current, theme: id, themeId: id, colors: theme.colors || theme.palette || [theme.primaryColor, theme.secondaryColor].filter(Boolean), font: theme.fontId || current.font }))} /><label className="text-sm font-bold text-slate-700">Background<select value={card.background} onChange={(event) => update('background', event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal"><option value="">Template background</option>{data.backgrounds.map((item) => <option key={item.id} value={item.value}>{item.name}</option>)}</select></label><ColorPicker value={card.textColor} onChange={(value) => update('textColor', value)} /><FontPicker value={card.font} onChange={(value) => update('font', value)} /><label className="text-sm font-bold text-slate-700">Message size <output>{card.fontSize}px</output><input type="range" min="12" max="28" value={card.fontSize} onChange={(event) => update('fontSize', Number(event.target.value))} className="mt-2 w-full accent-violet-600" /></label><fieldset><legend className="mb-2 text-sm font-bold text-slate-700">Text alignment</legend><div className="grid grid-cols-3 gap-2">{['left', 'center', 'right'].map((value) => <button key={value} type="button" onClick={() => update('alignment', value)} aria-pressed={card.alignment === value} className={`rounded-xl border px-2 py-2 text-xs font-bold capitalize ${card.alignment === value ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-200'}`}>{value}</button>)}</div></fieldset></div>}{tab === 'stickers' && <StickerPicker value={card.stickers} onChange={(value) => update('stickers', value)} />}{tab === 'photos' && <section aria-labelledby="cc-album-photos"><div className="mb-3 flex items-center justify-between"><div><h3 id="cc-album-photos" className="font-black text-slate-900">Class album photos</h3><p className="text-xs font-semibold text-slate-500">Add a happy school memory</p></div>{card.photoUrl && <button type="button" onClick={() => update('photoUrl', '')} className="text-xs font-black text-rose-600">Remove</button>}</div><div className="grid grid-cols-2 gap-2">{albumImages.map((photo, index) => { const url = typeof photo === 'string' ? photo : (photo.imageUrl || photo.url); return <button key={photo.id || url || index} type="button" onClick={() => update('photoUrl', url)} aria-pressed={card.photoUrl === url} className={`overflow-hidden rounded-xl border-2 bg-slate-100 p-1 ${card.photoUrl === url ? 'border-violet-500 ring-2 ring-violet-100' : 'border-transparent'}`}><img src={url} alt={photo.title || `Album memory ${index + 1}`} crossOrigin="anonymous" className="aspect-[4/3] w-full rounded-lg object-cover" /></button>; })}</div>{!albumImages.length && <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">No album photos are available yet.</p>}</section>}</div>
+          <div role="tabpanel">{tab === 'message' && <MessagePicker messages={messages.filter((item) => !template.categoryId || item.categoryId === template.categoryId)} value={card.message} onChange={(value) => update('message', value)} />}{tab === 'style' && <div className="grid gap-6"><ThemePicker value={card.theme} onChange={(id, theme) => setCard((current) => ({ ...current, theme: id, themeId: id, colors: theme.colors || theme.palette || [theme.primaryColor, theme.secondaryColor].filter(Boolean), font: theme.fontId || current.font }))} /><label className="text-sm font-bold text-slate-700">Background<select value={card.background} onChange={(event) => update('background', event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-normal"><option value="">Template background</option>{data.backgrounds.map((item) => <option key={item.id} value={item.value}>{item.name}</option>)}</select></label><ColorPicker value={card.textColor} onChange={(value) => update('textColor', value)} /><FontPicker value={card.font} onChange={(value) => update('font', value)} /><label className="text-sm font-bold text-slate-700">Message size <output>{card.fontSize}px</output><input type="range" min="12" max="28" value={card.fontSize} onChange={(event) => update('fontSize', Number(event.target.value))} className="mt-2 w-full accent-violet-600" /></label><fieldset><legend className="mb-2 text-sm font-bold text-slate-700">Text alignment</legend><div className="grid grid-cols-3 gap-2">{['left', 'center', 'right'].map((value) => <button key={value} type="button" onClick={() => update('alignment', value)} aria-pressed={card.alignment === value} className={`rounded-xl border px-2 py-2 text-xs font-bold capitalize ${card.alignment === value ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-200'}`}>{value}</button>)}</div></fieldset></div>}{tab === 'stickers' && <StickerPicker value={card.stickers} onChange={(value) => update('stickers', value)} />}{tab === 'photos' && <PhotosPicker albumImages={albumImages} loading={albumPhotosLoading} error={albumPhotosError} value={card.photoUrl} onChange={(url) => update('photoUrl', url)} />}</div>
         </aside>
       </div>
       <ConfirmDialog open={confirmReset} title="Reset your card?" description="All unsaved edits will return to their original values." confirmLabel="Reset card" destructive onCancel={() => setConfirmReset(false)} onConfirm={() => { setCard(baseline); setErrors({}); setConfirmReset(false); onNavigate?.('reset'); }} />
