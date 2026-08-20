@@ -46,25 +46,74 @@ export function TenantProvider({ children }) {
     }
 
     if (!isApiEnabled()) {
-      setSchool(getSchoolBySlug(effectiveSlug));
+      setSchool(getSchoolBySlug(effectiveSlug) || {
+        id: `school-${effectiveSlug}`,
+        slug: effectiveSlug,
+        name: effectiveSlug,
+        status: 'active',
+      });
       setSchoolResolving(false);
       return undefined;
     }
 
     let cancelled = false;
+    // Unblock public routes (enrollment form, landing) immediately with a provisional school
+    // while portal config resolves — otherwise guests sit on "Loading workspace…".
+    setSchool((prev) => (
+      prev?.slug === effectiveSlug
+        ? prev
+        : {
+          id: provisionalSchoolId(effectiveSlug) || `school-${effectiveSlug}`,
+          slug: effectiveSlug,
+          name: effectiveSlug,
+          status: 'resolving',
+        }
+    ));
     setSchoolResolving(true);
+
+    const unlockTimer = window.setTimeout(() => {
+      if (!cancelled) setSchoolResolving(false);
+    }, 10_000);
+
     resolveSchoolBySlug(effectiveSlug)
       .then((resolved) => {
-        if (!cancelled) setSchool(resolved);
+        if (cancelled) return;
+        if (resolved?.id) {
+          setSchool(resolved);
+          return;
+        }
+        // Keep provisional tenant so guests can still open public enrollment.
+        setSchool((prev) => prev?.slug === effectiveSlug
+          ? { ...prev, status: 'active' }
+          : {
+            id: provisionalSchoolId(effectiveSlug) || `school-${effectiveSlug}`,
+            slug: effectiveSlug,
+            name: effectiveSlug,
+            status: 'active',
+          });
       })
       .catch((err) => {
-        if (!cancelled && !isTransientApiError(err)) setSchool(null);
+        if (cancelled) return;
+        if (isTransientApiError(err)) return;
+        // Portal config may fail; still allow public routes for this tenant slug.
+        setSchool((prev) => prev?.slug === effectiveSlug
+          ? { ...prev, status: 'active' }
+          : {
+            id: provisionalSchoolId(effectiveSlug) || `school-${effectiveSlug}`,
+            slug: effectiveSlug,
+            name: effectiveSlug,
+            status: 'active',
+          });
       })
       .finally(() => {
+        window.clearTimeout(unlockTimer);
         if (!cancelled) setSchoolResolving(false);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(unlockTimer);
+    };
   }, [effectiveSlug]);
 
   const value = useMemo(() => {

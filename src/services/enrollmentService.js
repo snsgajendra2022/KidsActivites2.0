@@ -151,9 +151,11 @@ export async function saveDraft(formData, existingId, meta = {}) {
     },
     apiFn: () => {
       const payload = sanitizeEnrollmentPayload({ ...formData, ...meta });
+      // Public guest enrollment — no login required (backend: Public or Parent).
+      const opts = getAccessToken() ? {} : { auth: false };
       return existingId
-        ? api.put(`/enrollment/draft/${existingId}`, payload)
-        : api.post('/enrollment/draft', payload);
+        ? api.put(`/enrollment/draft/${existingId}`, payload, opts)
+        : api.post('/enrollment/draft', payload, opts);
     },
   });
 }
@@ -187,12 +189,16 @@ export async function submitApplication(formData, existingId, parentId, schoolId
       saveAll(apps);
       return entry;
     },
-    apiFn: () => api.post('/enrollment/submit', sanitizeEnrollmentPayload({
-      applicationId: existingId,
-      parentId,
-      schoolId,
-      ...formData,
-    })),
+    apiFn: () => api.post(
+      '/enrollment/submit',
+      sanitizeEnrollmentPayload({
+        applicationId: existingId,
+        parentId,
+        schoolId,
+        ...formData,
+      }),
+      getAccessToken() ? {} : { auth: false },
+    ),
   });
 }
 
@@ -934,9 +940,9 @@ export async function getAdminDashboard(recentLimit = 5) {
 }
 
 /**
- * Email the public enrollment form link to a parent.
- * Backend: POST /admin/enrollment/share-form { parentEmail, formUrl, schoolName, message? }
- * Falls back to mock when the API is not ready (404/405/501).
+ * Email the public (no-login) enrollment form link to a parent.
+ * Backend: POST /admin/enrollment/share-form
+ * Body: { parentEmail, formUrl, schoolName, message? }
  */
 export async function shareEnrollmentFormInvite({
   parentEmail,
@@ -952,6 +958,15 @@ export async function shareEnrollmentFormInvite({
     throw new Error('Enrollment form link is missing.');
   }
 
+  const payload = {
+    parentEmail: email,
+    email,
+    formUrl,
+    link: formUrl,
+    schoolName: schoolName || null,
+    message: message || `Please complete the enrollment form: ${formUrl}`,
+  };
+
   return routeRequest({
     mockFn: async () => {
       await delay(200);
@@ -959,26 +974,30 @@ export async function shareEnrollmentFormInvite({
         emailSent: true,
         parentEmail: email,
         formUrl,
-        message: message || null,
+        message: payload.message,
       };
     },
     apiFn: async () => {
       try {
-        return await api.post('/admin/enrollment/share-form', {
-          parentEmail: email,
-          formUrl,
-          schoolName: schoolName || null,
-          message: message || null,
-        });
+        return await api.post('/admin/enrollment/share-form', payload);
       } catch (err) {
         const status = Number(err?.status || 0);
         if (status === 404 || status === 405 || status === 501) {
-          return {
-            emailSent: true,
-            parentEmail: email,
-            formUrl,
-            queuedLocally: true,
-          };
+          // Alternate path some backends use
+          try {
+            return await api.post('/admin/enrollment/invite', payload);
+          } catch (altErr) {
+            const altStatus = Number(altErr?.status || 0);
+            if (altStatus === 404 || altStatus === 405 || altStatus === 501) {
+              return {
+                emailSent: false,
+                parentEmail: email,
+                formUrl,
+                queuedLocally: true,
+              };
+            }
+            throw altErr;
+          }
         }
         throw err;
       }

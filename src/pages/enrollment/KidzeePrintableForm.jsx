@@ -101,34 +101,53 @@ export default function KidzeePrintableForm({
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
-      toast('Enrollment form link copied.', 'success');
+      toast('Public enrollment link copied (no login required).', 'success');
     } catch {
       toast('Could not copy link. Select and copy it manually.', 'error');
     }
   };
 
   const sendShareEmail = async () => {
+    const email = String(shareEmail || '').trim();
+    if (!email || !email.includes('@')) {
+      toast('Enter a valid parent email address.', 'error');
+      return;
+    }
+    if (!shareUrl) {
+      toast('Enrollment form link is missing.', 'error');
+      return;
+    }
+
     setSharing(true);
     try {
       const result = await shareEnrollmentFormInvite({
-        parentEmail: shareEmail,
+        parentEmail: email,
         formUrl: shareUrl,
         schoolName: branding.brandName,
-        message: `Please complete the ${branding.brandName} enrollment form using this link.`,
+        message: [
+          `Hello,`,
+          ``,
+          `Please complete the ${branding.brandName || 'school'} enrollment form using this link (no login required):`,
+          shareUrl,
+          ``,
+          `Thank you.`,
+        ].join('\n'),
       });
+
       if (result?.queuedLocally) {
-        const subject = encodeURIComponent(`${branding.brandName} enrollment form`);
+        const subject = encodeURIComponent(`${branding.brandName || 'School'} enrollment form`);
         const body = encodeURIComponent(
-          `Hello,\n\nPlease fill the enrollment form for ${branding.brandName}:\n${shareUrl}\n\nThank you.`,
+          `Hello,\n\nPlease fill the enrollment form for ${branding.brandName || 'our school'} (no login needed):\n${shareUrl}\n\nThank you.`,
         );
-        window.location.href = `mailto:${encodeURIComponent(shareEmail.trim())}?subject=${subject}&body=${body}`;
-        toast('Opened your email app with the form link. Backend email API is not live yet.', 'success');
+        window.open(`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`, '_blank');
+        toast('Email API not ready yet — opened your mail app with the public form link.', 'warning');
       } else {
-        toast(`Enrollment form link emailed to ${result?.parentEmail || shareEmail}.`, 'success');
+        toast(`Enrollment link emailed to ${result?.parentEmail || email}.`, 'success');
       }
       setShareOpen(false);
+      setShareEmail('');
     } catch (err) {
-      toast(err?.message || 'Could not share the form link.', 'error');
+      toast(err?.message || 'Could not send the form link.', 'error');
     } finally {
       setSharing(false);
     }
@@ -210,6 +229,11 @@ export default function KidzeePrintableForm({
     if (busy) return;
     setDownloading(true);
     try {
+      // Guests (no login): print locally — PDF capture needs a saved draft id.
+      if (!draftId && !parentId && !isAdmin) {
+        window.print();
+        return;
+      }
       let appId = draftId;
       if (!appId) {
         appId = await ensureDraftSaved();
@@ -350,7 +374,10 @@ export default function KidzeePrintableForm({
 
       {isAdmin && shareOpen && !printOnly ? (
         <div className="print-share-panel no-print" role="region" aria-label="Share enrollment form">
-          <p className="print-share-panel__title">Send this school&apos;s enrollment form to a parent</p>
+          <p className="print-share-panel__title">Email the public enrollment link to a parent</p>
+          <p className="print-share-panel__hint">
+            Parents open this link without logging in, fill the form, and submit.
+          </p>
           <p className="print-share-panel__link">{shareUrl}</p>
           <div className="print-share-panel__row">
             <input
@@ -359,6 +386,12 @@ export default function KidzeePrintableForm({
               onChange={(e) => setShareEmail(e.target.value)}
               placeholder="parent@email.com"
               aria-label="Parent email"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void sendShareEmail();
+                }
+              }}
             />
             <Button type="button" variant="secondary" onClick={() => void copyShareLink()}>
               <Copy size={14} aria-hidden />
@@ -366,7 +399,7 @@ export default function KidzeePrintableForm({
             </Button>
             <Button type="button" variant="primary" loading={sharing} onClick={() => void sendShareEmail()}>
               <Mail size={14} aria-hidden />
-              Email link
+              Send email
             </Button>
           </div>
         </div>

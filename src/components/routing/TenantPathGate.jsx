@@ -10,7 +10,9 @@ export default function TenantPathGate({ children }) {
     return children;
   }
 
-  if (schoolResolving) {
+  // Provisional school is set immediately for tenant slugs, so public enrollment
+  // is not stuck on "Loading workspace…". Only wait when we have nothing yet.
+  if (schoolResolving && !school) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
         Loading workspace…

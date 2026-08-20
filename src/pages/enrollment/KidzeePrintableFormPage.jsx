@@ -68,8 +68,8 @@ export default function KidzeePrintableFormPage() {
       };
     }
     return {
-      href: tenantPath('/login'),
-      label: 'Back',
+      href: tenantPath('/'),
+      label: 'Back to school',
     };
   }, [applicationId, isAdmin, user?.role, tenantPath]);
 

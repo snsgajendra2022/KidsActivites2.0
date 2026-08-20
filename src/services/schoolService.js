@@ -95,14 +95,27 @@ export async function getSchoolBySlugApi(slug) {
         };
       }
 
-      // Always resolve against the requested slug (not whatever the current URL is).
-      const config = await fetchPortalConfigRaw(normalized);
-      const school = config?.school;
-      if (!school?.id) throw new Error('School not found');
+      try {
+        // Always resolve against the requested slug (not whatever the current URL is).
+        const config = await fetchPortalConfigRaw(normalized);
+        const school = config?.school;
+        if (school?.id) {
+          return {
+            ...school,
+            slug: normalized,
+            status: school.status || 'active',
+          };
+        }
+      } catch (err) {
+        // Fall through to provisional school so public enrollment stays reachable.
+        console.warn('[school] Portal config resolve failed for', normalized, err?.message);
+      }
+
       return {
-        ...school,
+        id: `school-${normalized}`,
         slug: normalized,
-        status: school.status || 'active',
+        name: normalized,
+        status: 'active',
       };
     },
   });
