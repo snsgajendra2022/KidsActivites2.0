@@ -323,7 +323,7 @@ export default function Landing() {
       <EditorialTimeline
         title="Why Programs Choose Kids Activities"
         subtitle="A complete platform for admissions, photo albums, fees, documents, dashboards, and parent communication."
-        steps={TIMELINE_STEPS}
+        steps={PLATFORM_TIMELINE_STEPS}
       />
 
       <section className="sb-editorial-section sb-editorial-section--white">
@@ -456,7 +456,7 @@ export default function Landing() {
         }}
       />
 
-      <EditorialFooter compact />
+      {/* <EditorialFooter compact /> */}
     </PublicLayout>
   );
 }
