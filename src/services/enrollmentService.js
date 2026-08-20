@@ -100,7 +100,15 @@ export async function getApplicationByParent(parentId) {
       if (!apps.length) return null;
       return apps.sort((a, b) => new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0))[0];
     },
-    apiFn: () => api.get('/enrollment/my-application'),
+    apiFn: async () => {
+      try {
+        return await api.get('/enrollment/my-application');
+      } catch (err) {
+        // Parents/admins with no application used to get success+null (broken FE).
+        if (err?.status === 404 || err?.code === 'NOT_FOUND') return null;
+        throw err;
+      }
+    },
   });
 }
 

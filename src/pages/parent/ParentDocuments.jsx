@@ -20,7 +20,9 @@ export default function ParentDocuments() {
   const { user } = useAuth();
   const [app, setApp] = useState(null);
 
-  useEffect(() => { getApplicationByParent(user.id).then(setApp); }, [user.id]);
+  useEffect(() => {
+    getApplicationByParent(user.id).then(setApp).catch(() => setApp(null));
+  }, [user.id]);
 
   const documents = app?.documents
     ? Object.entries(app.documents).map(([key, doc]) => ({ key, doc }))
@@ -31,17 +33,26 @@ export default function ParentDocuments() {
       label: 'Document',
       primary: true,
       render: (row) => (
-        <div>
-          <span className="capitalize">{formatDocKey(row.key)}</span>
-          {row.doc?.status === 'rejected' && row.doc?.rejectReason && (
-            <p className="mt-1 text-xs text-[#b42318]">{row.doc.rejectReason}</p>
-          )}
+        <div className="flex items-center gap-3">
+          {(row.doc?.previewUrl || row.doc?.dataUrl) && String(row.doc.previewUrl || row.doc.dataUrl).startsWith('data:image') ? (
+            <img
+              src={row.doc.previewUrl || row.doc.dataUrl}
+              alt=""
+              className="h-10 w-10 rounded object-cover border border-[#e5e7eb]"
+            />
+          ) : null}
+          <div>
+            <span className="capitalize">{formatDocKey(row.key)}</span>
+            {row.doc?.status === 'rejected' && row.doc?.rejectReason && (
+              <p className="mt-1 text-xs text-[#b42318]">{row.doc.rejectReason}</p>
+            )}
+          </div>
         </div>
       ),
     },
     {
       label: 'File',
-      render: (row) => row.doc?.name,
+      render: (row) => row.doc?.name || row.doc?.fileName || '—',
     },
     {
       label: 'Status',
