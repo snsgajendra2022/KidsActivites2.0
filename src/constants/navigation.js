@@ -1,6 +1,6 @@
 import {
   Award, Banknote, BarChart3, Bell, BookMarked, BookOpen, Bot, Briefcase, Building2,
-  Bus, CalendarClock, CalendarOff, CircleDollarSign, ClipboardCheck, ClipboardList,
+  Bus, Calendar, CalendarClock, CalendarOff, CircleDollarSign, ClipboardCheck, ClipboardList,
   Contact, CreditCard, FileBadge, FileInput, FileText, FolderOpen, GraduationCap,
   History, Home, IdCard, Image, Images, Landmark, Layers, LayoutGrid, Library, ListChecks,
   LogOut, MapPinned, Megaphone, MessageCircle, MonitorPlay, MoreHorizontal, Package,
@@ -17,6 +17,7 @@ import { ROLES } from './roles.js';
 export const NAV_SECTION_ICONS = {
   // Canonical short titles (local / mock nav)
   School: School,
+  Calendar: Calendar,
   Classroom: BookOpen,
   Transport: Bus,
   Finance: Wallet,
@@ -95,6 +96,9 @@ const ADMIN_CORE_NAV = [
   { id: 'admin_attendance', to: '/admin/attendance', label: 'Attendance', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'School' },
   { id: 'admin_attendance_advanced', to: '/admin/attendance-advanced', label: 'Advanced Attendance', icon: ClipboardList, iconName: 'ClipboardList', section: 'School' },
   { id: 'admin_leave', to: '/admin/leave', label: 'Leave Approvals', icon: CalendarOff, iconName: 'CalendarOff', section: 'School' },
+  { id: 'admin_calendar', to: '/admin/calendar', label: 'School Calendar', icon: Calendar, iconName: 'Calendar', section: 'Calendar' },
+  { id: 'admin_calendar_holidays', to: '/admin/calendar/holidays', label: 'Holidays', icon: CalendarOff, iconName: 'CalendarOff', section: 'Calendar' },
+  { id: 'admin_calendar_emergencies', to: '/admin/calendar/emergencies', label: 'Emergency Closures', icon: Bell, iconName: 'Bell', section: 'Calendar' },
   { id: 'admin_library_books', to: '/admin/library/books', label: 'Library Books', icon: Library, iconName: 'Library', section: 'School' },
   { id: 'admin_library_issues', to: '/admin/library/issues', label: 'Library Issues', icon: BookMarked, iconName: 'BookMarked', section: 'School' },
   { id: 'admin_inventory', to: '/admin/inventory', label: 'Inventory', icon: Package, iconName: 'Package', section: 'School' },
@@ -194,6 +198,7 @@ export const PARENT_NAV = [
   { id: 'parent_fees', to: '/parent/fees', label: 'Fees', icon: CreditCard, iconName: 'CreditCard', section: 'Family' },
   { id: 'parent_messages', to: '/parent/messages', label: 'Messages', icon: MessageCircle, iconName: 'MessageCircle', section: 'Family' },
   { id: 'parent_notice_board', to: '/parent/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Family' },
+  { id: 'parent_calendar', to: '/parent/calendar', label: 'Family Calendar', icon: Calendar, iconName: 'Calendar', section: 'Family' },
   { id: 'parent_notifications', to: '/parent/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell', section: 'Family' },
   { id: 'parent_attendance', to: '/parent/attendance', label: 'Attendance', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'School' },
   { id: 'parent_homework', to: '/parent/homework', label: 'Homework', icon: BookOpen, iconName: 'BookOpen', section: 'School' },
@@ -219,6 +224,7 @@ export const TEACHER_NAV = [
   { id: 'teacher_marks', to: '/teacher/marks', label: 'Enter Marks', icon: PenLine, iconName: 'PenLine', section: 'Classroom' },
   { id: 'teacher_notes', to: '/teacher/notes', label: 'Performance Notes', icon: ScrollText, iconName: 'ScrollText', section: 'Classroom' },
   { id: 'teacher_timetable', to: '/teacher/timetable', label: 'My Timetable', icon: CalendarClock, iconName: 'CalendarClock', section: 'Classroom' },
+  { id: 'teacher_calendar', to: '/teacher/calendar', label: 'My Calendar', icon: Calendar, iconName: 'Calendar', section: 'Classroom' },
   { id: 'teacher_lms', to: '/teacher/lms', label: 'Digital Classroom', icon: MonitorPlay, iconName: 'MonitorPlay', section: 'Classroom' },
   { id: 'teacher_lms_enrollments', to: '/teacher/lms/enrollments', label: 'Learner Progress', icon: BarChart3, iconName: 'BarChart3', section: 'Classroom' },
   { id: 'teacher_lms_certificates', to: '/teacher/lms/certificates', label: 'Course Certificates', icon: Award, iconName: 'Award', section: 'Classroom' },
@@ -239,6 +245,7 @@ export const ACCOUNTANT_NAV = [
   { id: 'admin_reports', to: '/admin/reports', label: 'Reports', icon: BarChart3, iconName: 'BarChart3', section: 'Finance' },
   { id: 'admin_reports_hub', to: '/admin/reports-hub', label: 'Reports Hub', icon: PieChart, iconName: 'PieChart', section: 'Finance' },
   { id: 'admin_notice_board', to: '/admin/notice-board', label: 'Notice Board', icon: Megaphone, iconName: 'Megaphone', section: 'Communication' },
+  { id: 'admin_calendar', to: '/admin/calendar', label: 'School Calendar', icon: Calendar, iconName: 'Calendar', section: 'Calendar' },
   { id: 'admin_notifications', to: '/admin/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell', section: 'Communication' },
 ];
 
@@ -256,6 +263,7 @@ export const NAV_BY_ROLE = {
   [ROLES.TEACHER]: TEACHER_NAV,
   [ROLES.DRIVER]: [
     { id: 'driver_trip', to: '/driver/trip', label: 'My trip', icon: Bus, iconName: 'Bus', section: 'Transport' },
+    { id: 'driver_calendar', to: '/driver/calendar', label: 'Transport Calendar', icon: Calendar, iconName: 'Calendar', section: 'Transport' },
   ],
   [ROLES.PARENT]: PARENT_NAV,
   [ROLES.STUDENT]: PARENT_NAV,

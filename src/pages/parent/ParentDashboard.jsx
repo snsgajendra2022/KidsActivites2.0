@@ -20,6 +20,7 @@ import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getParentDashboard } from '../../services/parentService.js';
 import { ENROLLMENT_STATUSES } from '../../constants/enrollmentStatuses.js';
 import '../../styles/parent-dashboard.css';
+import UpcomingEventsWidget from '../../components/calendar/UpcomingEventsWidget.jsx';
 
 function countDocsPending(documents) {
   const entries = documents ? Object.values(documents) : [];
@@ -356,6 +357,17 @@ export default function ParentDashboard() {
               </div>
             </>
           )}
+
+          <div className="bento-span-12">
+            <UpcomingEventsWidget
+              role={user?.role}
+              userId={user?.id}
+              classIds={children.map((child) => child.classId).filter(Boolean)}
+              studentIds={children.map((child) => child.studentId || child.student?.id).filter(Boolean)}
+              calendarPath="/parent/calendar"
+              title="Upcoming for your family"
+            />
+          </div>
 
           <div className="bento-span-12">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

@@ -21,5 +21,6 @@
 | [NOTICE_BOARD_TEST_CASES.md](./NOTICE_BOARD_TEST_CASES.md) | Notice test cases |
 | [STUDENT_ATTENDANCE_BACKEND_CONTRACT.md](./STUDENT_ATTENDANCE_BACKEND_CONTRACT.md) | Core attendance sessions |
 | [STUDENT_ATTENDANCE_IMPLEMENTATION_PROMPT.md](./STUDENT_ATTENDANCE_IMPLEMENTATION_PROMPT.md) | Attendance implementation notes |
+| [SCHOOL_CALENDAR_API_CONTRACT.md](./SCHOOL_CALENDAR_API_CONTRACT.md) | School calendar, holidays, emergencies, feed, notifications, attendance/transport hooks |
 
 Existing feature contracts remain in their specialized documents. The new-work contract intentionally excludes legacy APIs.

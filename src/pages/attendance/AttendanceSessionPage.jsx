@@ -19,6 +19,8 @@ import {
   getAttendanceStatuses,
   saveAttendanceSession,
 } from '../../services/attendanceService.js';
+import { getSchoolOperationsForDate } from '../../services/calendarFeedService.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import '../../styles/admin-modules.css';
 
 const MSG = {
@@ -54,6 +56,7 @@ function computeLocalSummary(students) {
 
 export default function AttendanceSessionPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [date, setDate] = useState(searchParams.get('date') || todayISODate());
@@ -71,6 +74,7 @@ export default function AttendanceSessionPage() {
   const [sessionLoading, setSessionLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [holidayImpact, setHolidayImpact] = useState(null);
 
   const { classId, sectionId } = useMemo(() => parseClassKey(classKey), [classKey]);
   const isFinalized = session?.status === 'FINALIZED';
@@ -84,6 +88,18 @@ export default function AttendanceSessionPage() {
     if (parsed.sectionId) params.set('sectionId', parsed.sectionId);
     setSearchParams(params, { replace: true });
   }, [setSearchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSchoolOperationsForDate(date, { role: user?.role, userId: user?.id })
+      .then((impact) => {
+        if (!cancelled) setHolidayImpact(impact);
+      })
+      .catch(() => {
+        if (!cancelled) setHolidayImpact(null);
+      });
+    return () => { cancelled = true; };
+  }, [date, user?.id, user?.role]);
 
   useEffect(() => {
     let cancelled = false;
@@ -298,7 +314,16 @@ export default function AttendanceSessionPage() {
           )}
         </div>
 
-        {!classId || !date ? (
+          {holidayImpact ? (
+            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+              {holidayImpact.title} is on this date
+              {holidayImpact.operations?.studentAttendance === 'holiday' || holidayImpact.operations?.schoolStatus === 'closed'
+                ? '. Do not mark students absent for a school holiday — use Excused if you still need a session record. Historical attendance is not changed.'
+                : '.'}
+            </div>
+          ) : null}
+
+          {!classId || !date ? (
           <EmptyState
             icon={ClipboardCheck}
             title="Get started"

@@ -108,6 +108,13 @@ export function resolveNotificationPath(n, role) {
       if (isAdmin) return '/admin/applications';
       if (isParent) return '/parent/enrollment';
       return null;
+    case 'calendar':
+    case 'emergency':
+      if (isParent) return '/parent/calendar';
+      if (isTeacher) return '/teacher/calendar';
+      if (role === 'driver') return '/driver/calendar';
+      if (isAdmin) return '/admin/calendar';
+      return '/parent/calendar';
     default:
       if (type === 'CHAT_MESSAGE' || type === 'CHAT') {
         const base = messagesRouteForRole(role);

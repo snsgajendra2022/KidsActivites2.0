@@ -110,6 +110,13 @@ import {
   SecurityCenterPage,
   CommunicationCenterPage,
   ManagementReportsHubPage,
+  AdminSchoolCalendarPage,
+  TeacherSchoolCalendarPage,
+  ParentSchoolCalendarPage,
+  DriverSchoolCalendarPage,
+  CalendarEventFormPage,
+  HolidaysPage,
+  EmergencyClosuresPage,
 } from './routes/lazyPages.js';
 
 const CORE_ADMIN = [ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.ADMISSION_OFFICER];
@@ -221,6 +228,11 @@ export default function App() {
         <Route path="admin/notice-board/new" element={<ProtectedRoute allowedRoles={NOTICE_BOARD_ADMIN_ROLES}><AdminNoticeForm /></ProtectedRoute>} />
         <Route path="admin/notice-board/:noticeId/edit" element={<ProtectedRoute allowedRoles={NOTICE_BOARD_ADMIN_ROLES}><AdminNoticeForm /></ProtectedRoute>} />
         <Route path="admin/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={NOTICE_BOARD_ADMIN_ROLES}><AdminNoticeDetail /></ProtectedRoute>} />
+        <Route path="admin/calendar" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ROLES.ACCOUNTANT]}><AdminSchoolCalendarPage /></ProtectedRoute>} />
+        <Route path="admin/calendar/holidays" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><HolidaysPage /></ProtectedRoute>} />
+        <Route path="admin/calendar/emergencies" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><EmergencyClosuresPage /></ProtectedRoute>} />
+        <Route path="admin/calendar/new" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><CalendarEventFormPage /></ProtectedRoute>} />
+        <Route path="admin/calendar/:eventId/edit" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><CalendarEventFormPage /></ProtectedRoute>} />
         <Route path="admin/audit-logs" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminAuditLogs /></ProtectedRoute>} />
         <Route path="admin/portal-settings" element={<ProtectedRoute allowedRoles={PORTAL_SETTINGS_ROLES}><PortalSettings /></ProtectedRoute>} />
         <Route path="admin/users" element={<ProtectedRoute allowedRoles={SUPER_ADMIN_ONLY}><AdminUsers /></ProtectedRoute>} />
@@ -276,6 +288,7 @@ export default function App() {
         <Route path="parent/notice-board" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeBoard /></ProtectedRoute>} />
         <Route path="parent/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeDetail backPath="/parent/notice-board" /></ProtectedRoute>} />
         <Route path="parent/notifications" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><NotificationsPage title="Notifications" subtitle="Your enrollment and school notifications." /></ProtectedRoute>} />
+        <Route path="parent/calendar" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentSchoolCalendarPage /></ProtectedRoute>} />
         <Route path="parent/attendance" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><StudentAttendanceHistory /></ProtectedRoute>} />
         <Route path="parent/homework" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentHomeworkPage /></ProtectedRoute>} />
         <Route path="parent/exams" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ExamMarksPage layout="app" readOnly audience="parent" /></ProtectedRoute>} />
@@ -291,6 +304,7 @@ export default function App() {
 
         {/* Driver — trip GPS is mobile-first; web shows setup guidance */}
         <Route path="driver/trip" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><DriverTripGuidePage /></ProtectedRoute>} />
+        <Route path="driver/calendar" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><DriverSchoolCalendarPage /></ProtectedRoute>} />
 
         {/* Teacher routes */}
         <Route path="teacher/dashboard" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherDashboard /></ProtectedRoute>} />
@@ -301,6 +315,7 @@ export default function App() {
         <Route path="teacher/messages" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ChatPage /></ProtectedRoute>} />
         <Route path="teacher/notice-board" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><MyNoticeBoard basePath="/teacher/notice-board" title="Notice Board" subtitle="Announcements shared with you by the school." /></ProtectedRoute>} />
         <Route path="teacher/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><MyNoticeDetail backPath="/teacher/notice-board" /></ProtectedRoute>} />
+        <Route path="teacher/calendar" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><TeacherSchoolCalendarPage /></ProtectedRoute>} />
         <Route path="teacher/attendance" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><AttendanceSessionPage /></ProtectedRoute>} />
         <Route path="teacher/homework" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><HomeworkPage layout="app" /></ProtectedRoute>} />
         <Route path="teacher/exams" element={<ProtectedRoute allowedRoles={TEACHER_ROLES}><ExamsPage layout="app" /></ProtectedRoute>} />

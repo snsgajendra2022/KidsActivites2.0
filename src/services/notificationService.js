@@ -86,3 +86,22 @@ export function pushNoticeNotification({ userId, noticeId, title }) {
   });
   setStore(KEY, notifs);
 }
+
+export function pushCalendarNotification({ userId, eventId, title, message, kind = 'published', priority = 'normal' }) {
+  const notifs = getAll();
+  const id = `notif-cal-${eventId}-${userId}-${kind}`;
+  if (notifs.some((n) => n.id === id)) return;
+  notifs.unshift({
+    id,
+    userId,
+    eventId,
+    title: kind === 'cancelled' ? `Cancelled: ${title}` : kind === 'updated' ? `Updated: ${title}` : title,
+    message,
+    type: priority === 'emergency' ? 'emergency' : 'calendar',
+    read: false,
+    createdAt: new Date().toISOString(),
+    link: `/parent/calendar`,
+    webRoute: '/parent/calendar',
+  });
+  setStore(KEY, notifs);
+}

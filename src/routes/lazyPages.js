@@ -113,3 +113,11 @@ export const RolesPermissionsPage = lazy(() => import('../pages/modules/RolesPer
 export const SecurityCenterPage = lazy(() => import('../pages/modules/SecurityCenterPage.jsx'));
 export const CommunicationCenterPage = lazy(() => import('../pages/modules/CommunicationCenterPage.jsx'));
 export const ManagementReportsHubPage = lazy(() => import('../pages/modules/ManagementReportsHubPage.jsx'));
+
+export const AdminSchoolCalendarPage = lazyNamed(() => import('../pages/calendar/SchoolCalendarPage.jsx'), 'AdminSchoolCalendarPage');
+export const TeacherSchoolCalendarPage = lazyNamed(() => import('../pages/calendar/SchoolCalendarPage.jsx'), 'TeacherSchoolCalendarPage');
+export const ParentSchoolCalendarPage = lazyNamed(() => import('../pages/calendar/SchoolCalendarPage.jsx'), 'ParentSchoolCalendarPage');
+export const DriverSchoolCalendarPage = lazyNamed(() => import('../pages/calendar/SchoolCalendarPage.jsx'), 'DriverSchoolCalendarPage');
+export const CalendarEventFormPage = lazy(() => import('../pages/calendar/CalendarEventFormPage.jsx'));
+export const HolidaysPage = lazyNamed(() => import('../pages/calendar/CalendarEventsAdminPage.jsx'), 'HolidaysPage');
+export const EmergencyClosuresPage = lazyNamed(() => import('../pages/calendar/CalendarEventsAdminPage.jsx'), 'EmergencyClosuresPage');

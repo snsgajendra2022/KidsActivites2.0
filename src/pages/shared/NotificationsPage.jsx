@@ -21,6 +21,8 @@ const TYPE_CONFIG = {
   photo: { label: 'Photos', icon: Image, filter: 'photo' },
   chat: { label: 'Messages', icon: MessageCircle, filter: 'chat' },
   notice: { label: 'Notices', icon: Megaphone, filter: 'notice' },
+  calendar: { label: 'Calendar', icon: Bell, filter: 'calendar' },
+  emergency: { label: 'Emergency', icon: Bell, filter: 'emergency' },
   system: { label: 'System', icon: Bell, filter: 'system' },
 };
 
@@ -32,6 +34,8 @@ const FILTERS = [
   { id: 'photo', label: 'Photos' },
   { id: 'chat', label: 'Messages' },
   { id: 'notice', label: 'Notices' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'emergency', label: 'Emergency' },
   { id: 'system', label: 'System' },
 ];
 

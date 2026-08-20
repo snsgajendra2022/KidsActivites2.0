@@ -6,6 +6,7 @@ import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import NetworkBanner from './NetworkBanner.jsx';
 import WebPushEnableBanner from '../notifications/WebPushEnableBanner.jsx';
+import EmergencyCalendarBanner from '../calendar/EmergencyCalendarBanner.jsx';
 import '../../styles/notifications.css';
 
 const SIDEBAR_COLLAPSE_KEY = 'ka.sidebar.collapsed';
@@ -84,6 +85,7 @@ export default function AppLayout({ children }) {
         <main className="flex-1 min-w-0 overflow-x-clip overflow-y-auto p-3 sm:p-4 lg:p-6 xl:p-8">
           {/* Post-login: permission prompt / retry when FCM token never landed in localStorage */}
           {user?.id ? <WebPushEnableBanner compact /> : null}
+          {user?.id ? <EmergencyCalendarBanner /> : null}
           {children}
         </main>
       </div>

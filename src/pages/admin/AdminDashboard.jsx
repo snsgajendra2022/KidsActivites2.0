@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenant } from '../../context/TenantContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import LoadingState from '../../components/ui/LoadingState.jsx';
+import UpcomingEventsWidget from '../../components/calendar/UpcomingEventsWidget.jsx';
 
 const RECENT_COLUMNS = [
   { key: 'applicationNo', label: 'Application No.', primary: true },
@@ -98,6 +99,10 @@ export default function AdminDashboard() {
 
           <div className="bento-span-8"><ApplicationsChart data={chartData} /></div>
           <div className="bento-span-4"><FeeChart data={chartData} /></div>
+
+          <div className="bento-span-12">
+            <UpcomingEventsWidget role={user?.role} userId={user?.id} calendarPath="/admin/calendar" title="Upcoming school events" />
+          </div>
 
           <div className="bento-span-12">
             <ResponsiveDataTablePanel

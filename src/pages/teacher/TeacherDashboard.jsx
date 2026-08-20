@@ -8,6 +8,7 @@ import { WelcomeBanner } from '../../components/dashboard/ChartCards.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getTeacherClasses, getTeacherStats } from '../../services/teacherService.js';
+import UpcomingEventsWidget from '../../components/calendar/UpcomingEventsWidget.jsx';
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -96,6 +97,16 @@ export default function TeacherDashboard() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="bento-span-12">
+            <UpcomingEventsWidget
+              role={user?.role}
+              userId={user?.id}
+              classIds={classes.map((item) => item.id || item.classId).filter(Boolean)}
+              calendarPath="/teacher/calendar"
+              title="Today and upcoming"
+            />
           </div>
         </div>
       </PageTransition>
