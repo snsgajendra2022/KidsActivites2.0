@@ -4,7 +4,7 @@ import { GraduationCap, Image, MessageCircle, Users, Send, ArrowRight, BookOpen,
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
-import { WelcomeBanner } from '../../components/dashboard/ChartCards.jsx';
+import WelcomeBanner from '../../components/dashboard/WelcomeBanner.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getTeacherClasses, getTeacherStats } from '../../services/teacherService.js';

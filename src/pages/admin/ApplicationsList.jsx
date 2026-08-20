@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { PageHeader, SearchField } from '../../components/ui/index.jsx';
 import StatusBadge from '../../components/ui/StatusBadge.jsx';
@@ -9,6 +11,7 @@ import {
 } from '../../components/ui/DataTable.jsx';
 import { getApplications } from '../../services/enrollmentService.js';
 import { STATUS_LABELS } from '../../constants/enrollmentStatuses.js';
+import { useTenantPath } from '../../hooks/useTenantPath.js';
 import '../../styles/admin-modules.css';
 
 const APP_COLUMNS = [
@@ -52,6 +55,7 @@ const APP_COLUMNS = [
 ];
 
 export default function ApplicationsList() {
+  const { tenantPath } = useTenantPath();
   const [apps, setApps] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -118,7 +122,19 @@ export default function ApplicationsList() {
 
   return (
     <DashboardLayout>
-      <PageHeader title="Enrollment Applications" subtitle="Review, approve, and manage all enrollment applications." />
+      <PageHeader
+        title="Enrollment Applications"
+        subtitle="Review, approve, and manage all enrollment applications."
+        actions={(
+          <Link
+            to={tenantPath('/admin/enrollment/kidzee-print-form')}
+            className="premium-btn premium-btn-primary premium-btn-sm"
+          >
+            <Plus size={16} aria-hidden />
+            New enrollment form
+          </Link>
+        )}
+      />
 
       <div className="admin-record-toolbar">
         <SearchField

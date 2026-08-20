@@ -7,7 +7,7 @@ import {
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import BentoStatCard from '../../components/dashboard/BentoStatCard.jsx';
-import { WelcomeBanner } from '../../components/dashboard/ChartCards.jsx';
+import WelcomeBanner from '../../components/dashboard/WelcomeBanner.jsx';
 import {
   ResponsiveDataTablePanel,
   DataTableToolbar,

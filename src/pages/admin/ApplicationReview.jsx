@@ -481,7 +481,7 @@ export default function ApplicationReview() {
                   {app.formType === 'kidzee_printable' ? (
                     <>
                       <Link
-                        to={tenantPath(`/enrollment/kidzee-print-form?applicationId=${app.id}`)}
+                        to={tenantPath(`/admin/enrollment/kidzee-print-form?applicationId=${app.id}`)}
                         className="sb-button-secondary text-sm"
                         target="_blank"
                         rel="noopener noreferrer"

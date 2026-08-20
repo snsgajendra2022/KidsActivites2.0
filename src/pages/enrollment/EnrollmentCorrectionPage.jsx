@@ -9,7 +9,7 @@ import {
   submitCorrectionApplication,
 } from '../../services/enrollmentService.js';
 import {
-  KIDZEE_BRANDING,
+  buildEnrollmentFormBranding,
   getEmptyKidzeeFormData,
   mapApplicationToKidzeeForm,
 } from './kidzeePrintFields.js';
@@ -154,7 +154,7 @@ function StepTabs({ step, onChange }) {
 export default function EnrollmentCorrectionPage() {
   const { token } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { branding: portalBranding, enrollmentForm } = usePortalConfig();
+  const { branding: portalBranding, enrollmentForm, portalName, tagline, school, footer, printableFormBranding } = usePortalConfig();
 
   const step = searchParams.get('step') === 'form' ? 'form' : 'documents';
   const setStep = (next) => {
@@ -164,10 +164,14 @@ export default function EnrollmentCorrectionPage() {
     setSearchParams(params, { replace: true });
   };
 
-  const branding = useMemo(() => ({
-    ...KIDZEE_BRANDING,
-    logoUrl: portalBranding?.logoUrl || KIDZEE_BRANDING.logoUrl,
-  }), [portalBranding?.logoUrl]);
+  const branding = useMemo(() => buildEnrollmentFormBranding({
+    portalName,
+    tagline,
+    school,
+    branding: portalBranding,
+    footer,
+    printableFormBranding,
+  }), [portalName, tagline, school, portalBranding, footer, printableFormBranding]);
 
   const allDocumentFields = useMemo(
     () => getEnrollmentDocumentFields(enrollmentForm),

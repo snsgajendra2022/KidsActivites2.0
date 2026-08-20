@@ -4,7 +4,7 @@ import KidzeePrintableForm from './KidzeePrintableForm.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { getPrintApplication } from '../../services/enrollmentService.js';
 import {
-  KIDZEE_BRANDING,
+  buildEnrollmentFormBranding,
   getEmptyKidzeeFormData,
   mapApplicationToKidzeeForm,
 } from './kidzeePrintFields.js';
@@ -19,14 +19,26 @@ import {
  * Loaded via short-lived print token — no nav, toolbar, or auth required.
  */
 export default function KidzeePrintFormPrintPage() {
-  const { branding: portalBranding, enrollmentForm } = usePortalConfig();
+  const {
+    branding: portalBranding,
+    enrollmentForm,
+    portalName,
+    tagline,
+    school,
+    footer,
+    printableFormBranding,
+  } = usePortalConfig();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
 
-  const branding = useMemo(() => ({
-    ...KIDZEE_BRANDING,
-    logoUrl: portalBranding?.logoUrl || KIDZEE_BRANDING.logoUrl,
-  }), [portalBranding?.logoUrl]);
+  const branding = useMemo(() => buildEnrollmentFormBranding({
+    portalName,
+    tagline,
+    school,
+    branding: portalBranding,
+    footer,
+    printableFormBranding,
+  }), [portalName, tagline, school, portalBranding, footer, printableFormBranding]);
 
   const documentFieldLabels = useMemo(() => {
     const map = {};

@@ -130,6 +130,26 @@ export async function loadCalendarFeed({
   return calendarService.expand(visible, from, to);
 }
 
+/** Dashboard widget: calendar events only (skips exams/homework/notices). */
+export async function loadCalendarUpcomingLight({
+  from,
+  to,
+  role,
+  userId,
+  classIds = [],
+  studentIds = [],
+} = {}) {
+  const managed = await calendarService.list({ from, to }).catch(() => []);
+  const visible = calendarService.visible(managed, {
+    role,
+    userId,
+    classIds,
+    studentIds,
+    canManage: false,
+  });
+  return calendarService.expand(visible, from, to);
+}
+
 export async function loadActiveEmergencyEvents(context = {}) {
   const today = toDateKey(new Date());
   const items = await calendarService.list({ from: today, to: today }).catch(() => []);

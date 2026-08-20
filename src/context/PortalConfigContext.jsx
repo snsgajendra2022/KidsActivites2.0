@@ -22,6 +22,7 @@ import {
 } from '../services/platformConfigService.js';
 import { DEFAULT_PORTAL_CONFIG } from '../data/defaultPortalConfig.js';
 import { DEFAULT_ENROLLMENT_FORM } from '../data/defaultEnrollmentFormConfig.js';
+import { mergePrintableFormBranding } from '../data/defaultPrintableFormBranding.js';
 
 const PortalConfigContext = createContext(null);
 
@@ -352,6 +353,9 @@ export function PortalConfigProvider({ children, user = null }) {
       enrollmentForm: isPlatformEnrollment
         ? (platform?.enrollmentForm || DEFAULT_ENROLLMENT_FORM)
         : config?.enrollmentForm,
+      printableFormBranding: isPlatformEnrollment
+        ? mergePrintableFormBranding(null)
+        : mergePrintableFormBranding(config?.printableFormBranding),
       portalName: isPlatformPublic
         ? normalizeProductBrand(platform?.platformName)
         : normalizeProductBrand(config?.portalName),

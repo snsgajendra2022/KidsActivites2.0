@@ -169,16 +169,21 @@ export function KidzeeHeader({ branding }) {
 
 export function KidzeeHeaderBrand({ branding }) {
   const logoSrc = branding.wordmarkUrl || branding.logoUrl;
-  const tagline = branding.preschoolTagline || 'PRESCHOOL IS';
+  const tagline = branding.preschoolTagline || 'ENROLLMENT FORM';
+  const brandName = branding.brandName || 'School';
 
   return (
     <div className="kz-header__brand">
       <span className="kz-header__tagline">{tagline}</span>
-      <img
-        src={logoSrc}
-        alt={branding.brandName}
-        className="kz-header__logo"
-      />
+      {logoSrc ? (
+        <img
+          src={logoSrc}
+          alt={brandName}
+          className="kz-header__logo"
+        />
+      ) : (
+        <span className="kz-header__name">{brandName}</span>
+      )}
     </div>
   );
 }
@@ -255,13 +260,16 @@ export function SectionBar({ children }) {
   return <div className="kz-section-bar">{children}</div>;
 }
 
-export function TrustedBrandSeal({ className = '' }) {
+export function TrustedBrandSeal({ className = '', branding = null }) {
+  const brandName = branding?.brandName || 'SCHOOL';
+  const arcTop = branding?.sealArcTop || branding?.trustedBrandText || "INDIA'S MOST TRUSTED BRAND";
+  const arcBottom = branding?.sealArcBottom || '★ PRE SCHOOL ★';
   return (
     <svg
       className={`kz-seal ${className}`.trim()}
       viewBox="0 0 100 100"
       role="img"
-      aria-label="India's Most Trusted Brand seal"
+      aria-label={`${brandName} seal`}
     >
       <defs>
         <path id="kz-seal-arc-top" d="M 14,50 A 36,36 0 0 1 86,50" />
@@ -272,16 +280,16 @@ export function TrustedBrandSeal({ className = '' }) {
       <circle className="kz-seal__ring kz-seal__ring--inner" cx="50" cy="50" r="30" />
       <text className="kz-seal__arc kz-seal__arc--top">
         <textPath href="#kz-seal-arc-top" startOffset="50%" textAnchor="middle">
-          {"INDIA'S MOST TRUSTED BRAND"}
+          {arcTop}
         </textPath>
       </text>
       <text className="kz-seal__arc kz-seal__arc--bottom">
         <textPath href="#kz-seal-arc-bottom" startOffset="50%" textAnchor="middle">
-          {"\u2605 PRE SCHOOL \u2605"}
+          {arcBottom}
         </textPath>
       </text>
       <text className="kz-seal__brand" x="50" y="47" textAnchor="middle">
-        KIDZEE
+        {String(brandName).slice(0, 12).toUpperCase()}
       </text>
       <text className="kz-seal__tag" x="50" y="58" textAnchor="middle">
         {"\u2605 \u2605 \u2605"}

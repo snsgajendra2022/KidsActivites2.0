@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Download, Send } from 'lucide-react';
+import { ArrowLeft, Copy, Download, Mail, Send } from 'lucide-react';
 import { useToast } from '../../context/ToastContext.jsx';
 import PortalLogo from '../../components/brand/PortalLogo.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -9,6 +9,7 @@ import {
   submitApplication,
   getAdmissionsStatus,
   downloadKidzeeEnrollmentPdf,
+  shareEnrollmentFormInvite,
 } from '../../services/enrollmentService.js';
 import {
   KIDZEE_BRANDING,
@@ -73,6 +74,7 @@ export default function KidzeePrintableForm({
   correctionNote = '',
   requestedDocuments = [],
   documentFieldLabels = {},
+  parentShareUrl = null,
 }) {
   const showCorrectionBanner = applicationStatus === 'correction_required'
     || Boolean(correctionToken)
@@ -84,8 +86,53 @@ export default function KidzeePrintableForm({
   const busy = submitting || downloading;
   const [currentPage, setCurrentPage] = useState(1);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [sharing, setSharing] = useState(false);
   const printRef = useRef(null);
   const { toast } = useToast();
+  const formTitle = branding.formTitle || `${branding.brandName || 'School'} Enrollment Form`;
+  const shareUrl = parentShareUrl || (typeof window !== 'undefined' ? window.location.href : '');
+
+  const copyShareLink = async () => {
+    if (!shareUrl) {
+      toast('Share link is not available.', 'error');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast('Enrollment form link copied.', 'success');
+    } catch {
+      toast('Could not copy link. Select and copy it manually.', 'error');
+    }
+  };
+
+  const sendShareEmail = async () => {
+    setSharing(true);
+    try {
+      const result = await shareEnrollmentFormInvite({
+        parentEmail: shareEmail,
+        formUrl: shareUrl,
+        schoolName: branding.brandName,
+        message: `Please complete the ${branding.brandName} enrollment form using this link.`,
+      });
+      if (result?.queuedLocally) {
+        const subject = encodeURIComponent(`${branding.brandName} enrollment form`);
+        const body = encodeURIComponent(
+          `Hello,\n\nPlease fill the enrollment form for ${branding.brandName}:\n${shareUrl}\n\nThank you.`,
+        );
+        window.location.href = `mailto:${encodeURIComponent(shareEmail.trim())}?subject=${subject}&body=${body}`;
+        toast('Opened your email app with the form link. Backend email API is not live yet.', 'success');
+      } else {
+        toast(`Enrollment form link emailed to ${result?.parentEmail || shareEmail}.`, 'success');
+      }
+      setShareOpen(false);
+    } catch (err) {
+      toast(err?.message || 'Could not share the form link.', 'error');
+    } finally {
+      setSharing(false);
+    }
+  };
 
   useEffect(() => {
     if (printOnly) return undefined;
@@ -251,7 +298,7 @@ export default function KidzeePrintableForm({
           <PortalLogo size="sm" inverse className="print-toolbar__logo" />
         </div>
         <div className="print-toolbar__titles">
-          <h1 className="print-toolbar__title">Kidzee Enrollment Form</h1>
+          <h1 className="print-toolbar__title">{formTitle}</h1>
           <p className="print-toolbar__subtitle">
             CHILD REGISTRATION FORM
             <span className="print-toolbar__page-badge" aria-live="polite">
@@ -260,6 +307,17 @@ export default function KidzeePrintableForm({
           </p>
         </div>
         <div className="print-toolbar__actions">
+          {isAdmin && !correctionToken ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="sb-button-secondary print-toolbar__btn"
+              onClick={() => setShareOpen((open) => !open)}
+            >
+              <Mail size={16} aria-hidden />
+              Share with parent
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="secondary"
@@ -289,6 +347,30 @@ export default function KidzeePrintableForm({
         </div>
       </div>
       )}
+
+      {isAdmin && shareOpen && !printOnly ? (
+        <div className="print-share-panel no-print" role="region" aria-label="Share enrollment form">
+          <p className="print-share-panel__title">Send this school&apos;s enrollment form to a parent</p>
+          <p className="print-share-panel__link">{shareUrl}</p>
+          <div className="print-share-panel__row">
+            <input
+              type="email"
+              value={shareEmail}
+              onChange={(e) => setShareEmail(e.target.value)}
+              placeholder="parent@email.com"
+              aria-label="Parent email"
+            />
+            <Button type="button" variant="secondary" onClick={() => void copyShareLink()}>
+              <Copy size={14} aria-hidden />
+              Copy link
+            </Button>
+            <Button type="button" variant="primary" loading={sharing} onClick={() => void sendShareEmail()}>
+              <Mail size={14} aria-hidden />
+              Email link
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="kidzee-print-pages" ref={printRef}>
         {showCorrectionBanner && (

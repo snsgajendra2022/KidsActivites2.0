@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, KeyRound, Layout, Menu, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode, Home, PanelBottom, Award } from 'lucide-react';
+import { Image, KeyRound, Layout, Menu, Save, Upload, Mail, Smartphone, Shield, Globe, QrCode, Home, PanelBottom, Award, FileText } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -22,6 +22,7 @@ import FooterSettings from '../../components/admin/FooterSettings.jsx';
 import CourseCertificateSettings from '../../components/admin/CourseCertificateSettings.jsx';
 import { mergeCourseCertificateConfig } from '../../data/defaultCourseCertificateConfig.js';
 import { mergeFooterConfig } from '../../data/defaultFooterConfig.js';
+import { mergePrintableFormBranding } from '../../data/defaultPrintableFormBranding.js';
 import LandingBuilder from '../../landing-builder/admin/LandingBuilder.jsx';
 
 const TABS = [
@@ -31,6 +32,7 @@ const TABS = [
   // Theme Colors — hidden for now; re-enable when tenant theme customization is ready.
   // { id: 'theme', label: 'Theme Colors', icon: Palette, desc: 'Brand & accent colors' },
   { id: 'school', label: 'School Details', icon: Menu, desc: 'Contact information' },
+  { id: 'enrollmentBrand', label: 'Enrollment Form', icon: FileText, desc: 'Print form name & socials' },
   { id: 'footer', label: 'Footer', icon: PanelBottom, desc: 'Contact, socials & links' },
   { id: 'images', label: 'Logo & Images', icon: Image, desc: 'Logos & hero images' },
   { id: 'certificates', label: 'Course Certificates', icon: Award, desc: 'Certificate templates' },
@@ -283,6 +285,7 @@ export default function PortalSettings() {
         loginMethods: { ...config.loginMethods },
         loginScrollLines: [...(config.loginScrollLines || [])],
         enrollmentForm: cloneEnrollmentFormConfig(config.enrollmentForm),
+        printableFormBranding: mergePrintableFormBranding(config.printableFormBranding),
         menuVisibility: JSON.parse(JSON.stringify(config.menuVisibility || {})),
         menuCustomization: { ...(config.menuCustomization || {}) },
         customMenuItems: [...(config.customMenuItems || [])],
@@ -981,6 +984,167 @@ export default function PortalSettings() {
               )
             }
           />
+        )}
+
+        {tab === 'enrollmentBrand' && (
+          <div className="grid gap-5">
+            <p className="text-sm text-[#64748b]">
+              These names appear on the printable enrollment form. Leave blank to use School Details / Portal Identity.
+              Logo comes from Logo &amp; Images.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Brand name (header)"
+                value={form.printableFormBranding?.brandName || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  printableFormBranding: {
+                    ...mergePrintableFormBranding(f.printableFormBranding),
+                    brandName: e.target.value,
+                  },
+                }))}
+                variant="enrollment"
+                helper="e.g. Shri Kids Academy — replaces hard-coded Kidzee"
+              />
+              <Input
+                label="Legal name (declarations)"
+                value={form.printableFormBranding?.legalName || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  printableFormBranding: {
+                    ...mergePrintableFormBranding(f.printableFormBranding),
+                    legalName: e.target.value,
+                  },
+                }))}
+                variant="enrollment"
+              />
+              <Input
+                label="Learn mark (footer letter)"
+                value={form.printableFormBranding?.learnMark || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  printableFormBranding: {
+                    ...mergePrintableFormBranding(f.printableFormBranding),
+                    learnMark: e.target.value,
+                  },
+                }))}
+                variant="enrollment"
+                helper="Single letter shown in the footer badge"
+              />
+              <Input
+                label="Learn subtext"
+                value={form.printableFormBranding?.learnSubtext || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  printableFormBranding: {
+                    ...mergePrintableFormBranding(f.printableFormBranding),
+                    learnSubtext: e.target.value,
+                  },
+                }))}
+                variant="enrollment"
+                helper="e.g. SCHOOL or LEARN"
+              />
+              <Input
+                label="Form number default"
+                value={form.printableFormBranding?.formNoDefault || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  printableFormBranding: {
+                    ...mergePrintableFormBranding(f.printableFormBranding),
+                    formNoDefault: e.target.value,
+                  },
+                }))}
+                variant="enrollment"
+              />
+              <Input
+                label="Alumni label"
+                value={form.printableFormBranding?.alumniLabel || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  printableFormBranding: {
+                    ...mergePrintableFormBranding(f.printableFormBranding),
+                    alumniLabel: e.target.value,
+                  },
+                }))}
+                variant="enrollment"
+                helper="e.g. Shri Alumni (Y/N)"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Facebook handle / URL"
+                value={form.printableFormBranding?.social?.facebook || ''}
+                onChange={(e) => setForm((f) => {
+                  const next = mergePrintableFormBranding(f.printableFormBranding);
+                  return {
+                    ...f,
+                    printableFormBranding: {
+                      ...next,
+                      social: { ...next.social, facebook: e.target.value },
+                    },
+                  };
+                })}
+                variant="enrollment"
+              />
+              <Input
+                label="Instagram handle / URL"
+                value={form.printableFormBranding?.social?.instagram || ''}
+                onChange={(e) => setForm((f) => {
+                  const next = mergePrintableFormBranding(f.printableFormBranding);
+                  return {
+                    ...f,
+                    printableFormBranding: {
+                      ...next,
+                      social: { ...next.social, instagram: e.target.value },
+                    },
+                  };
+                })}
+                variant="enrollment"
+              />
+              <Input
+                label="Website"
+                value={form.printableFormBranding?.social?.website || ''}
+                onChange={(e) => setForm((f) => {
+                  const next = mergePrintableFormBranding(f.printableFormBranding);
+                  return {
+                    ...f,
+                    printableFormBranding: {
+                      ...next,
+                      social: { ...next.social, website: e.target.value },
+                    },
+                  };
+                })}
+                variant="enrollment"
+              />
+            </div>
+            <div className="grid gap-4">
+              <Input
+                label="Form header tagline"
+                value={form.printableFormBranding?.preschoolTagline || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  printableFormBranding: {
+                    ...mergePrintableFormBranding(f.printableFormBranding),
+                    preschoolTagline: e.target.value,
+                  },
+                }))}
+                variant="enrollment"
+                helper="Small text next to the logo (defaults to portal tagline)"
+              />
+              <Input
+                label="Trusted brand / seal text"
+                value={form.printableFormBranding?.trustedBrandText || ''}
+                onChange={(e) => setForm((f) => ({
+                  ...f,
+                  printableFormBranding: {
+                    ...mergePrintableFormBranding(f.printableFormBranding),
+                    trustedBrandText: e.target.value,
+                  },
+                }))}
+                variant="enrollment"
+              />
+            </div>
+          </div>
         )}
 
         {tab === 'footer' && (

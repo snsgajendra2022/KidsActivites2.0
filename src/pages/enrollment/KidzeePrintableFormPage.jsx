@@ -7,7 +7,7 @@ import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { ROLES } from '../../constants/roles.js';
 import { getApplication } from '../../services/enrollmentService.js';
 import {
-  KIDZEE_BRANDING,
+  buildEnrollmentFormBranding,
   getEmptyKidzeeFormData,
   mapApplicationToKidzeeForm,
 } from './kidzeePrintFields.js';
@@ -27,7 +27,16 @@ const ADMIN_ROLES = new Set([
 ]);
 
 export default function KidzeePrintableFormPage() {
-  const { branding: portalBranding, activeSchoolId, enrollmentForm } = usePortalConfig();
+  const {
+    branding: portalBranding,
+    activeSchoolId,
+    enrollmentForm,
+    portalName,
+    tagline,
+    school,
+    footer,
+    printableFormBranding,
+  } = usePortalConfig();
   const documentFieldLabels = useMemo(() => {
     const map = {};
     getEnrollmentDocumentFields(enrollmentForm).forEach((f) => { map[f.key] = f.label; });
@@ -64,10 +73,19 @@ export default function KidzeePrintableFormPage() {
     };
   }, [applicationId, isAdmin, user?.role, tenantPath]);
 
-  const branding = useMemo(() => ({
-    ...KIDZEE_BRANDING,
-    logoUrl: portalBranding?.logoUrl || KIDZEE_BRANDING.logoUrl,
-  }), [portalBranding?.logoUrl]);
+  const branding = useMemo(() => buildEnrollmentFormBranding({
+    portalName,
+    tagline,
+    school,
+    branding: portalBranding,
+    footer,
+    printableFormBranding,
+  }), [portalName, tagline, school, portalBranding, footer, printableFormBranding]);
+
+  const parentShareUrl = useMemo(() => {
+    if (typeof window === 'undefined') return tenantPath('/enrollment/kidzee-print-form');
+    return `${window.location.origin}${tenantPath('/enrollment/kidzee-print-form')}`;
+  }, [tenantPath]);
 
   const emptyForm = useMemo(() => getEmptyKidzeeFormData(branding), [branding]);
   const [loadState, setLoadState] = useState(() => ({
@@ -164,6 +182,7 @@ export default function KidzeePrintableFormPage() {
         correctionNote={loadState.correctionNote}
         requestedDocuments={loadState.requestedDocuments}
         documentFieldLabels={documentFieldLabels}
+        parentShareUrl={isAdmin ? parentShareUrl : null}
       />
     </div>
   );

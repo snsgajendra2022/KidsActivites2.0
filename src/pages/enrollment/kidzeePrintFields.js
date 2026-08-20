@@ -1,22 +1,119 @@
-/** Kidzee printable enrollment form — field definitions, branding, and draft helpers. */
+/** Printable enrollment form — field definitions, branding, and draft helpers. */
+
+import { mergePrintableFormBranding } from '../../data/defaultPrintableFormBranding.js';
 
 export const KIDZEE_DRAFT_KEY = 'kidzee_printable_enrollment_form_draft';
 
+/** Layout-only defaults. Names/logos come from portal `printableFormBranding` + school config. */
 export const KIDZEE_BRANDING = {
-  logoUrl: '/assets/enrollment/kidzee-logo.png',
-  wordmarkUrl: '/assets/enrollment/kidzee-logo.png',
-  preschoolTagline: 'PRESCHOOL IS',
-  brandName: 'KIDZEE',
-  learnMark: 'Z',
-  learnSubtext: 'LEARN',
-  formNoDefault: '001331',
+  logoUrl: null,
+  wordmarkUrl: null,
+  preschoolTagline: 'ENROLLMENT FORM',
+  brandName: 'School',
+  legalName: 'School',
+  learnMark: 'S',
+  learnSubtext: 'SCHOOL',
+  formNoDefault: '000001',
+  alumniLabel: 'School Alumni (Y/N)',
   social: {
-    facebook: 'KidzeeIndia',
-    instagram: 'kidzeeindia',
-    website: 'kidzee.com',
+    facebook: '',
+    instagram: '',
+    website: '',
   },
-  trustedBrandText: "INDIA'S MOST TRUSTED BRAND",
+  trustedBrandText: 'SCHOOL ENROLLMENT',
+  sealArcTop: 'SCHOOL ENROLLMENT',
+  sealArcBottom: '★ ENROLLMENT ★',
 };
+
+function socialHandle(urlOrHandle, fallback = '') {
+  const raw = String(urlOrHandle || '').trim();
+  if (!raw) return fallback;
+  try {
+    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const parsed = new URL(withProtocol);
+    const host = parsed.hostname.replace(/^www\./i, '');
+    const path = parsed.pathname.replace(/^\/+|\/+$/g, '');
+    if (path) return path.replace(/^@/, '').split('/')[0] || host;
+    return host;
+  } catch {
+    return raw.replace(/^@/, '').replace(/^https?:\/\//i, '').split('/')[0] || fallback;
+  }
+}
+
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    const text = String(value ?? '').trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+/**
+ * Build printable-form branding from admin portal config API fields.
+ * Priority: printableFormBranding → school/portal → layout defaults.
+ */
+export function buildEnrollmentFormBranding({
+  portalName,
+  tagline,
+  school,
+  branding,
+  footer,
+  printableFormBranding,
+} = {}) {
+  const pf = mergePrintableFormBranding(printableFormBranding);
+  const schoolName = firstNonEmpty(school?.name, portalName);
+  const displayName = firstNonEmpty(pf.brandName, schoolName, 'School');
+  const legalName = firstNonEmpty(pf.legalName, displayName);
+  const logo = branding?.logoUrl || branding?.logoIconUrl || null;
+  const socialLinks = footer?.socialLinks || {};
+  const websiteRaw = firstNonEmpty(
+    pf.social?.website,
+    socialLinks.website,
+    school?.website,
+    school?.email?.includes('@') ? school.email.split('@')[1] : '',
+  );
+
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'S';
+
+  const compactName = displayName.replace(/\s+/g, '');
+
+  return {
+    ...KIDZEE_BRANDING,
+    brandName: displayName,
+    legalName,
+    preschoolTagline: firstNonEmpty(pf.preschoolTagline, tagline, 'ENROLLMENT FORM'),
+    logoUrl: logo || null,
+    wordmarkUrl: logo || null,
+    learnMark: firstNonEmpty(pf.learnMark, initials.slice(0, 1)),
+    learnSubtext: firstNonEmpty(pf.learnSubtext, 'SCHOOL'),
+    formNoDefault: firstNonEmpty(pf.formNoDefault, KIDZEE_BRANDING.formNoDefault),
+    alumniLabel: firstNonEmpty(pf.alumniLabel, `${displayName} Alumni (Y/N)`),
+    formTitle: `${displayName} Enrollment Form`,
+    trustedBrandText: firstNonEmpty(pf.trustedBrandText, displayName.toUpperCase()),
+    sealArcTop: firstNonEmpty(pf.sealArcTop, pf.trustedBrandText, displayName.toUpperCase()),
+    sealArcBottom: firstNonEmpty(pf.sealArcBottom, '★ ENROLLMENT ★'),
+    social: {
+      facebook: socialHandle(
+        firstNonEmpty(pf.social?.facebook, socialLinks.facebook),
+        compactName,
+      ),
+      instagram: socialHandle(
+        firstNonEmpty(pf.social?.instagram, socialLinks.instagram),
+        compactName.toLowerCase(),
+      ),
+      website: socialHandle(websiteRaw, 'school portal'),
+    },
+    schoolAddress: school?.address || '',
+    schoolPhone: school?.phone || '',
+    schoolEmail: school?.email || '',
+  };
+}
 
 export const CLASS_OPTIONS = [
   { key: 'ptp', label: 'PTP' },

@@ -3,6 +3,7 @@ import { mergeCourseCertificateConfig } from '../data/defaultCourseCertificateCo
 import { mergeFooterConfig } from '../data/defaultFooterConfig.js';
 import { mergeLandingPage } from '../data/defaultLandingPage.js';
 import { DEFAULT_ENROLLMENT_FORM, cloneEnrollmentFormConfig } from '../data/defaultEnrollmentFormConfig.js';
+import { mergePrintableFormBranding } from '../data/defaultPrintableFormBranding.js';
 import { NAV_BY_ROLE } from '../constants/navigation.js';
 import { buildDefaultMenuVisibility } from '../data/defaultPortalConfig.js';
 import { delay, getStore, setStore, removeStore } from './mockApi.js';
@@ -191,6 +192,7 @@ function buildDefaultsForSchool(schoolId, schoolFromApi = null) {
       ]
       : [...DEFAULT_PORTAL_CONFIG.loginScrollLines],
     enrollmentForm: cloneEnrollmentFormConfig(DEFAULT_ENROLLMENT_FORM),
+    printableFormBranding: mergePrintableFormBranding(DEFAULT_PORTAL_CONFIG.printableFormBranding),
     menuVisibility: buildDefaultMenuVisibility(NAV_BY_ROLE),
     menuCustomization: {},
     customMenuItems: [],
@@ -230,6 +232,9 @@ function mergeConfig(stored, schoolId = DEFAULT_SCHOOL_ID, schoolFromApi = null)
     enrollmentForm: stored.enrollmentForm?.steps?.length
       ? cloneEnrollmentFormConfig(stored.enrollmentForm)
       : cloneEnrollmentFormConfig(defaults.enrollmentForm),
+    printableFormBranding: mergePrintableFormBranding(
+      stored.printableFormBranding || defaults.printableFormBranding,
+    ),
     menuVisibility: {
       ...defaults.menuVisibility,
       ...(stored.menuVisibility || {}),
@@ -427,6 +432,9 @@ function mockSavePortalConfig(updates, schoolId) {
     enrollmentForm: updates.enrollmentForm
       ? cloneEnrollmentFormConfig({ ...current.enrollmentForm, ...updates.enrollmentForm })
       : current.enrollmentForm,
+    printableFormBranding: updates.printableFormBranding
+      ? mergePrintableFormBranding({ ...current.printableFormBranding, ...updates.printableFormBranding })
+      : current.printableFormBranding,
     menuVisibility: updates.menuVisibility
       ? { ...current.menuVisibility, ...updates.menuVisibility }
       : current.menuVisibility,

@@ -285,6 +285,45 @@
   border-color: #fff;
 }
 
+.print-share-panel {
+  margin: 0.75rem 1rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: 0.85rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.print-share-panel__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.print-share-panel__link {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: #0058be;
+  word-break: break-all;
+}
+
+.print-share-panel__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.print-share-panel__row input {
+  flex: 1 1 14rem;
+  min-height: 2.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.9rem;
+}
+
 .print-toolbar__toggle {
   display: inline-flex;
   align-items: center;
@@ -516,9 +555,21 @@
 .kz-header__logo {
   width: 30mm;
   height: auto;
+  max-height: 12mm;
   object-fit: contain;
   display: block;
   mix-blend-mode: multiply;
+}
+
+.kz-header__name {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14pt;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #0f172a;
+  line-height: 1.15;
+  max-width: 55mm;
+  text-align: right;
 }
 
 .kz-footer {

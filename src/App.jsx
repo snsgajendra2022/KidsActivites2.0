@@ -214,6 +214,8 @@ export default function App() {
         <Route path="admin/dashboard" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminDashboard /></ProtectedRoute>} />
         <Route path="admin/applications" element={<ProtectedRoute allowedRoles={SUPPORT_APP_ROLES}><ApplicationsList /></ProtectedRoute>} />
         <Route path="admin/applications/:id" element={<ProtectedRoute allowedRoles={APPLICATION_REVIEW_ROLES}><ApplicationReview /></ProtectedRoute>} />
+        <Route path="admin/enrollment/kidzee-print-form" element={<ProtectedRoute allowedRoles={APPLICATION_REVIEW_ROLES}><KidzeePrintableFormPage /></ProtectedRoute>} />
+        <Route path="admin/enrollment/kidzee-print-form/print" element={<ProtectedRoute allowedRoles={APPLICATION_REVIEW_ROLES}><KidzeePrintFormPrintPage /></ProtectedRoute>} />
         <Route path="admin/students" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><AdminStudents /></ProtectedRoute>} />
         <Route path="admin/students/:studentId" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><StudentProfile /></ProtectedRoute>} />
         <Route path="admin/fees" element={<ProtectedRoute allowedRoles={FEES_ROLES}><AdminFees /></ProtectedRoute>} />

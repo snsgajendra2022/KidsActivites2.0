@@ -81,7 +81,7 @@ export default function KidzeePage3({
               <th>Date of Birth</th>
               <th>School Attending</th>
               <th>Standard</th>
-              <th>Kidzee Alumni (Y/N)</th>
+              <th>{branding?.alumniLabel || 'School Alumni (Y/N)'}</th>
             </tr>
           </thead>
           <tbody>

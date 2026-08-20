@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { loadCalendarFeed } from '../../services/calendarFeedService.js';
+import { loadCalendarFeed, loadCalendarUpcomingLight } from '../../services/calendarFeedService.js';
 import { addDays, daysUntil, formatDateLabel, todayKey } from '../../utils/calendarDates.js';
 import { CALENDAR_CATEGORY_LABELS } from '../../constants/calendar.js';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
@@ -13,20 +13,28 @@ export default function UpcomingEventsWidget({
   studentIds = [],
   calendarPath,
   title = 'Upcoming',
+  /** Dashboard: calendar events only (faster). Full feed includes exams/homework/notices. */
+  light = false,
 }) {
   const { tenantPath } = useTenantPath();
   const from = todayKey();
   const query = useQuery({
-    queryKey: ['calendar-upcoming', role, userId, from],
-    queryFn: () => loadCalendarFeed({
-      from,
-      to: addDays(from, 45),
-      role,
-      userId,
-      classIds,
-      studentIds,
-    }),
+    queryKey: ['calendar-upcoming', light ? 'light' : 'full', role, userId, from],
+    queryFn: () => {
+      const args = {
+        from,
+        to: addDays(from, 45),
+        role,
+        userId,
+        classIds,
+        studentIds,
+      };
+      return light ? loadCalendarUpcomingLight(args) : loadCalendarFeed(args);
+    },
     enabled: Boolean(userId || role),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const items = (query.data || [])

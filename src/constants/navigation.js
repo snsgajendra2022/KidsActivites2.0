@@ -91,6 +91,7 @@ export const CREATIVE_CARDS_NAV = {
 const ADMIN_CORE_NAV = [
   // School — people, admissions, ops, media docs
   { id: 'admin_applications', to: '/admin/applications', label: 'Enrollment Applications', icon: FileInput, iconName: 'FileInput', section: 'School' },
+  { id: 'admin_kidzee_form', to: '/admin/enrollment/kidzee-print-form', label: 'Enrollment Form', icon: FileText, iconName: 'FileText', section: 'School' },
   { id: 'admin_students', to: '/admin/students', label: 'Students', icon: GraduationCap, iconName: 'GraduationCap', section: 'School' },
   { id: 'admin_class_management', to: '/admin/class-management', label: 'Class Management', icon: School, iconName: 'School', section: 'School' },
   { id: 'admin_attendance', to: '/admin/attendance', label: 'Attendance', icon: ClipboardCheck, iconName: 'ClipboardCheck', section: 'School' },
@@ -253,6 +254,7 @@ export const SUPPORT_NAV = [
   { id: 'admin_chat', to: '/admin/chat', label: 'Chat', icon: MessageCircle, iconName: 'MessageCircle', section: 'Communication' },
   { id: 'admin_notifications', to: '/admin/notifications', label: 'Notifications', icon: Bell, iconName: 'Bell', section: 'Communication' },
   { id: 'admin_applications', to: '/admin/applications', label: 'Applications', icon: FileInput, iconName: 'FileInput', section: 'Communication' },
+  { id: 'admin_kidzee_form', to: '/admin/enrollment/kidzee-print-form', label: 'Enrollment Form', icon: FileText, iconName: 'FileText', section: 'Communication' },
 ];
 
 export const NAV_BY_ROLE = {

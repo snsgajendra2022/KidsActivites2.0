@@ -589,13 +589,6 @@ export default function Login() {
         </div>
       ) : null}
 
-      <div className="login-enroll-section">
-        <p className="login-enroll-section__label">New Applicant</p>
-        <Link to={tenantPath('/enrollment/kidzee-print-form')} className="sb-button-secondary w-full !justify-center">
-          Start Admission Process
-          <ArrowRight size={16} />
-        </Link>
-      </div>
     </AuthSplitLayout>
   );
 }

@@ -139,6 +139,9 @@ async function tryApi(fn) {
   }
 }
 
+/** Remember missing calendar routes so dashboards do not pay for double 404s every load. */
+let calendarListEndpoint = 'auto'; // 'auto' | 'primary' | 'admin' | 'local'
+
 export const calendarService = {
   async list(filters = {}) {
     return routeRequest({
@@ -165,15 +168,41 @@ export const calendarService = {
         });
       },
       apiFn: async () => {
-        const data = await tryApi(() => api.get('/calendar/events', filters));
-        if (data == null) {
+        const localOnly = () => readEvents().filter((item) => !item.deletedAt);
+
+        if (calendarListEndpoint === 'local') {
+          return localOnly();
+        }
+
+        if (calendarListEndpoint === 'admin') {
           const fallback = await tryApi(() => api.get('/admin/calendar-events', filters));
           if (fallback == null) {
-            return readEvents().filter((item) => !item.deletedAt);
+            calendarListEndpoint = 'local';
+            return localOnly();
           }
           return asCrudList(fallback).map(normalizeCalendarEvent);
         }
-        return asCrudList(data).map(normalizeCalendarEvent);
+
+        if (calendarListEndpoint === 'primary' || calendarListEndpoint === 'auto') {
+          const data = await tryApi(() => api.get('/calendar/events', filters));
+          if (data != null) {
+            calendarListEndpoint = 'primary';
+            return asCrudList(data).map(normalizeCalendarEvent);
+          }
+          if (calendarListEndpoint === 'primary') {
+            calendarListEndpoint = 'local';
+            return localOnly();
+          }
+        }
+
+        const fallback = await tryApi(() => api.get('/admin/calendar-events', filters));
+        if (fallback != null) {
+          calendarListEndpoint = 'admin';
+          return asCrudList(fallback).map(normalizeCalendarEvent);
+        }
+
+        calendarListEndpoint = 'local';
+        return localOnly();
       },
     });
   },

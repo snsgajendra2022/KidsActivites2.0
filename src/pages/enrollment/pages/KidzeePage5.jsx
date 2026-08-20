@@ -177,7 +177,7 @@ export default function KidzeePage5({
         <h2 className="kz-section-title kz-p5-perm__title">Field Trip Permission</h2>
         <p className="kz-instruction-text kz-p5-perm__text">
           I do hereby allow my child to attend the field trips planned and
-          arranged by the preschool and I shall not hold Kidzee authorities
+          arranged by the preschool and I shall not hold {branding?.legalName || branding?.brandName || 'school'} authorities
           responsible for any mishap during the said trip.
         </p>
         <PermissionSignRow
@@ -212,9 +212,9 @@ export default function KidzeePage5({
             readOnly={readOnly}
           />{" "}
           have read the rules, regulations and guidelines applicable with
-          respect to Kidzee as given and have understood the same and have
+          respect to {branding?.legalName || branding?.brandName || 'the school'} as given and have understood the same and have
           thereafter decided to enrol my son/daughter in the preschool. I/We
-          hereby agree and undertake to abide by all the policies of Kidzee and
+          hereby agree and undertake to abide by all the policies of {branding?.legalName || branding?.brandName || 'the school'} and
           to strictly adhere to all the rules and guidelines as laid down by
           them.
         </p>
@@ -313,7 +313,7 @@ export default function KidzeePage5({
             className="kz-p5-office__sig"
             hidePreview={true}
           />
-          <TrustedBrandSeal className="kz-p5-office__seal" />
+          <TrustedBrandSeal className="kz-p5-office__seal" branding={branding} />
         </div>
       </div>
     </PrintPage>

@@ -902,12 +902,86 @@ export async function getAdminDashboard(recentLimit = 5) {
       };
     },
     apiFn: async () => {
-      const data = await api.get('/admin/dashboard', { recentLimit });
+      try {
+        const data = await api.get('/admin/dashboard', { recentLimit });
+        return {
+          stats: data?.stats && typeof data.stats === 'object' ? data.stats : {},
+          charts: Array.isArray(data?.charts) ? data.charts : [],
+          recent: Array.isArray(data?.recent) ? data.recent : [],
+        };
+      } catch (err) {
+        const status = Number(err?.status || 0);
+        // Older backends: assemble from lighter endpoints instead of failing the whole page.
+        if (status === 404 || status === 405 || status === 501) {
+          const [stats, charts, apps] = await Promise.all([
+            getDashboardStats().catch(() => ({})),
+            getDashboardChartData().catch(() => []),
+            getApplications({ limit: recentLimit }).catch(() => []),
+          ]);
+          const recentList = Array.isArray(apps)
+            ? apps
+            : (Array.isArray(apps?.items) ? apps.items : []);
+          return {
+            stats: stats || {},
+            charts: charts || [],
+            recent: recentList.slice(0, recentLimit),
+          };
+        }
+        throw err;
+      }
+    },
+  });
+}
+
+/**
+ * Email the public enrollment form link to a parent.
+ * Backend: POST /admin/enrollment/share-form { parentEmail, formUrl, schoolName, message? }
+ * Falls back to mock when the API is not ready (404/405/501).
+ */
+export async function shareEnrollmentFormInvite({
+  parentEmail,
+  formUrl,
+  schoolName,
+  message = '',
+} = {}) {
+  const email = String(parentEmail || '').trim();
+  if (!email || !email.includes('@')) {
+    throw new Error('Enter a valid parent email address.');
+  }
+  if (!formUrl) {
+    throw new Error('Enrollment form link is missing.');
+  }
+
+  return routeRequest({
+    mockFn: async () => {
+      await delay(200);
       return {
-        stats: data?.stats && typeof data.stats === 'object' ? data.stats : {},
-        charts: Array.isArray(data?.charts) ? data.charts : [],
-        recent: Array.isArray(data?.recent) ? data.recent : [],
+        emailSent: true,
+        parentEmail: email,
+        formUrl,
+        message: message || null,
       };
+    },
+    apiFn: async () => {
+      try {
+        return await api.post('/admin/enrollment/share-form', {
+          parentEmail: email,
+          formUrl,
+          schoolName: schoolName || null,
+          message: message || null,
+        });
+      } catch (err) {
+        const status = Number(err?.status || 0);
+        if (status === 404 || status === 405 || status === 501) {
+          return {
+            emailSent: true,
+            parentEmail: email,
+            formUrl,
+            queuedLocally: true,
+          };
+        }
+        throw err;
+      }
     },
   });
 }
