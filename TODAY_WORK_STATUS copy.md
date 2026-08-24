@@ -1,61 +1,69 @@
 TODAY'S WORK STATUS
-Tuesday, 18 August 2026
+Thursday, 20 August 2026
 
 Project: Kids Activities Web (KidsActivities2.0)
 
-Status: COMPLETED (frontend) — landing page product coverage + Creative Cards photos/PNG + global search
+Status: COMPLETED (frontend) — enrollment branding/share + public form + dashboard perf
+         Backend still needed for share-form email + calendar APIs in production
 
 Overview
 --------
 
-Public landing page now matches the product (classroom, transport, driver). Creative
-Cards uses Photo Studio images and downloads a sharp PNG. Global search is in the
-header. Kidzee print-form still shows a static "Kidzee" brand (locations listed;
-not replaced).
+Enrollment printable form is school-branded (not hard-coded Kidzee), shareable
+to parents by email with a no-login public URL, and admin dashboard loads
+without blocking the whole page. Calendar widget path was lightened on the
+dashboard. This repo has no database; live APIs remain Spring Boot.
 
 Completed this session
 ----------------------
 
-Landing page (product gaps)
-- Hero, roles, FAQs, how-it-works, footer updated for classroom, transport, LMS,
-  attendance, library, leave, Creative Cards, AI, driver portal
-- New “Classroom, transport & more” section (#classroom)
-- Overview tabs: Classroom, Transport (dedicated showcase visuals, not the orbit)
-- Mobile demo cycles Parent / Teacher / Admin / Driver screens
-- Files: KidsLandingPage.jsx, platformLandingData.js, PlatformLandingSections.jsx,
-  PlatformShowcaseVisual.jsx, kids-landing-page.css, public-pages.css
+Enrollment form — admin + public
+- Admin route: /{tenant}/admin/enrollment/kidzee-print-form (+ /print)
+- Public route (no login): /{tenant}/enrollment/kidzee-print-form
+- Nav: Enrollment Form under School; links from Applications / Admin dashboard
+- Login “Start Admission” enroll button removed (admin path preferred)
+- Guest draft/submit use auth: false when no access token
+- TenantPathGate / TenantContext: provisional school so guests are not stuck
+  on “Loading workspace…” / false “Workspace not found”
 
-Global search
-- Header launcher + results (GlobalSearch, GlobalSearchLauncher, globalSearchService)
-- Duplicate search icons: CSS display (mobile icon <1024px, full bar ≥1024px);
-  Tailwind hidden/lg:hidden was overridden by custom flex
+Dynamic branding (replaces Kidzee defaults)
+- buildEnrollmentFormBranding() from portal config + printableFormBranding
+- Portal Settings → Enrollment Form tab (brand name, legal name, socials,
+  alumni label, seal/tagline, etc.)
+- Logo from Logo & Images; empty branding fields fall back to school/portal name
+- Saved with portal config (PUT /admin/portal-settings → printableFormBranding)
+- Header/footer/legal/alumni/seal use school name, not Kidzee
 
-Creative Cards
-- Photos tab loads Photo Studio gallery (listPhotoStudioImages / getPhotoStudioConfig),
-  same as /admin/photos — not mock INITIAL_PHOTOS
-- PNG download: removed backdrop-filter / blob blur; .cc-card-preview--capture
-  during capture so html-to-image does not smear frost
-- Google Fonts CORS: skipFonts + fetch stylesheet as fontEmbedCSS (CardDownload.jsx)
+Share with parent
+- Admin form toolbar: Share with parent → email + copy link
+- Link is always the public URL (no login required)
+- API: POST /admin/enrollment/share-form (fallback /admin/enrollment/invite;
+  mailto if API not live yet)
 
-Other
-- Lazy routes / Suspense loading for public pages
-- Driver SEND_MESSAGES permission + chat subtitle
+Admin dashboard performance
+- Progressive UI: banner/stats shell immediately (no full-page spinner wait)
+- Lazy-load Recharts (WelcomeBanner split out of ChartCards)
+- UpcomingEventsWidget light mode: calendar events only (not exams/homework/notices)
+- calendarService.list remembers missing endpoints (avoids double 404 every load)
+- getAdminDashboard fallback assembles stats/charts/recent if combined API 404
+- Faster PageTransition; less aggressive refetch
 
-Kidzee print form — static "Kidzee" (audit only, no code change)
-- Toolbar: “Kidzee Enrollment Form” — KidzeePrintableForm.jsx:254
-- Brand: KIDZEE / KidzeeIndia / kidzeeindia / kidzee.com — kidzeePrintFields.js
-  (KIDZEE_BRANDING; logo URL can come from portal, brandName stays KIDZEE)
-- Page 3: “Kidzee Alumni (Y/N)” — KidzeePage3.jsx:84
-- Page 5 legal: “Kidzee authorities”, “respect to Kidzee”, “policies of Kidzee”
-  — KidzeePage5.jsx:180, 215, 217
-- Also static elsewhere: Enrollment.jsx “Kidzee Print Form”; ApplicationsList
-  “Kidzee”; ApplicationReview “Kidzee Form”; KidzeeApplicationDetails
-  “Kidzee — …” section titles; ParentEnrollmentSections “Kidzee Printable”
+Calendar leftovers from prior session (still open)
+- Spring Boot: docs/SCHOOL_CALENDAR_API_CONTRACT.md not implemented yet
+- Until then calendar data may use localStorage fallback on 404/405/501
 
 Still needs
 -----------
 
-- Replace static Kidzee brand/legal copy with school/portal name (start at
-  KIDZEE_BRANDING.brandName + hardcoded strings above)
-- Live bus: Spring Boot items 13–20 in MASTER_LIVE_TRACKING_API.md §6
-  (student attendance REST + WS) — still open from earlier work
+Backend
+- Persist/return printableFormBranding on portal settings
+- Production POST /admin/enrollment/share-form (SMTP / school email)
+- School calendar APIs per SCHOOL_CALENDAR_API_CONTRACT.md
+
+Frontend / product
+- Recurring edit modes this / future / series; drag-resize on month grid
+- Live bus: MASTER_LIVE_TRACKING_API.md §6 items still open on Spring Boot
+
+Prior sessions (already shipped, not re-done today)
+- 19 Aug: School Calendar & Alerts UI + API contract doc
+- 18 Aug: Landing coverage, Creative Cards, global search

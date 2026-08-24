@@ -166,8 +166,8 @@ export const TERMS_AND_CONDITIONS_CONTENT = {
 export const PRIVACY_POLICY_CONTENT = {
   title: 'Privacy Policy',
   subtitle: 'How Kids Activities collects, uses, and protects the information of schools, staff, and families.',
-  lastUpdated: 'July 8, 2026',
-  intro: 'This Privacy Policy explains how the Kids Activities platform ("the Platform") handles personal information on behalf of your school. Your school is the controller of student and family data; Kids Activities Systems processes that data to provide the Platform\'s services.',
+  lastUpdated: 'August 24, 2026',
+  intro: 'This Privacy Policy explains how the Kids Activities platform ("the Platform"), including the Kids Activities mobile apps for Android and iOS, handles personal information on behalf of your school. Your school is the controller of student and family data; Kids Activities Systems processes that data to provide the Platform\'s services.',
   sections: [
     {
       heading: '1. Information We Collect',
@@ -179,6 +179,7 @@ export const PRIVACY_POLICY_CONTENT = {
         'Fee records: fee assignments and payment proof you upload for verification.',
         'Media: classroom photos and albums shared by teachers and staff.',
         'Communications: messages exchanged through the secure chat and notifications.',
+        'Location data (precise GPS): when a school bus driver (or authorized transport staff) starts an active trip and taps “Start trip & share location” in the mobile app, we collect the device’s precise location, including while the app is in the background or the screen is off, so parents can see the live bus on the map. Location is collected only during an active trip and stops when the driver ends the trip or stops sharing. A persistent notification remains visible while sharing is on. Location is not used for advertising or for tracking users outside an active school trip.',
         'Usage and device data: log information such as actions taken, timestamps, and basic technical details used for security and troubleshooting.',
       ],
     },
@@ -190,21 +191,34 @@ export const PRIVACY_POLICY_CONTENT = {
         'Enable fee assignment, payment-proof submission, and receipt tracking.',
         'Allow teachers to share photos and albums with the relevant parents.',
         'Provide secure messaging and send notifications about school activity.',
+        'Show live school-bus location to authorized parents and school staff only while a driver has an active trip and has consented to share location.',
         'Authenticate users and enforce role-based access to data.',
         'Maintain security, prevent fraud, and keep audit records of key administrative actions.',
         'Operate, maintain, and improve the Platform.',
       ],
     },
     {
-      heading: '3. Legal Basis & Consent',
-      body: 'We process personal information to perform the enrollment and school-communication services requested by you and your school, to comply with legal obligations, and based on the consent you provide when submitting applications or uploading content. Where a child\'s information is provided, it is submitted by a parent or guardian.',
+      heading: '3. Location Data (Mobile App — Live Bus Tracking)',
+      body: 'The Kids Activities Android and iOS apps may access LOCATION data for school transport only, as follows:',
+      bullets: [
+        'Who: school bus drivers or authorized transport staff using the driver “My trip” feature.',
+        'What: precise device location (GPS coordinates, and related fields such as heading, speed, and accuracy when available).',
+        'When: only after the user sees an in-app disclosure, grants location permission (including background / “Allow all the time” where required), and starts sharing for an active trip. Collection continues in the background while that trip is active so parents can keep seeing the bus when the driver leaves the app.',
+        'Why: to display the live bus position on the parent and school live map during pickup and drop-off.',
+        'Control: the driver can stop sharing at any time with “End trip & stop sharing” or by pausing sharing; location updates and the trip notification then stop.',
+        'We do not sell location data. It is shared only with the driver’s school and authorized parents/staff for that trip, and with infrastructure providers that host the Platform under confidentiality obligations.',
+      ],
     },
     {
-      heading: '4. Role-Based Access',
-      body: 'Access to information is restricted by role. Parents and students see only their own family\'s data; teachers see data for their assigned classes; admission officers, accountants, and administrators see the data necessary for their responsibilities. Photos are visible only to the parents of children in the selected class or to individually chosen recipients.',
+      heading: '4. Legal Basis & Consent',
+      body: 'We process personal information to perform the enrollment and school-communication services requested by you and your school, to comply with legal obligations, and based on the consent you provide when submitting applications, uploading content, or granting device permissions (such as location for live bus tracking). Where a child\'s information is provided, it is submitted by a parent or guardian.',
     },
     {
-      heading: '5. Data Sharing',
+      heading: '5. Role-Based Access',
+      body: 'Access to information is restricted by role. Parents and students see only their own family\'s data; teachers see data for their assigned classes; admission officers, accountants, and administrators see the data necessary for their responsibilities. Photos are visible only to the parents of children in the selected class or to individually chosen recipients. Live bus location is visible only to authorized roles for the relevant school trip.',
+    },
+    {
+      heading: '6. Data Sharing',
       body: 'We do not sell personal information. Information is shared only:',
       bullets: [
         'With your school and its authorized staff, to deliver the services described above.',
@@ -213,37 +227,37 @@ export const PRIVACY_POLICY_CONTENT = {
       ],
     },
     {
-      heading: '6. Data Security',
+      heading: '7. Data Security',
       body: 'We apply industry-standard safeguards, including encryption of data in transit (TLS), encrypted storage for uploaded documents and photos, protected credential handling, rate-limited login attempts, and role-based access controls. No system is completely secure, but we work to protect your information and to respond promptly to security incidents.',
     },
     {
-      heading: '7. Data Retention',
-      body: 'Personal information is retained for as long as needed to provide the services and to meet your school\'s legal, accounting, and administrative requirements. Your school determines specific retention periods for enrollment and student records; contact your school administrator for details.',
+      heading: '8. Data Retention',
+      body: 'Personal information is retained for as long as needed to provide the services and to meet your school\'s legal, accounting, and administrative requirements. Live location points used for an active trip are processed for real-time display and are not kept as a permanent advertising profile; your school may retain trip-related operational records according to its policies. Contact your school administrator for specific retention details.',
     },
     {
-      heading: '8. Your Rights',
+      heading: '9. Your Rights',
       body: 'Subject to applicable law and your school\'s policies, you may request to:',
       bullets: [
         'Access the personal information held about you or your child.',
         'Correct inaccurate or incomplete information.',
         'Request deletion of information that is no longer required.',
-        'Withdraw consent for optional processing where applicable.',
+        'Withdraw consent for optional processing where applicable (for example, revoke location permission in device Settings or stop trip sharing in the app).',
       ],
     },
     {
-      heading: '9. Children\'s Privacy',
-      body: 'The Platform is used by adults (parents, guardians, and school staff) to manage information about children for school purposes. Children\'s information is provided and managed by their parents/guardians and the school, and is handled with additional care and restricted access.',
+      heading: '10. Children\'s Privacy',
+      body: 'The Platform is used by adults (parents, guardians, and school staff) to manage information about children for school purposes. Children\'s information is provided and managed by their parents/guardians and the school, and is handled with additional care and restricted access. The app does not use children’s devices for background location collection; location is collected from the driver’s device during an active trip.',
     },
     {
-      heading: '10. Cookies & Local Storage',
-      body: 'The Platform uses cookies and browser local storage to keep you signed in, remember preferences, and support core functionality such as session management. Disabling these may affect your ability to use the Platform.',
+      heading: '11. Cookies & Local Storage',
+      body: 'The Platform uses cookies and browser local storage to keep you signed in, remember preferences, and support core functionality such as session management. Disabling these may affect your ability to use the Platform. The mobile apps may store session tokens and preferences on the device for the same purposes.',
     },
     {
-      heading: '11. Changes to This Policy',
+      heading: '12. Changes to This Policy',
       body: 'We may update this Privacy Policy from time to time. Material changes will be reflected by the "Last updated" date above. Please review this page periodically.',
     },
     {
-      heading: '12. Contact',
+      heading: '13. Contact',
       body: 'For privacy questions or to exercise your rights, contact your school administrator or use the Direct Support page. Privacy-related queries about the Platform can be sent to privacy@kidsactivites.demo.',
     },
   ],
