@@ -949,8 +949,18 @@ export async function getAdminDashboard(recentLimit = 5) {
 
 /**
  * Email the public (no-login) enrollment form link to a parent.
- * Backend: POST /admin/enrollment/share-form
- * Body: { parentEmail, formUrl, schoolName, message? }
+ *
+ * Live API (admin auth + tenant header required):
+ *   POST /api/v1/admin/enrollment/share-form
+ *   {
+ *     parentEmail: "parent@email.com",
+ *     formUrl: "https://kidsactivities.snssystem.com/{tenant}/enrollment/kidzee-print-form",
+ *     schoolName: "School name",
+ *     message: "optional body text including the link"
+ *   }
+ *
+ * Fallback if share-form is missing: POST /admin/enrollment/invite (same body).
+ * Uses school SMTP from Portal Settings → Email Settings when configured.
  */
 export async function shareEnrollmentFormInvite({
   parentEmail,
@@ -962,17 +972,33 @@ export async function shareEnrollmentFormInvite({
   if (!email || !email.includes('@')) {
     throw new Error('Enter a valid parent email address.');
   }
-  if (!formUrl) {
-    throw new Error('Enrollment form link is missing.');
+
+  const publicFormUrl = String(formUrl || '')
+    .trim()
+    // Never email the admin URL — parents must get the public no-login form.
+    .replace(/\/admin\/enrollment\/kidzee-print-form/i, '/enrollment/kidzee-print-form');
+
+  if (!publicFormUrl || !/^https?:\/\//i.test(publicFormUrl)) {
+    throw new Error('Enrollment form link is missing or invalid.');
+  }
+  if (/\/admin\//i.test(publicFormUrl)) {
+    throw new Error('Share link must be the public enrollment URL (no /admin/).');
   }
 
   const payload = {
     parentEmail: email,
     email,
-    formUrl,
-    link: formUrl,
+    formUrl: publicFormUrl,
+    link: publicFormUrl,
     schoolName: schoolName || null,
-    message: message || `Please complete the enrollment form: ${formUrl}`,
+    message: message || [
+      'Hello,',
+      '',
+      `Please complete the ${schoolName || 'school'} enrollment form using this link (no login required):`,
+      publicFormUrl,
+      '',
+      'Thank you.',
+    ].join('\n'),
   };
 
   return routeRequest({
@@ -981,32 +1007,44 @@ export async function shareEnrollmentFormInvite({
       return {
         emailSent: true,
         parentEmail: email,
-        formUrl,
+        formUrl: publicFormUrl,
         message: payload.message,
       };
     },
     apiFn: async () => {
       try {
-        return await api.post('/admin/enrollment/share-form', payload);
+        const data = await api.post('/admin/enrollment/share-form', payload);
+        return {
+          emailSent: true,
+          parentEmail: email,
+          formUrl: publicFormUrl,
+          ...(data && typeof data === 'object' ? data : {}),
+        };
       } catch (err) {
         const status = Number(err?.status || 0);
         if (status === 404 || status === 405 || status === 501) {
-          // Alternate path some backends use
           try {
-            return await api.post('/admin/enrollment/invite', payload);
+            const data = await api.post('/admin/enrollment/invite', payload);
+            return {
+              emailSent: true,
+              parentEmail: email,
+              formUrl: publicFormUrl,
+              ...(data && typeof data === 'object' ? data : {}),
+            };
           } catch (altErr) {
             const altStatus = Number(altErr?.status || 0);
             if (altStatus === 404 || altStatus === 405 || altStatus === 501) {
               return {
                 emailSent: false,
                 parentEmail: email,
-                formUrl,
+                formUrl: publicFormUrl,
                 queuedLocally: true,
               };
             }
             throw altErr;
           }
         }
+        // Surface SMTP / validation errors from the live API (do not hide behind mailto).
         throw err;
       }
     },

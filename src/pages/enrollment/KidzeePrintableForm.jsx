@@ -140,9 +140,9 @@ export default function KidzeePrintableForm({
           `Hello,\n\nPlease fill the enrollment form for ${branding.brandName || 'our school'} (no login needed):\n${shareUrl}\n\nThank you.`,
         );
         window.open(`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`, '_blank');
-        toast('Email API not ready yet — opened your mail app with the public form link.', 'warning');
+        toast('Server email API is not available yet — opened your mail app with the public form link.', 'warning');
       } else {
-        toast(`Enrollment link emailed to ${result?.parentEmail || email}.`, 'success');
+        toast(`Enrollment link emailed to ${result?.parentEmail || email} via school API.`, 'success');
       }
       setShareOpen(false);
       setShareEmail('');
