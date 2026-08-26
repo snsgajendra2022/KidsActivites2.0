@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bus, Plus, Trash2, UserRound } from 'lucide-react';
+import { Bus, Plus, Trash2, UserCheck, UserRound } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { EmptyState, LoadingState, PageHeader, SearchField } from '../../components/ui/index.jsx';
@@ -11,6 +11,7 @@ import { ResponsiveDataTable, TableActionButton } from '../../components/ui/Data
 import { useToast } from '../../context/ToastContext.jsx';
 import { transportVehicleService } from '../../services/schoolModules/index.js';
 import {
+  activateDriver,
   assignDriverToVehicle,
   createDriver,
   deactivateDriver,
@@ -31,6 +32,13 @@ const EMPTY_FORM = {
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function isDriverInactive(driver) {
+  if (!driver) return false;
+  if (driver.active === false || driver.active === 0) return true;
+  const label = String(driver.statusLabel || driver.status || '').trim().toLowerCase();
+  return label === 'inactive' || label === 'disabled' || label === 'deactivated';
+}
+
 export default function TransportDriversPage() {
   const { toast } = useToast();
   const [items, setItems] = useState([]);
@@ -41,7 +49,7 @@ export default function TransportDriversPage() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
+  const [statusAction, setStatusAction] = useState(null); // { id, activate: boolean, name }
   const [tempPassword, setTempPassword] = useState(null);
   const [endpointHint, setEndpointHint] = useState('');
 
@@ -107,9 +115,7 @@ export default function TransportDriversPage() {
         || vehicle?.vehicleNumber
         || vehicle?.vehicle_number
         || '—',
-      statusLabel: driver.active === false || String(driver.status).toLowerCase() === 'inactive'
-        ? 'inactive'
-        : (driver.status || 'active'),
+      statusLabel: isDriverInactive(driver) ? 'Inactive' : 'Active',
     };
   }), [items, vehicleMap]);
 
@@ -151,7 +157,7 @@ export default function TransportDriversPage() {
       mobile: item.mobile || '',
       licenseNumber: item.licenseNumber || '',
       vehicleId: item.vehicleId || '',
-      status: item.statusLabel || item.status || 'active',
+      status: isDriverInactive(item) ? 'inactive' : 'active',
     });
     setModalOpen(true);
   };
@@ -218,16 +224,33 @@ export default function TransportDriversPage() {
     }
   };
 
-  const handleDeactivate = async () => {
-    if (!deleteId) return;
+  const handleStatusConfirm = async () => {
+    if (!statusAction?.id) return;
     setSaving(true);
     try {
-      await deactivateDriver(deleteId);
-      toast('Driver deactivated.', 'success');
-      setDeleteId(null);
+      if (statusAction.activate) {
+        await activateDriver(statusAction.id);
+        setItems((current) => current.map((driver) => (
+          String(driver.id) === String(statusAction.id)
+            ? { ...driver, active: true, status: 'active' }
+            : driver
+        )));
+        toast('Driver activated.', 'success');
+      } else {
+        await deactivateDriver(statusAction.id);
+        setItems((current) => current.map((driver) => (
+          String(driver.id) === String(statusAction.id)
+            ? { ...driver, active: false, status: 'inactive' }
+            : driver
+        )));
+        toast('Driver deactivated.', 'success');
+      }
+      setStatusAction(null);
       await load();
     } catch (err) {
-      toast(err?.message || 'Unable to deactivate driver.', 'error');
+      toast(err?.message || (statusAction.activate
+        ? 'Unable to activate driver.'
+        : 'Unable to deactivate driver.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -274,14 +297,40 @@ export default function TransportDriversPage() {
             data={filtered}
             emptyMessage="No drivers match your search."
             minWidth={960}
-            renderActions={(item) => (
-              <>
-                <TableActionButton variant="outline" onClick={() => openEdit(item)}>Edit</TableActionButton>
-                <TableActionButton variant="danger" onClick={() => setDeleteId(item.id)}>
-                  <Trash2 size={14} /> Deactivate
-                </TableActionButton>
-              </>
-            )}
+            renderActions={(item) => {
+              // Match the Status badge: Inactive → Activate, Active → Deactivate
+              const inactive = item.statusLabel === 'Inactive' || isDriverInactive(item);
+              return (
+                <>
+                  <TableActionButton variant="outline" onClick={() => openEdit(item)}>
+                    Edit
+                  </TableActionButton>
+                  {inactive ? (
+                    <TableActionButton
+                      variant="success"
+                      onClick={() => setStatusAction({
+                        id: item.id,
+                        activate: true,
+                        name: item.name || 'this driver',
+                      })}
+                    >
+                      <UserCheck size={14} /> Activate
+                    </TableActionButton>
+                  ) : (
+                    <TableActionButton
+                      variant="danger"
+                      onClick={() => setStatusAction({
+                        id: item.id,
+                        activate: false,
+                        name: item.name || 'this driver',
+                      })}
+                    >
+                      <Trash2 size={14} /> Deactivate
+                    </TableActionButton>
+                  )}
+                </>
+              );
+            }}
           />
         )}
 
@@ -371,12 +420,15 @@ export default function TransportDriversPage() {
         </Modal>
 
         <ConfirmModal
-          open={Boolean(deleteId)}
-          onClose={() => setDeleteId(null)}
-          onConfirm={() => void handleDeactivate()}
-          title="Deactivate driver?"
-          description="The driver will no longer sign in or publish GPS. Reassign the vehicle before the next trip."
-          confirmLabel="Deactivate"
+          open={Boolean(statusAction)}
+          onClose={() => setStatusAction(null)}
+          onConfirm={() => void handleStatusConfirm()}
+          title={statusAction?.activate ? 'Activate driver?' : 'Deactivate driver?'}
+          message={statusAction?.activate
+            ? `${statusAction?.name || 'This driver'} will be able to sign in and publish GPS again.`
+            : `${statusAction?.name || 'This driver'} will no longer sign in or publish GPS. Reassign the vehicle before the next trip.`}
+          confirmText={statusAction?.activate ? 'Activate' : 'Deactivate'}
+          confirmVariant={statusAction?.activate ? 'primary' : 'danger'}
           loading={saving}
         />
       </PageTransition>

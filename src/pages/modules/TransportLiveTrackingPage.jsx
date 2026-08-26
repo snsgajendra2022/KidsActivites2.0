@@ -678,7 +678,27 @@ export default function TransportLiveTrackingPage() {
                     </span>
                   </div>
                 </div>
-                <div className="h-[min(62vh,520px)] w-full sm:h-[min(68vh,560px)] lg:h-[min(70vh,640px)] 2xl:h-[620px]">
+                {timelineStops.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 border-b border-[#eaecf0] bg-white px-3 py-2 sm:px-4">
+                    {timelineStops.map((stop, index) => {
+                      const seq = stop.displaySequence != null ? stop.displaySequence : (stop.sequence ?? index + 1);
+                      const label = stop.name || `Stop ${seq}`;
+                      return (
+                        <span
+                          key={stop.id || `${label}-${index}`}
+                          className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#d0d5dd] bg-[#f8f9ff] px-2 py-1 text-[11px] font-semibold text-[#0b1c30]"
+                          title={label}
+                        >
+                          <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0b1c30] px-1 text-[9px] text-white">
+                            {seq}
+                          </span>
+                          <span className="truncate">{label}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                <div className="h-[min(70vh,640px)] w-full sm:h-[min(74vh,700px)] lg:h-[min(76vh,760px)] 2xl:h-[700px]">
                   <LiveBusMap
                     vehicles={filteredVehicles}
                     selectedVehicleId={selectedId}

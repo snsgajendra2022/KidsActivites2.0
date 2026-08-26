@@ -208,6 +208,7 @@ export const PARENT_NAV = [
   { id: 'parent_lms', to: '/parent/lms', label: 'My Learning', icon: MonitorPlay, iconName: 'MonitorPlay', section: 'School' },
   { id: 'parent_lms_certificates', to: '/parent/lms/certificates', label: 'Course Certificates', icon: Award, iconName: 'Award', section: 'School' },
   { id: 'parent_leave', to: '/parent/leave', label: 'Leave Requests', icon: CalendarOff, iconName: 'CalendarOff', section: 'School' },
+  { id: 'parent_library', to: '/parent/library', label: 'Library Books', icon: BookMarked, iconName: 'BookMarked', section: 'School' },
   { id: 'parent_photos', to: '/parent/photos', label: 'Photos', icon: Image, iconName: 'Image', section: 'School' },
   { ...CREATIVE_CARDS_NAV, section: 'School' },
   { id: 'parent_transport', to: '/parent/transport', label: 'Bus Tracking', icon: MapPinned, iconName: 'MapPinned', section: 'Transport' },

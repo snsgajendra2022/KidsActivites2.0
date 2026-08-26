@@ -35,6 +35,31 @@ export function studentIdFromStop(stop) {
 }
 
 /**
+ * Best available human label for a stop from mixed API shapes.
+ */
+export function resolveStopDisplayName(stop, index = 0) {
+  if (!stop || typeof stop !== 'object') return `Stop ${index + 1}`;
+  const candidates = [
+    stop.name,
+    stop.stopName,
+    stop.stop_name,
+    stop.title,
+    stop.label,
+    stop.addressLabel,
+    stop.address_label,
+    stop.address,
+    stop.placeName,
+    stop.place_name,
+  ];
+  for (const value of candidates) {
+    if (value == null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return `Stop ${index + 1}`;
+}
+
+/**
  * Normalize and sort mapped stops that have valid coordinates.
  * Used by nearest-stop rotation (same rules as mobile).
  */
@@ -49,7 +74,7 @@ export function normalizeMappedStops(stops) {
       const studentId = studentIdFromStop(stop);
       return {
         id: String(stop.id || `stop-${index + 1}`),
-        name: String(stop.name || `Stop ${index + 1}`).trim() || `Stop ${index + 1}`,
+        name: resolveStopDisplayName(stop, index),
         lat,
         lng,
         sequence: Number(stop.sequence) || index + 1,
@@ -74,7 +99,7 @@ export function normalizeRouteStops(stops) {
         const lng = Number(stop.lng ?? stop.longitude);
         return {
           id: String(stop.id || `stop-${index + 1}`),
-          name: String(stop.name || `Stop ${index + 1}`).trim() || `Stop ${index + 1}`,
+          name: resolveStopDisplayName(stop, index),
           sequence: Number(stop.sequence) || index + 1,
           lat: Number.isFinite(lat) ? lat : null,
           lng: Number.isFinite(lng) ? lng : null,

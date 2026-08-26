@@ -64,6 +64,7 @@ export default function TransportAssignmentsPage() {
   const [saving, setSaving] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [deleteLabel, setDeleteLabel] = useState('');
 
   const {
     classOptions,
@@ -374,6 +375,7 @@ export default function TransportAssignmentsPage() {
       await transportAssignmentService.remove(deleteId);
       toast('Assignment removed.', 'success');
       setDeleteId(null);
+      setDeleteLabel('');
       await load();
     } catch (err) {
       toast(err?.message || 'Unable to delete assignment.', 'error');
@@ -436,8 +438,16 @@ export default function TransportAssignmentsPage() {
             minWidth={980}
             renderActions={(item) => (
               <>
-                <TableActionButton variant="outline" onClick={() => openEdit(item)}>Edit</TableActionButton>
-                <TableActionButton variant="danger" onClick={() => setDeleteId(item.id)}>
+                <TableActionButton variant="outline" onClick={() => openEdit(item)}>
+                  Edit
+                </TableActionButton>
+                <TableActionButton
+                  variant="danger"
+                  onClick={() => {
+                    setDeleteId(item.id);
+                    setDeleteLabel(item.studentLabel || item.studentName || '');
+                  }}
+                >
                   <Trash2 size={14} /> Remove
                 </TableActionButton>
               </>
@@ -617,9 +627,12 @@ export default function TransportAssignmentsPage() {
 
         <ConfirmModal
           open={Boolean(deleteId)}
-          onClose={() => setDeleteId(null)}
+          onClose={() => {
+            setDeleteId(null);
+            setDeleteLabel('');
+          }}
           onConfirm={handleDelete}
-          title="Remove assignment?"
+          title={deleteLabel ? `Remove ${deleteLabel}?` : 'Remove assignment?'}
           message="This student will no longer be linked to the vehicle/route for live tracking."
           confirmText="Remove"
           confirmVariant="danger"

@@ -95,6 +95,7 @@ import {
   DriverTripGuidePage,
   LibraryBooksPage,
   LibraryIssuesPage,
+  ParentLibraryPage,
   CertificatesPage,
   ExpensesPage,
   HrStaffPage,
@@ -287,8 +288,8 @@ export default function App() {
         <Route path="parent/documents" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentDocuments /></ProtectedRoute>} />
         <Route path="parent/photos" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentPhotos /></ProtectedRoute>} />
         <Route path="parent/messages" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ChatPage /></ProtectedRoute>} />
-        <Route path="parent/notice-board" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeBoard /></ProtectedRoute>} />
-        <Route path="parent/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeDetail backPath="/parent/notice-board" /></ProtectedRoute>} />
+        <Route path="parent/notice-board" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeBoard layout="app" /></ProtectedRoute>} />
+        <Route path="parent/notice-board/:noticeId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyNoticeDetail layout="app" backPath="/parent/notice-board" /></ProtectedRoute>} />
         <Route path="parent/notifications" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><NotificationsPage title="Notifications" subtitle="Your enrollment and school notifications." /></ProtectedRoute>} />
         <Route path="parent/calendar" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentSchoolCalendarPage /></ProtectedRoute>} />
         <Route path="parent/attendance" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><StudentAttendanceHistory /></ProtectedRoute>} />
@@ -302,6 +303,7 @@ export default function App() {
         <Route path="parent/learning/certificates" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LmsCertificatesPage layout="app" audience="parent" backPath="/parent/lms" /></ProtectedRoute>} />
         <Route path="parent/learning/:enrollmentId" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><CoursePlayerPage layout="app" basePath="/parent/lms" /></ProtectedRoute>} />
         <Route path="parent/leave" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><LeaveRequestsPage layout="app" /></ProtectedRoute>} />
+        <Route path="parent/library" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentLibraryPage /></ProtectedRoute>} />
         <Route path="parent/transport" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentTransportTrackingPage /></ProtectedRoute>} />
 
         {/* Driver — trip GPS is mobile-first; web shows setup guidance */}

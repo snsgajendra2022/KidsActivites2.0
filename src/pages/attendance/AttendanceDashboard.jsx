@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardCheck, Download, History, RotateCcw } from 'lucide-react';
+import { ClipboardCheck, Download, History, RotateCcw, UserRound } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { EmptyState, LoadingState, PageHeader } from '../../components/ui/index.jsx';
-import { ResponsiveDataTable } from '../../components/ui/DataTable.jsx';
+import {
+  ResponsiveDataTable,
+  TableActionButton,
+} from '../../components/ui/DataTable.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import AttendanceFilters, {
@@ -28,6 +31,10 @@ const MSG = {
   empty: 'No attendance records found for this period.',
   loadError: 'Unable to load attendance. Please check your connection and try again.',
 };
+
+function displayCount(value) {
+  return value == null ? '—' : value;
+}
 
 export default function AttendanceDashboard() {
   const { toast } = useToast();
@@ -160,12 +167,31 @@ export default function AttendanceDashboard() {
     }
   };
 
-  const sessionLink = (row) => {
+  const historyPath = (row) => {
+    const id = row.studentId;
+    if (!id || String(id).startsWith('row-') || String(id).startsWith('agg-')) return null;
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const query = params.toString();
+    return `${tenantPath(`/attendance/students/${id}`)}${query ? `?${query}` : ''}`;
+  };
+
+  const sessionPath = (row) => {
     const params = new URLSearchParams();
     if (row.classId || classId) params.set('classId', row.classId || classId);
     if (row.sectionId || sectionId) params.set('sectionId', row.sectionId || sectionId);
     if (row.date) params.set('date', row.date);
     else if (to) params.set('date', to);
+    const studentId = row.studentId
+      && !String(row.studentId).startsWith('row-')
+      && !String(row.studentId).startsWith('agg-')
+      ? row.studentId
+      : '';
+    if (studentId) params.set('studentId', studentId);
+    if (row.studentName) params.set('studentName', row.studentName);
+    // Always open with student focus — session page resolves class if needed.
+    if (!studentId && !params.get('classId')) return null;
     return `${tenantPath('/admin/attendance/session')}?${params.toString()}`;
   };
 
@@ -182,15 +208,15 @@ export default function AttendanceDashboard() {
     },
     {
       label: 'Present',
-      render: (row) => row.present ?? '—',
+      render: (row) => displayCount(row.present),
     },
     {
       label: 'Absent',
-      render: (row) => row.absent ?? '—',
+      render: (row) => displayCount(row.absent),
     },
     {
       label: 'Late',
-      render: (row) => row.late ?? '—',
+      render: (row) => displayCount(row.late),
     },
     {
       label: '%',
@@ -198,45 +224,12 @@ export default function AttendanceDashboard() {
     },
     {
       label: 'Status',
+      badge: true,
       render: (row) => (
         row.lastStatus || row.sessionStatus
           ? <AttendanceStatusChip status={row.lastStatus || row.sessionStatus} />
           : '—'
       ),
-    },
-    {
-      label: 'Actions',
-      render: (row) => {
-        const sessionId = row.sessionId || row.attendanceSessionId;
-        const finalized = (row.sessionStatus || row.status) === 'FINALIZED';
-        return (
-          <div className="flex flex-wrap gap-2">
-            <Link to={sessionLink(row)} className="text-xs font-semibold text-[#0058be] hover:underline">
-              Open session
-            </Link>
-            {sessionId && (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#5a6270] hover:text-[#0b1c30]"
-                onClick={() => openAudit(sessionId)}
-              >
-                <History size={12} /> Audit
-              </button>
-            )}
-            {finalized && sessionId && (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:underline"
-                disabled={reopeningId === sessionId}
-                onClick={() => handleReopen(row)}
-              >
-                <RotateCcw size={12} />
-                {reopeningId === sessionId ? 'Reopening…' : 'Reopen'}
-              </button>
-            )}
-          </div>
-        );
-      },
     },
   ];
 
@@ -309,11 +302,51 @@ export default function AttendanceDashboard() {
             ) : (
               <div className="rounded-xl border border-[#e8ebf2] bg-white p-2 sm:p-4">
                 <ResponsiveDataTable
+                  layout="cards"
                   columns={columns}
                   data={students}
-                  keyExtractor={(row) => row.studentId || `${row.studentName}-${row.rollNumber}`}
+                  keyExtractor={(row, index) => (
+                    row.studentId
+                    || `${row.studentName || 'student'}-${row.rollNumber || index}`
+                  )}
                   emptyMessage={MSG.empty}
                   minWidth={720}
+                  renderActions={(row) => {
+                    const sessionId = row.sessionId || row.attendanceSessionId;
+                    const finalized = (row.sessionStatus || row.status) === 'FINALIZED';
+                    const historyHref = historyPath(row);
+                    const sessionHref = sessionPath(row);
+
+                    return (
+                      <>
+                        {historyHref ? (
+                          <Link to={historyHref} className="table-action-btn table-action-btn-outline">
+                            <UserRound size={14} /> History
+                          </Link>
+                        ) : null}
+                        {sessionHref ? (
+                          <Link to={sessionHref} className="table-action-btn table-action-btn-outline">
+                            Open session
+                          </Link>
+                        ) : null}
+                        {sessionId ? (
+                          <TableActionButton variant="outline" onClick={() => openAudit(sessionId)}>
+                            <History size={14} /> Audit
+                          </TableActionButton>
+                        ) : null}
+                        {finalized && sessionId ? (
+                          <TableActionButton
+                            variant="outline"
+                            disabled={reopeningId === sessionId}
+                            onClick={() => handleReopen(row)}
+                          >
+                            <RotateCcw size={14} />
+                            {reopeningId === sessionId ? 'Reopening…' : 'Reopen'}
+                          </TableActionButton>
+                        ) : null}
+                      </>
+                    );
+                  }}
                 />
               </div>
             )}

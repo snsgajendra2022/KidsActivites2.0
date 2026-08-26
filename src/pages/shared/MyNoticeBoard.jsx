@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Megaphone } from 'lucide-react';
+import AppLayout from '../../components/layout/AppLayout.jsx';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { EmptyState, LoadingState, PageHeader } from '../../components/ui/index.jsx';
 import NoticeCard from '../../components/notice-board/NoticeCard.jsx';
@@ -13,7 +14,9 @@ export default function MyNoticeBoard({
   title = 'Notice Board',
   subtitle = 'Important announcements from your school.',
   basePath = '/parent/notice-board',
+  layout = 'dashboard',
 }) {
+  const Layout = layout === 'app' ? AppLayout : DashboardLayout;
   const navigate = useNavigate();
   const { tenantPath } = useTenantPath();
   const [search, setSearch] = useState('');
@@ -28,10 +31,10 @@ export default function MyNoticeBoard({
     unreadOnly: unreadOnly ? 'true' : undefined,
   }), [search, category, priority, unreadOnly]);
 
-  const { items, unreadCount, loading } = useMyNotices(filters);
+  const { items, unreadCount, loading, error } = useMyNotices(filters);
 
   return (
-    <DashboardLayout>
+    <Layout>
       <div className="notice-board-page">
         <PageHeader
           title={title}
@@ -59,6 +62,12 @@ export default function MyNoticeBoard({
 
         {loading ? (
           <LoadingState message="Loading notices…" />
+        ) : error ? (
+          <EmptyState
+            icon={Megaphone}
+            title="Unable to load notices"
+            description={error?.message || 'Please try again in a moment.'}
+          />
         ) : items.length === 0 ? (
           <EmptyState
             icon={Megaphone}
@@ -78,6 +87,6 @@ export default function MyNoticeBoard({
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </Layout>
   );
 }

@@ -524,12 +524,41 @@ export const libraryIssueService = createCrudService({
 /** Parent-facing library issues for linked students (`GET /parent/library/issues`). */
 export const parentLibraryIssueService = {
   async list(filters = {}) {
+    const normalize = (item) => {
+      if (!item) return null;
+      const book = item.book && typeof item.book === 'object' ? item.book : {};
+      const student = item.student && typeof item.student === 'object' ? item.student : {};
+      return {
+        ...item,
+        id: item.id || item.issueId,
+        bookId: item.bookId || item.book_id || book.id || '',
+        bookTitle: item.bookTitle || item.book_title || book.title || item.title || '',
+        studentId: item.studentId || item.student_id || student.id || '',
+        studentName: item.studentName
+          || item.student_name
+          || student.fullName
+          || student.name
+          || '',
+        classId: item.classId || item.class_id || student.classId || '',
+        className: item.className || item.class_name || student.className || '',
+        issueDate: item.issueDate || item.issue_date || item.issuedAt || '',
+        dueDate: item.dueDate || item.due_date || '',
+        returnDate: item.returnDate || item.return_date || '',
+        fine: item.fine ?? item.fineAmount ?? 0,
+        status: String(item.status || 'issued').toLowerCase(),
+      };
+    };
+
     return routeRequest({
       mockFn: async () => {
         await delay(120);
-        return libraryIssueService.list(filters);
+        const list = await libraryIssueService.list(filters);
+        return (Array.isArray(list) ? list : []).map(normalize).filter(Boolean);
       },
-      apiFn: async () => asCrudList(await api.get('/parent/library/issues', filters)),
+      apiFn: async () => {
+        const raw = asCrudList(await api.get('/parent/library/issues', filters));
+        return raw.map(normalize).filter(Boolean);
+      },
     });
   },
   async getById(id) {

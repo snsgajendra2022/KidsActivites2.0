@@ -1,5 +1,5 @@
 import { Flag, School } from 'lucide-react';
-import { normalizeRouteStops } from '../../utils/transportRouteGeo.js';
+import { normalizeRouteStops, resolveStopDisplayName } from '../../utils/transportRouteGeo.js';
 
 const TYPE_LABEL = {
   pickup: 'Pickup',
@@ -20,7 +20,7 @@ function prepareTimelineStops(stops) {
       const lng = Number(stop.lng ?? stop.longitude);
       return {
         id: String(stop.id || stop.stopId || `stop-${index + 1}`),
-        name: String(stop.name || `Stop ${index + 1}`).trim() || `Stop ${index + 1}`,
+        name: resolveStopDisplayName(stop, index),
         sequence: Number(stop.sequence) || index + 1,
         displaySequence: Number(stop.displaySequence) || index + 1,
         lat: Number.isFinite(lat) ? lat : null,

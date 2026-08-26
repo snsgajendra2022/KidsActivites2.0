@@ -21,6 +21,7 @@ import {
 import { useToast } from '../../context/ToastContext.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
 import { geocodeAddress } from '../../services/geocoding/placeSearch.js';
+import '../../styles/admin-modules.css';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -49,6 +50,7 @@ export default function TransportRoutesManagePage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [deleteLabel, setDeleteLabel] = useState('');
   const [schoolCenter, setSchoolCenter] = useState(null);
 
   useEffect(() => {
@@ -194,6 +196,7 @@ export default function TransportRoutesManagePage() {
       await transportRouteService.remove(deleteId);
       toast('Route deleted.', 'success');
       setDeleteId(null);
+      setDeleteLabel('');
       await load();
     } catch (err) {
       toast(err?.message || 'Unable to delete route.', 'error');
@@ -239,8 +242,10 @@ export default function TransportRoutesManagePage() {
           </div>
         </div>
 
-        <div className="mb-4">
+        <div className="admin-record-toolbar">
           <SearchField
+            className="min-w-[200px] flex-1"
+            maxWidthClass=""
             placeholder="Search routes or stops…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -257,14 +262,23 @@ export default function TransportRoutesManagePage() {
           />
         ) : (
           <ResponsiveDataTable
+            layout="cards"
             columns={columns}
             data={filtered}
             emptyMessage="No routes match your search."
             minWidth={860}
             renderActions={(item) => (
               <>
-                <TableActionButton variant="outline" onClick={() => openEdit(item)}>Edit</TableActionButton>
-                <TableActionButton variant="danger" onClick={() => setDeleteId(item.id)}>
+                <TableActionButton variant="outline" onClick={() => openEdit(item)}>
+                  Edit
+                </TableActionButton>
+                <TableActionButton
+                  variant="danger"
+                  onClick={() => {
+                    setDeleteId(item.id);
+                    setDeleteLabel(item.name || '');
+                  }}
+                >
                   <Trash2 size={14} /> Delete
                 </TableActionButton>
               </>
@@ -354,9 +368,12 @@ export default function TransportRoutesManagePage() {
 
         <ConfirmModal
           open={Boolean(deleteId)}
-          onClose={() => setDeleteId(null)}
+          onClose={() => {
+            setDeleteId(null);
+            setDeleteLabel('');
+          }}
           onConfirm={handleDelete}
-          title="Delete route?"
+          title={deleteLabel ? `Delete ${deleteLabel}?` : 'Delete route?'}
           message="This removes the route definition. Live trips that reference it may stop showing a path."
           confirmText="Delete"
           confirmVariant="danger"

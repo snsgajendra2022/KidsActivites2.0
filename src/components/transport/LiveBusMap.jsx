@@ -17,19 +17,72 @@ const STATUS_COLORS = {
 
 const FALLBACK_CENTER = [22.9734, 78.6569];
 const FALLBACK_ZOOM = 5;
+/**
+ * Hard zoom cap = free tile depth only.
+ * Past this, Carto used to show “basemaps API key required” placeholders —
+ * we no longer use Carto, and zoom cannot go past this limit.
+ */
+const MAP_MAX_ZOOM = 18;
+const MAP_MIN_ZOOM = 3;
 const MAP_TYPE_STORAGE_KEY = 'transport-live-map-type';
+
+/**
+ * Free basemaps with clear road + place labels (schools, hospitals, shops).
+ * No Carto — avoids “API key required” tiles at deep zoom.
+ */
 const MAP_TILES = {
   default: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19,
+    // Esri World Street Map: readable road names + POI labels (school/hospital/shop).
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: '',
+    maxZoom: MAP_MAX_ZOOM,
+    maxNativeZoom: 18,
   },
   satellite: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri',
-    maxZoom: 19,
+    attribution: '',
+    maxZoom: MAP_MAX_ZOOM,
+    maxNativeZoom: 17,
   },
 };
+
+/** Street underlay when satellite imagery thins out at high zoom. */
+const STREET_UNDERLAY = {
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  attribution: '',
+  maxZoom: MAP_MAX_ZOOM,
+  maxNativeZoom: 18,
+};
+
+/** Place names (schools, hospitals, towns) on satellite. */
+const PLACE_LABELS = {
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  attribution: '',
+  maxZoom: MAP_MAX_ZOOM,
+  maxNativeZoom: 18,
+};
+
+/** Road / street names on satellite. */
+const ROAD_LABELS = {
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+  attribution: '',
+  maxZoom: MAP_MAX_ZOOM,
+  maxNativeZoom: 18,
+};
+
+function tileLayerOptions(tiles) {
+  return {
+    attribution: tiles.attribution,
+    minZoom: MAP_MIN_ZOOM,
+    maxZoom: tiles.maxZoom ?? MAP_MAX_ZOOM,
+    maxNativeZoom: tiles.maxNativeZoom ?? tiles.maxZoom ?? MAP_MAX_ZOOM,
+    subdomains: tiles.subdomains || 'abc',
+    keepBuffer: 2,
+    updateWhenIdle: true,
+    updateWhenZooming: false,
+    detectRetina: false,
+  };
+}
 
 function readStoredMapType() {
   try {
@@ -128,37 +181,94 @@ function busHeadingTransform(heading) {
   return `rotate(${degrees - 90}deg)${mirrored ? ' scaleY(-1)' : ''}`;
 }
 
-function createBusIcon(status = 'running', selected = false) {
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function truncateLabel(value, max = 32) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1)}…`;
+}
+
+function resolveStopName(stop) {
+  const candidates = [
+    stop?.name,
+    stop?.stopName,
+    stop?.stop_name,
+    stop?.addressLabel,
+    stop?.address,
+  ];
+  for (const value of candidates) {
+    if (value == null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  const stopType = stop?.stop_type || stop?.stopType;
+  return stopType === 'school' ? 'School' : 'Stop';
+}
+
+function resolveVehicleLabel(vehicle) {
+  const candidates = [
+    vehicle?.vehicle_number,
+    vehicle?.vehicleNumber,
+    vehicle?.name,
+    vehicle?.label,
+    vehicle?.vehicle_id,
+    vehicle?.vehicleId,
+    vehicle?.id,
+  ];
+  for (const value of candidates) {
+    if (value == null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return 'Bus';
+}
+
+function createBusIcon(status = 'running', selected = false, vehicleLabel = '') {
   const color = STATUS_COLORS[status] || STATUS_COLORS.running;
+  const label = truncateLabel(vehicleLabel, 18);
+  const labelHtml = label
+    ? `<span class="live-bus-name-chip">${escapeHtml(label)}</span>`
+    : '';
   return L.divIcon({
     className: 'live-bus-marker',
-    html: `<div class="live-bus-marker-body${selected ? ' is-selected' : ''}" style="--bus-ring:${color}">${busGlyphSvg()}<span class="live-bus-status"></span></div>`,
-    iconSize: [BUS_MARKER_SIZE, BUS_MARKER_SIZE],
-    iconAnchor: [BUS_MARKER_SIZE / 2, BUS_MARKER_SIZE / 2],
+    html: `<div class="live-bus-marker-wrap">
+      <div class="live-bus-marker-body${selected ? ' is-selected' : ''}" style="--bus-ring:${color}">${busGlyphSvg()}<span class="live-bus-status"></span></div>
+      ${labelHtml}
+    </div>`,
+    iconSize: [120, 70],
+    iconAnchor: [60, 27],
   });
 }
 
-function createStopIcon(stopType, sequence, studentCount) {
+function createStopIcon(stopType, sequence, studentCount, stopName) {
   const color = stopType === 'school' ? '#0058be' : '#111827';
-  const label = sequence != null ? String(sequence) : '';
+  const seq = sequence != null ? String(sequence) : '';
+  const name = truncateLabel(stopName || (stopType === 'school' ? 'School' : 'Stop'), 34);
   const count = Number(studentCount);
   const badge = Number.isFinite(count) && count > 0
-    ? `<span style="
-        position:absolute;top:-6px;right:-8px;min-width:16px;height:16px;padding:0 4px;
-        border-radius:999px;background:#0B6E4F;color:#fff;font-size:9px;font-weight:700;
-        display:grid;place-items:center;border:1px solid #fff;
-      ">${count > 9 ? '9+' : count}</span>`
+    ? `<span class="live-stop-count">${count > 9 ? '9+' : count}</span>`
     : '';
   return L.divIcon({
     className: 'live-stop-marker',
-    html: `<div style="
-      position:relative;min-width:${label ? 22 : 12}px;height:${label ? 22 : 12}px;padding:0 ${label ? 5 : 0}px;
-      border-radius:999px;background:${color};color:#fff;font-size:11px;font-weight:700;
-      display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);
-      cursor:pointer;
-    ">${label}${badge}</div>`,
-    iconSize: [label ? 22 : 12, label ? 22 : 12],
-    iconAnchor: [label ? 11 : 6, label ? 11 : 6],
+    html: `<div class="live-stop-pin">
+      <div class="live-stop-dot" style="background:${color}">
+        ${seq ? `<span class="live-stop-seq">${escapeHtml(seq)}</span>` : ''}
+        ${badge}
+      </div>
+      <div class="live-stop-label" title="${escapeHtml(stopName || name)}">
+        <span class="live-stop-name">${escapeHtml(name)}</span>
+      </div>
+    </div>`,
+    iconSize: [168, 36],
+    iconAnchor: [14, 18],
   });
 }
 
@@ -263,6 +373,8 @@ export default function LiveBusMap({
   const isFullscreen = apiFullscreen || cssFullscreen;
   const layerRef = useRef(null);
   const tileLayerRef = useRef(null);
+  const underlayTileLayerRef = useRef(null);
+  const labelsTileLayerRef = useRef(null);
   const markersRef = useRef(new Map());
   const routeLayerRef = useRef(null);
   const lastFitTokenRef = useRef('');
@@ -317,8 +429,14 @@ export default function LiveBusMap({
     const map = L.map(containerRef.current, {
       center: FALLBACK_CENTER,
       zoom: FALLBACK_ZOOM,
+      minZoom: MAP_MIN_ZOOM,
+      maxZoom: MAP_MAX_ZOOM,
       zoomControl: false,
-      attributionControl: true,
+      attributionControl: false,
+      // Integer zoom keeps tiles aligned to native resolution (no soft scaling).
+      zoomSnap: 1,
+      zoomDelta: 1,
+      wheelPxPerZoomLevel: 100,
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -350,6 +468,8 @@ export default function LiveBusMap({
       mapRef.current = null;
       layerRef.current = null;
       tileLayerRef.current = null;
+      underlayTileLayerRef.current = null;
+      labelsTileLayerRef.current = null;
       routeLayerRef.current = null;
       lastFitTokenRef.current = '';
     };
@@ -359,19 +479,62 @@ export default function LiveBusMap({
     const map = mapRef.current;
     if (!map) return undefined;
 
+    const removeTileRefs = () => {
+      [tileLayerRef, underlayTileLayerRef, labelsTileLayerRef].forEach((ref) => {
+        if (ref.current) {
+          map.removeLayer(ref.current);
+          ref.current = null;
+        }
+      });
+    };
+
+    removeTileRefs();
+
     const tiles = MAP_TILES[mapType] || MAP_TILES.default;
-    const nextLayer = L.tileLayer(tiles.url, {
-      attribution: tiles.attribution,
-      maxZoom: tiles.maxZoom,
-    }).addTo(map);
-    nextLayer.bringToBack();
+
+    if (mapType === 'satellite') {
+      const underlay = L.tileLayer(STREET_UNDERLAY.url, tileLayerOptions(STREET_UNDERLAY)).addTo(map);
+      underlay.setZIndex(100);
+      underlayTileLayerRef.current = underlay;
+    }
+
+    const nextLayer = L.tileLayer(tiles.url, tileLayerOptions(tiles)).addTo(map);
+    nextLayer.setZIndex(mapType === 'satellite' ? 200 : 100);
     tileLayerRef.current = nextLayer;
 
+    // Satellite: overlay clear road names + place names (schools/hospitals/towns).
+    if (mapType === 'satellite') {
+      const overlays = L.layerGroup();
+      const roads = L.tileLayer(ROAD_LABELS.url, {
+        ...tileLayerOptions(ROAD_LABELS),
+        opacity: 0.95,
+      });
+      const places = L.tileLayer(PLACE_LABELS.url, {
+        ...tileLayerOptions(PLACE_LABELS),
+        opacity: 0.98,
+      });
+      roads.addTo(overlays);
+      places.addTo(overlays);
+      overlays.addTo(map);
+      labelsTileLayerRef.current = overlays;
+    }
+
+    // Snap to integer zoom so tiles stay crisp after type switch.
+    const zoom = map.getZoom();
+    if (Number.isFinite(zoom)) {
+      map.setZoom(Math.round(Math.min(MAP_MAX_ZOOM, Math.max(MAP_MIN_ZOOM, zoom))), {
+        animate: false,
+      });
+    }
+
     return () => {
-      if (mapRef.current && tileLayerRef.current) {
-        mapRef.current.removeLayer(tileLayerRef.current);
-      }
-      tileLayerRef.current = null;
+      if (!mapRef.current) return;
+      [tileLayerRef, underlayTileLayerRef, labelsTileLayerRef].forEach((ref) => {
+        if (ref.current) {
+          mapRef.current.removeLayer(ref.current);
+          ref.current = null;
+        }
+      });
     };
   }, [mapType]);
 
@@ -405,17 +568,25 @@ export default function LiveBusMap({
       seen.add(id);
       const selected = selectedVehicleId && String(selectedVehicleId) === id;
       const status = vehicle.tracking_status || vehicle.status;
-      const icon = createBusIcon(status, selected);
+      const vehicleLabel = resolveVehicleLabel(vehicle);
+      const icon = createBusIcon(status, selected, vehicleLabel);
 
       let marker = markersRef.current.get(id);
       if (!marker) {
         marker = L.marker([lat, lng], { icon, zIndexOffset: 600 })
+          .bindTooltip(vehicleLabel, {
+            direction: 'top',
+            offset: [0, -28],
+            opacity: 0.95,
+            className: 'live-map-tooltip',
+          })
           .addTo(layer)
           .on('click', () => onSelectVehicle?.(vehicle));
         markersRef.current.set(id, marker);
       } else {
         marker.setLatLng([lat, lng]);
         marker.setIcon(icon);
+        marker.setTooltipContent(vehicleLabel);
       }
 
       if (vehicle.heading != null && Number.isFinite(Number(vehicle.heading))) {
@@ -432,27 +603,37 @@ export default function LiveBusMap({
       const markerSeq = stop.displaySequence != null ? stop.displaySequence : stop.sequence;
       const stopType = stop.stop_type || stop.stopType;
       const studentCount = stop.assignedStudentCount ?? stop.studentCount;
+      const stopName = resolveStopName(stop);
       const kmLabel = Number.isFinite(Number(stop.distanceFromBusKm))
         ? ` · ${Number(stop.distanceFromBusKm).toFixed(2)} km`
         : '';
       const countLabel = Number.isFinite(Number(studentCount)) && Number(studentCount) > 0
         ? ` · ${Number(studentCount)} student${Number(studentCount) === 1 ? '' : 's'}`
         : '';
-      const popup = `${stop.name || 'Stop'}${markerSeq != null ? ` #${markerSeq}` : ''}${kmLabel}${countLabel}`;
+      const popup = `${stopName}${markerSeq != null ? ` (#${markerSeq})` : ''}${kmLabel}${countLabel}`;
+      const stopIcon = createStopIcon(stopType, markerSeq, studentCount, stopName);
 
       let marker = markersRef.current.get(id);
       if (!marker) {
         marker = L.marker([stop.latitude, stop.longitude], {
-          icon: createStopIcon(stopType, markerSeq, studentCount),
+          icon: stopIcon,
+          zIndexOffset: 400,
         })
           .bindPopup(popup)
+          .bindTooltip(stopName, {
+            direction: 'right',
+            offset: [18, 0],
+            opacity: 0.95,
+            className: 'live-map-tooltip',
+          })
           .on('click', () => onSelectStop?.(stop))
           .addTo(layer);
         markersRef.current.set(id, marker);
       } else {
         marker.setLatLng([stop.latitude, stop.longitude]);
-        marker.setIcon(createStopIcon(stopType, markerSeq, studentCount));
+        marker.setIcon(stopIcon);
         marker.setPopupContent(popup);
+        marker.setTooltipContent(stopName);
         marker.off('click');
         marker.on('click', () => onSelectStop?.(stop));
       }
@@ -573,6 +754,20 @@ export default function LiveBusMap({
           border: none !important;
           overflow: visible !important;
         }
+        .live-stop-marker {
+          background: transparent !important;
+          border: none !important;
+          overflow: visible !important;
+        }
+        .live-bus-marker-wrap {
+          position: relative;
+          width: 120px;
+          height: 70px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          pointer-events: auto;
+        }
         .live-bus-marker-body {
           position: relative;
           width: 54px;
@@ -598,6 +793,23 @@ export default function LiveBusMap({
           background: rgba(0, 88, 190, 0.16);
           box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92);
         }
+        .live-bus-name-chip {
+          margin-top: 2px;
+          max-width: 110px;
+          padding: 2px 7px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.96);
+          border: 1px solid #d0d5dd;
+          box-shadow: 0 1px 3px rgba(11, 18, 32, 0.18);
+          color: #0b1c30;
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          text-align: center;
+        }
         .live-bus-glyph {
           position: relative;
           z-index: 1;
@@ -615,6 +827,93 @@ export default function LiveBusMap({
           border-radius: 999px;
           background: var(--bus-ring, #0B6E4F);
           border: 2.5px solid #fff;
+        }
+        .live-stop-pin {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          height: 36px;
+          pointer-events: auto;
+        }
+        .live-stop-dot {
+          position: relative;
+          flex: 0 0 auto;
+          min-width: 22px;
+          height: 22px;
+          padding: 0 5px;
+          border-radius: 999px;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 700;
+          display: grid;
+          place-items: center;
+          border: 2px solid #fff;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+        }
+        .live-stop-seq {
+          line-height: 1;
+        }
+        .live-stop-count {
+          position: absolute;
+          top: -7px;
+          right: -9px;
+          min-width: 16px;
+          height: 16px;
+          padding: 0 4px;
+          border-radius: 999px;
+          background: #0B6E4F;
+          color: #fff;
+          font-size: 9px;
+          font-weight: 700;
+          display: grid;
+          place-items: center;
+          border: 1px solid #fff;
+        }
+        .live-stop-label {
+          max-width: 140px;
+          padding: 3px 8px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.96);
+          border: 1px solid #d0d5dd;
+          box-shadow: 0 1px 4px rgba(11, 18, 32, 0.16);
+        }
+        .live-stop-name {
+          display: block;
+          color: #0b1c30;
+          font-size: 11px;
+          font-weight: 700;
+          line-height: 1.25;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .live-map-tooltip {
+          background: #0b1c30 !important;
+          color: #fff !important;
+          border: none !important;
+          border-radius: 8px !important;
+          padding: 4px 8px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          box-shadow: 0 2px 8px rgba(11, 18, 32, 0.28) !important;
+        }
+        .live-map-tooltip::before {
+          border-top-color: #0b1c30 !important;
+          border-right-color: #0b1c30 !important;
+        }
+        .live-bus-map-shell .leaflet-container {
+          background: #e8eef5;
+          font: inherit;
+        }
+        .live-bus-map-shell .leaflet-control-attribution {
+          display: none !important;
+        }
+        .live-bus-map-shell .leaflet-tile {
+          image-rendering: auto;
+          filter: none !important;
+        }
+        .live-bus-map-shell .leaflet-zoom-anim .leaflet-zoom-animated {
+          will-change: transform;
         }
       `}</style>
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] flex flex-col gap-1.5 p-1.5 sm:flex-row sm:items-start sm:justify-between sm:p-2">

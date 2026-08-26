@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
+import AppLayout from '../../components/layout/AppLayout.jsx';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { LoadingState } from '../../components/ui/index.jsx';
 import { NoticeCategoryBadge, NoticePriorityBadge } from '../../components/notice-board/NoticeBadges.jsx';
@@ -9,7 +10,11 @@ import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import '../../styles/notice-board.css';
 
-export default function MyNoticeDetail({ backPath = '/parent/notice-board' }) {
+export default function MyNoticeDetail({
+  backPath = '/parent/notice-board',
+  layout = 'dashboard',
+}) {
+  const Layout = layout === 'app' ? AppLayout : DashboardLayout;
   const { noticeId } = useParams();
   const { tenantPath } = useTenantPath();
   const { toast } = useToast();
@@ -20,7 +25,7 @@ export default function MyNoticeDetail({ backPath = '/parent/notice-board' }) {
     if (noticeId && notice && !notice.readAt) {
       markRead(noticeId).catch(() => {});
     }
-  }, [noticeId, notice?.readAt]);
+  }, [noticeId, notice?.readAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAcknowledge = async () => {
     try {
@@ -33,20 +38,20 @@ export default function MyNoticeDetail({ backPath = '/parent/notice-board' }) {
   };
 
   if (loading) {
-    return <DashboardLayout><LoadingState message="Loading notice…" /></DashboardLayout>;
+    return <Layout><LoadingState message="Loading notice…" /></Layout>;
   }
 
   if (!notice) {
     return (
-      <DashboardLayout>
+      <Layout>
         <p>Notice not found or you do not have access.</p>
         <Link to={tenantPath(backPath)}>Back to Notice Board</Link>
-      </DashboardLayout>
+      </Layout>
     );
   }
 
   return (
-    <DashboardLayout>
+    <Layout>
       <div className="notice-detail-page notice-detail-page--inbox">
         <Link to={tenantPath(backPath)} className="notice-back-link">
           <ArrowLeft size={16} /> Back to Notice Board
@@ -76,6 +81,6 @@ export default function MyNoticeDetail({ backPath = '/parent/notice-board' }) {
           <p className="notice-ack-done">Acknowledged on {new Date(notice.acknowledgedAt).toLocaleString()}</p>
         )}
       </div>
-    </DashboardLayout>
+    </Layout>
   );
 }

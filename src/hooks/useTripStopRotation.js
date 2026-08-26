@@ -5,7 +5,7 @@ import { normalizeMappedStops } from '../utils/transportRouteGeo.js';
 function toLiveMapStop(stop) {
   return {
     id: stop.stopId,
-    name: stop.name,
+    name: stop.name || stop.stopName || stop.stop_name || 'Stop',
     latitude: stop.latitude,
     longitude: stop.longitude,
     sequence: stop.sequence,

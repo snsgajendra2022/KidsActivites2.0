@@ -23,12 +23,44 @@ function pickString(...values) {
   return '';
 }
 
+function isFalsyFlag(value) {
+  if (value === false || value === 0) return true;
+  const text = String(value ?? '').trim().toLowerCase();
+  return text === 'false' || text === '0' || text === 'no' || text === 'inactive' || text === 'disabled';
+}
+
+function resolveDriverActive(item, user = {}) {
+  const statusText = String(
+    item.status
+    || item.accountStatus
+    || item.account_status
+    || user.status
+    || user.accountStatus
+    || '',
+  ).trim().toLowerCase();
+  if (['inactive', 'disabled', 'deactivated', 'suspended', 'deleted'].includes(statusText)) {
+    return false;
+  }
+  if (
+    isFalsyFlag(item.active)
+    || isFalsyFlag(item.isActive)
+    || isFalsyFlag(item.enabled)
+    || isFalsyFlag(user.active)
+    || isFalsyFlag(user.isActive)
+    || isFalsyFlag(user.enabled)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function normalizeDriver(item) {
   if (!item) return null;
   const user = item.user && typeof item.user === 'object' ? item.user : {};
   const vehicle = item.vehicle && typeof item.vehicle === 'object' ? item.vehicle : {};
   const id = pickString(item.id, item.driverId, item.driver_id, item.userId, item.user_id, user.id);
   if (!id) return null;
+  const active = resolveDriverActive(item, user);
   return {
     id,
     userId: pickString(item.userId, item.user_id, user.id, id),
@@ -36,8 +68,8 @@ export function normalizeDriver(item) {
     email: pickString(item.email, user.email),
     mobile: pickString(item.mobile, item.phone, item.driverPhone, user.mobile, user.phone),
     licenseNumber: pickString(item.licenseNumber, item.license_number, item.licenceNumber),
-    status: pickString(item.status, item.active === false ? 'inactive' : '', 'active') || 'active',
-    active: item.active !== false && String(item.status || 'active').toLowerCase() !== 'inactive',
+    status: active ? 'active' : 'inactive',
+    active,
     vehicleId: pickString(item.vehicleId, item.vehicle_id, vehicle.id) || null,
     vehicleNumber: pickString(item.vehicleNumber, item.vehicle_number, vehicle.vehicleNumber, vehicle.number) || null,
     role: ROLES.DRIVER,
@@ -118,6 +150,22 @@ export async function deactivateDriver(driverId) {
     } catch (inner) {
       if (!isNotFound(inner)) throw inner;
       return updateDriver(driverId, { status: 'inactive', active: false });
+    }
+  }
+}
+
+export async function activateDriver(driverId) {
+  try {
+    const data = await api.patch(`/admin/transport/drivers/${driverId}/activate`, {});
+    return normalizeDriver(data) || { id: driverId, active: true, status: 'active' };
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+    try {
+      const data = await api.patch(`/admin/users/${driverId}/activate`);
+      return normalizeDriver(data) || { id: driverId, active: true, status: 'active' };
+    } catch (inner) {
+      if (!isNotFound(inner)) throw inner;
+      return updateDriver(driverId, { status: 'active', active: true });
     }
   }
 }

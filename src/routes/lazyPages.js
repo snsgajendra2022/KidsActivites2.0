@@ -96,6 +96,7 @@ export const DriverTripGuidePage = lazy(() => import('../pages/modules/DriverTri
 
 export const LibraryBooksPage = lazyNamed(() => import('../pages/modules/LibraryPages.jsx'), 'LibraryBooksPage');
 export const LibraryIssuesPage = lazyNamed(() => import('../pages/modules/LibraryPages.jsx'), 'LibraryIssuesPage');
+export const ParentLibraryPage = lazy(() => import('../pages/parent/ParentLibraryPage.jsx'));
 
 export const CertificatesPage = lazyNamed(() => import('../pages/modules/OpsModulePages.jsx'), 'CertificatesPage');
 export const ExpensesPage = lazyNamed(() => import('../pages/modules/OpsModulePages.jsx'), 'ExpensesPage');

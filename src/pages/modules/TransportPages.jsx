@@ -91,6 +91,9 @@ export function TransportVehiclesPage() {
       fields={vehicleFields}
       createLabel="Add Vehicle"
       searchKeys={['vehicleNumber', 'driverName', 'routeName', 'status']}
+      deleteLabel="Delete"
+      deleteTitle="Delete vehicle?"
+      deleteMessage="This removes the vehicle from transport. Reassign students and drivers on other vehicles before the next trip."
       transformCreate={(form) => {
         const selectedRoute = routeOptions.find((option) => String(option.value) === String(form.routeId));
         const selectedDriver = driverOptions.find((option) => String(option.value) === String(form.driverUserId));

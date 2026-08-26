@@ -68,8 +68,8 @@ export default function StudentAttendanceHistory() {
 
   const queryStudentId = searchParams.get('studentId') || '';
 
-  const [from, setFrom] = useState(monthStartISODate());
-  const [to, setTo] = useState(todayISODate());
+  const [from, setFrom] = useState(searchParams.get('from') || monthStartISODate());
+  const [to, setTo] = useState(searchParams.get('to') || todayISODate());
   const [children, setChildren] = useState([]);
   const [manualStudentId, setManualStudentId] = useState('');
   const [history, setHistory] = useState(null);

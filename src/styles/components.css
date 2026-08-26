@@ -283,6 +283,28 @@ a.sb-link-btn--light:hover { color: var(--sb-navy) !important; }
   background: var(--sb-deep-blue);
 }
 
+.table-action-btn-danger {
+  background: #fff;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.table-action-btn-danger:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+  color: #991b1b;
+}
+
+.table-action-btn-success {
+  background: #059669;
+  color: #fff;
+  border: none;
+}
+
+.table-action-btn-success:hover {
+  background: #047857;
+}
+
 /* Status badges */
 .sb-status-badge {
   display: inline-flex;

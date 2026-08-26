@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FileText, CreditCard, FolderOpen, Image, MessageCircle, Bell, ArrowRight,
-  AlertCircle, GraduationCap, Plus, Users, Clock, CheckCircle,
+  AlertCircle, GraduationCap, Plus, Users, Clock, CheckCircle, BookMarked, Megaphone,
 } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
@@ -18,6 +18,8 @@ import LoadingState from '../../components/ui/LoadingState.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { getParentDashboard } from '../../services/parentService.js';
+import { parentLibraryIssueService } from '../../services/schoolModules/index.js';
+import { getMyNotices } from '../../services/noticeBoardService.js';
 import { ENROLLMENT_STATUSES } from '../../constants/enrollmentStatuses.js';
 import '../../styles/parent-dashboard.css';
 import UpcomingEventsWidget from '../../components/calendar/UpcomingEventsWidget.jsx';
@@ -91,6 +93,8 @@ const QUICK_LINKS = [
   { key: 'timetable', icon: Clock, label: 'Timetable', path: '/parent/timetable' },
   { key: 'fees', icon: CreditCard, label: 'Fees', path: '/parent/fees' },
   { key: 'leave', icon: AlertCircle, label: 'Leave', path: '/parent/leave' },
+  { key: 'library', icon: BookMarked, label: 'Library', path: '/parent/library' },
+  { key: 'notices', icon: Megaphone, label: 'Notices', path: '/parent/notice-board' },
   { key: 'transport', icon: Users, label: 'Bus Track', path: '/parent/transport' },
   { key: 'documents', icon: FolderOpen, label: 'Documents', path: '/parent/documents' },
   { key: 'photos', icon: Image, label: 'Photos', path: '/parent/photos' },
@@ -148,6 +152,9 @@ export default function ParentDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [libraryIssues, setLibraryIssues] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [noticeUnread, setNoticeUnread] = useState(0);
 
   useEffect(() => {
     if (!user?.id) {
@@ -175,6 +182,25 @@ export default function ParentDashboard() {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    let cancelled = false;
+    Promise.all([
+      parentLibraryIssueService.list({}).catch(() => []),
+      getMyNotices(user.id, {}).catch(() => ({ items: [], unreadCount: 0 })),
+    ]).then(([issues, noticeData]) => {
+      if (cancelled) return;
+      const list = Array.isArray(issues) ? issues : [];
+      setLibraryIssues(list.filter((item) => {
+        const status = String(item.status || '').toLowerCase();
+        return status === 'issued' || status === 'overdue';
+      }).slice(0, 4));
+      setNotices(Array.isArray(noticeData?.items) ? noticeData.items.slice(0, 4) : []);
+      setNoticeUnread(Number(noticeData?.unreadCount || 0));
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const quickLinks = useMemo(
     () => QUICK_LINKS.map((link) => ({ ...link, to: tenantPath(link.path) })),
@@ -367,6 +393,89 @@ export default function ParentDashboard() {
               calendarPath="/parent/calendar"
               title="Upcoming for your family"
             />
+          </div>
+
+          <div className="bento-span-6">
+            <div className="premium-card" style={{ height: '100%' }}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="card-title" style={{ margin: 0 }}>Library books</h3>
+                  <p className="text-muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+                    Issued to your children
+                  </p>
+                </div>
+                <Link to={tenantPath('/parent/library')} className="table-action-btn table-action-btn-outline">
+                  View all
+                </Link>
+              </div>
+              {libraryIssues.length === 0 ? (
+                <p className="text-muted" style={{ margin: 0, fontSize: 14 }}>
+                  No books currently issued.
+                </p>
+              ) : (
+                <ul className="parent-dashboard-pending__list">
+                  {libraryIssues.map((item) => (
+                    <li key={item.id}>
+                      <Link to={tenantPath('/parent/library')} className="parent-dashboard-pending__item">
+                        <span className="parent-dashboard-pending__item-text">
+                          <strong>{item.bookTitle || 'Library book'}</strong>
+                          <span>
+                            {item.studentName || 'Student'}
+                            {item.dueDate ? ` · Due ${item.dueDate}` : ''}
+                          </span>
+                        </span>
+                        <BookMarked size={16} aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="bento-span-6">
+            <div className="premium-card" style={{ height: '100%' }}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="card-title" style={{ margin: 0 }}>
+                    Notices
+                    {noticeUnread > 0 ? ` · ${noticeUnread} unread` : ''}
+                  </h3>
+                  <p className="text-muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+                    School announcements for your family
+                  </p>
+                </div>
+                <Link to={tenantPath('/parent/notice-board')} className="table-action-btn table-action-btn-outline">
+                  View all
+                </Link>
+              </div>
+              {notices.length === 0 ? (
+                <p className="text-muted" style={{ margin: 0, fontSize: 14 }}>
+                  No notices yet.
+                </p>
+              ) : (
+                <ul className="parent-dashboard-pending__list">
+                  {notices.map((notice) => (
+                    <li key={notice.id}>
+                      <Link
+                        to={tenantPath(`/parent/notice-board/${notice.id}`)}
+                        className="parent-dashboard-pending__item"
+                      >
+                        <span className="parent-dashboard-pending__item-text">
+                          <strong>{notice.title || 'Notice'}</strong>
+                          <span>
+                            {notice.publishedAt
+                              ? new Date(notice.publishedAt).toLocaleDateString()
+                              : 'School notice'}
+                          </span>
+                        </span>
+                        <Megaphone size={16} aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           <div className="bento-span-12">

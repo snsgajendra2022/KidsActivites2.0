@@ -175,6 +175,9 @@ export default function ModuleCrudPage({
   /** Optional override for table row actions. Receives (item, helpers). */
   renderRowActions,
   hideCreate = false,
+  deleteLabel = 'Delete',
+  deleteTitle = 'Delete record?',
+  deleteMessage = 'This action cannot be undone.',
 }) {
   const Layout = layout === 'app' ? AppLayout : DashboardLayout;
   const { toast } = useToast();
@@ -187,6 +190,7 @@ export default function ModuleCrudPage({
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [deleteTargetLabel, setDeleteTargetLabel] = useState('');
   const [optionMap, setOptionMap] = useState({});
   const [optionLoading, setOptionLoading] = useState({});
   const optionRequestRef = useRef({});
@@ -417,6 +421,22 @@ export default function ModuleCrudPage({
     }
   };
 
+  const requestDelete = (itemOrId, label = '') => {
+    if (itemOrId && typeof itemOrId === 'object') {
+      setDeleteId(itemOrId.id);
+      setDeleteTargetLabel(
+        label
+        || itemOrId.vehicleNumber
+        || itemOrId.name
+        || itemOrId.title
+        || '',
+      );
+      return;
+    }
+    setDeleteId(itemOrId);
+    setDeleteTargetLabel(label || '');
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     setSaving(true);
@@ -424,6 +444,7 @@ export default function ModuleCrudPage({
       await service.remove(deleteId);
       toast('Record deleted.', 'success');
       setDeleteId(null);
+      setDeleteTargetLabel('');
       await load();
     } catch (err) {
       toast(err?.message || 'Unable to delete record.', 'error');
@@ -491,15 +512,17 @@ export default function ModuleCrudPage({
               if (typeof renderRowActions === 'function') {
                 return renderRowActions(item, {
                   openEdit,
-                  requestDelete: (id) => setDeleteId(id),
+                  requestDelete,
                   reload: load,
                 });
               }
               return (
                 <>
-                  <TableActionButton variant="outline" onClick={() => openEdit(item)}>Edit</TableActionButton>
-                  <TableActionButton variant="danger" onClick={() => setDeleteId(item.id)}>
-                    <Trash2 size={14} /> Delete
+                  <TableActionButton variant="outline" onClick={() => openEdit(item)}>
+                    Edit
+                  </TableActionButton>
+                  <TableActionButton variant="danger" onClick={() => requestDelete(item)}>
+                    <Trash2 size={14} /> {deleteLabel}
                   </TableActionButton>
                 </>
               );
@@ -536,11 +559,14 @@ export default function ModuleCrudPage({
 
         <ConfirmModal
           open={Boolean(deleteId)}
-          onClose={() => setDeleteId(null)}
+          onClose={() => {
+            setDeleteId(null);
+            setDeleteTargetLabel('');
+          }}
           onConfirm={handleDelete}
-          title="Delete record?"
-          message="This action cannot be undone."
-          confirmText="Delete"
+          title={deleteTargetLabel ? `Delete ${deleteTargetLabel}?` : deleteTitle}
+          message={deleteMessage}
+          confirmText={deleteLabel}
           confirmVariant="danger"
           loading={saving}
         />

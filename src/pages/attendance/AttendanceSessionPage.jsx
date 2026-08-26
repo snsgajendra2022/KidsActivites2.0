@@ -17,6 +17,7 @@ import {
   getAttendanceClasses,
   getAttendanceSession,
   getAttendanceStatuses,
+  getStudentAttendanceHistory,
   saveAttendanceSession,
 } from '../../services/attendanceService.js';
 import { getSchoolOperationsForDate } from '../../services/calendarFeedService.js';
@@ -29,6 +30,36 @@ const MSG = {
   finalized: 'Attendance has been finalized for this date. Contact admin to reopen it.',
   loadError: 'Unable to load attendance. Please check your connection and try again.',
 };
+
+function normalizePersonName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function studentMatchesFocus(student, focusStudentId, focusStudentName) {
+  if (!student) return false;
+  if (focusStudentId) {
+    const ids = [
+      student.studentId,
+      student.id,
+      student.applicationId,
+      student.enrollmentId,
+    ].filter(Boolean).map(String);
+    if (ids.some((id) => id === String(focusStudentId))) return true;
+  }
+  if (focusStudentName) {
+    const target = normalizePersonName(focusStudentName);
+    const names = [
+      student.studentName,
+      student.name,
+      student.fullName,
+    ].map(normalizePersonName).filter(Boolean);
+    if (names.some((name) => name === target)) return true;
+  }
+  return false;
+}
 
 function computeLocalSummary(students) {
   const summary = {
@@ -65,6 +96,8 @@ export default function AttendanceSessionPage() {
     const sectionId = searchParams.get('sectionId') || '';
     return classId ? buildClassKey(classId, sectionId) : '';
   });
+  const focusStudentId = searchParams.get('studentId') || '';
+  const focusStudentName = searchParams.get('studentName') || '';
   const [classes, setClasses] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [session, setSession] = useState(null);
@@ -75,19 +108,24 @@ export default function AttendanceSessionPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [holidayImpact, setHolidayImpact] = useState(null);
+  const [resolvingFocusClass, setResolvingFocusClass] = useState(false);
 
   const { classId, sectionId } = useMemo(() => parseClassKey(classKey), [classKey]);
   const isFinalized = session?.status === 'FINALIZED';
   const canEdit = !isFinalized && (session == null || session.canEdit !== false);
 
-  const syncUrl = useCallback((nextDate, nextClassKey) => {
+  const syncUrl = useCallback((nextDate, nextClassKey, focus = {}) => {
     const params = new URLSearchParams();
     if (nextDate) params.set('date', nextDate);
     const parsed = parseClassKey(nextClassKey);
     if (parsed.classId) params.set('classId', parsed.classId);
     if (parsed.sectionId) params.set('sectionId', parsed.sectionId);
+    const studentId = focus.studentId ?? searchParams.get('studentId');
+    const studentName = focus.studentName ?? searchParams.get('studentName');
+    if (studentId) params.set('studentId', studentId);
+    if (studentName) params.set('studentName', studentName);
     setSearchParams(params, { replace: true });
-  }, [setSearchParams]);
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,7 +160,9 @@ export default function AttendanceSessionPage() {
         if (cancelled) return;
         const list = Array.isArray(data) ? data : [];
         setClasses(list);
-        if (!classKey && list.length === 1) {
+        // Do not auto-pick a class when we are focusing a specific student —
+        // that student may belong to another class (e.g. Nitin vs Ankit).
+        if (!classKey && list.length === 1 && !focusStudentId && !focusStudentName) {
           const nextKey = buildClassKey(list[0].id, list[0].sectionId);
           setClassKey(nextKey);
           syncUrl(date, nextKey);
@@ -139,6 +179,72 @@ export default function AttendanceSessionPage() {
       });
     return () => { cancelled = true; };
   }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resolve class/section for Open session when report row only had studentId/name.
+  useEffect(() => {
+    if (classKey || (!focusStudentId && !focusStudentName)) return undefined;
+    let cancelled = false;
+    setResolvingFocusClass(true);
+
+    (async () => {
+      try {
+        let resolvedClassId = '';
+        let resolvedSectionId = '';
+
+        if (focusStudentId) {
+          const history = await getStudentAttendanceHistory(focusStudentId, {
+            from: date || undefined,
+            to: date || undefined,
+          });
+          const records = Array.isArray(history?.records) ? history.records : [];
+          const withClass = records.find((record) => record.classId)
+            || records[0]
+            || null;
+          resolvedClassId = withClass?.classId || history?.student?.classId || '';
+          resolvedSectionId = withClass?.sectionId || history?.student?.sectionId || '';
+        }
+
+        // Fallback: scan today's class sessions for a matching student name/id.
+        if (!resolvedClassId && classes.length) {
+          for (const cls of classes) {
+            if (cancelled) return;
+            try {
+              const payload = await getAttendanceSession({
+                classId: cls.id,
+                sectionId: cls.sectionId || undefined,
+                date,
+              });
+              const roster = Array.isArray(payload?.students) ? payload.students : [];
+              const hit = roster.find((student) => (
+                studentMatchesFocus(student, focusStudentId, focusStudentName)
+              ));
+              if (hit) {
+                resolvedClassId = cls.id;
+                resolvedSectionId = cls.sectionId || '';
+                break;
+              }
+            } catch {
+              // try next class
+            }
+          }
+        }
+
+        if (cancelled || !resolvedClassId) return;
+        const nextKey = buildClassKey(resolvedClassId, resolvedSectionId);
+        setClassKey(nextKey);
+        syncUrl(date, nextKey, {
+          studentId: focusStudentId || undefined,
+          studentName: focusStudentName || undefined,
+        });
+      } catch {
+        // Leave class unselected; user can pick manually.
+      } finally {
+        if (!cancelled) setResolvingFocusClass(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [classKey, focusStudentId, focusStudentName, date, classes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!classId || !date) {
@@ -179,6 +285,31 @@ export default function AttendanceSessionPage() {
     () => (students.length ? computeLocalSummary(students) : summary),
     [students, summary],
   );
+
+  const orderedStudents = useMemo(() => {
+    if (!focusStudentId && !focusStudentName) return students;
+    const focused = [];
+    const rest = [];
+    students.forEach((student) => {
+      if (studentMatchesFocus(student, focusStudentId, focusStudentName)) focused.push(student);
+      else rest.push(student);
+    });
+    return focused.length ? [...focused, ...rest] : students;
+  }, [students, focusStudentId, focusStudentName]);
+
+  const focusedStudent = orderedStudents.find((student) => (
+    studentMatchesFocus(student, focusStudentId, focusStudentName)
+  )) || null;
+
+  useEffect(() => {
+    if ((!focusStudentId && !focusStudentName) || sessionLoading || !focusedStudent) return undefined;
+    const focusId = focusedStudent.studentId || focusStudentId;
+    const timer = window.setTimeout(() => {
+      const el = document.getElementById(`attendance-student-${focusId}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [focusStudentId, focusStudentName, sessionLoading, focusedStudent]);
 
   const handleDateChange = (value) => {
     setDate(value);
@@ -312,6 +443,11 @@ export default function AttendanceSessionPage() {
           {classesLoading && (
             <p className="mt-2 text-sm text-[#5a6270]">Loading classes…</p>
           )}
+          {resolvingFocusClass && (
+            <p className="mt-2 text-sm text-[#5a6270]">
+              Finding class session for {focusStudentName || 'selected student'}…
+            </p>
+          )}
         </div>
 
           {holidayImpact ? (
@@ -323,14 +459,23 @@ export default function AttendanceSessionPage() {
             </div>
           ) : null}
 
+          {(focusStudentId || focusStudentName) && focusedStudent ? (
+            <div className="mb-4 rounded-xl border border-[#c7d7f5] bg-[#eef5ff] px-4 py-3 text-sm text-[#0b1c30]">
+              Opened session for <strong>{focusedStudent.studentName || focusedStudent.name || focusStudentName}</strong>
+              {' '}— their row is highlighted below.
+            </div>
+          ) : null}
+
           {!classId || !date ? (
           <EmptyState
             icon={ClipboardCheck}
-            title="Get started"
-            description={MSG.select}
+            title={resolvingFocusClass ? 'Opening student session…' : 'Get started'}
+            description={resolvingFocusClass
+              ? `Looking up the class for ${focusStudentName || 'this student'}.`
+              : MSG.select}
           />
-        ) : sessionLoading ? (
-          <LoadingState message="Loading attendance…" />
+        ) : sessionLoading || resolvingFocusClass ? (
+          <LoadingState message={resolvingFocusClass ? 'Opening student session…' : 'Loading attendance…'} />
         ) : error ? (
           <EmptyState
             icon={ClipboardCheck}
@@ -390,12 +535,13 @@ export default function AttendanceSessionPage() {
               />
             ) : (
               <div className="space-y-2">
-                {students.map((student) => (
+                {orderedStudents.map((student) => (
                   <AttendanceStudentRow
                     key={student.studentId}
                     student={student}
                     statuses={statusList}
                     canEdit={canEdit}
+                    highlighted={studentMatchesFocus(student, focusStudentId, focusStudentName)}
                     onStatusChange={handleStatusChange}
                     onNoteChange={handleNoteChange}
                   />

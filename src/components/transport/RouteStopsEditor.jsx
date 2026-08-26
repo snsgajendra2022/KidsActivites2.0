@@ -18,7 +18,9 @@ import useRoadRoute from '../../hooks/useRoadRoute.js';
 
 const FALLBACK_CENTER = [22.9734, 78.6569];
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const MAP_MAX_ZOOM = 22;
+const MAP_MIN_ZOOM = 3;
+const OSM_MAX_NATIVE_ZOOM = 19;
 
 function makeStopId() {
   return `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -170,10 +172,22 @@ export default function RouteStopsEditor({
     const map = L.map(containerRef.current, {
       center: start,
       zoom: Array.isArray(initialCenter) ? 13 : 5,
+      minZoom: MAP_MIN_ZOOM,
+      maxZoom: MAP_MAX_ZOOM,
       zoomControl: false,
+      attributionControl: false,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
     });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    L.tileLayer(OSM_TILE_URL, { attribution: OSM_ATTRIBUTION, maxZoom: 19 }).addTo(map);
+    L.tileLayer(OSM_TILE_URL, {
+      attribution: '',
+      minZoom: MAP_MIN_ZOOM,
+      maxZoom: MAP_MAX_ZOOM,
+      maxNativeZoom: OSM_MAX_NATIVE_ZOOM,
+      keepBuffer: 2,
+      updateWhenZooming: true,
+    }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  CalendarDays, CheckCircle2, Clock3, UserRound, XCircle,
+  CalendarDays, CheckCircle2, Clock3, MessageSquareText, UserRound, XCircle,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import AppLayout from '../../components/layout/AppLayout.jsx';
@@ -36,7 +36,7 @@ function formatDate(value) {
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString(undefined, {
-    day: '2-digit',
+    day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
@@ -64,6 +64,14 @@ function statusTone(status) {
   return 'info';
 }
 
+function statusCardClass(status) {
+  const value = String(status || '').toLowerCase();
+  if (value === 'approved') return 'leave-card--approved';
+  if (value === 'rejected') return 'leave-card--rejected';
+  if (value === 'pending') return 'leave-card--pending';
+  return '';
+}
+
 function emptyForm(user) {
   return {
     classId: '',
@@ -83,7 +91,7 @@ export default function LeaveRequestsPage({ layout = 'app' }) {
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState(isParent ? 'all' : 'pending');
+  const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -172,16 +180,18 @@ export default function LeaveRequestsPage({ layout = 'app' }) {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return items.filter((item) => {
-      const status = String(item.status || '').toLowerCase();
-      if (filter !== 'all' && status !== filter) return false;
-      if (!query) return true;
-      return [item.studentName, item.className, item.reason, item.status]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
-    });
+    return items
+      .filter((item) => {
+        const status = String(item.status || '').toLowerCase();
+        if (filter !== 'all' && status !== filter) return false;
+        if (!query) return true;
+        return [item.studentName, item.className, item.reason, item.status, item.reviewNote]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(query);
+      })
+      .sort((a, b) => String(b.fromDate || '').localeCompare(String(a.fromDate || '')));
   }, [items, filter, search]);
 
   const openCreate = () => {
@@ -279,7 +289,9 @@ export default function LeaveRequestsPage({ layout = 'app' }) {
             : 'Review pending requests quickly and keep families informed.'}
           actions={isParent ? (
             <Button onClick={openCreate}>Request Leave</Button>
-          ) : null}
+          ) : (
+            <Button variant="secondary" onClick={openCreate}>Add leave request</Button>
+          )}
         />
 
         {isParent ? (
@@ -295,34 +307,34 @@ export default function LeaveRequestsPage({ layout = 'app' }) {
         ) : null}
 
         <div className="leave-kpi-grid">
-          <div className="admin-stat-card admin-stat-card--amber">
-            <div className="admin-stat-card__icon"><Clock3 size={18} /></div>
-            <div>
-              <p className="admin-stat-card__value">{counts.pending}</p>
-              <p className="admin-stat-card__label">Pending</p>
-            </div>
-          </div>
-          <div className="admin-stat-card admin-stat-card--emerald">
-            <div className="admin-stat-card__icon"><CheckCircle2 size={18} /></div>
-            <div>
-              <p className="admin-stat-card__value">{counts.approved}</p>
-              <p className="admin-stat-card__label">Approved</p>
-            </div>
-          </div>
-          <div className="admin-stat-card admin-stat-card--rose">
-            <div className="admin-stat-card__icon"><XCircle size={18} /></div>
-            <div>
-              <p className="admin-stat-card__value">{counts.rejected}</p>
-              <p className="admin-stat-card__label">Rejected</p>
-            </div>
-          </div>
-          <div className="admin-stat-card admin-stat-card--sky">
+          <button type="button" className="admin-stat-card admin-stat-card--sky text-left" onClick={() => setFilter('all')}>
             <div className="admin-stat-card__icon"><CalendarDays size={18} /></div>
             <div>
               <p className="admin-stat-card__value">{counts.all}</p>
               <p className="admin-stat-card__label">Total</p>
             </div>
-          </div>
+          </button>
+          <button type="button" className="admin-stat-card admin-stat-card--amber text-left" onClick={() => setFilter('pending')}>
+            <div className="admin-stat-card__icon"><Clock3 size={18} /></div>
+            <div>
+              <p className="admin-stat-card__value">{counts.pending}</p>
+              <p className="admin-stat-card__label">Pending</p>
+            </div>
+          </button>
+          <button type="button" className="admin-stat-card admin-stat-card--emerald text-left" onClick={() => setFilter('approved')}>
+            <div className="admin-stat-card__icon"><CheckCircle2 size={18} /></div>
+            <div>
+              <p className="admin-stat-card__value">{counts.approved}</p>
+              <p className="admin-stat-card__label">Approved</p>
+            </div>
+          </button>
+          <button type="button" className="admin-stat-card admin-stat-card--rose text-left" onClick={() => setFilter('rejected')}>
+            <div className="admin-stat-card__icon"><XCircle size={18} /></div>
+            <div>
+              <p className="admin-stat-card__value">{counts.rejected}</p>
+              <p className="admin-stat-card__label">Rejected</p>
+            </div>
+          </button>
         </div>
 
         <div className="leave-toolbar">
@@ -360,10 +372,14 @@ export default function LeaveRequestsPage({ layout = 'app' }) {
         ) : (
           <div className="leave-list">
             {filtered.map((item) => {
-              const pending = String(item.status || '').toLowerCase() === 'pending';
+              const status = String(item.status || '').toLowerCase();
+              const pending = status === 'pending';
               const days = daySpan(item.fromDate, item.toDate);
               return (
-                <article key={item.id} className={`leave-card${pending && !isParent ? ' leave-card--pending' : ''}`}>
+                <article
+                  key={item.id}
+                  className={`leave-card ${statusCardClass(status)}`.trim()}
+                >
                   <div className="leave-card__main">
                     <div className="leave-card__avatar" aria-hidden="true">
                       {initials(item.studentName)}
@@ -373,8 +389,10 @@ export default function LeaveRequestsPage({ layout = 'app' }) {
                         <div>
                           <h3 className="leave-card__title">{item.studentName || 'Student'}</h3>
                           <p className="leave-card__meta">
-                            <UserRound size={14} />
-                            {item.className || 'Class not linked'}
+                            <span className="leave-card__class">
+                              <UserRound size={12} />
+                              {item.className || 'Class not linked'}
+                            </span>
                           </p>
                         </div>
                         <StatusBadge status={item.status} variant={statusTone(item.status)} />
@@ -387,28 +405,36 @@ export default function LeaveRequestsPage({ layout = 'app' }) {
                           <span className="leave-card__sep">→</span>
                           {formatDate(item.toDate)}
                         </span>
-                        {days ? <span className="leave-card__days">{days} day{days === 1 ? '' : 's'}</span> : null}
+                        {days ? (
+                          <span className="leave-card__days">
+                            {days} day{days === 1 ? '' : 's'}
+                          </span>
+                        ) : null}
                       </div>
 
-                      <p className="leave-card__reason">{item.reason || 'No reason provided.'}</p>
+                      <div className="leave-card__reason-block">
+                        <span className="leave-card__label">Reason</span>
+                        <p className="leave-card__reason">{item.reason || 'No reason provided.'}</p>
+                      </div>
+
                       {item.reviewNote ? (
-                        <p className="leave-card__note">Review note: {item.reviewNote}</p>
+                        <div className="leave-card__note">
+                          <MessageSquareText size={15} className="leave-card__note-icon" aria-hidden />
+                          <div className="leave-card__note-copy">
+                            <strong>Review note</strong>
+                            <span>{item.reviewNote}</span>
+                          </div>
+                        </div>
                       ) : null}
                     </div>
                   </div>
 
                   {!isParent && pending ? (
                     <div className="leave-card__actions">
-                      <Button
-                        variant="primary"
-                        onClick={() => openReview(item, 'approve')}
-                      >
+                      <Button variant="primary" onClick={() => openReview(item, 'approve')}>
                         <CheckCircle2 size={16} /> Approve
                       </Button>
-                      <Button
-                        variant="danger"
-                        onClick={() => openReview(item, 'reject')}
-                      >
+                      <Button variant="danger" onClick={() => openReview(item, 'reject')}>
                         <XCircle size={16} /> Reject
                       </Button>
                     </div>
@@ -516,11 +542,17 @@ export default function LeaveRequestsPage({ layout = 'app' }) {
                 <div>
                   <h3 className="leave-card__title">{reviewItem.studentName || 'Student'}</h3>
                   <p className="leave-card__meta">
-                    {reviewItem.className || 'Class'} · {formatDate(reviewItem.fromDate)} → {formatDate(reviewItem.toDate)}
+                    <span className="leave-card__class">{reviewItem.className || 'Class'}</span>
+                    <span>
+                      {formatDate(reviewItem.fromDate)} → {formatDate(reviewItem.toDate)}
+                    </span>
                   </p>
                 </div>
               </div>
-              <p className="leave-card__reason">{reviewItem.reason}</p>
+              <div className="leave-card__reason-block">
+                <span className="leave-card__label">Reason</span>
+                <p className="leave-card__reason">{reviewItem.reason}</p>
+              </div>
               <Textarea
                 label={reviewAction === 'reject' ? 'Rejection note' : 'Note (optional)'}
                 required={reviewAction === 'reject'}
