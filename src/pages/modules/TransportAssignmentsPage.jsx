@@ -23,8 +23,10 @@ import {
   updateStudentTransportAddress,
 } from '../../services/transportAddressService.js';
 import {
+  formatTransportAddress,
   isTransportAddressComplete,
   normalizeTransportAddress,
+  resolveAssignmentHomeAddressLabel,
   suggestNearestStop,
 } from '../../utils/transportAddress.js';
 import { normalizeRouteStops } from '../../utils/transportRouteGeo.js';
@@ -92,7 +94,37 @@ export default function TransportAssignmentsPage() {
           return [];
         }),
       ]);
-      setItems(Array.isArray(assignmentsResult) ? assignmentsResult : []);
+
+      const rawAssignments = Array.isArray(assignmentsResult) ? assignmentsResult : [];
+
+      // Assignment list often omits home address — fill from student enrollment/profile.
+      const assignments = await Promise.all(rawAssignments.map(async (item) => {
+        const existing = resolveAssignmentHomeAddressLabel(item);
+        if (existing) {
+          return {
+            ...item,
+            pickupAddressLabel: existing,
+            addressLabel: existing,
+          };
+        }
+        const studentId = item.studentId || item.student_id;
+        if (!studentId) return item;
+        try {
+          const ctx = await fetchStudentTransportContext(studentId);
+          const label = formatTransportAddress(ctx.address)
+            || (ctx.addressLabel && ctx.addressLabel !== 'Address missing' ? ctx.addressLabel : '');
+          if (!label) return item;
+          return {
+            ...item,
+            pickupAddressLabel: label,
+            addressLabel: label,
+          };
+        } catch {
+          return item;
+        }
+      }));
+
+      setItems(assignments);
       setRoutes(Array.isArray(routeList) ? routeList : []);
       setVehicles(Array.isArray(vehicleList) ? vehicleList : []);
     } catch (err) {
@@ -223,7 +255,10 @@ export default function TransportAssignmentsPage() {
       vehicleNumber: vehicle?.vehicleNumber || vehicle?.vehicle_number || item.vehicleNumber || '—',
       stopName: stop?.name || item.stopName || '—',
       studentLabel: item.studentName || item.studentId || '—',
-      addressLabel: item.pickupAddressLabel || '—',
+      addressLabel: resolveAssignmentHomeAddressLabel(item)
+        || item.addressLabel
+        || item.pickupAddressLabel
+        || '—',
       direction: item.direction || 'both',
     };
   }), [items, routeMap, vehicleMap]);
@@ -247,7 +282,15 @@ export default function TransportAssignmentsPage() {
     { key: 'routeName', label: 'Route' },
     { key: 'stopName', label: 'Pickup stop' },
     { key: 'direction', label: 'Direction' },
-    { key: 'addressLabel', label: 'Home address' },
+    {
+      key: 'addressLabel',
+      label: 'Home address',
+      render: (row) => (
+        <span className="line-clamp-2 max-w-[240px] text-sm text-[#344054]" title={row.addressLabel}>
+          {row.addressLabel || '—'}
+        </span>
+      ),
+    },
     { key: 'status', label: 'Status', badge: true },
   ], []);
 
@@ -350,6 +393,8 @@ export default function TransportAssignmentsPage() {
         vehicleId: form.vehicleId,
         direction: form.direction || 'both',
         status: form.status || 'active',
+        // Keep a display label on the assignment when the API stores it.
+        pickupAddressLabel: formatTransportAddress(address) || undefined,
       };
 
       if (editing) {

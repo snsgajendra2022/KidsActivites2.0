@@ -54,17 +54,21 @@ const STREET_UNDERLAY = {
   maxNativeZoom: 18,
 };
 
-/** Place names (schools, hospitals, towns) on satellite. */
-const PLACE_LABELS = {
-  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+/**
+ * Light labels for dark satellite imagery — roads, schools, hospitals, shops.
+ * (Esri reference layers alone are too sparse for local POI names.)
+ */
+const HYBRID_LABELS = {
+  url: 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
   attribution: '',
   maxZoom: MAP_MAX_ZOOM,
   maxNativeZoom: 18,
+  subdomains: 'abcd',
 };
 
-/** Road / street names on satellite. */
-const ROAD_LABELS = {
-  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+/** Extra Esri place / town names. */
+const PLACE_LABELS = {
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
   attribution: '',
   maxZoom: MAP_MAX_ZOOM,
   maxNativeZoom: 18,
@@ -441,6 +445,12 @@ export default function LiveBusMap({
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+    if (!map.getPane('labelsPane')) {
+      map.createPane('labelsPane');
+      map.getPane('labelsPane').style.zIndex = '450';
+      map.getPane('labelsPane').style.pointerEvents = 'none';
+    }
+
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -502,19 +512,19 @@ export default function LiveBusMap({
     nextLayer.setZIndex(mapType === 'satellite' ? 200 : 100);
     tileLayerRef.current = nextLayer;
 
-    // Satellite: overlay clear road names + place names (schools/hospitals/towns).
+    // Satellite: road + POI names above imagery (labels pane).
     if (mapType === 'satellite') {
       const overlays = L.layerGroup();
-      const roads = L.tileLayer(ROAD_LABELS.url, {
-        ...tileLayerOptions(ROAD_LABELS),
-        opacity: 0.95,
-      });
-      const places = L.tileLayer(PLACE_LABELS.url, {
+      L.tileLayer(HYBRID_LABELS.url, {
+        ...tileLayerOptions(HYBRID_LABELS),
+        pane: 'labelsPane',
+        opacity: 1,
+      }).addTo(overlays);
+      L.tileLayer(PLACE_LABELS.url, {
         ...tileLayerOptions(PLACE_LABELS),
-        opacity: 0.98,
-      });
-      roads.addTo(overlays);
-      places.addTo(overlays);
+        pane: 'labelsPane',
+        opacity: 0.95,
+      }).addTo(overlays);
       overlays.addTo(map);
       labelsTileLayerRef.current = overlays;
     }

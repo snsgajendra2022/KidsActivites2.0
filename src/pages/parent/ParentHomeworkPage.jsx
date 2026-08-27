@@ -303,7 +303,7 @@ export default function ParentHomeworkPage() {
                   {selected.description || 'No description provided.'}
                 </p>
               </div>
-
+{/* 
               {Array.isArray(selected.assignedStudentIds) && selected.assignedStudentIds.length > 0 ? (
                 <div className="rounded-xl border border-[#e8ebf2] bg-white p-4">
                   <p className="mb-2 text-sm font-semibold text-[#0b1c30]">Assigned student IDs</p>
@@ -318,7 +318,7 @@ export default function ParentHomeworkPage() {
                     ))}
                   </div>
                 </div>
-              ) : null}
+              ) : null} */}
 
               <div className="rounded-xl border border-[#e8ebf2] bg-white p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0b1c30]">

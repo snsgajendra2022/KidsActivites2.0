@@ -671,22 +671,24 @@ img { max-width: 100%; }
   cursor: not-allowed;
 }
 .table-action-btn-success {
-  background: #059669;
-  color: #fff;
-  border: none;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
 }
 .table-action-btn-success:hover:not(:disabled) {
-  background: #047857;
+  background: #059669;
+  color: #fff;
+  border-color: #059669;
 }
 .table-action-btn-danger {
-  background: #fff;
+  background: #fef2f2;
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
 .table-action-btn-danger:hover:not(:disabled) {
-  background: #fef2f2;
-  border-color: #f87171;
-  color: #991b1b;
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
 }
 .table-action-btn-outline {
   background: #fff;

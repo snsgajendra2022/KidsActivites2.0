@@ -95,6 +95,64 @@ export function formatTransportAddress(address) {
 }
 
 /**
+ * Best home-address label from a transport assignment / student row
+ * (API field names vary by backend version).
+ */
+export function resolveAssignmentHomeAddressLabel(item = {}) {
+  if (!item || typeof item !== 'object') return '';
+
+  const nestedStudent = item.student && typeof item.student === 'object' ? item.student : {};
+  const nestedEnrollment = item.enrollment && typeof item.enrollment === 'object' ? item.enrollment : {};
+
+  const stringCandidates = [
+    item.pickupAddressLabel,
+    item.pickup_address_label,
+    item.homeAddressLabel,
+    item.home_address_label,
+    item.addressLabel,
+    item.address_label,
+    item.homeAddressText,
+    item.home_address_text,
+    item.pickupAddressText,
+    typeof item.homeAddress === 'string' ? item.homeAddress : '',
+    typeof item.pickupAddress === 'string' ? item.pickupAddress : '',
+    typeof item.address === 'string' ? item.address : '',
+    typeof nestedStudent.homeAddress === 'string' ? nestedStudent.homeAddress : '',
+    typeof nestedStudent.address === 'string' ? nestedStudent.address : '',
+    typeof nestedEnrollment.address === 'string' ? nestedEnrollment.address : '',
+  ];
+  for (const value of stringCandidates) {
+    const text = String(value || '').trim();
+    if (text && text !== '—' && text.toLowerCase() !== 'address missing') return text;
+  }
+
+  const objectCandidates = [
+    item.homeAddress,
+    item.pickupAddress,
+    item.address,
+    item.enrollmentAddress,
+    nestedStudent.homeAddress,
+    nestedStudent.address,
+    nestedStudent.enrollmentAddress,
+    nestedEnrollment.address,
+  ].filter((value) => value && typeof value === 'object');
+
+  for (const value of objectCandidates) {
+    const formatted = formatTransportAddress(value);
+    if (formatted) return formatted;
+  }
+
+  // Flat fields sometimes live on the assignment row itself.
+  const flat = normalizeTransportAddress(item);
+  if (isTransportAddressComplete(flat) || flat.currentAddress) {
+    const formatted = formatTransportAddress(flat);
+    if (formatted && formatted !== 'India') return formatted;
+  }
+
+  return '';
+}
+
+/**
  * Usable for geocoding / route stops.
  * Kidzee forms often leave city blank and put locality in line1 with a PIN —
  * street + (city OR PIN OR state) is enough.

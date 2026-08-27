@@ -284,25 +284,27 @@ a.sb-link-btn--light:hover { color: var(--sb-navy) !important; }
 }
 
 .table-action-btn-danger {
-  background: #fff;
+  background: #fef2f2;
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
 
 .table-action-btn-danger:hover {
-  background: #fef2f2;
-  border-color: #f87171;
-  color: #991b1b;
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
 }
 
 .table-action-btn-success {
-  background: #059669;
-  color: #fff;
-  border: none;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
 }
 
 .table-action-btn-success:hover {
-  background: #047857;
+  background: #059669;
+  color: #fff;
+  border-color: #059669;
 }
 
 /* Status badges */

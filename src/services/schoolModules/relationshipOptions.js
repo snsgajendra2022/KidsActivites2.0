@@ -284,6 +284,46 @@ export async function loadBookOptions() {
     }));
 }
 
+/** HR staff directory options for payroll and related modules. */
+export async function loadStaffOptions() {
+  const { hrStaffService } = await import('./index.js');
+  let staff = [];
+  try {
+    staff = await hrStaffService.list() || [];
+  } catch {
+    staff = [];
+  }
+
+  return (staff || [])
+    .filter((person) => {
+      const id = person?.id || person?.staffId;
+      if (!id) return false;
+      const status = String(person.status || 'active').toLowerCase();
+      return status !== 'exited' && status !== 'inactive' && status !== 'deleted';
+    })
+    .map((person) => {
+      const id = String(person.id || person.staffId);
+      const name = String(person.name || person.fullName || person.employeeName || 'Staff').trim();
+      const code = String(person.employeeId || person.employeeCode || '').trim();
+      const role = String(person.role || '').trim();
+      const department = String(person.department || '').trim();
+      return {
+        value: id,
+        label: [name, code ? `(${code})` : '', role || department ? `· ${role || department}` : '']
+          .filter(Boolean)
+          .join(' '),
+        meta: {
+          staffId: id,
+          employeeName: name,
+          employeeCode: code,
+          department,
+          role,
+        },
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export function findOption(options, value) {
   return (options || []).find((option) => String(option.value) === String(value)) || null;
 }

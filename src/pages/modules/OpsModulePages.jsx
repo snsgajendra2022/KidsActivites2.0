@@ -12,8 +12,17 @@ import {
 } from '../../services/schoolModules/index.js';
 import {
   loadClassOptions,
+  loadStaffOptions,
   loadStudentOptions,
 } from '../../services/schoolModules/relationshipOptions.js';
+
+function payrollNetPay(form = {}) {
+  const n = (key) => {
+    const value = Number(form[key]);
+    return Number.isFinite(value) ? value : 0;
+  };
+  return String(Math.max(0, n('basic') + n('allowances') + n('bonuses') - n('deductions')));
+}
 
 export function InventoryPage() {
   return (
@@ -114,13 +123,41 @@ export function PayrollPage() {
         { key: 'status', label: 'Status', badge: true },
       ]}
       fields={[
-        { key: 'employeeName', label: 'Employee Name', required: true },
+        {
+          key: 'staffId',
+          label: 'Employee',
+          type: 'entity',
+          required: true,
+          metaKeys: ['employeeName', 'employeeCode'],
+          loadOptions: async () => loadStaffOptions(),
+          emptyText: 'No staff found. Add people under HR & Staff first.',
+          helpText: 'Loaded from HR & Staff directory',
+          placeholder: 'Select employee',
+        },
+        {
+          key: 'employeeName',
+          label: 'Employee Name',
+          visible: false,
+        },
+        {
+          key: 'employeeCode',
+          label: 'Employee Code',
+          visible: false,
+        },
         { key: 'month', label: 'Payroll Month', type: 'month', required: true },
         { key: 'basic', label: 'Basic', type: 'number', required: true },
         { key: 'allowances', label: 'Allowances', type: 'number', defaultValue: '0' },
         { key: 'deductions', label: 'Deductions', type: 'number', defaultValue: '0' },
         { key: 'bonuses', label: 'Bonuses', type: 'number', defaultValue: '0' },
-        { key: 'netPay', label: 'Net Pay', type: 'number', required: true },
+        {
+          key: 'netPay',
+          label: 'Net Pay',
+          type: 'number',
+          required: true,
+          disabled: true,
+          helpText: 'Auto: Basic + Allowances + Bonuses − Deductions',
+          compute: payrollNetPay,
+        },
         {
           key: 'status',
           label: 'Status',
@@ -135,7 +172,21 @@ export function PayrollPage() {
         },
       ]}
       createLabel="Generate Payslip"
-      searchKeys={['employeeName', 'month', 'status']}
+      searchKeys={['employeeName', 'employeeCode', 'month', 'status']}
+      transformCreate={async (form) => {
+        const netPay = payrollNetPay(form);
+        return {
+          ...form,
+          employeeName: form.employeeName || '',
+          employeeCode: form.employeeCode || '',
+          staffId: form.staffId || '',
+          basic: Number(form.basic || 0),
+          allowances: Number(form.allowances || 0),
+          deductions: Number(form.deductions || 0),
+          bonuses: Number(form.bonuses || 0),
+          netPay: Number(netPay),
+        };
+      }}
     />
   );
 }

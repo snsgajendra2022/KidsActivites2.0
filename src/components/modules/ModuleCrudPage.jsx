@@ -141,15 +141,20 @@ function FieldControl({
   }
 
   return (
-    <Input
-      label={field.label}
-      required={field.required}
-      type={field.type || 'text'}
-      value={value || ''}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={field.placeholder}
-      disabled={field.disabled}
-    />
+    <div>
+      <Input
+        label={field.label}
+        required={field.required}
+        type={field.type || 'text'}
+        value={value || ''}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={field.placeholder}
+        disabled={field.disabled}
+      />
+      {field.helpText ? (
+        <p className="mt-1 text-xs text-[#667085]">{field.helpText}</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -313,7 +318,22 @@ export default function ModuleCrudPage({
         defaults[field.key] = field.defaultValue ?? '';
       }
     });
+    fields.forEach((field) => {
+      if (typeof field.compute === 'function') {
+        defaults[field.key] = field.compute(defaults);
+      }
+    });
     return defaults;
+  };
+
+  const applyComputedFields = (formState) => {
+    const next = { ...formState };
+    fields.forEach((field) => {
+      if (typeof field.compute === 'function') {
+        next[field.key] = field.compute(next);
+      }
+    });
+    return next;
   };
 
   const openCreate = () => {
@@ -334,7 +354,7 @@ export default function ModuleCrudPage({
       }
     });
     setEditing(item);
-    setForm(next);
+    setForm(applyComputedFields(next));
     setOptionMap({});
     setModalOpen(true);
   };
@@ -368,7 +388,7 @@ export default function ModuleCrudPage({
           });
         });
 
-      return next;
+      return applyComputedFields(next);
     });
   };
 

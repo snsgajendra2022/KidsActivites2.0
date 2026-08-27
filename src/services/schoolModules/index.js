@@ -24,6 +24,7 @@ import {
 import { delay } from '../mockApi.js';
 import { api } from '../api/client.js';
 import { routeRequest } from '../api/routeRequest.js';
+import { resolveAssignmentHomeAddressLabel } from '../../utils/transportAddress.js';
 
 export const homeworkService = createCrudService({
   key: 'homework',
@@ -488,6 +489,7 @@ export const transportAssignmentService = createCrudService({
   idPrefix: 'ta',
   normalizeItem: (item) => {
     if (!item) return item;
+    const pickupAddressLabel = resolveAssignmentHomeAddressLabel(item);
     return {
       ...item,
       id: item.id || item.assignmentId,
@@ -503,6 +505,8 @@ export const transportAssignmentService = createCrudService({
       className: item.className || item.class_name || '',
       routeName: item.routeName || item.route_name || '',
       vehicleNumber: item.vehicleNumber || item.vehicle_number || '',
+      pickupAddressLabel,
+      addressLabel: pickupAddressLabel,
     };
   },
 });
@@ -621,6 +625,23 @@ export const payrollService = createCrudService({
   resource: 'payroll',
   seed: PAYROLL_SEED,
   idPrefix: 'pay',
+  normalizeItem: (item) => {
+    if (!item) return item;
+    return {
+      ...item,
+      id: item.id || item.payslipId || item.payrollId,
+      staffId: item.staffId || item.staff_id || item.employeeRecordId || '',
+      employeeName: item.employeeName || item.employee_name || item.staffName || '',
+      employeeCode: item.employeeCode || item.employee_code || item.employeeId || item.employee_id || '',
+      month: item.month || item.payrollMonth || item.payroll_month || '',
+      basic: item.basic ?? item.basicPay ?? item.basic_pay ?? 0,
+      allowances: item.allowances ?? 0,
+      deductions: item.deductions ?? 0,
+      bonuses: item.bonuses ?? item.bonus ?? 0,
+      netPay: item.netPay ?? item.net_pay ?? 0,
+      status: item.status || 'generated',
+    };
+  },
 });
 
 export const expenseService = createCrudService({

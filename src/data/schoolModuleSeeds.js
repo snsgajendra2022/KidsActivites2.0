@@ -304,7 +304,9 @@ export const HR_STAFF_SEED = [
 export const PAYROLL_SEED = [
   {
     id: 'pay-1',
+    staffId: 'staff-1',
     employeeName: 'Priya Mehta',
+    employeeCode: 'EMP-101',
     month: '2026-07',
     basic: 35000,
     allowances: 5000,

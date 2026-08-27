@@ -7,14 +7,58 @@ import { authenticateByEmail } from './authService.js';
 import { getSchoolById } from './schoolService.js';
 import { ROLE_LABELS } from '../constants/roles.js';
 
+function asList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.users)) return data.users;
+  return [];
+}
+
+function isFalsyFlag(value) {
+  if (value === false || value === 0) return true;
+  const text = String(value ?? '').trim().toLowerCase();
+  return text === 'false' || text === '0' || text === 'no' || text === 'inactive' || text === 'disabled';
+}
+
+/** Resolve active/inactive from mixed API shapes. */
+export function isAdminUserInactive(user = {}) {
+  const statusText = String(
+    user.status
+    || user.accountStatus
+    || user.account_status
+    || user.userStatus
+    || '',
+  ).trim().toLowerCase();
+  if (['inactive', 'disabled', 'deactivated', 'suspended', 'deleted'].includes(statusText)) {
+    return true;
+  }
+  if (
+    isFalsyFlag(user.active)
+    || isFalsyFlag(user.isActive)
+    || isFalsyFlag(user.is_active)
+    || isFalsyFlag(user.enabled)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function sanitizeUser(user) {
   const { password, ...safe } = user;
   const school = user.schoolId ? getSchoolById(user.schoolId) : null;
+  const inactive = isAdminUserInactive(user);
   return {
     ...safe,
-    schoolName: school?.name || (user.schoolId ? user.schoolId : 'Platform'),
-    roleLabel: ROLE_LABELS[user.role] || user.role,
+    active: !inactive,
+    schoolName: school?.name || user.schoolName || (user.schoolId ? user.schoolId : 'Platform'),
+    roleLabel: ROLE_LABELS[user.role] || user.roleLabel || user.role,
   };
+}
+
+function normalizeUsersResponse(data) {
+  return asList(data).map((item) => sanitizeUser(item || {}));
 }
 
 async function mockListUsers({ schoolId, role, search } = {}) {
@@ -101,11 +145,19 @@ async function mockDeactivateUser(userId) {
   return sanitizeUser(target);
 }
 
+async function mockActivateUser(userId) {
+  await delay(250);
+  const target = usersData.users.find((u) => u.id === userId);
+  if (!target) throw new Error('User not found.');
+  target.active = true;
+  return sanitizeUser(target);
+}
+
 export async function listUsers(filters = {}, user) {
   return routeRequest({
     user,
     mockFn: () => mockListUsers(filters),
-    apiFn: () => api.get('/admin/users', filters),
+    apiFn: async () => normalizeUsersResponse(await api.get('/admin/users', filters)),
   });
 }
 
@@ -130,6 +182,25 @@ export async function deactivateAdminUser(userId, user) {
     user,
     mockFn: () => mockDeactivateUser(userId),
     apiFn: () => api.patch(`/admin/users/${userId}/deactivate`),
+  });
+}
+
+export async function activateAdminUser(userId, user) {
+  return routeRequest({
+    user,
+    mockFn: () => mockActivateUser(userId),
+    apiFn: async () => {
+      try {
+        return await api.patch(`/admin/users/${userId}/activate`);
+      } catch (err) {
+        // Fallback if activate route is not deployed yet.
+        const status = err?.status || err?.response?.status;
+        if (status === 404 || status === 405) {
+          return api.patch(`/admin/users/${userId}`, { active: true });
+        }
+        throw err;
+      }
+    },
   });
 }
 

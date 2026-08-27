@@ -271,45 +271,75 @@ export default function SchoolCalendarPage({
           {feedQuery.error ? <p className="text-sm text-rose-600">{feedQuery.error.message || 'Could not load calendar.'}</p> : null}
 
           {view === 'month' && !feedQuery.isPending ? (
-            <div className="school-calendar-grid" role="grid" aria-label="Month calendar">
-              {WEEKDAY_LABELS.slice(WEEK_START).concat(WEEKDAY_LABELS.slice(0, WEEK_START)).map((label) => (
-                <div key={label} className="school-calendar-dow">{label}</div>
-              ))}
-              {days.map((day) => {
-                const dayEvents = eventsOnDay(events, day);
-                const extra = Math.max(0, dayEvents.length - 3);
-                const inMonth = day.slice(0, 7) === cursor.slice(0, 7);
-                return (
-                  <div
-                    key={day}
-                    role="gridcell"
-                    tabIndex={0}
-                    className={`school-calendar-cell${inMonth ? '' : ' is-muted'}${day === today ? ' is-today' : ''}`}
-                    onClick={() => (canManage ? openCreate(day) : dayEvents[0] && setSelected(dayEvents[0]))}
-                    onKeyDown={(e) => { if (e.key === 'Enter') canManage ? openCreate(day) : dayEvents[0] && setSelected(dayEvents[0]); }}
-                  >
-                    <span className="school-calendar-daynum">{Number(day.slice(8))}</span>
-                    {dayEvents.slice(0, 3).map((event) => (
-                      <EventChip key={event.occurrenceId || event.id} event={event} onOpen={setSelected} />
-                    ))}
-                    {extra > 0 || (dayEvents.length > 0 && typeof window !== 'undefined' && window.innerWidth < 900) ? (
-                      <button type="button" className="school-calendar-more" onClick={(e) => { e.stopPropagation(); setView('day'); setCursor(day); }}>
-                        {extra > 0 ? `+${extra} more` : `${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}`}
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })}
+            <div className="school-calendar-month">
+              <div className="school-calendar-dows" aria-hidden>
+                {WEEKDAY_LABELS.slice(WEEK_START).concat(WEEKDAY_LABELS.slice(0, WEEK_START)).map((label) => (
+                  <div key={label} className="school-calendar-dow">{label}</div>
+                ))}
+              </div>
+              <div className="school-calendar-grid" role="grid" aria-label="Month calendar">
+                {days.map((day) => {
+                  const dayEvents = eventsOnDay(events, day);
+                  const preview = dayEvents.slice(0, 1);
+                  const extra = Math.max(0, dayEvents.length - preview.length);
+                  const inMonth = day.slice(0, 7) === cursor.slice(0, 7);
+                  return (
+                    <div
+                      key={day}
+                      role="gridcell"
+                      tabIndex={0}
+                      className={`school-calendar-cell${inMonth ? '' : ' is-muted'}${day === today ? ' is-today' : ''}${dayEvents.length ? ' has-events' : ''}`}
+                      onClick={() => (canManage ? openCreate(day) : dayEvents[0] && setSelected(dayEvents[0]))}
+                      onKeyDown={(e) => { if (e.key === 'Enter') canManage ? openCreate(day) : dayEvents[0] && setSelected(dayEvents[0]); }}
+                    >
+                      <div className="school-calendar-cell__head">
+                        <span className="school-calendar-daynum">{Number(day.slice(8))}</span>
+                        {dayEvents.length > 0 ? (
+                          <div className="school-calendar-cell__meta">
+                            <span className="school-calendar-cell__dots" aria-hidden>
+                              {dayEvents.slice(0, 3).map((event) => (
+                                <span
+                                  key={event.occurrenceId || event.id}
+                                  className="school-calendar-cell__dot"
+                                  style={{ background: getCalendarEventType(event.eventType).color }}
+                                />
+                              ))}
+                            </span>
+                            <span className="school-calendar-cell__count" title={`${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}`}>
+                              {dayEvents.length}
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {preview[0] ? (
+                        <EventChip event={preview[0]} onOpen={setSelected} />
+                      ) : null}
+
+                      {extra > 0 ? (
+                        <button
+                          type="button"
+                          className="school-calendar-more"
+                          onClick={(e) => { e.stopPropagation(); setView('day'); setCursor(day); }}
+                        >
+                          +{extra} more
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
 
           {view === 'week' && !feedQuery.isPending ? (
-            <div className="school-calendar-grid">
+            <div className="school-calendar-grid is-week">
               {weekDays.map((day) => (
                 <div key={day} className="school-calendar-dow">{formatDateLabel(day, { weekday: 'short', year: false })}</div>
               ))}
               {weekDays.map((day) => (
                 <div key={`${day}-cell`} className={`school-calendar-cell${day === today ? ' is-today' : ''}`}>
+                  <span className="school-calendar-daynum">{Number(day.slice(8))}</span>
                   {eventsOnDay(events, day).map((event) => (
                     <EventChip key={event.occurrenceId || event.id} event={event} onOpen={setSelected} />
                   ))}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Users, Plus } from 'lucide-react';
+import { Users, Plus, UserCheck, UserX } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import { PageHeader } from '../../components/ui/index.jsx';
@@ -12,6 +12,8 @@ import {
   listUsers,
   createAdminUser,
   deactivateAdminUser,
+  activateAdminUser,
+  isAdminUserInactive,
 } from '../../services/userService.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
@@ -31,11 +33,15 @@ const COLUMNS = [
   {
     label: 'Status',
     badge: true,
-    render: (row) => (
-      <span className={`admin-badge ${row.active === false ? 'admin-badge--muted' : 'admin-badge--success'}`}>
-        {row.active === false ? 'Inactive' : 'Active'}
-      </span>
-    ),
+    render: (row) => {
+      const inactive = isAdminUserInactive(row) || row.active === false;
+      return (
+        <span className={`admin-badge admin-users-status ${inactive ? 'admin-badge--muted' : 'admin-badge--success'}`}>
+          <span className={`admin-users-status__dot ${inactive ? 'is-inactive' : 'is-active'}`} aria-hidden />
+          {inactive ? 'Inactive' : 'Active'}
+        </span>
+      );
+    },
   },
 ];
 
@@ -67,9 +73,9 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [selected, setSelected] = useState(null);
   const [saving, setSaving] = useState(false);
   const [tempPassword, setTempPassword] = useState(null);
+  const [statusAction, setStatusAction] = useState(null); // { id, activate, name }
 
   const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
   const canManage = isSuperAdmin || user?.role === ROLES.SCHOOL_ADMIN;
@@ -100,7 +106,6 @@ export default function AdminUsers() {
   const closeModal = () => {
     setModal(null);
     setForm(EMPTY_FORM);
-    setSelected(null);
     setTempPassword(null);
   };
 
@@ -139,15 +144,23 @@ export default function AdminUsers() {
     }
   };
 
-  const handleDeactivate = async () => {
+  const handleStatusConfirm = async () => {
+    if (!statusAction?.id) return;
     setSaving(true);
     try {
-      await deactivateAdminUser(selected.id, user);
+      if (statusAction.activate) {
+        await activateAdminUser(statusAction.id, user);
+        toast('User activated.', 'success');
+      } else {
+        await deactivateAdminUser(statusAction.id, user);
+        toast('User deactivated.', 'success');
+      }
       await loadUsers();
-      toast('User deactivated.', 'success');
-      closeModal();
+      setStatusAction(null);
     } catch (err) {
-      toast(err.message || 'Failed to deactivate user.', 'error');
+      toast(err.message || (statusAction.activate
+        ? 'Failed to activate user.'
+        : 'Failed to deactivate user.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -213,16 +226,37 @@ export default function AdminUsers() {
             data={users}
             minWidth={720}
             emptyMessage="No users match your filters."
-            renderActions={canManage ? (row) => (
-              row.active !== false && row.id !== user?.id ? (
+            renderActions={canManage ? (row) => {
+              if (row.id === user?.id) return null;
+              const inactive = isAdminUserInactive(row) || row.active === false;
+              return inactive ? (
+                <TableActionButton
+                  variant="success"
+                  className="admin-users-status-btn admin-users-status-btn--activate"
+                  onClick={() => setStatusAction({
+                    id: row.id,
+                    activate: true,
+                    name: row.name || 'this user',
+                  })}
+                >
+                  <UserCheck size={14} strokeWidth={2.25} aria-hidden />
+                  Activate
+                </TableActionButton>
+              ) : (
                 <TableActionButton
                   variant="danger"
-                  onClick={() => { setSelected(row); setModal('deactivate'); }}
+                  className="admin-users-status-btn admin-users-status-btn--deactivate"
+                  onClick={() => setStatusAction({
+                    id: row.id,
+                    activate: false,
+                    name: row.name || 'this user',
+                  })}
                 >
+                  <UserX size={14} strokeWidth={2.25} aria-hidden />
                   Deactivate
                 </TableActionButton>
-              ) : null
-            ) : undefined}
+              );
+            } : undefined}
           />
         )}
 
@@ -296,13 +330,15 @@ export default function AdminUsers() {
         </Modal>
 
         <ConfirmModal
-          open={modal === 'deactivate'}
-          onClose={closeModal}
-          onConfirm={handleDeactivate}
-          title="Deactivate User?"
-          message={`${selected?.name || 'This user'} will no longer be able to sign in.`}
-          confirmText="Deactivate"
-          confirmVariant="danger"
+          open={Boolean(statusAction)}
+          onClose={() => setStatusAction(null)}
+          onConfirm={handleStatusConfirm}
+          title={statusAction?.activate ? 'Activate User?' : 'Deactivate User?'}
+          message={statusAction?.activate
+            ? `${statusAction?.name || 'This user'} will be able to sign in again.`
+            : `${statusAction?.name || 'This user'} will no longer be able to sign in.`}
+          confirmText={statusAction?.activate ? 'Activate' : 'Deactivate'}
+          confirmVariant={statusAction?.activate ? 'success' : 'danger'}
           loading={saving}
         />
       </PageTransition>

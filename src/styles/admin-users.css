@@ -41,6 +41,71 @@
   color: var(--navy, #1b2e4b);
 }
 
+/* Status badge with live/off dot */
+.admin-users-status {
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 0.25rem 0.625rem;
+  letter-spacing: 0.01em;
+}
+
+.admin-users-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.admin-users-status__dot.is-active {
+  background: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.18);
+}
+
+.admin-users-status__dot.is-inactive {
+  background: #98a2b3;
+  box-shadow: 0 0 0 3px rgba(152, 162, 179, 0.2);
+}
+
+/* Activate / Deactivate action chips */
+.admin-users-status-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.admin-users-status-btn--activate.table-action-btn-success,
+.admin-users-status-btn--activate {
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1px solid #6ee7b7 !important;
+}
+
+.admin-users-status-btn--activate:hover:not(:disabled) {
+  background: #059669 !important;
+  color: #fff !important;
+  border-color: #059669 !important;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.28);
+}
+
+.admin-users-status-btn--deactivate.table-action-btn-danger,
+.admin-users-status-btn--deactivate {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  border: 1px solid #fecaca !important;
+}
+
+.admin-users-status-btn--deactivate:hover:not(:disabled) {
+  background: #dc2626 !important;
+  color: #fff !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.28);
+}
+
 .admin-schools-grid {
   display: grid;
   grid-template-columns: 1fr;
