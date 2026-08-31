@@ -19,6 +19,8 @@ function mapApiNavItem(item, role) {
     id: item.id,
     to: item.path || item.to,
     label: item.label,
+    subtitle: item.subtitle || builtin?.subtitle || '',
+    group: item.group || builtin?.group || '',
     icon: resolveMenuIcon(
       typeof item.icon === 'string' ? item.icon : item.iconName,
       builtin?.icon,

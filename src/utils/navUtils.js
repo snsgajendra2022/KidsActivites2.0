@@ -197,18 +197,26 @@ function navPathKey(to) {
 /** Append built-in nav items missing from API responses (e.g. newly shipped routes). */
 export function mergeMissingBuiltinNavItems(apiItems, role, config = {}) {
   const localItems = resolveNavItemsForRole(role, config);
+  const localById = new Map(localItems.map((item) => [item.id, item]));
   const seenIds = new Set(apiItems.map((item) => item.id));
   const seenPaths = new Set(
     apiItems.map((item) => navPathKey(item.to)).filter(Boolean),
   );
   // Prefer API items; drop renamed-id duplicates that open the same route.
+  // Backfill subtitle/group/section from local builtins when API omits them.
   const dedupedApiItems = [];
   const pathsKept = new Set();
   for (const item of apiItems) {
     const pathKey = navPathKey(item.to);
     if (pathKey && pathsKept.has(pathKey)) continue;
     if (pathKey) pathsKept.add(pathKey);
-    dedupedApiItems.push(item);
+    const local = localById.get(item.id);
+    dedupedApiItems.push(local ? {
+      ...item,
+      subtitle: item.subtitle || local.subtitle || '',
+      group: item.group || local.group || '',
+      section: normalizeNavSection(item.section || local.section, item.id),
+    } : item);
   }
   const missing = localItems.filter((item) => {
     if (seenIds.has(item.id)) return false;
@@ -262,6 +270,8 @@ export function resolveNavItemsForRole(role, config = {}) {
       return {
         ...item,
         label: custom?.label?.trim() || item.label,
+        subtitle: custom?.subtitle?.trim() || item.subtitle || '',
+        group: custom?.group?.trim() || item.group || '',
         icon: resolveMenuIcon(custom?.icon, item.icon),
         section: normalizeNavSection(item.section, item.id),
       };
@@ -273,6 +283,8 @@ export function resolveNavItemsForRole(role, config = {}) {
       id: item.id,
       to: item.to,
       label: item.label,
+      subtitle: item.subtitle || '',
+      group: item.group || '',
       icon: resolveMenuIcon(item.icon),
       section: normalizeNavSection(item.section || 'More', item.id),
       custom: true,

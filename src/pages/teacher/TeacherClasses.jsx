@@ -61,10 +61,10 @@ export default function TeacherClasses() {
                     <Users size={14} />
                     {cls.studentCount} students
                   </span>
-                  <span className="teacher-class-card__stat">
+                  {/* <span className="teacher-class-card__stat">
                     <Building2 size={14} />
                     {cls.id}
-                  </span>
+                  </span> */}
                 </div>
 
                 <div className="teacher-class-card__actions">

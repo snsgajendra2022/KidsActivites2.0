@@ -53,7 +53,8 @@ function normalizeLearningItem(item) {
     progressPct: Number.isFinite(progressPct) ? Math.round(progressPct) : 0,
     certificateId: item.certificateId || item.certificate?.id || null,
     quizzes: item.quizzes || item.enrollment?.quizzes,
-    passed: item.passed ?? item.quizzes?.[0]?.passed,
+    // Keep top-level passed only; quiz.passed:false with 0 attempts is "not yet"
+    passed: typeof item.passed === 'boolean' ? item.passed : undefined,
     bestScore: item.bestScore ?? item.quizzes?.[0]?.bestScore ?? item.quizzes?.[0]?.bestPercentage,
     quizPercentage: item.quizPercentage ?? item.percentage ?? item.quizzes?.[0]?.percentage,
   };

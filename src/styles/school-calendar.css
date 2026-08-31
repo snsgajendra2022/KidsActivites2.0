@@ -451,6 +451,127 @@
 }
 
 @media print {
-  .app-sidebar, .app-header, .school-calendar-toolbar, .school-calendar-filters { display: none !important; }
-  .school-calendar-page { background: #fff; }
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  /* App shell clips scrollable content — unwrap so the calendar can print. */
+  .portal-shell,
+  .portal-shell > div,
+  .portal-shell main {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    transform: none !important;
+  }
+
+  .portal-shell main {
+    padding: 0 !important;
+  }
+
+  .app-sidebar,
+  .app-header,
+  .sidebar-mobile-backdrop,
+  .sidebar-flyout,
+  .webpush-banner,
+  .school-calendar-banner,
+  .school-calendar-no-print,
+  .school-calendar-toolbar,
+  .school-calendar-filters,
+  .school-calendar-legend,
+  .school-calendar-stats,
+  .school-calendar-drawer,
+  .school-calendar-month,
+  .school-calendar-grid,
+  .school-calendar-list,
+  .school-calendar-agenda,
+  .school-calendar-year,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Framer PageTransition wrapper */
+  .portal-shell main > div {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  .school-calendar-page {
+    background: #fff !important;
+    gap: 0.75rem;
+  }
+
+  .school-calendar-print-agenda {
+    display: block !important;
+  }
+
+  .school-calendar-print-agenda__title {
+    margin: 0;
+    font-size: 1.35rem;
+    color: #0f172a;
+  }
+
+  .school-calendar-print-agenda__period {
+    margin: 0.25rem 0 1rem;
+    font-size: 0.9rem;
+    color: #64748b;
+  }
+
+  .school-calendar-print-agenda__empty {
+    margin: 0;
+    color: #64748b;
+  }
+
+  .school-calendar-print-agenda__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .school-calendar-print-agenda__item {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: 0.75rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid #e2e8f0;
+    break-inside: avoid;
+  }
+
+  .school-calendar-print-agenda__date {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .school-calendar-print-agenda__item strong {
+    display: block;
+    font-size: 0.95rem;
+    color: #0f172a;
+  }
+
+  .school-calendar-print-agenda__item p {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+
+  .premium-page-header .premium-page-title,
+  .premium-page-header .premium-page-subtitle {
+    color: #0f172a !important;
+  }
+}
+
+.school-calendar-print-agenda {
+  display: none;
 }

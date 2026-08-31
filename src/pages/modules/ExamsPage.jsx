@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import ModuleCrudPage from '../../components/modules/ModuleCrudPage.jsx';
 import { examService } from '../../services/schoolModules/index.js';
 import {
@@ -6,6 +8,9 @@ import {
 } from '../../services/schoolModules/relationshipOptions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { ROLES } from '../../constants/roles.js';
+import Modal from '../../components/ui/Modal.jsx';
+import Button from '../../components/ui/Button.jsx';
+import { TableActionButton } from '../../components/ui/DataTable.jsx';
 
 const columns = [
   { key: 'name', label: 'Exam', primary: true },
@@ -87,29 +92,56 @@ function buildFields(user) {
 
 export default function ExamsPage({ layout = 'dashboard', readOnly = false }) {
   const { user } = useAuth();
+  const isTeacher = user?.role === ROLES.TEACHER;
+  const [adminOnlyDeleteOpen, setAdminOnlyDeleteOpen] = useState(false);
 
   return (
-    <ModuleCrudPage
-      title="Examination Management"
-      subtitle="Create exams against existing classes and subjects. Marks entry uses the exam ID and student roster."
-      service={examService}
-      columns={columns}
-      fields={buildFields(user)}
-      createLabel="Create Exam"
-      layout={layout}
-      readOnly={readOnly}
-      searchKeys={['name', 'type', 'className', 'subject', 'status']}
-      transformCreate={(form, _editing, { user: currentUser }) => ({
-        name: form.name,
-        type: form.type,
-        classId: form.classId,
-        sectionId: form.sectionId || null,
-        subjectId: form.subjectId,
-        maxMarks: Number(form.maxMarks),
-        examDate: form.examDate,
-        status: form.status || 'draft',
-        createdByUserId: form.createdByUserId || currentUser?.id || null,
-      })}
-    />
+    <>
+      <ModuleCrudPage
+        title="Examination Management"
+        subtitle="Create exams against existing classes and subjects. Marks entry uses the exam ID and student roster."
+        service={examService}
+        columns={columns}
+        fields={buildFields(user)}
+        createLabel="Create Exam"
+        layout={layout}
+        readOnly={readOnly}
+        searchKeys={['name', 'type', 'className', 'subject', 'status']}
+        renderRowActions={isTeacher ? (item, { openEdit }) => (
+          <>
+            <TableActionButton variant="outline" onClick={() => openEdit(item)}>
+              Edit
+            </TableActionButton>
+            <TableActionButton variant="danger" onClick={() => setAdminOnlyDeleteOpen(true)}>
+              <Trash2 size={14} /> Delete
+            </TableActionButton>
+          </>
+        ) : undefined}
+        transformCreate={(form, _editing, { user: currentUser }) => ({
+          name: form.name,
+          type: form.type,
+          classId: form.classId,
+          sectionId: form.sectionId || null,
+          subjectId: form.subjectId,
+          maxMarks: Number(form.maxMarks),
+          examDate: form.examDate,
+          status: form.status || 'draft',
+          createdByUserId: form.createdByUserId || currentUser?.id || null,
+        })}
+      />
+
+      <Modal
+        open={adminOnlyDeleteOpen}
+        onClose={() => setAdminOnlyDeleteOpen(false)}
+        title="Delete exam"
+        footer={(
+          <Button onClick={() => setAdminOnlyDeleteOpen(false)}>OK</Button>
+        )}
+      >
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)', lineHeight: 1.6 }}>
+          Only an admin can delete exams. Contact your school admin if this exam should be removed.
+        </p>
+      </Modal>
+    </>
   );
 }

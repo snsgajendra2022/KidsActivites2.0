@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Printer } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout.jsx';
 import PageTransition from '../../components/ui/PageTransition.jsx';
 import LoadingState from '../../components/ui/LoadingState.jsx';
+import Button from '../../components/ui/Button.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { usePortalConfig } from '../../context/PortalConfigContext.jsx';
@@ -187,23 +189,39 @@ export default function SchoolCalendarPage({
   const days = view === 'month' ? monthGrid(cursor, WEEK_START) : [];
   const weekDays = view === 'week' ? Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(cursor, WEEK_START), i)) : [];
 
+  const printEvents = useMemo(() => (
+    [...events].sort((a, b) => {
+      const left = String(a.occurrenceDate || a.startDate || '');
+      const right = String(b.occurrenceDate || b.startDate || '');
+      return left.localeCompare(right);
+    })
+  ), [events]);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <AppLayout>
       <PageTransition>
         <div className="school-calendar-page">
-          <div className="premium-page-header">
+          <div className="premium-page-header flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="premium-page-title">{title}</h1>
               <p className="premium-page-subtitle">{subtitle}</p>
             </div>
-            <button type="button" className="school-calendar-icon-btn" onClick={() => window.print()}>Print</button>
-            {canManage ? (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Link to={tenantPath('/admin/calendar/holidays')} className="premium-btn premium-btn-secondary premium-btn-sm">Holidays</Link>
-                <Link to={tenantPath('/admin/calendar/emergencies')} className="premium-btn premium-btn-secondary premium-btn-sm">Emergencies</Link>
-                <Link to={tenantPath('/admin/calendar/new')} className="premium-btn premium-btn-primary premium-btn-sm">Add event</Link>
-              </div>
-            ) : null}
+            <div className="school-calendar-no-print flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" onClick={handlePrint}>
+                <Printer size={16} /> Print
+              </Button>
+              {canManage ? (
+                <>
+                  <Link to={tenantPath('/admin/calendar/holidays')} className="premium-btn premium-btn-secondary premium-btn-sm">Holidays</Link>
+                  <Link to={tenantPath('/admin/calendar/emergencies')} className="premium-btn premium-btn-secondary premium-btn-sm">Emergencies</Link>
+                  <Link to={tenantPath('/admin/calendar/new')} className="premium-btn premium-btn-primary premium-btn-sm">Add event</Link>
+                </>
+              ) : null}
+            </div>
           </div>
 
           {canManage && statsQuery.data ? (
@@ -396,6 +414,36 @@ export default function SchoolCalendarPage({
               }}
             />
           ) : null}
+
+          <section className="school-calendar-print-agenda" aria-hidden="true">
+            <h2 className="school-calendar-print-agenda__title">{title}</h2>
+            <p className="school-calendar-print-agenda__period">{periodLabel}</p>
+            {printEvents.length === 0 ? (
+              <p className="school-calendar-print-agenda__empty">No events in this period.</p>
+            ) : (
+              <ul className="school-calendar-print-agenda__list">
+                {printEvents.map((event) => {
+                  const type = getCalendarEventType(event.eventType);
+                  return (
+                    <li key={event.occurrenceId || event.id} className="school-calendar-print-agenda__item">
+                      <div className="school-calendar-print-agenda__date">
+                        {formatDateLabel(event.occurrenceDate || event.startDate, { weekday: 'short' })}
+                      </div>
+                      <div>
+                        <strong>{event.title}</strong>
+                        <p>
+                          {CALENDAR_CATEGORY_LABELS[event.eventCategory] || type.label}
+                          {' · '}
+                          {eventTimeLabel(event)}
+                          {event.location ? ` · ${event.location}` : ''}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </div>
       </PageTransition>
     </AppLayout>

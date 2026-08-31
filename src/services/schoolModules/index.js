@@ -689,12 +689,103 @@ export const loginHistoryService = createCrudService({
   normalizeItem: normalizeLoginEvent,
 });
 
+function normalizePerformanceNote(item) {
+  if (!item) return item;
+  const student = item.student && typeof item.student === 'object' ? item.student : {};
+  const classRef = item.class && typeof item.class === 'object' ? item.class : {};
+  return {
+    ...item,
+    id: item.id || item.noteId,
+    classId: item.classId || item.class_id || classRef.id || null,
+    className: item.className || item.class_name || classRef.name || '',
+    studentId: item.studentId || item.student_id || student.id || null,
+    studentName: item.studentName
+      || item.student_name
+      || student.fullName
+      || student.name
+      || '',
+    subject: item.subject || item.subjectName || '',
+    note: item.note || item.body || item.message || '',
+    visibility: String(item.visibility || 'private').toLowerCase(),
+    teacherName: item.teacherName || item.createdByName || item.createdBy || '',
+    createdAt: item.createdAt || null,
+    updatedAt: item.updatedAt || null,
+  };
+}
+
 export const performanceNoteService = createCrudService({
   key: 'performance_notes',
   resource: 'performance-notes',
   seed: PERFORMANCE_NOTE_SEED,
   idPrefix: 'note',
+  normalizeItem: normalizePerformanceNote,
 });
+
+/** Parent-facing notes shared for linked students (`GET /parent/performance-notes`). */
+export const parentPerformanceNoteService = {
+  async list(filters = {}) {
+    return routeRequest({
+      mockFn: async () => {
+        await delay(120);
+        const list = await performanceNoteService.list(filters);
+        return (Array.isArray(list) ? list : [])
+          .map(normalizePerformanceNote)
+          .filter((item) => item && item.visibility === 'shared_parent');
+      },
+      apiFn: async () => {
+        try {
+          return asCrudList(await api.get('/parent/performance-notes', filters))
+            .map(normalizePerformanceNote)
+            .filter((item) => item && (
+              !item.visibility || item.visibility === 'shared_parent'
+            ));
+        } catch (err) {
+          const status = Number(err?.status || 0);
+          // Fallback if parent-specific route is not wired yet.
+          if (status === 404 || status === 405) {
+            return asCrudList(await api.get('/performance-notes', {
+              ...filters,
+              visibility: 'shared_parent',
+            }))
+              .map(normalizePerformanceNote)
+              .filter((item) => item && item.visibility === 'shared_parent');
+          }
+          throw err;
+        }
+      },
+    });
+  },
+  async getById(id) {
+    return routeRequest({
+      mockFn: async () => {
+        const item = normalizePerformanceNote(await performanceNoteService.getById(id));
+        if (!item || item.visibility !== 'shared_parent') return null;
+        return item;
+      },
+      apiFn: async () => {
+        try {
+          return normalizePerformanceNote(await api.get(`/parent/performance-notes/${id}`));
+        } catch (err) {
+          const status = Number(err?.status || 0);
+          if (status === 404 || status === 405) {
+            const items = await parentPerformanceNoteService.list();
+            return items.find((item) => String(item.id) === String(id)) || null;
+          }
+          throw err;
+        }
+      },
+    });
+  },
+  async create() {
+    throw new Error('Parents cannot create performance notes.');
+  },
+  async update() {
+    throw new Error('Parents cannot edit performance notes.');
+  },
+  async remove() {
+    throw new Error('Parents cannot delete performance notes.');
+  },
+};
 
 export async function getAccountingDashboard() {
   return routeRequest({

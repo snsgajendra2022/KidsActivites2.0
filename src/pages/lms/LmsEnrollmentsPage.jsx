@@ -15,7 +15,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useTenantPath } from '../../hooks/useTenantPath.js';
 import { lmsApi } from '../../services/lmsService.js';
 import { loadClassOptions, loadStudentOptions } from '../../services/schoolModules/relationshipOptions.js';
-import { enrollmentQuizOutcome } from '../../utils/lmsEnrollmentOutcome.js';
+import { enrollmentQuizOutcome, hasEarnedCertificate } from '../../utils/lmsEnrollmentOutcome.js';
 
 export default function LmsEnrollmentsPage({ layout = 'dashboard', basePath = '/admin/lms' }) {
   const Layout = layout === 'app' ? AppLayout : DashboardLayout;
@@ -172,10 +172,16 @@ export default function LmsEnrollmentsPage({ layout = 'dashboard', basePath = '/
                 label: 'Quiz',
                 render: (row) => {
                   const outcome = enrollmentQuizOutcome(row);
-                  if (!outcome.attempted && outcome.passed == null) return '—';
-                  const pct = outcome.percentage != null ? `${Math.round(Number(outcome.percentage))}%` : '';
-                  const label = outcome.technical || (outcome.passed ? 'PASS' : 'FAIL');
-                  return [pct, label].filter(Boolean).join(' · ');
+                  if (outcome.attempted && outcome.passed != null) {
+                    const pct = outcome.percentage != null ? `${Math.round(Number(outcome.percentage))}%` : '';
+                    const label = outcome.technical || (outcome.passed ? 'PASS' : 'FAIL');
+                    return [pct, label].filter(Boolean).join(' · ');
+                  }
+                  // Completed + certificate but API omitted quiz attempts → still PASS
+                  if (hasEarnedCertificate(row)) {
+                    return 'PASS';
+                  }
+                  return '—';
                 },
               },
             ]}

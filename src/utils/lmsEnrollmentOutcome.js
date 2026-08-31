@@ -109,6 +109,13 @@ export function requiredQuizzesPassed(source) {
   });
 }
 
+/** Trust pass/fail only after a real attempt, or an explicit pass. */
+function trustedPassedFlag(value, hasAttempt) {
+  if (typeof value !== 'boolean') return null;
+  if (value === true) return true;
+  return hasAttempt ? false : null;
+}
+
 export function enrollmentQuizOutcome(source) {
   const quiz = requiredQuizzes(source)[0] || sourceQuizzes(source)[0] || source?.quiz || null;
   const attempt = latestAttempt(quiz);
@@ -117,11 +124,20 @@ export function enrollmentQuizOutcome(source) {
     ? record.certificate
     : {};
 
-  let passed = null;
-  if (typeof record.passed === 'boolean') passed = record.passed;
-  else if (typeof nestedCert.passed === 'boolean') passed = nestedCert.passed;
-  else if (typeof quiz?.passed === 'boolean') passed = quiz.passed;
-  else if (typeof attempt?.passed === 'boolean') passed = attempt.passed;
+  const required = requiredQuizzes(source);
+  const attempted = required.length
+    ? required.some(quizWasAttempted)
+    : Boolean(
+      quizWasAttempted(quiz)
+      || pickPercentage(record, null) != null
+      || pickPercentage(nestedCert, null) != null
+      || record.quizPercentage != null,
+    );
+
+  let passed = trustedPassedFlag(record.passed, attempted)
+    ?? trustedPassedFlag(nestedCert.passed, attempted)
+    ?? trustedPassedFlag(quiz?.passed, quizWasAttempted(quiz))
+    ?? trustedPassedFlag(attempt?.passed, Boolean(attempt));
 
   const passingPercentage = quizPassingPercentage(
     quiz,
@@ -131,24 +147,23 @@ export function enrollmentQuizOutcome(source) {
     ?? pickPercentage(nestedCert, quiz)
     ?? pickPercentage(attempt, quiz);
 
-  const required = requiredQuizzes(source);
-  const attempted = required.length
-    ? required.some(quizWasAttempted)
-    : Boolean(
-      quizWasAttempted(quiz)
-      || passed != null
-      || percentage != null
-      || record.quizPercentage != null,
-    );
-
-  if (required.length && required.every((q) => typeof q.passed === 'boolean' || quizWasAttempted(q))) {
+  // API often sends passed:false before any attempt — that means "not yet", not FAIL.
+  const everyRequiredResolved = required.length > 0 && required.every(
+    (q) => quizWasAttempted(q) || q?.passed === true,
+  );
+  if (everyRequiredResolved) {
     passed = requiredQuizzesPassed(source);
     const scores = required
       .map((q) => pickPercentage(q, q) ?? pickPercentage(latestAttempt(q), q))
       .filter((n) => n != null);
     if (scores.length) percentage = Math.max(...scores);
-  } else if (passed == null && percentage != null) {
+  } else if (passed == null && percentage != null && attempted) {
     passed = percentage >= passingPercentage;
+  }
+
+  if (!attempted && passed !== true) {
+    passed = null;
+    percentage = null;
   }
 
   const copy = passed == null ? { headline: '', technical: '', tone: '' } : kidsPassFailCopy(passed);

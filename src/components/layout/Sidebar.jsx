@@ -209,9 +209,12 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
   };
 
   const renderExpandedNav = () =>
-    navItems.map(({ id, to, label, icon: Icon, section }, index) => {
-      const prevSection = navItems[index - 1]?.section;
+    navItems.map(({ id, to, label, subtitle, group, icon: Icon, section }, index) => {
+      const prev = navItems[index - 1];
+      const prevSection = prev?.section;
+      const prevGroup = prev?.group;
       const showSection = section && section !== prevSection;
+      const showGroup = Boolean(group) && (group !== prevGroup || section !== prevSection);
       const showUnreadBadge = isChatNavItem({ id, to }) && unreadMessageCount > 0;
 
       return (
@@ -221,15 +224,28 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
               {section}
             </p>
           )}
+          {showGroup && (
+            <p className="sidebar-nav-group px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-[#8a93a3]">
+              {group}
+            </p>
+          )}
           <NavLink
             to={to}
             onClick={handleNavClick}
+            title={subtitle ? `${label} — ${subtitle}` : label}
             className={(props) => sidebarLinkClass({ ...props, collapsed: false })}
           >
-            <span className="sidebar-nav-icon-wrap relative shrink-0">
+            <span className="sidebar-nav-icon-wrap relative shrink-0 self-start mt-0.5">
               <Icon size={18} className="transition-colors duration-200" />
             </span>
-            <span className="min-w-0 flex-1 truncate transition-colors duration-200">{label}</span>
+            <span className="min-w-0 flex-1 transition-colors duration-200">
+              <span className="block truncate">{label}</span>
+              {subtitle ? (
+                <span className="sidebar-nav-subtitle mt-0.5 block truncate text-[11px] font-medium leading-snug opacity-70">
+                  {subtitle}
+                </span>
+              ) : null}
+            </span>
             {showUnreadBadge && (
               <span
                 className="sidebar-nav-badge"
@@ -413,31 +429,47 @@ export default function Sidebar({ user, open, onClose, collapsed, onToggleCollap
         >
           <div className="sidebar-flyout-header">{activeFlyoutGroup.section}</div>
           <div className="sidebar-flyout-list">
-            {activeFlyoutGroup.items.map((item) => {
+            {activeFlyoutGroup.items.map((item, index) => {
               const Icon = item.icon;
+              const prevGroup = activeFlyoutGroup.items[index - 1]?.group;
+              const showGroup = Boolean(item.group) && item.group !== prevGroup;
               const showUnreadBadge = isChatNavItem(item) && unreadMessageCount > 0;
               return (
-                <NavLink
-                  key={item.id || item.to}
-                  to={item.to}
-                  role="menuitem"
-                  onClick={handleNavClick}
-                  className={flyoutLinkClass}
-                >
-                  <span className="sidebar-nav-icon-wrap relative shrink-0">
-                    <Icon size={17} className="transition-colors duration-200" />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  {showUnreadBadge && (
-                    <span
-                      className="sidebar-nav-badge"
-                      title={unreadBadgeLabel(unreadMessageCount)}
-                      aria-label={unreadBadgeLabel(unreadMessageCount)}
-                    >
-                      {formatUnreadBadge(unreadMessageCount)}
+                <div key={item.id || item.to}>
+                  {showGroup ? (
+                    <p className="sidebar-nav-group px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-[#8a93a3]">
+                      {item.group}
+                    </p>
+                  ) : null}
+                  <NavLink
+                    to={item.to}
+                    role="menuitem"
+                    title={item.subtitle ? `${item.label} — ${item.subtitle}` : item.label}
+                    onClick={handleNavClick}
+                    className={flyoutLinkClass}
+                  >
+                    <span className="sidebar-nav-icon-wrap relative shrink-0 self-start mt-0.5">
+                      <Icon size={17} className="transition-colors duration-200" />
                     </span>
-                  )}
-                </NavLink>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{item.label}</span>
+                      {item.subtitle ? (
+                        <span className="sidebar-nav-subtitle mt-0.5 block truncate text-[11px] font-medium leading-snug opacity-70">
+                          {item.subtitle}
+                        </span>
+                      ) : null}
+                    </span>
+                    {showUnreadBadge && (
+                      <span
+                        className="sidebar-nav-badge"
+                        title={unreadBadgeLabel(unreadMessageCount)}
+                        aria-label={unreadBadgeLabel(unreadMessageCount)}
+                      >
+                        {formatUnreadBadge(unreadMessageCount)}
+                      </span>
+                    )}
+                  </NavLink>
+                </div>
               );
             })}
           </div>

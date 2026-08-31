@@ -57,6 +57,7 @@ import {
   ParentDocuments,
   ParentPhotos,
   ParentHomeworkPage,
+  ParentPerformanceNotesPage,
   TeacherDashboard,
   TeacherClasses,
   TeacherStudents,
@@ -249,6 +250,7 @@ export default function App() {
         <Route path="admin/homework" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><HomeworkPage /></ProtectedRoute>} />
         <Route path="admin/exams" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><ExamsPage /></ProtectedRoute>} />
         <Route path="admin/exam-marks" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><ExamMarksPage /></ProtectedRoute>} />
+        <Route path="admin/notes" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><PerformanceNotesPage layout="dashboard" /></ProtectedRoute>} />
         <Route path="admin/timetable" element={<ProtectedRoute allowedRoles={CORE_ADMIN}><TimetablePage /></ProtectedRoute>} />
         <Route path="admin/lms" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><LmsCoursesPage /></ProtectedRoute>} />
         <Route path="admin/lms/courses/new" element={<ProtectedRoute allowedRoles={[...CORE_ADMIN, ...TEACHER_ROLES]}><LmsCourseEditorPage /></ProtectedRoute>} />
@@ -294,6 +296,7 @@ export default function App() {
         <Route path="parent/calendar" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentSchoolCalendarPage /></ProtectedRoute>} />
         <Route path="parent/attendance" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><StudentAttendanceHistory /></ProtectedRoute>} />
         <Route path="parent/homework" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentHomeworkPage /></ProtectedRoute>} />
+        <Route path="parent/notes" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ParentPerformanceNotesPage /></ProtectedRoute>} />
         <Route path="parent/exams" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><ExamMarksPage layout="app" readOnly audience="parent" /></ProtectedRoute>} />
         <Route path="parent/timetable" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><TimetablePage layout="app" readOnly audience="parent" /></ProtectedRoute>} />
         <Route path="parent/lms" element={<ProtectedRoute allowedRoles={PARENT_ROLES}><MyLearningPage layout="app" basePath="/parent/lms" /></ProtectedRoute>} />

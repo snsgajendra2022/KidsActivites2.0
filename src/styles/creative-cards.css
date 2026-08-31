@@ -4,7 +4,94 @@
   --cc-success: #22c55e;
   --cc-pink: #ec4899;
   --cc-sky: #38bdf8;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1500px;
+  min-height: 0;
+  height: fit-content;
+  margin-inline: auto;
+  padding-bottom: 0;
+  overflow: clip;
   font-family: Inter, ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+
+.cc-template-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  height: fit-content;
+  overflow: clip;
+}
+
+.cc-template-grid {
+  display: grid;
+  gap: 1.25rem;
+  align-items: stretch;
+  grid-auto-rows: auto;
+  min-height: 0;
+}
+
+@media (min-width: 640px) {
+  .cc-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .cc-template-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1536px) {
+  .cc-template-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.cc-template-gallery .cc-template-card {
+  height: auto !important;
+  max-height: none;
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-template-gallery .cc-template-card > button {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Same inner preview size for every template (portrait + landscape). */
+.cc-template-card__preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  max-height: 16rem;
+  overflow: hidden;
+  border-radius: 1.35rem;
+  flex-shrink: 0;
+}
+
+.cc-card-preview--thumbnail,
+.cc-template-card__preview-inner.cc-card-preview--thumbnail {
+  container-type: normal !important;
+  aspect-ratio: auto !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  border-radius: inherit;
 }
 
 .cc-studio button,
@@ -389,17 +476,10 @@
   box-shadow: 0 8px 18px rgb(124 58 237 / .22);
 }
 
-.cc-template-grid {
-  align-items: start;
-}
-
-.cc-template-grid > :nth-child(3n + 2) {
-  transform: translateY(10px);
-}
-
 .cc-card-preview {
   container-type: inline-size;
   min-width: 0;
+  max-width: 100%;
   border: 1px solid rgb(255 255 255 / .8);
   box-shadow:
     0 28px 55px rgb(76 29 149 / .2),
@@ -685,22 +765,50 @@
 }
 
 .cc-card-preview--thumbnail {
-  aspect-ratio: 4 / 5 !important;
+  /* Sized by .cc-template-card__preview frame so every gallery card matches. */
+  container-type: normal !important;
+  aspect-ratio: auto !important;
+  overflow: hidden !important;
+}
+
+.cc-card-preview--thumbnail .cc-card-preview__art {
+  filter: none;
 }
 
 .cc-card-preview--thumbnail .cc-card-preview__content {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto auto auto;
-  gap: 3.5cqw;
-  padding: 10cqw 9cqw;
+  gap: 0.45rem;
+  height: 100%;
+  max-height: 100%;
+  padding: 1rem 0.9rem;
+  overflow: hidden;
+}
+
+.cc-card-preview--thumbnail .cc-card-preview__art {
+  max-height: 46%;
 }
 
 .cc-card-preview--thumbnail .cc-card-preview__art-item {
-  font-size: clamp(2.2rem, 11.5cqw, 5rem);
+  font-size: 2.25rem;
 }
 
 .cc-card-preview--thumbnail .cc-card-preview__title {
-  font-size: clamp(1.2rem, 8cqw, 3rem);
+  font-size: 1.15rem;
+  line-height: 1.15;
+  max-height: 2.6em;
+  overflow: hidden;
+}
+
+.cc-card-preview--thumbnail .cc-card-preview__footer {
+  font-size: 0.62rem;
+}
+
+.cc-card-preview--thumbnail .cc-card-preview__photo-wrap,
+.cc-card-preview--thumbnail .cc-card-preview__photo {
+  max-height: 100%;
+  width: 100%;
+  object-fit: cover;
 }
 
 .cc-card-editor__details {

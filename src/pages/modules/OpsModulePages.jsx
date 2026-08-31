@@ -350,7 +350,7 @@ export function PerformanceNotesPage({ layout = 'app' }) {
   return (
     <ModuleCrudPage
       title="Student Performance Notes"
-      subtitle="Private teacher notes about student progress."
+      subtitle="Notes about student progress. Use Shared with Parent so families can see them."
       service={performanceNoteService}
       columns={[
         { key: 'studentName', label: 'Student', primary: true },
@@ -387,16 +387,24 @@ export function PerformanceNotesPage({ layout = 'app' }) {
           label: 'Visibility',
           type: 'select',
           required: true,
-          defaultValue: 'private',
+          defaultValue: 'shared_parent',
           options: [
-            { value: 'private', label: 'Private (Teachers/Admin)' },
             { value: 'shared_parent', label: 'Shared with Parent' },
+            { value: 'private', label: 'Private (Teachers/Admin)' },
           ],
+          helpText: 'Parents only see notes marked Shared with Parent.',
         },
       ]}
       createLabel="Add Note"
       layout={layout}
-      searchKeys={['studentName', 'className', 'subject', 'note']}
+      searchKeys={['studentName', 'className', 'subject', 'note', 'visibility']}
+      transformCreate={(form) => ({
+        classId: form.classId,
+        studentId: form.studentId,
+        subject: form.subject,
+        note: form.note,
+        visibility: form.visibility || 'shared_parent',
+      })}
     />
   );
 }

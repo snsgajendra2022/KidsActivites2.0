@@ -51,6 +51,7 @@ export const ParentFees = lazy(() => import('../pages/parent/ParentFees.jsx'));
 export const ParentDocuments = lazy(() => import('../pages/parent/ParentDocuments.jsx'));
 export const ParentPhotos = lazy(() => import('../pages/parent/ParentPhotos.jsx'));
 export const ParentHomeworkPage = lazy(() => import('../pages/parent/ParentHomeworkPage.jsx'));
+export const ParentPerformanceNotesPage = lazy(() => import('../pages/parent/ParentPerformanceNotesPage.jsx'));
 
 export const TeacherDashboard = lazy(() => import('../pages/teacher/TeacherDashboard.jsx'));
 export const TeacherClasses = lazy(() => import('../pages/teacher/TeacherClasses.jsx'));

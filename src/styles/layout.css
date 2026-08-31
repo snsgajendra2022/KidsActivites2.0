@@ -493,6 +493,29 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * Auth shell must fill the visible window with no gap under sidebar/main.
+ * `h-screen` (100vh) / plain percentage height can leave empty body space
+ * below the chrome or create a phantom page scroll — pin to the viewport.
+ */
+html:has(.portal-shell:not(.portal-public-page)),
+html:has(.portal-shell:not(.portal-public-page)) body,
+html:has(.portal-shell:not(.portal-public-page)) #root {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.portal-shell:not(.portal-public-page) {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .portal-shell main {
   background: var(--admin-page-bg);
 }
@@ -1013,6 +1036,22 @@
 
 .portal-shell .app-sidebar .sidebar-nav-section {
   color: var(--sb-muted, #64748b) !important;
+}
+
+.portal-shell .app-sidebar .sidebar-nav-group {
+  color: var(--sb-muted, #8a93a3) !important;
+}
+
+.portal-shell .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) .sidebar-nav-subtitle,
+.portal-shell .sidebar-flyout-link:not(.sidebar-nav-link-active) .sidebar-nav-subtitle {
+  color: var(--sb-muted, #64748b) !important;
+  opacity: 1;
+}
+
+.portal-shell .app-sidebar .sidebar-nav-link-active .sidebar-nav-subtitle,
+.portal-shell .sidebar-flyout-link.sidebar-nav-link-active .sidebar-nav-subtitle {
+  color: inherit !important;
+  opacity: 0.85;
 }
 
 .portal-shell .app-sidebar .sidebar-nav-link:not(.sidebar-nav-link-active) {

@@ -27,7 +27,7 @@ const CardPreview = forwardRef(function CardPreview({
       className={cx(
         'cc-card-preview relative isolate overflow-hidden rounded-[2rem] shadow-xl',
         variant === 'thumbnail' && 'cc-card-preview--thumbnail',
-        orientation === 'landscape' ? 'aspect-[7/5]' : 'aspect-[5/7]',
+        variant !== 'thumbnail' && (orientation === 'landscape' ? 'aspect-[7/5]' : 'aspect-[5/7]'),
         className,
       )}
       style={{

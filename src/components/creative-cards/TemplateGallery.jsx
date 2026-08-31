@@ -27,7 +27,7 @@ export default function TemplateGallery({
 }) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState({ category: initialCategory || ALL, age: ALL, theme: ALL, orientation: ALL });
-  const [visibleCount, setVisibleCount] = useState(12);
+  const [visibleCount, setVisibleCount] = useState(Math.min(12, templates.length || 12));
   const filtered = useMemo(() => templates.filter((template) => {
     const haystack = `${getLabel(template)} ${template.description || ''} ${template.tags || ''}`.toLowerCase();
     return haystack.includes(query.toLowerCase())
@@ -49,10 +49,12 @@ export default function TemplateGallery({
     const photo = albumImages[index % albumImages.length];
     return typeof photo === 'string' ? photo : (photo?.imageUrl || photo?.url);
   };
+  const visibleTemplates = filtered.slice(0, visibleCount);
+  const remaining = Math.max(0, filtered.length - visibleCount);
 
   return (
-    <section className="cc-template-gallery space-y-6" aria-labelledby="cc-gallery-title">
-      <div className="cc-template-hero relative overflow-hidden rounded-[2.5rem] px-6 py-8 sm:px-10 sm:py-10">
+    <section className="cc-template-gallery" aria-labelledby="cc-gallery-title">
+      <div className="cc-template-hero relative overflow-hidden rounded-[2.5rem] px-6 py-7 sm:px-10 sm:py-8">
         <div className="cc-template-hero__scribble" aria-hidden="true" />
         <span className="absolute right-[7%] top-[9%] rotate-12 text-4xl opacity-70" aria-hidden="true">⭐</span>
         <span className="absolute bottom-[8%] right-[40%] -rotate-12 text-4xl opacity-70" aria-hidden="true">🖍️</span>
@@ -95,7 +97,7 @@ export default function TemplateGallery({
           <div><p className="text-[10px] font-black uppercase tracking-[.2em] text-pink-600">First, choose the moment</p><h2 id="cc-occasion-filter" className="text-lg font-black text-slate-900">What kind of card?</h2></div>
           <span className="hidden rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700 sm:block">{activeCategory ? `${activeCategory.emoji} ${activeCategory.name}` : '✨ All celebrations'}</span>
         </div>
-        <div className="cc-occasion-chips flex gap-2 overflow-x-auto pb-2">
+        <div className="cc-occasion-chips flex gap-2 overflow-x-auto pb-1">
           <button type="button" onClick={() => setFilter('category', ALL)} aria-pressed={filters.category === ALL} className={`cc-occasion-chip ${filters.category === ALL ? 'is-active' : ''}`}><span aria-hidden="true">✨</span> All cards</button>
           {data.categories.map((category) => <button key={category.id} type="button" onClick={() => setFilter('category', category.id)} aria-pressed={filters.category === category.id} className={`cc-occasion-chip ${filters.category === category.id ? 'is-active' : ''}`}><span aria-hidden="true">{category.emoji}</span> {category.name}</button>)}
         </div>
@@ -113,16 +115,36 @@ export default function TemplateGallery({
         {hasFilters && <button type="button" onClick={clear} className="inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-black text-rose-600 hover:bg-rose-50"><X size={15} /> Reset</button>}
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-3 pt-2">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div><p className="text-xs font-black uppercase tracking-widest text-sky-600">{activeCategory ? activeCategory.name : 'Every celebration'}</p><h2 className="mt-1 text-2xl font-black text-slate-900">Pick a card to begin</h2></div>
         <p className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600" aria-live="polite">{filtered.length} lovely {filtered.length === 1 ? 'design' : 'designs'}</p>
       </div>
       {filtered.length ? (
-        <div className="cc-template-grid grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {filtered.slice(0, visibleCount).map((template, index) => <TemplateCard key={getId(template, index)} template={template} previewPhoto={previewPhotoAt(index)} selected={String(selectedId) === getId(template, index)} favorite={favoriteIds.includes(getId(template, index))} onSelect={onSelect} onFavorite={onFavorite} />)}
+        <div className="cc-template-grid">
+          {visibleTemplates.map((template, index) => (
+            <TemplateCard
+              key={getId(template, index)}
+              template={template}
+              previewPhoto={previewPhotoAt(index)}
+              selected={String(selectedId) === getId(template, index)}
+              favorite={favoriteIds.includes(getId(template, index))}
+              onSelect={onSelect}
+              onFavorite={onFavorite}
+            />
+          ))}
         </div>
       ) : <EmptyState title="No templates found" description="Try clearing a filter or searching with a different word." actionLabel="Clear filters" onAction={clear} />}
-      {filtered.length > visibleCount && <div className="pt-3 text-center"><button type="button" onClick={() => setVisibleCount((count) => count + 12)} className="inline-flex items-center gap-2 rounded-2xl border-2 border-violet-200 bg-white px-6 py-3 font-black text-violet-700 shadow-sm transition hover:-translate-y-1 hover:border-violet-400 hover:shadow-lg"><Sparkles size={17} /> Show 12 more designs</button></div>}
+      {remaining > 0 ? (
+        <div className="pt-1 pb-1 text-center">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((count) => count + 12)}
+            className="inline-flex items-center gap-2 rounded-2xl border-2 border-violet-200 bg-white px-6 py-3 font-black text-violet-700 shadow-sm transition hover:-translate-y-1 hover:border-violet-400 hover:shadow-lg"
+          >
+            <Sparkles size={17} /> Show {Math.min(12, remaining)} more design{Math.min(12, remaining) === 1 ? '' : 's'}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

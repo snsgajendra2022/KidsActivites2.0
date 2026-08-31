@@ -116,10 +116,6 @@ export default function AttendanceStudentRow({
           </div>
         ) : null}
 
-        {parsed.freeText && !canEdit ? (
-          <p className="text-sm text-[#5a6270]">{parsed.freeText}</p>
-        ) : null}
-
         {canEdit ? (
           <input
             type="text"
@@ -133,8 +129,8 @@ export default function AttendanceStudentRow({
             onChange={(e) => handleNoteInput(e.target.value)}
             aria-label={`Note for ${name}`}
           />
-        ) : !noteChips.length && student.note ? (
-          <p className="text-sm text-[#5a6270]">{student.note}</p>
+        ) : parsed.freeText ? (
+          <p className="text-sm text-[#5a6270]">{parsed.freeText}</p>
         ) : null}
       </div>
     </div>

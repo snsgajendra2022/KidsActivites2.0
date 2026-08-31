@@ -70,7 +70,7 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className="portal-shell flex h-screen overflow-hidden sb-surface text-[var(--sb-on-surface,#111827)]">
+    <div className="portal-shell flex overflow-hidden sb-surface text-[var(--sb-on-surface,#111827)]">
       <Sidebar
         user={user}
         open={sidebarOpen}
@@ -82,7 +82,7 @@ export default function AppLayout({ children }) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <NetworkBanner />
         <Header user={user} onMenuClick={() => setSidebarOpen(true)} onLogout={onLogout} />
-        <main className="flex-1 min-w-0 overflow-x-clip overflow-y-auto p-3 sm:p-4 lg:p-6 xl:p-8">
+        <main className="min-h-0 flex-1 min-w-0 overflow-x-clip overflow-y-auto p-3 sm:p-4 lg:p-6 xl:p-8">
           {/* Post-login: permission prompt / retry when FCM token never landed in localStorage */}
           {user?.id ? <WebPushEnableBanner compact /> : null}
           {user?.id ? <EmergencyCalendarBanner /> : null}

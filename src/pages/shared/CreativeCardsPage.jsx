@@ -191,7 +191,7 @@ export default function CreativeCardsPage() {
 
   return (
     <AppLayout>
-      <div className="cc-studio mx-auto w-full max-w-[1500px]">
+      <div className="cc-studio">
         {mode !== 'create' && mode !== 'view' && (
           <nav className="cc-studio-nav mb-6 inline-flex max-w-full flex-wrap gap-1 rounded-2xl border border-violet-100 bg-white p-1.5 shadow-sm" aria-label="Creative Cards sections">
             {[

@@ -402,11 +402,13 @@ export const LOGIN_HISTORY_SEED = [
 export const PERFORMANCE_NOTE_SEED = [
   {
     id: 'note-1',
-    studentName: 'Aarav Sharma',
-    className: 'Class 1',
+    studentId: 'app-d48bc59f',
+    studentName: 'NITIN SEN',
+    classId: 'cls-6b80f2847c68',
+    className: 'Enrichment Centre',
     subject: 'Mathematics',
     note: 'Shows improvement in problem solving. Needs more practice with word problems.',
-    visibility: 'private',
+    visibility: 'shared_parent',
     createdBy: 'Teacher',
     createdAt: now,
   },
